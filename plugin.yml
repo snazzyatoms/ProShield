@@ -1,0 +1,21 @@
+name: ProShield
+version: 1.0.0
+main: com.proshield.ProShield
+api-version: 1.19
+authors: [ "YourName" ]
+description: "The Ultimate Land Protection Plugin with economy, GUI, backups, and Discord integration."
+website: "https://github.com/yourname/ProShield"
+
+commands:
+  proshield:
+    description: Main ProShield command
+    usage: /proshield help
+    aliases: [ps]
+
+permissions:
+  proshield.admin:
+    description: Access to all admin features
+    default: op
+  proshield.vip:
+    description: VIP plot perks
+    default: false

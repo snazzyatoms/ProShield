@@ -1,0 +1,19 @@
+com/proshield/
+│ ProShield.java
+│
+├── commands/
+│   └── ProShieldCommand.java
+│
+├── managers/
+│   ├── GUIManager.java
+│   ├── PlotManager.java
+│   ├── EconomyManager.java
+│   ├── BackupManager.java
+│   └── DiscordManager.java
+│
+├── gui/
+│   ├── PlayerGUI.java
+│   └── AdminGUI.java
+│
+└── models/
+    └── Plot.java

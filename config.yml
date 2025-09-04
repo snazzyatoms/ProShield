@@ -1,0 +1,27 @@
+# ProShield Default Config
+
+protection:
+  default-radius: 25
+  max-radius: 100
+  height-limit: 256
+  depth-limit: 0
+
+economy:
+  enabled: true
+  base-expansion-cost: 100
+  cost-scale-factor: 1.5
+
+backups:
+  enabled: true
+  mode: "hybrid" # options: full, differential, hybrid
+  schedule:
+    full: "1d"
+    differential: "1h"
+
+discord:
+  integration: false
+  webhook-url: ""
+
+debug:
+  enabled: false
+  auto-disable-on-restart: true

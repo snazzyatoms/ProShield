@@ -1,39 +1,47 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.listeners.AdminJoinListener;
+import com.snazzyatoms.proshield.listeners.CompassListener;
 import com.snazzyatoms.proshield.listeners.GUIListener;
+import com.snazzyatoms.proshield.managers.GUIManager;
 import com.snazzyatoms.proshield.managers.PlotManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
     private static ProShield instance;
+
     private PlotManager plotManager;
+    private GUIManager guiManager;
 
     @Override
     public void onEnable() {
         instance = this;
 
-        // Create default config.yml if missing
+        // Generate /plugins/ProShield/config.yml on first run
         saveDefaultConfig();
 
-        // Initialize managers
-        plotManager = new PlotManager(this);
+        // Managers
+        this.plotManager = new PlotManager(this);
+        this.guiManager  = new GUIManager();
 
-        // Register command executor
-        getCommand("proshield").setExecutor(new ProShieldCommand(this));
+        // Commands
+        if (getCommand("proshield") != null) {
+            getCommand("proshield").setExecutor(new com.snazzyatoms.proshield.commands.ProShieldCommand(this));
+        } else {
+            getLogger().severe("Command 'proshield' not found. Check plugin.yml!");
+        }
 
-        // Register listeners
-        getServer().getPluginManager().registerEvents(new AdminJoinListener(this), this);
-        getServer().getPluginManager().registerEvents(new GUIListener(this), this);
+        // Listeners
+        getServer().getPluginManager().registerEvents(new CompassListener(guiManager), this);
+        getServer().getPluginManager().registerEvents(new GUIListener(plotManager), this);
 
-        getLogger().info("[ProShield] ProShield v" + getDescription().getVersion() + " has been enabled!");
+        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion());
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("[ProShield] ProShield has been disabled.");
+        getLogger().info("[ProShield] Disabled.");
     }
 
     public static ProShield getInstance() {
@@ -42,5 +50,9 @@ public class ProShield extends JavaPlugin {
 
     public PlotManager getPlotManager() {
         return plotManager;
+    }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
     }
 }

@@ -1,29 +1,33 @@
 package com.snazzyatoms.proshield;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import com.snazzyatoms.proshield.managers.PlotManager;
-import com.snazzyatoms.proshield.listeners.PlotProtectionListener;
-import com.snazzyatoms.proshield.commands.ProShieldCommand;
 
 public class ProShield extends JavaPlugin {
 
+    private static ProShield instance;
     private PlotManager plotManager;
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
-        plotManager = new PlotManager(this);
+        instance = this;
+        plotManager = new PlotManager();
 
-        // Register events
+        // Register event listeners
         getServer().getPluginManager().registerEvents(new PlotProtectionListener(plotManager), this);
 
-        // Register command
+        // Register commands
         getCommand("proshield").setExecutor(new ProShieldCommand(plotManager));
+
+        getLogger().info("ProShield enabled successfully!");
     }
 
     @Override
     public void onDisable() {
-        // Cleanup if necessary
+        getLogger().info("ProShield disabled.");
+    }
+
+    public static ProShield getInstance() {
+        return instance;
     }
 
     public PlotManager getPlotManager() {

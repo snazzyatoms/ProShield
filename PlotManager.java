@@ -1,6 +1,5 @@
 package com.proshield.managers;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -8,71 +7,39 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Handles storing and checking player plot claims.
- * For now this is an in-memory system (no database yet).
- */
 public class PlotManager {
 
+    // Stores player UUID -> their plot
     private final Map<UUID, Plot> plots = new HashMap<>();
 
-    public static class Plot {
-        private final UUID owner;
-        private final Location center;
-        private final int radius;
-
-        public Plot(UUID owner, Location center, int radius) {
-            this.owner = owner;
-            this.center = center;
-            this.radius = radius;
-        }
-
-        public UUID getOwner() {
-            return owner;
-        }
-
-        public Location getCenter() {
-            return center;
-        }
-
-        public int getRadius() {
-            return radius;
-        }
-
-        public boolean isInside(Location loc) {
-            if (!loc.getWorld().equals(center.getWorld())) return false;
-            double dx = loc.getX() - center.getX();
-            double dz = loc.getZ() - center.getZ();
-            return (dx * dx + dz * dz) <= (radius * radius);
-        }
+    /**
+     * Claim a new plot for a player
+     *
+     * @param player player claiming the plot
+     * @param center center location of the plot
+     * @param radius radius of the plot
+     */
+    public void claimPlot(Player player, Location center, int radius) {
+        plots.put(player.getUniqueId(), new Plot(center, radius));
     }
 
     /**
-     * Try to claim a new plot for a player.
+     * Check if a player is inside their own plot
+     *
+     * @param player   player to check
+     * @param location location being tested
+     * @return true if inside own plot, false otherwise
      */
-    public boolean claimPlot(Player player, int radius) {
-        if (plots.containsKey(player.getUniqueId())) {
-            return false; // already has a claim
-        }
-        plots.put(player.getUniqueId(),
-                new Plot(player.getUniqueId(), player.getLocation(), radius));
-        return true;
+    public boolean isInsideOwnPlot(Player player, Location location) {
+        Plot plot = plots.get(player.getUniqueId());
+        if (plot == null) return false;
+        return plot.isInside(location);
     }
 
     /**
-     * Get the player's plot.
+     * Get a player’s plot
+     *
+     * @param player the player
+     * @return their plot, or null if none
      */
-    public Plot getPlot(Player player) {
-        return plots.get(player.getUniqueId());
-    }
-
-    /**
-     * Check if a location is protected by someone's claim.
-     */
-    public boolean isClaimed(Location loc) {
-        for (Plot plot : plots.values()) {
-            if (plot.isInside(loc)) return true;
-        }
-        return false;
-    }
-}
+    public Plot getP

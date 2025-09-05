@@ -43,7 +43,6 @@ It combines **plot protection, GUI-based management, economy hooks, and backups 
 - Java 17+
 - Spigot / Paper 1.19+
 - (Optional) Vault for economy
-- (Optional) DiscordSRV for Discord integration
 
 ---
 

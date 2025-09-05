@@ -1,19 +1,20 @@
-# ================================
+# =====================================================
 # ProShield Configuration
-# ================================
+# =====================================================
+# This file is automatically created on first startup.
+# Manage claims and plugin behavior here.
+# =====================================================
 
-# Default plot radius when a player claims land
-default-plot-radius: 20
+settings:
+  debug: false
+  allow-multiple-claims: false
 
-# Minimum gap between plots to avoid overlap (in blocks)
-minimum-gap-between-plots: 10
-
-# Should players be restricted from breaking/placing blocks outside of plots?
-restrict-building-outside-plots: false
-
-# DiscordSRV integration
-discord:
-  enabled: false       # true = enable integration, false = disable
-  webhook-url: ""      # optional webhook URL for alerts (leave empty if not used)
-  role-sync: false     # true = sync ranks with Discord, false = ignore
-  notify-expansion-requests: true  # true = send expansion requests to Discord
+# Player claims
+claims: {}
+# Example (auto-generated when players create claims):
+# claims:
+#   16c55c1d-bdab-4292-8e17-2d0936d68d0:
+#     world: world
+#     x: 100
+#     y: 65
+#     z: 200

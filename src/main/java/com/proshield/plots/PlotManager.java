@@ -1,76 +1,39 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
+import java.util.*;
+
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 public class PlotManager {
+    private final Map<UUID, List<Claim>> playerClaims = new HashMap<>();
 
-    private final ProShield plugin;
-    private final Map<UUID, Location> playerClaims;
-
-    public PlotManager(ProShield plugin) {
-        this.plugin = plugin;
-        this.playerClaims = new HashMap<>();
+    public Claim createClaim(Player player, Location corner1, Location corner2) {
+        Claim claim = new Claim(player.getUniqueId(), corner1, corner2);
+        playerClaims.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>()).add(claim);
+        return claim;
     }
 
-    /**
-     * Create a claim at the player's current location.
-     */
-    public void createClaim(Player player) {
-        UUID uuid = player.getUniqueId();
-        if (playerClaims.containsKey(uuid)) {
-            player.sendMessage(ChatColor.RED + "You already have a claim!");
-            return;
+    public List<Claim> getClaims(UUID owner) {
+        return playerClaims.getOrDefault(owner, Collections.emptyList());
+    }
+
+    public boolean removeClaim(Player player, Claim claim) {
+        List<Claim> claims = playerClaims.get(player.getUniqueId());
+        if (claims != null) {
+            return claims.remove(claim);
         }
-
-        Location loc = player.getLocation();
-        playerClaims.put(uuid, loc);
-        player.sendMessage(ChatColor.GREEN + "New claim created at your current location: "
-                + ChatColor.YELLOW + formatLocation(loc));
+        return false;
     }
 
-    /**
-     * Get information about the player's claim.
-     */
-    public void getClaimInfo(Player player) {
-        UUID uuid = player.getUniqueId();
-        if (!playerClaims.containsKey(uuid)) {
-            player.sendMessage(ChatColor.RED + "You don't have a claim yet.");
-            return;
+    public Claim getClaimAt(Location location) {
+        for (List<Claim> claims : playerClaims.values()) {
+            for (Claim claim : claims) {
+                if (claim.isInside(location)) {
+                    return claim;
+                }
+            }
         }
-
-        Location loc = playerClaims.get(uuid);
-        player.sendMessage(ChatColor.AQUA + "Your claim is located at: "
-                + ChatColor.YELLOW + formatLocation(loc));
-    }
-
-    /**
-     * Remove the player's claim.
-     */
-    public void removeClaim(Player player) {
-        UUID uuid = player.getUniqueId();
-        if (!playerClaims.containsKey(uuid)) {
-            player.sendMessage(ChatColor.RED + "You don't have a claim to remove.");
-            return;
-        }
-
-        playerClaims.remove(uuid);
-        player.sendMessage(ChatColor.GREEN + "Your claim has been removed.");
-    }
-
-    /**
-     * Helper to format a location as x,y,z,world.
-     */
-    private String formatLocation(Location loc) {
-        return "X:" + loc.getBlockX() +
-                " Y:" + loc.getBlockY() +
-                " Z:" + loc.getBlockZ() +
-                " World:" + loc.getWorld().getName();
+        return null;
     }
 }

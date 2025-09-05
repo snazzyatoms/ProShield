@@ -1,7 +1,5 @@
-package com.proshield.managers;
+package com.snazzyatoms.proshield;
 
-import com.proshield.ProShield;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -40,6 +38,7 @@ public class PlotManager {
         if (radius <= 0) {
             radius = defaultRadius;
         }
+
         if (radius > maxRadius) {
             player.sendMessage("§cThe maximum plot radius allowed is " + maxRadius + ".");
             return false;
@@ -49,37 +48,30 @@ public class PlotManager {
 
         // Check for overlap with existing plots
         for (Plot existing : plots.values()) {
-            if (arePlotsTooClose(center, radius, existing)) {
-                player.sendMessage("§cYou must claim at least " + minGap + " blocks away from other plots.");
+            if (center.distance(existing.getCenter()) < radius + existing.getRadius() + minGap) {
+                player.sendMessage("§cYour plot must be at least " + minGap + " blocks away from other plots.");
                 return false;
             }
         }
 
-        // Store the new plot
+        // Save new plot
         plots.put(player.getUniqueId(), new Plot(center, radius));
-        player.sendMessage("§aSuccessfully claimed a plot with radius " + radius + ".");
+        player.sendMessage("§aPlot claimed successfully with radius " + radius + "!");
         return true;
     }
 
     /**
-     * Checks if the player is inside their own claimed plot.
+     * Check if a player can build at a given location.
      */
-    public boolean isInsideOwnPlot(Player player, Location loc) {
+    public boolean canBuild(Player player, Location location) {
         Plot plot = plots.get(player.getUniqueId());
-        return plot != null && plot.contains(loc);
+        if (plot == null) return false;
+
+        return location.distance(plot.getCenter()) <= plot.getRadius();
     }
 
     /**
-     * Checks if two plots are overlapping or too close.
-     */
-    private boolean arePlotsTooClose(Location center, int radius, Plot other) {
-        double distance = center.distance(other.getCenter());
-        int minAllowed = radius + other.getRadius() + minGap;
-        return distance < minAllowed;
-    }
-
-    /**
-     * Inner class representing a plot.
+     * Inner class representing a single plot.
      */
     private static class Plot {
         private final Location center;
@@ -96,11 +88,6 @@ public class PlotManager {
 
         public int getRadius() {
             return radius;
-        }
-
-        public boolean contains(Location loc) {
-            return center.getWorld().equals(loc.getWorld()) &&
-                   center.distance(loc) <= radius;
         }
     }
 }

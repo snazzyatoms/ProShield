@@ -2,4 +2,8 @@ jdk:
   - openjdk17
 
 before_install:
-  - echo "Building ProShield 1.1.5 with Java 17"
+  - echo "Using Java 17 for build"
+
+build:
+  commands:
+    - mvn clean package

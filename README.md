@@ -59,8 +59,6 @@
 - Minor bug fixes and internal improvements.  
 
 ---
-[![](https://jitpack.io/v/snazzyatoms/ProShield.svg)](https://jitpack.io/#snazzyatoms/ProShield)
-
 
 ## 🏗️ Build with JitPack
 If you want to include ProShield as a dependency in your own project:

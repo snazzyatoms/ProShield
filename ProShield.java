@@ -21,27 +21,29 @@ public class ProShield extends JavaPlugin {
     private GUIManager guiManager;
 
     @Override
-    public void onEnable() {
-        instance = this;
+public void onEnable() {
+    instance = this;
 
-        saveDefaultConfig(); // generate config.yml if missing
+    saveDefaultConfig(); // generate config.yml if missing
 
-        // Initialize managers
-        plotManager = new PlotManager(this);
-        economyManager = new EconomyManager(this);
-        backupManager = new BackupManager(this);
-        discordManager = new DiscordManager(this);
-        guiManager = new GUIManager(this);
+    // Initialize managers
+    plotManager = new PlotManager(this);
+    economyManager = new EconomyManager(this);
+    backupManager = new BackupManager(this);
+    discordManager = new DiscordManager(this);
+    guiManager = new GUIManager(this);
 
-        // Register commands
-        getCommand("proshield").setExecutor(new ProShieldCommand(this));
+    // Register commands
+    getCommand("proshield").setExecutor(new ProShieldCommand(this));
 
-        // Register events/listeners
-        getServer().getPluginManager().registerEvents(new com.proshield.listeners.PlayerGUIListener(this), this);
+    // Register events/listeners
+    getServer().getPluginManager().registerEvents(new com.proshield.listeners.PlayerGUIListener(this), this);
+    getServer().getPluginManager().registerEvents(new com.proshield.listeners.PlotProtectionListener(this), this);
 
-        // Log startup
-        Bukkit.getLogger().info("[ProShield] Plugin enabled successfully!");
-    }
+    // Log startup
+    Bukkit.getLogger().info("[ProShield] Plugin enabled successfully!");
+}
+
 
     @Override
     public void onDisable() {

@@ -19,6 +19,26 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <repositories>
+        <!-- Spigot snapshots -->
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+
+        <!-- Sonatype OSS (for community artifacts) -->
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+
+        <!-- JitPack (for Vault, DiscordSRV, etc.) -->
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <!-- Spigot / Paper API -->
         <dependency>
@@ -28,7 +48,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Vault (Economy) -->
+        <!-- Vault (via JitPack) -->
         <dependency>
             <groupId>com.github.MilkBowl</groupId>
             <artifactId>VaultAPI</artifactId>
@@ -36,10 +56,10 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- DiscordSRV (Optional Integration) -->
+        <!-- DiscordSRV (via JitPack) -->
         <dependency>
-            <groupId>com.discordsrv</groupId>
-            <artifactId>discordsrv</artifactId>
+            <groupId>com.github.DiscordSRV</groupId>
+            <artifactId>DiscordSRV</artifactId>
             <version>1.26.2</version>
             <scope>provided</scope>
         </dependency>
@@ -69,13 +89,6 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <relocations>
-                                <!-- Prevent conflicts -->
-                                <relocation>
-                                    <pattern>net.kyori</pattern>
-                                    <shadedPattern>com.snazzyatoms.shaded.net.kyori</shadedPattern>
-                                </relocation>
-                            </relocations>
                         </configuration>
                     </execution>
                 </executions>

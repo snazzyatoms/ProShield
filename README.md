@@ -1,9 +1,3 @@
-HTML + CSS + Javascript said:
-
-Perfect 👌 let’s modernize your README.md so it’s clean, informative, and reflects ProShield 1.1.6 with all the changes we’ve made so far.
-
-Here’s a refined version you can copy–paste into your repo:
-
 🛡️ ProShield
 
 A lightweight land protection plugin for Paper/Spigot servers.

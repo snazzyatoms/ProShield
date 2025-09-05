@@ -7,7 +7,7 @@ public class ProShield extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        getLogger().info("ProShield has been enabled!");
+        getLogger().info("ProShield v1.0.6 has been enabled!");
 
         // Check if DiscordSRV is installed (soft dependency)
         if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
@@ -24,7 +24,7 @@ public class ProShield extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        getLogger().info("ProShield has been disabled.");
+        getLogger().info("ProShield v1.0.6 has been disabled.");
     }
 
     private void hookIntoDiscordSRV() {
@@ -34,14 +34,11 @@ public class ProShield extends JavaPlugin {
 
     private void registerCommands() {
         // Example command registration
-        // this.getCommand("claimplot").setExecutor(new ClaimPlotCommand());
-        // this.getCommand("unclaimplot").setExecutor(new UnclaimPlotCommand());
-        // this.getCommand("addmember").setExecutor(new AddMemberCommand());
-        // this.getCommand("removemember").setExecutor(new RemoveMemberCommand());
+        // this.getCommand("proshield").setExecutor(new ProShieldCommand(this));
     }
 
     private void registerEvents() {
         // Example event registration
-        // getServer().getPluginManager().registerEvents(new PlotProtectionListener(), this);
+        // getServer().getPluginManager().registerEvents(new PlotProtectionListener(this), this);
     }
 }

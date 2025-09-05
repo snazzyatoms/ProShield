@@ -1,30 +1,21 @@
 package com.snazzyatoms.proshield;
 
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        getLogger().info("ProShield v1.0.6 has been enabled!");
-
-        // Check if DiscordSRV is installed (soft dependency)
-        if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
-            getLogger().info("DiscordSRV detected! Hooking into it...");
-            hookIntoDiscordSRV();
-        } else {
-            getLogger().info("DiscordSRV not found. Continuing without Discord integration.");
-        }
-
-        // Register commands, events, etc.
-        registerCommands();
-        registerEvents();
+        getLogger().info("ProShield has been enabled!");
+        // Register commands, listeners, managers here
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("ProShield v1.0.6 has been disabled.");
+        getLogger().info("ProShield has been disabled!");
+    }
+}
+
     }
 
     private void hookIntoDiscordSRV() {

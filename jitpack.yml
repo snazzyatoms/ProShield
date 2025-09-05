@@ -1,5 +1,12 @@
 jdk:
-  - openjdk8
+  - openjdk17
 
 install:
   - mvn clean install -DskipTests
+
+build:
+  script:
+    - mvn package -DskipTests
+
+artifacts:
+  - target/proshield-1.1.2.jar

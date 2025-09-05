@@ -3,44 +3,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.yourname</groupId>
+    <groupId>com.snazzyatoms</groupId>
     <artifactId>proshield</artifactId>
     <version>1.0.6</version>
-    <packaging>jar</packaging>
-
     <name>ProShield</name>
-    <description>A flexible plot protection and management system with GUI and Discord integration support.</description>
-    <url>https://github.com/yourusername/ProShield</url>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
-    <repositories>
-        <!-- SpigotMC repo -->
-        <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
-        </repository>
-
-        <!-- Paper repo -->
-        <repository>
-            <id>papermc-repo</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
-    </repositories>
-
-    <dependencies>
-        <!-- Spigot API -->
-        <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.16.5-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
 
     <build>
         <plugins>
@@ -52,6 +23,19 @@
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

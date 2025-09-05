@@ -2,5 +2,7 @@ jdk:
   - openjdk17
 
 before_install:
-  - mvn -v
-  - java -version
+  - echo "Building ProShield with JDK 17"
+
+install:
+  - mvn clean install -DskipTests

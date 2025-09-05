@@ -1,11 +1,11 @@
 name: ProShield
-main: com.snazzyatoms.proshield.ProShield
 version: 1.1.1
-api-version: 1.20
+main: com.snazzyatoms.proshield.ProShield
+api-version: 1.16
 author: snazzyatoms
-description: Plot protection plugin with ProShield system.
+description: A simple plot protection plugin for Minecraft servers.
 
 commands:
   proshield:
-    description: Main command for ProShield
-    usage: /proshield
+    description: Main ProShield command
+    usage: /<command> <protect|unprotect|check>

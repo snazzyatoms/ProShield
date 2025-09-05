@@ -10,12 +10,12 @@ description: >
 commands:
   proshield:
     description: Main command for ProShield
-    usage: /proshield <claim|check|reload>
+    usage: /proshield <claim|check|reload|help>
     aliases: [pshield]
 
 permissions:
   proshield.use:
-    description: Allows use of /proshield claim and check
+    description: Allows use of /proshield claim, check, and help
     default: true
   proshield.reload:
     description: Allows reloading of the ProShield configuration

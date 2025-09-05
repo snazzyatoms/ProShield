@@ -14,22 +14,22 @@ public class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Config auto-create
-        saveDefaultConfig();
-
         // Register commands
-        getCommand("proshield").setExecutor(new ProShieldCommand(this));
+        this.getCommand("proshield").setExecutor(new ProShieldCommand());
 
         // Register listeners
-        Bukkit.getPluginManager().registerEvents(new PlotProtectionListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new AdminJoinListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlotProtectionListener(), this);
+        getServer().getPluginManager().registerEvents(new AdminJoinListener(), this);
 
-        getLogger().info("✅ ProShield 1.1.6 enabled successfully!");
+        // Create and save default config
+        saveDefaultConfig();
+
+        Bukkit.getLogger().info("[ProShield] v" + getDescription().getVersion() + " has been enabled.");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("❌ ProShield disabled.");
+        Bukkit.getLogger().info("[ProShield] v" + getDescription().getVersion() + " has been disabled.");
     }
 
     public static ProShield getInstance() {

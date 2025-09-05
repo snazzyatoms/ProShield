@@ -1,40 +1,29 @@
 package com.snazzyatoms.proshield.listeners;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class AdminJoinListener implements Listener {
+/**
+ * Basic plot protection listener.
+ * Prevents block breaking/placing without proper permissions.
+ */
+public class PlotProtectionListener implements Listener {
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
+    public void onBlockBreak(BlockBreakEvent event) {
+        if (!event.getPlayer().hasPermission("proshield.build")) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage("§cYou cannot break blocks here!");
+        }
+    }
 
-        if (player.isOp() || player.hasPermission("proshield.admin")) {
-            boolean hasCompass = player.getInventory().contains(Material.COMPASS);
-
-            if (!hasCompass) {
-                ItemStack compass = new ItemStack(Material.COMPASS);
-                ItemMeta meta = compass.getItemMeta();
-                if (meta != null) {
-                    meta.setDisplayName(ChatColor.GOLD + "🛡 ProShield Menu");
-                    List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.YELLOW + "Right-click to open ProShield GUI");
-                    meta.setLore(lore);
-                    compass.setItemMeta(meta);
-                }
-
-                player.getInventory().addItem(compass);
-                player.sendMessage(ChatColor.GREEN + "[ProShield] Compass added for testing.");
-            }
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (!event.getPlayer().hasPermission("proshield.build")) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage("§cYou cannot place blocks here!");
         }
     }
 }

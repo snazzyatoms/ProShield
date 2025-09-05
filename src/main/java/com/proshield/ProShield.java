@@ -1,11 +1,11 @@
 package com.snazzyatoms.proshield;
 
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.java.JavaPlugin;
+import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.listeners.AdminJoinListener;
 import com.snazzyatoms.proshield.listeners.PlotProtectionListener;
 import com.snazzyatoms.proshield.managers.PlotManager;
-import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
@@ -15,21 +15,23 @@ public class ProShield extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        this.plotManager = new PlotManager();
+
+        // Initialize PlotManager
+        plotManager = new PlotManager(this);
 
         // Register commands
         getCommand("proshield").setExecutor(new ProShieldCommand(this));
 
         // Register listeners
-        Bukkit.getPluginManager().registerEvents(new PlotProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new AdminJoinListener(), this);
+        Bukkit.getPluginManager().registerEvents(new AdminJoinListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PlotProtectionListener(this), this);
 
-        getLogger().info("ProShield v" + getDescription().getVersion() + " has been enabled!");
+        getLogger().info("ProShield has been enabled!");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("ProShield has been disabled.");
+        getLogger().info("ProShield has been disabled!");
     }
 
     public static ProShield getInstance() {

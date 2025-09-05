@@ -4,11 +4,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.proshield.commands.ProShieldCommand;
-import com.proshield.managers.GUIManager;
 import com.proshield.managers.PlotManager;
 import com.proshield.managers.EconomyManager;
 import com.proshield.managers.BackupManager;
 import com.proshield.managers.DiscordManager;
+import com.proshield.managers.GUIManager;
 
 public class ProShield extends JavaPlugin {
 
@@ -20,43 +20,42 @@ public class ProShield extends JavaPlugin {
     private DiscordManager discordManager;
     private GUIManager guiManager;
 
-   @Override
-public void onEnable() {
-    instance = this;
+    @Override
+    public void onEnable() {
+        instance = this;
 
-    saveDefaultConfig(); // generate config.yml if missing
+        saveDefaultConfig(); // generate config.yml if missing
 
-    // Initialize managers
-    plotManager = new PlotManager(this);
-    economyManager = new EconomyManager(this);
-    backupManager = new BackupManager(this);
-    discordManager = new DiscordManager(this);
-    guiManager = new GUIManager(this);
+        // Initialize managers
+        plotManager = new PlotManager(this);
+        economyManager = new EconomyManager(this);
+        backupManager = new BackupManager(this);
+        discordManager = new DiscordManager(this);
+        guiManager = new GUIManager(this);
 
-    // Register commands
-    getCommand("proshield").setExecutor(new ProShieldCommand(this));
+        // Register commands
+        getCommand("proshield").setExecutor(new ProShieldCommand(this));
 
-    // Register events/listeners
-    getServer().getPluginManager().registerEvents(new com.proshield.listeners.PlayerGUIListener(this), this);
+        // Register events/listeners
+        getServer().getPluginManager().registerEvents(new com.proshield.listeners.PlayerGUIListener(this), this);
 
-    // Log startup
-    Bukkit.getLogger().info("[ProShield] Plugin enabled successfully!");
-}
-
+        // Log startup
+        Bukkit.getLogger().info("[ProShield] Plugin enabled successfully!");
+    }
 
     @Override
-public void onDisable() {
-    if (backupManager != null) backupManager.shutdown();
-    if (discordManager != null) discordManager.shutdown();
-    Bukkit.getLogger().info("[ProShield] Plugin disabled.");
-}
+    public void onDisable() {
+        if (backupManager != null) backupManager.shutdown();
+        if (discordManager != null) discordManager.shutdown();
 
+        Bukkit.getLogger().info("[ProShield] Plugin disabled.");
+    }
 
+    // --- Getters ---
     public static ProShield getInstance() {
         return instance;
     }
 
-    // Getters for managers
     public PlotManager getPlotManager() {
         return plotManager;
     }

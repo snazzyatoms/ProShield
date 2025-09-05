@@ -39,9 +39,21 @@ public class ProShieldCommand implements CommandExecutor {
                     return true;
                 }
 
-                int defaultRadius = plugin.getConfig().getInt("protection.default-radius", 10);
+                int radius;
+                boolean allowCustomRadius = plugin.getConfig().getBoolean("protection.allow-custom-claim-radius", false);
 
-                boolean success = plotManager.claimPlot(player, defaultRadius);
+                if (args.length >= 2 && allowCustomRadius) {
+                    try {
+                        radius = Integer.parseInt(args[1]);
+                    } catch (NumberFormatException e) {
+                        player.sendMessage(ChatColor.RED + "Invalid radius. Please enter a number.");
+                        return true;
+                    }
+                } else {
+                    radius = plugin.getConfig().getInt("protection.default-radius", 10);
+                }
+
+                boolean success = plotManager.claimPlot(player, radius);
                 if (!success) {
                     int minGap = plugin.getConfig().getInt("protection.min-gap", 10);
                     player.sendMessage(ChatColor.RED + "Claim failed. Plots must be at least "

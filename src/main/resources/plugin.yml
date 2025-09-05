@@ -1,28 +1,21 @@
 name: ProShield
-main: com.proshield.ProShield
+main: com.snazzyatoms.proshield.ProShield
 version: 1.0.5
-author: YourName
-description: A plot protection and management system with customizable radius, buffers, and protection rules.
-
+api-version: 1.16
+author: SnazzyAtoms
+description: A plugin to manage protected plots and growth control.
 commands:
-  proshield:
-    description: Main command for ProShield.
-    usage: /<command> [reload|claim|check]
-    aliases: [ps]
-
-permissions:
-  proshield.reload:
-    description: Allows reloading the ProShield configuration.
-    default: op
-
-  proshield.claim:
-    description: Allows claiming a plot of land.
-    default: true
-
-  proshield.check:
-    description: Allows players to check if they’re inside their own plot.
-    default: true
-
-# Optional dependency
+  claimplot:
+    description: Claim a plot of land.
+    usage: /<command>
+  unclaimplot:
+    description: Unclaim your current plot.
+    usage: /<command>
+  addmember:
+    description: Add a player to your plot.
+    usage: /<command> <player>
+  removemember:
+    description: Remove a player from your plot.
+    usage: /<command> <player>
 softdepend:
   - DiscordSRV

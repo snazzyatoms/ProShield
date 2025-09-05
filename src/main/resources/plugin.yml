@@ -1,6 +1,6 @@
 name: ProShield
-main: com.snazzyatoms.ProShield
-version: 1.0.3
+main: com.proshield.ProShield
+version: 1.0.5
 author: YourName
 description: A plot protection and management system with customizable radius, buffers, and protection rules.
 
@@ -20,5 +20,9 @@ permissions:
     default: true
 
   proshield.check:
-    description: Allows players to check if they're inside their own plot.
+    description: Allows players to check if they’re inside their own plot.
     default: true
+
+# Optional dependency
+softdepend:
+  - DiscordSRV

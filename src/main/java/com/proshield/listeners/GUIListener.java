@@ -1,77 +1,92 @@
 package com.snazzyatoms.proshield.listeners;
 
-import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.managers.PlotManager;
+import com.snazzyatoms.proshield.managers.GUIManager;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class GUIListener implements Listener {
 
-    private final ProShield plugin;
-    private final PlotManager plotManager;
+    private final GUIManager guiManager;
 
-    public GUIListener(ProShield plugin) {
-        this.plugin = plugin;
-        this.plotManager = plugin.getPlotManager();
+    public GUIListener(GUIManager guiManager) {
+        this.guiManager = guiManager;
     }
 
+    /**
+     * Handle right-click with the ProShield Admin Compass
+     */
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        Player player = (Player) event.getWhoClicked();
+    public void onCompassUse(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
 
-        // Only handle clicks in our GUI
-        if (event.getView().getTitle() == null ||
-            !ChatColor.stripColor(event.getView().getTitle()).equalsIgnoreCase("Claim Management")) {
+        // Only care about right-click
+        if (!(event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)) {
             return;
         }
 
-        event.setCancelled(true); // Stop item pickup
+        ItemStack item = event.getItem();
+        if (item == null || item.getType() != Material.COMPASS) return;
 
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-
-        ItemMeta meta = clicked.getItemMeta();
+        ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
-        String displayName = ChatColor.stripColor(meta.getDisplayName());
+        // Match display name of ProShield Admin Compass
+        if (ChatColor.stripColor(meta.getDisplayName()).equalsIgnoreCase("ProShield Admin Compass")) {
+            // Check permission
+            if (!player.hasPermission("proshield.compass")) {
+                player.sendMessage(ChatColor.RED + "You do not have permission to use the ProShield Compass.");
+                return;
+            }
 
-        switch (displayName.toLowerCase()) {
-            case "create claim":
-                player.closeInventory();
-                if (plotManager.createClaim(player)) {
-                    player.sendMessage(ChatColor.GREEN + "[ProShield] Claim created successfully!");
-                } else {
-                    player.sendMessage(ChatColor.RED + "[ProShield] Failed to create claim (you may already own one).");
-                }
-                break;
+            // Cancel interaction and open GUI
+            event.setCancelled(true);
+            guiManager.openClaimGUI(player);
+        }
+    }
 
-            case "claim info":
-                player.closeInventory();
-                String info = plotManager.getClaimInfo(player);
-                if (info != null) {
-                    player.sendMessage(ChatColor.YELLOW + "[ProShield] " + info);
-                } else {
-                    player.sendMessage(ChatColor.RED + "[ProShield] You don’t own a claim yet.");
-                }
-                break;
+    /**
+     * Handle clicks inside the Claim Management GUI
+     */
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
 
-            case "remove claim":
-                player.closeInventory();
-                if (plotManager.removeClaim(player)) {
-                    player.sendMessage(ChatColor.RED + "[ProShield] Claim removed successfully.");
-                } else {
-                    player.sendMessage(ChatColor.RED + "[ProShield] No claim found to remove.");
-                }
-                break;
+        Player player = (Player) event.getWhoClicked();
+        String title = event.getView().getTitle();
 
-            default:
-                break;
+        // Check GUI title from GUIManager
+        if (title.equals(ChatColor.DARK_GREEN + "Claim Management")) {
+            event.setCancelled(true); // Prevent item grabbing
+
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || !clicked.hasItemMeta()) return;
+
+            String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+
+            switch (name.toLowerCase()) {
+                case "create claim":
+                    player.performCommand("proshield createclaim");
+                    player.closeInventory();
+                    break;
+                case "claim info":
+                    player.performCommand("proshield claiminfo");
+                    player.closeInventory();
+                    break;
+                case "remove claim":
+                    player.performCommand("proshield removeclaim");
+                    player.closeInventory();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

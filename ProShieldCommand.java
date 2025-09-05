@@ -6,9 +6,15 @@ import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-public class ProShieldCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final PlotManager plotManager;
 
@@ -53,8 +59,10 @@ public class ProShieldCommand implements CommandExecutor {
                     PlotManager.Plot plot = plotManager.getPlot(player);
                     if (plot != null) {
                         player.sendMessage(ChatColor.GREEN + "You are inside your plot!");
-                        player.sendMessage(ChatColor.AQUA + "Center: " + ChatColor.WHITE + plot.getCenter().getBlockX() + ", " +
-                                plot.getCenter().getBlockY() + ", " + plot.getCenter().getBlockZ());
+                        player.sendMessage(ChatColor.AQUA + "Center: " + ChatColor.WHITE +
+                                plot.getCenter().getBlockX() + ", " +
+                                plot.getCenter().getBlockY() + ", " +
+                                plot.getCenter().getBlockZ());
                         player.sendMessage(ChatColor.AQUA + "Radius: " + ChatColor.WHITE + plot.getRadius());
                     }
                 } else {
@@ -75,5 +83,19 @@ public class ProShieldCommand implements CommandExecutor {
                 player.sendMessage(ChatColor.YELLOW + "Unknown subcommand. Use: /proshield <claim|check|reload>");
                 return true;
         }
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            List<String> options = new ArrayList<>(Arrays.asList("claim", "check", "reload"));
+
+            if (!(sender.hasPermission("proshield.reload"))) {
+                options.remove("reload"); // Only show reload if they have permission
+            }
+
+            return options;
+        }
+        return Collections.emptyList();
     }
 }

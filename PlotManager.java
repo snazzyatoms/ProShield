@@ -1,5 +1,7 @@
-package com.proshield.managers;
+package com.yourname.proshield;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -9,67 +11,71 @@ import java.util.UUID;
 
 public class PlotManager {
 
+    private final ProShield plugin;
+
+    // Store player plots (UUID -> Plot)
     private final Map<UUID, Plot> plots = new HashMap<>();
 
-    /**
-     * Attempts to claim a plot for the player.
-     * If the player already owns a plot, it will overwrite it.
-     *
-     * @param player Player claiming the plot
-     * @param center Center location of the plot
-     * @param radius Radius of the plot
-     */
-    public void claimPlot(Player player, Location center, int radius) {
-        plots.put(player.getUniqueId(), new Plot(center, radius));
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
     }
 
     /**
-     * Retrieves the plot owned by a player.
-     *
-     * @param player Player
-     * @return Plot instance, or null if none
+     * Attempt to claim a new plot for a player
      */
-    public Plot getPlot(Player player) {
-        return plots.get(player.getUniqueId());
+    public boolean claimPlot(Player player, int requestedRadius) {
+        UUID uuid = player.getUniqueId();
+
+        if (plots.containsKey(uuid)) {
+            return false; // Player already has a plot
+        }
+
+        // Enforce max radius from config
+        int maxRadius = plugin.getConfig().getInt("protection.max-radius", 50);
+        int finalRadius = Math.min(requestedRadius, maxRadius);
+
+        Location center = player.getLocation();
+        Plot plot = new Plot(center, finalRadius);
+
+        // TODO: Add overlap checks with other plots here
+        plots.put(uuid, plot);
+
+        Bukkit.getLogger().info(ChatColor.GREEN + "[ProShield] " + player.getName() 
+                + " claimed a plot with radius " + finalRadius + ".");
+        return true;
     }
 
     /**
-     * Checks whether the player is inside their own plot.
-     *
-     * @param player Player
-     * @param loc Location to check
-     * @return true if inside their own plot
+     * Check if the player already has a plot
+     */
+    public boolean hasPlot(Player player) {
+        return plots.containsKey(player.getUniqueId());
+    }
+
+    /**
+     * Get plot info for a player
+     */
+    public String getPlotInfo(Player player) {
+        Plot plot = plots.get(player.getUniqueId());
+        if (plot == null) {
+            return "No plot claimed.";
+        }
+        Location center = plot.getCenter();
+        return "Center: " + center.getBlockX() + ", " + center.getBlockY() + ", " + center.getBlockZ() +
+                " | Radius: " + plot.getRadius();
+    }
+
+    /**
+     * Check if a location is inside a player’s plot
      */
     public boolean isInsideOwnPlot(Player player, Location loc) {
-        Plot plot = getPlot(player);
+        Plot plot = plots.get(player.getUniqueId());
         if (plot == null) return false;
-
-        Location center = plot.getCenter();
-
-        return loc.getWorld().equals(center.getWorld()) &&
-                loc.distance(center) <= plot.getRadius();
+        return plot.contains(loc);
     }
 
-    /**
-     * Checks if a location is inside any claimed plot.
-     *
-     * @param loc Location
-     * @return true if location is inside any plot
-     */
-    public boolean isInsideAnyPlot(Location loc) {
-        for (Plot plot : plots.values()) {
-            if (plot.getCenter().getWorld().equals(loc.getWorld()) &&
-                    plot.getCenter().distance(loc) <= plot.getRadius()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Internal plot data structure.
-     */
-    public static class Plot {
+    // Inner class representing a plot
+    private static class Plot {
         private final Location center;
         private final int radius;
 
@@ -84,6 +90,12 @@ public class PlotManager {
 
         public int getRadius() {
             return radius;
+        }
+
+        public boolean contains(Location loc) {
+            return loc.getWorld().equals(center.getWorld()) &&
+                    Math.abs(loc.getBlockX() - center.getBlockX()) <= radius &&
+                    Math.abs(loc.getBlockZ() - center.getBlockZ()) <= radius;
         }
     }
 }

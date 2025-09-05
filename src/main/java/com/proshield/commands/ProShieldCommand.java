@@ -1,7 +1,6 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.managers.GUIManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -22,67 +21,58 @@ public class ProShieldCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.YELLOW + "[ProShield] " + ChatColor.GRAY +
-                    "Use /proshield <reload|info|compass>");
+            sender.sendMessage(ChatColor.YELLOW + "Usage: /proshield <reload|info|compass>");
             return true;
         }
 
-        String subcommand = args[0].toLowerCase();
-
-        switch (subcommand) {
-
+        switch (args[0].toLowerCase()) {
             case "reload":
                 if (!sender.hasPermission("proshield.reload")) {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
                     return true;
                 }
-                plugin.reloadConfig();
-                sender.sendMessage(ChatColor.GREEN + "[ProShield] Configuration reloaded.");
+                plugin.getPlotManager().reloadFromDisk();
+                sender.sendMessage(ChatColor.GREEN + "[ProShield] Config reloaded.");
                 return true;
 
             case "info":
                 if (!sender.hasPermission("proshield.info")) {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
                     return true;
                 }
                 sender.sendMessage(ChatColor.AQUA + "ProShield v" + plugin.getDescription().getVersion());
-                sender.sendMessage(ChatColor.GRAY + "Author: " + String.join(", ", plugin.getDescription().getAuthors()));
+                sender.sendMessage(ChatColor.GRAY + "Authors: " + String.join(", ", plugin.getDescription().getAuthors()));
                 return true;
 
             case "compass":
                 if (!(sender instanceof Player)) {
-                    sender.sendMessage(ChatColor.RED + "This command can only be used in-game.");
+                    sender.sendMessage(ChatColor.RED + "Run this in-game.");
                     return true;
                 }
-
-                Player player = (Player) sender;
-                if (!player.hasPermission("proshield.compass")) {
-                    player.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+                Player p = (Player) sender;
+                if (!p.hasPermission("proshield.compass")) {
+                    p.sendMessage(ChatColor.RED + "You do not have permission.");
                     return true;
                 }
-
-                // Create special Admin Compass
-                ItemStack compass = new ItemStack(Material.COMPASS, 1);
+                ItemStack compass = new ItemStack(Material.COMPASS);
                 ItemMeta meta = compass.getItemMeta();
                 if (meta != null) {
                     meta.setDisplayName(ChatColor.GOLD + "ProShield Admin Compass");
                     meta.setLore(Arrays.asList(
                             ChatColor.YELLOW + "Right-click to open Claim Manager",
-                            ChatColor.GRAY + "Manage your land and protections easily"
+                            ChatColor.GRAY + "Manage your land & protections"
                     ));
                     compass.setItemMeta(meta);
                 }
-
-                // Give to player
-                player.getInventory().addItem(compass);
-                player.sendMessage(ChatColor.GREEN + "[ProShield] You have received the Admin Compass.");
+                p.getInventory().addItem(compass);
+                p.sendMessage(ChatColor.GREEN + "You received the ProShield Admin Compass.");
                 return true;
 
             default:
-                sender.sendMessage(ChatColor.RED + "Unknown subcommand. Use: /proshield <reload|info|compass>");
+                sender.sendMessage(ChatColor.RED + "Unknown subcommand.");
                 return true;
         }
     }

@@ -1,8 +1,5 @@
 jdk:
   - openjdk8
 
-before_install:
-  - echo "Preparing build for ProShield v1.1.0"
-
 install:
   - mvn clean install -DskipTests

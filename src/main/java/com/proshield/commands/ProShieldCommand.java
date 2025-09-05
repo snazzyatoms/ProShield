@@ -1,49 +1,55 @@
-package com.proshield.commands;
+package com.snazzyatoms.proshield.commands;
 
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import com.proshield.managers.PlotManager;
 
 public class ProShieldCommand implements CommandExecutor {
 
-    private final PlotManager plotManager;
+    private final ProShield plugin;
 
-    public ProShieldCommand(PlotManager plotManager) {
-        this.plotManager = plotManager;
+    public ProShieldCommand(ProShield plugin) {
+        this.plugin = plugin;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
-            return true;
-        }
-
-        Player player = (Player) sender;
-        Location location = player.getLocation();
-
         if (args.length == 0) {
-            player.sendMessage(ChatColor.RED + "Usage: /proshield <add|remove>");
+            sender.sendMessage(ChatColor.GOLD + "⚔ ProShield Commands:");
+            sender.sendMessage(ChatColor.YELLOW + "/proshield help " + ChatColor.GRAY + "- Show help menu");
+            sender.sendMessage(ChatColor.YELLOW + "/proshield info " + ChatColor.GRAY + "- Plugin info");
+            sender.sendMessage(ChatColor.YELLOW + "/proshield reload " + ChatColor.GRAY + "- Reload config");
             return true;
         }
 
-        if (args[0].equalsIgnoreCase("add")) {
-            plotManager.addProtectedPlot(location);
-            player.sendMessage(ChatColor.GREEN + "Plot protected at your location!");
-            return true;
-        }
+        switch (args[0].toLowerCase()) {
+            case "reload":
+                if (sender.hasPermission("proshield.admin")) {
+                    plugin.reloadConfig();
+                    sender.sendMessage(ChatColor.GREEN + "✅ ProShield config reloaded.");
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You don't have permission.");
+                }
+                return true;
 
-        if (args[0].equalsIgnoreCase("remove")) {
-            plotManager.removeProtectedPlot(location);
-            player.sendMessage(ChatColor.YELLOW + "Plot unprotected at your location!");
-            return true;
-        }
+            case "info":
+                sender.sendMessage(ChatColor.GOLD + "🛡 ProShield " + plugin.getDescription().getVersion());
+                sender.sendMessage(ChatColor.GRAY + "Author: " + plugin.getDescription().getAuthors());
+                sender.sendMessage(ChatColor.GRAY + "Description: " + plugin.getDescription().getDescription());
+                return true;
 
-        player.sendMessage(ChatColor.RED + "Usage: /proshield <add|remove>");
-        return true;
+            case "help":
+                sender.sendMessage(ChatColor.GOLD + "⚔ ProShield Help Menu:");
+                sender.sendMessage(ChatColor.YELLOW + "/proshield help " + ChatColor.GRAY + "- Show this help menu");
+                sender.sendMessage(ChatColor.YELLOW + "/proshield info " + ChatColor.GRAY + "- Plugin info");
+                sender.sendMessage(ChatColor.YELLOW + "/proshield reload " + ChatColor.GRAY + "- Reload config");
+                return true;
+
+            default:
+                sender.sendMessage(ChatColor.RED + "Unknown command. Use /proshield help.");
+                return true;
+        }
     }
 }

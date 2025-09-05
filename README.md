@@ -1,7 +1,7 @@
 # 🛡️ ProShield
 
 **ProShield** is the ultimate land protection plugin for Spigot/Paper servers.  
-It combines **plot protection, GUI-based management, economy hooks, backups, and Discord integration** into one simple package.
+It combines **plot protection, GUI-based management, economy hooks, and backups into one simple package.
 
 ---
 

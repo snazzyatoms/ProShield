@@ -1,6 +1,7 @@
-package com.snazzyatoms.proshield.gui;
+package com.snazzyatoms.proshield.listeners;
 
-import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
+
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -8,49 +9,53 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
-
-    private final ProShield plugin;
     private final GUIManager guiManager;
 
-    public GUIListener(ProShield plugin, GUIManager guiManager) {
-        this.plugin = plugin;
+    public GUIListener(GUIManager guiManager) {
         this.guiManager = guiManager;
     }
 
+    // Open GUI when compass is right-clicked
     @EventHandler
     public void onCompassUse(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND) return;
-
+        Player player = event.getPlayer();
         ItemStack item = event.getItem();
-        if (item != null && item.getType() == Material.COMPASS && item.hasItemMeta()
-                && ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase("ProShield Compass")) {
+        if (item != null && item.getType() == Material.COMPASS &&
+            item.hasItemMeta() &&
+            ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase("ProShield Admin Compass")) {
             event.setCancelled(true);
-            guiManager.openClaimGUI(event.getPlayer());
+            guiManager.openClaimGUI(player);
         }
     }
 
+    // Handle GUI button clicks
     @EventHandler
-    public void onGUIClick(InventoryClickEvent event) {
-        if (event.getView().getTitle().equals(ChatColor.BLUE + "ProShield Claim Manager")) {
-            event.setCancelled(true);
-            Player player = (Player) event.getWhoClicked();
-            ItemStack clicked = event.getCurrentItem();
-            if (clicked == null) return;
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
 
-            if (clicked.getType() == Material.GRASS_BLOCK) {
-                plugin.getPlotManager().createClaim(player);
-                player.closeInventory();
-            } else if (clicked.getType() == Material.PAPER) {
-                plugin.getPlotManager().getClaimInfo(player);
-                player.closeInventory();
-            } else if (clicked.getType() == Material.BARRIER) {
-                plugin.getPlotManager().removeClaim(player);
-                player.closeInventory();
+        Player player = (Player) event.getWhoClicked();
+        if (event.getView().getTitle().equals(ChatColor.GREEN + "Claim Management")) {
+            event.setCancelled(true);
+
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || !clicked.hasItemMeta()) return;
+
+            String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+            switch (name) {
+                case "Create Claim":
+                    guiManager.handleCreate(player);
+                    break;
+                case "Claim Info":
+                    guiManager.handleInfo(player);
+                    break;
+                case "Remove Claim":
+                    guiManager.handleRemove(player);
+                    break;
             }
+            player.closeInventory();
         }
     }
 }

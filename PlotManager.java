@@ -27,20 +27,23 @@ public class PlotManager {
         UUID uuid = player.getUniqueId();
 
         if (plots.containsKey(uuid)) {
+            player.sendMessage(ChatColor.RED + "You already own a plot!");
             return false; // Player already has a plot
         }
 
-        // Enforce max radius from config
+        // Load radius limits from config
         int maxRadius = plugin.getConfig().getInt("protection.max-radius", 50);
+        int minGap = plugin.getConfig().getInt("protection.min-gap", 10);
         int finalRadius = Math.min(requestedRadius, maxRadius);
 
         Location center = player.getLocation();
         Plot newPlot = new Plot(center, finalRadius);
 
-        // Check for overlap with existing plots
+        // Check for overlap with existing plots (respecting min-gap)
         for (Plot existing : plots.values()) {
-            if (newPlot.overlaps(existing)) {
-                player.sendMessage(ChatColor.RED + "This area overlaps with another player’s plot!");
+            if (newPlot.overlaps(existing, minGap)) {
+                player.sendMessage(ChatColor.RED + "This area is too close to another player’s plot! "
+                        + "You must leave at least " + minGap + " blocks of space.");
                 return false;
             }
         }
@@ -49,6 +52,7 @@ public class PlotManager {
 
         Bukkit.getLogger().info(ChatColor.GREEN + "[ProShield] " + player.getName()
                 + " claimed a plot with radius " + finalRadius + ".");
+        player.sendMessage(ChatColor.GREEN + "You successfully claimed a plot with radius " + finalRadius + "!");
         return true;
     }
 
@@ -105,7 +109,7 @@ public class PlotManager {
                     Math.abs(loc.getBlockZ() - center.getBlockZ()) <= radius;
         }
 
-        public boolean overlaps(Plot other) {
+        public boolean overlaps(Plot other, int minGap) {
             if (!center.getWorld().equals(other.getCenter().getWorld())) {
                 return false; // Different worlds can't overlap
             }
@@ -114,7 +118,7 @@ public class PlotManager {
             int dz = Math.abs(center.getBlockZ() - other.center.getBlockZ());
 
             int distance = Math.max(dx, dz); // Chebyshev distance for square plots
-            return distance <= (radius + other.radius);
+            return distance <= (radius + other.radius + minGap);
         }
     }
 }

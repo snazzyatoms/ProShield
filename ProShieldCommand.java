@@ -1,5 +1,6 @@
-package com.snazzyatoms.proshield;
+package com.snazzyatoms.proshield.commands;
 
+import com.snazzyatoms.proshield.managers.PlotManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -7,36 +8,41 @@ import org.bukkit.entity.Player;
 
 public class ProShieldCommand implements CommandExecutor {
 
-    private final ProShield plugin;
+    private final PlotManager plotManager;
 
-    public ProShieldCommand(ProShield plugin) {
-        this.plugin = plugin;
+    public ProShieldCommand(PlotManager plotManager) {
+        this.plotManager = plotManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
+            sender.sendMessage("§cOnly players can use this command.");
             return true;
         }
 
         Player player = (Player) sender;
 
-        if (args.length > 0 && args[0].equalsIgnoreCase("claim")) {
-            int radius = 0;
+        if (args.length == 0) {
+            player.sendMessage("§eUsage: /proshield claim [radius]");
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("claim")) {
+            int radius = -1;
             if (args.length > 1) {
                 try {
                     radius = Integer.parseInt(args[1]);
                 } catch (NumberFormatException e) {
-                    player.sendMessage("§cInvalid radius. Please use a number.");
+                    player.sendMessage("§cRadius must be a number.");
                     return true;
                 }
             }
-            plugin.getPlotManager().claimPlot(player, radius);
+            plotManager.claimPlot(player, radius);
             return true;
         }
 
-        player.sendMessage("§eUsage: /proshield claim [radius]");
+        player.sendMessage("§eUnknown subcommand. Usage: /proshield claim [radius]");
         return true;
     }
 }

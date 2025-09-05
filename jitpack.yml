@@ -2,5 +2,7 @@ jdk:
   - openjdk8
 
 before_install:
-  - echo "Using Maven from JitPack"
-  - mvn -version
+  - mvn --version
+
+install:
+  - mvn clean install -DskipTests

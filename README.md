@@ -12,7 +12,6 @@ It combines **plot protection, GUI-based management, economy hooks, and backups 
 - Optional **admin approval workflows** for special expansions.
 - Beautiful **GUI menus** for players and admins.
 - Automatic **backup system** (full, differential, hybrid).
-- Optional **DiscordSRV integration** for notifications.
 - Powerful **admin tools** (rollback, debug mode, live updates).
 
 ---

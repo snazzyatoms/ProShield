@@ -9,19 +9,19 @@
 # Plot Protection Settings
 # ----------------------------
 protection:
-  # Default radius for newly claimed plots
+  # Default radius for plots when claimed without custom input
   default-radius: 10
 
-  # Maximum allowed plot radius
-  max-radius: 100
+  # Maximum allowed radius (admin can increase or decrease)
+  max-radius: 50
 
-  # Minimum required gap between plots (buffer zone)
+  # Minimum gap required between plots
   min-gap: 10
 
-  # Should players be prevented from building outside plots?
-  # false = players can build anywhere except inside someone else’s plot
-  # true  = players can ONLY build inside their own plot
-  protect-outside-plots: false
+  # Allow players to request a custom radius when claiming a plot
+  # Example: /proshield claim 20
+  allow-custom-claim-radius: false
+
 
 # ----------------------------
 # Economy Integration

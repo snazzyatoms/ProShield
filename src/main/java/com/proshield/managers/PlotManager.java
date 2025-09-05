@@ -2,119 +2,62 @@ package com.snazzyatoms.proshield.managers;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 public class PlotManager {
 
     private final ProShield plugin;
-    private final Map<UUID, Location> claims = new HashMap<>();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-        loadClaims();
     }
 
     /**
-     * Create a new claim at the player's current location.
+     * Create a new claim for a player
      */
-    public boolean createClaim(Player player) {
-        UUID uuid = player.getUniqueId();
-
-        if (claims.containsKey(uuid)) {
-            return false; // already has a claim
-        }
-
-        Location loc = player.getLocation();
-        claims.put(uuid, loc);
-
-        saveClaimToConfig(uuid, loc);
-        return true;
-    }
-
-    /**
-     * Get claim info for the player.
-     */
-    public String getClaimInfo(Player player) {
-        UUID uuid = player.getUniqueId();
-
-        if (!claims.containsKey(uuid)) {
-            return null; // no claim
-        }
-
-        Location loc = claims.get(uuid);
-        return "Your claim is at world=" + loc.getWorld().getName() +
-               ", X=" + loc.getBlockX() +
-               ", Y=" + loc.getBlockY() +
-               ", Z=" + loc.getBlockZ();
-    }
-
-    /**
-     * Remove the player's claim.
-     */
-    public boolean removeClaim(Player player) {
-        UUID uuid = player.getUniqueId();
-
-        if (!claims.containsKey(uuid)) {
-            return false;
-        }
-
-        claims.remove(uuid);
-
-        removeClaimFromConfig(uuid);
-        return true;
-    }
-
-    /**
-     * Load claims from config.yml into memory.
-     */
-    private void loadClaims() {
-        FileConfiguration config = plugin.getConfig();
-        if (config.isConfigurationSection("claims")) {
-            for (String key : config.getConfigurationSection("claims").getKeys(false)) {
-                try {
-                    UUID uuid = UUID.fromString(key);
-                    String world = config.getString("claims." + key + ".world");
-                    int x = config.getInt("claims." + key + ".x");
-                    int y = config.getInt("claims." + key + ".y");
-                    int z = config.getInt("claims." + key + ".z");
-
-                    Location loc = new Location(Bukkit.getWorld(world), x, y, z);
-                    claims.put(uuid, loc);
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to load claim for " + key);
-                }
-            }
-        }
-    }
-
-    /**
-     * Save a new claim to config.yml.
-     */
-    private void saveClaimToConfig(UUID uuid, Location loc) {
+    public void createClaim(UUID playerId, Location loc) {
         FileConfiguration config = plugin.getConfig();
 
-        config.set("claims." + uuid + ".world", loc.getWorld().getName());
-        config.set("claims." + uuid + ".x", loc.getBlockX());
-        config.set("claims." + uuid + ".y", loc.getBlockY());
-        config.set("claims." + uuid + ".z", loc.getBlockZ());
+        config.set("claims." + playerId + ".world", loc.getWorld().getName());
+        config.set("claims." + playerId + ".x", loc.getBlockX());
+        config.set("claims." + playerId + ".y", loc.getBlockY());
+        config.set("claims." + playerId + ".z", loc.getBlockZ());
 
         plugin.saveConfig();
+        Bukkit.getLogger().info("[ProShield] Claim created for " + playerId);
     }
 
     /**
-     * Remove a claim from config.yml.
+     * Get claim info for a player
      */
-    private void removeClaimFromConfig(UUID uuid) {
+    public String getClaimInfo(UUID playerId) {
         FileConfiguration config = plugin.getConfig();
 
-        config.set("claims." + uuid, null);
-        plugin.saveConfig();
+        if (!config.contains("claims." + playerId)) {
+            return "No claim found for this player.";
+        }
+
+        String world = config.getString("claims." + playerId + ".world");
+        int x = config.getInt("claims." + playerId + ".x");
+        int y = config.getInt("claims." + playerId + ".y");
+        int z = config.getInt("claims." + playerId + ".z");
+
+        return "Claim -> World: " + world + " | Location: X=" + x + ", Y=" + y + ", Z=" + z;
+    }
+
+    /**
+     * Remove a player’s claim
+     */
+    public void removeClaim(UUID playerId) {
+        FileConfiguration config = plugin.getConfig();
+
+        if (config.contains("claims." + playerId)) {
+            config.set("claims." + playerId, null);
+            plugin.saveConfig();
+            Bukkit.getLogger().info("[ProShield] Claim removed for " + playerId);
+        }
     }
 }

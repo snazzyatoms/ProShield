@@ -1,5 +1,6 @@
 package com.snazzyatoms.proshield.listeners;
 
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -11,26 +12,31 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class AdminJoinListener implements Listener {
 
+    private final ProShield plugin;
+
+    public AdminJoinListener(ProShield plugin) {
+        this.plugin = plugin;
+    }
+
     @EventHandler
     public void onAdminJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Only give compass if player is OP
         if (player.isOp()) {
             ItemStack compass = new ItemStack(Material.COMPASS, 1);
             ItemMeta meta = compass.getItemMeta();
+
             if (meta != null) {
                 meta.setDisplayName("§bProShield Menu");
                 compass.setItemMeta(meta);
             }
 
-            // Add compass to inventory if not already present
-            if (!player.getInventory().contains(Material.COMPASS)) {
+            // Give compass if they don't already have one
+            if (!player.getInventory().contains(compass)) {
                 player.getInventory().addItem(compass);
             }
 
-            // Debug log
-            Bukkit.getLogger().info("[ProShield] Gave admin compass to " + player.getName());
+            Bukkit.getLogger().info("Gave ProShield menu compass to admin: " + player.getName());
         }
     }
 }

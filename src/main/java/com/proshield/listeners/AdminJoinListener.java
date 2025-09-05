@@ -1,7 +1,6 @@
 package com.snazzyatoms.proshield.listeners;
 
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -13,27 +12,26 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class AdminJoinListener implements Listener {
 
     @EventHandler
-    public void onAdminJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Check if player is OP (server operator)
+        // Only give the item if they are OP
         if (player.isOp()) {
-            // Check if player already has the compass
-            boolean hasCompass = player.getInventory().contains(Material.COMPASS);
-
-            if (!hasCompass) {
-                ItemStack compass = new ItemStack(Material.COMPASS, 1);
-                ItemMeta meta = compass.getItemMeta();
-
-                if (meta != null) {
-                    meta.setDisplayName("§bProShield Menu");
-                    compass.setItemMeta(meta);
-                }
-
-                // Give compass to admin
-                player.getInventory().addItem(compass);
-                player.sendMessage("§a[ProShield] You have been given a ProShield compass.");
+            // Create a compass with custom name
+            ItemStack compass = new ItemStack(Material.COMPASS, 1);
+            ItemMeta meta = compass.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName("§aProShield Menu");
+                compass.setItemMeta(meta);
             }
+
+            // If they don’t already have it, give them one
+            if (!player.getInventory().contains(compass)) {
+                player.getInventory().addItem(compass);
+            }
+
+            // Debug logging
+            Bukkit.getLogger().info("[ProShield] OP " + player.getName() + " received the ProShield menu compass.");
         }
     }
 }

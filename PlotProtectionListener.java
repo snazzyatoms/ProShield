@@ -1,10 +1,11 @@
-package com.snazzyatoms.proshield;
+package com.snazzyatoms.proshield.listeners;
 
+import com.snazzyatoms.proshield.managers.PlotManager;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import java.util.UUID;
 
 public class PlotProtectionListener implements Listener {
 
@@ -15,20 +16,20 @@ public class PlotProtectionListener implements Listener {
     }
 
     @EventHandler
-    public void onBlockBreak(BlockBreakEvent event) {
-        UUID plotId = event.getBlock().getLocation().getWorld().getUID(); 
-        if (plotManager.isProtected(plotId)) {
+    public void onBlockPlace(BlockPlaceEvent event) {
+        Player player = event.getPlayer();
+        if (!plotManager.hasPlot(player)) {
+            player.sendMessage("§cYou must claim a plot before placing blocks!");
             event.setCancelled(true);
-            event.getPlayer().sendMessage("This plot is protected!");
         }
     }
 
     @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        UUID plotId = event.getBlock().getLocation().getWorld().getUID(); 
-        if (plotManager.isProtected(plotId)) {
+    public void onBlockBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        if (!plotManager.hasPlot(player)) {
+            player.sendMessage("§cYou must claim a plot before breaking blocks!");
             event.setCancelled(true);
-            event.getPlayer().sendMessage("This plot is protected!");
         }
     }
 }

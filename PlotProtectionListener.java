@@ -2,7 +2,7 @@ package com.proshield.listeners;
 
 import com.proshield.ProShield;
 import com.proshield.managers.PlotManager;
-import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,45 +13,47 @@ public class PlotProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final boolean protectOutsidePlots;
 
-    public PlotProtectionListener(ProShield plugin) {
+    public PlotProtectionListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
-        this.plotManager = plugin.getPlotManager();
-
-        // Load option from config.yml
-        this.protectOutsidePlots = plugin.getConfig().getBoolean("protection.protect-outside-plots", false);
-
-        Bukkit.getLogger().info("[ProShield] Plot protection mode: "
-                + (protectOutsidePlots ? "Locked to plots only" : "Free build outside plots"));
+        this.plotManager = plotManager;
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
 
-        boolean insidePlot = plotManager.isInsideClaim(player.getLocation(), player);
+        // Check config option
+        boolean protectOutside = plugin.getConfig().getBoolean("protection.protect-outside-plots", false);
 
-        if (protectOutsidePlots && !insidePlot) {
-            // Restrict building outside plots
-            event.setCancelled(true);
-            player.sendMessage("§cYou can only build inside your claimed plot!");
+        // If outside-plot protection is off, allow all building
+        if (!protectOutside) {
+            return;
         }
-        // If not protecting outside, always allow building outside plots.
-        // Inside plots are still protected against non-owners (PlotManager should handle that).
+
+        // If protection is on, only allow building inside player’s plot
+        if (!plotManager.isInsideOwnPlot(player, event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            player.sendMessage(ChatColor.RED + "You can only build inside your claimed plot!");
+        }
     }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
 
-        boolean insidePlot = plotManager.isInsideClaim(player.getLocation(), player);
+        // Check config option
+        boolean protectOutside = plugin.getConfig().getBoolean("protection.protect-outside-plots", false);
 
-        if (protectOutsidePlots && !insidePlot) {
-            // Restrict breaking outside plots
-            event.setCancelled(true);
-            player.sendMessage("§cYou can only break blocks inside your claimed plot!");
+        // If outside-plot protection is off, allow all breaking
+        if (!protectOutside) {
+            return;
         }
-        // If not protecting outside, allow breaking outside plots.
+
+        // If protection is on, only allow breaking inside player’s plot
+        if (!plotManager.isInsideOwnPlot(player, event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            player.sendMessage(ChatColor.RED + "You can only break blocks inside your claimed plot!");
+        }
     }
 }

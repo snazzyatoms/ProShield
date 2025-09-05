@@ -1,11 +1,15 @@
-package com.yourname.proshield;
+package com.proshield;
 
+import com.proshield.managers.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+/**
+ * Handles all /proshield commands
+ */
 public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
@@ -19,64 +23,65 @@ public class ProShieldCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use ProShield commands!");
+            sender.sendMessage(ChatColor.RED + "Only players can use ProShield commands.");
             return true;
         }
 
         Player player = (Player) sender;
 
+        // Show help if no args
         if (args.length == 0) {
-            player.sendMessage(ChatColor.YELLOW + "Usage: /proshield <claim|info|reload>");
+            sendHelp(player);
             return true;
         }
 
-        String subCommand = args[0].toLowerCase();
+        String sub = args[0].toLowerCase();
 
-        switch (subCommand) {
-            case "claim":
-                if (plotManager.hasPlot(player)) {
-                    player.sendMessage(ChatColor.RED + "You already own a plot!");
+        switch (sub) {
+            case "reload":
+                if (!player.hasPermission("proshield.reload")) {
+                    player.sendMessage(ChatColor.RED + "You don't have permission to reload ProShield.");
                     return true;
                 }
+                plugin.reloadConfig();
+                player.sendMessage(ChatColor.GREEN + "✅ ProShield configuration reloaded!");
+                return true;
 
-                int radius;
-                boolean allowCustomRadius = plugin.getConfig().getBoolean("protection.allow-custom-claim-radius", false);
+            case "claim":
+                int radius = plugin.getConfig().getInt("protection.default-radius", 10);
 
-                if (args.length >= 2 && allowCustomRadius) {
+                if (args.length >= 2) {
                     try {
                         radius = Integer.parseInt(args[1]);
                     } catch (NumberFormatException e) {
-                        player.sendMessage(ChatColor.RED + "Invalid radius. Please enter a number.");
+                        player.sendMessage(ChatColor.RED + "Invalid radius. Please use a number.");
                         return true;
                     }
-                } else {
-                    radius = plugin.getConfig().getInt("protection.default-radius", 10);
                 }
 
-                boolean success = plotManager.claimPlot(player, radius);
-                if (!success) {
-                    int minGap = plugin.getConfig().getInt("protection.min-gap", 10);
-                    player.sendMessage(ChatColor.RED + "Claim failed. Plots must be at least "
-                            + minGap + " blocks apart.");
+                if (plotManager.claimPlot(player, radius)) {
+                    player.sendMessage(ChatColor.GREEN + "✅ You successfully claimed a plot with radius " + radius + ".");
                 }
                 return true;
 
-            case "info":
-                player.sendMessage(ChatColor.AQUA + "Your plot: " + plotManager.getPlotInfo(player));
-                return true;
-
-            case "reload":
-                if (player.hasPermission("proshield.reload")) {
-                    plugin.reloadConfig();
-                    player.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
+            case "check":
+                if (plotManager.isInsideOwnPlot(player, player.getLocation())) {
+                    player.sendMessage(ChatColor.GREEN + "✅ You are inside your claimed plot.");
                 } else {
-                    player.sendMessage(ChatColor.RED + "You don’t have permission to reload ProShield.");
+                    player.sendMessage(ChatColor.RED + "❌ You are not inside your plot.");
                 }
                 return true;
 
             default:
-                player.sendMessage(ChatColor.YELLOW + "Unknown subcommand. Use: /proshield <claim|info|reload>");
+                player.sendMessage(ChatColor.RED + "Unknown subcommand. Type /proshield for help.");
                 return true;
         }
+    }
+
+    private void sendHelp(Player player) {
+        player.sendMessage(ChatColor.YELLOW + "----- ProShield Commands -----");
+        player.sendMessage(ChatColor.AQUA + "/proshield reload" + ChatColor.GRAY + " - Reload the config");
+        player.sendMessage(ChatColor.AQUA + "/proshield claim [radius]" + ChatColor.GRAY + " - Claim a plot");
+        player.sendMessage(ChatColor.AQUA + "/proshield check" + ChatColor.GRAY + " - Check if you’re inside your plot");
     }
 }

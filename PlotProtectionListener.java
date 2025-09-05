@@ -1,39 +1,35 @@
-package com.snazzyatoms.proshield;
+package com.snazzyatoms.proshield.listeners;
 
-import org.bukkit.Location;
-import org.bukkit.entity.Player;
+import com.snazzyatoms.proshield.managers.PlotManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.entity.Player;
 
 public class PlotProtectionListener implements Listener {
 
-    private final ProShield plugin;
+    private final PlotManager plotManager;
 
-    public PlotProtectionListener(ProShield plugin) {
-        this.plugin = plugin;
+    public PlotProtectionListener(PlotManager plotManager) {
+        this.plotManager = plotManager;
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        Location location = event.getBlockPlaced().getLocation();
-
-        if (!plugin.getPlotManager().canBuild(player, location)) {
+        if (plotManager.getPlot(player.getUniqueId()) == null) {
+            player.sendMessage("§cYou must claim a plot before building!");
             event.setCancelled(true);
-            player.sendMessage("§cYou cannot build here! This area is protected.");
         }
     }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        Location location = event.getBlock().getLocation();
-
-        if (!plugin.getPlotManager().canBuild(player, location)) {
+        if (plotManager.getPlot(player.getUniqueId()) == null) {
+            player.sendMessage("§cYou must claim a plot before breaking blocks!");
             event.setCancelled(true);
-            player.sendMessage("§cYou cannot break blocks here! This area is protected.");
         }
     }
 }

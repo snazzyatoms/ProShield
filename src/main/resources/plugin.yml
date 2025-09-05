@@ -1,13 +1,13 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.0.9
-api-version: 1.20
-author: snazzyatoms
-description: A land and plot protection plugin.
+version: 1.1.0
+api-version: 1.16
+author: SnazzyAtoms
+description: Plot protection plugin for Minecraft servers.
 softdepend: [DiscordSRV]
 
 commands:
   proshield:
-    description: Main command for ProShield
-    usage: /<command> help
+    description: Base command for ProShield
+    usage: /<command> claim [radius]
     aliases: [pshield]

@@ -1,49 +1,45 @@
-package com.proshield;
+package com.proshield.managers;
 
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-public class ProShieldCommand implements CommandExecutor {
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
-    private final ProShield plugin;
+public class PlotManager {
 
-    public ProShieldCommand(ProShield plugin) {
-        this.plugin = plugin;
+    // Stores player UUID -> their plot
+    private final Map<UUID, Plot> plots = new HashMap<>();
+
+    /**
+     * Claim a new plot for a player
+     *
+     * @param player player claiming the plot
+     * @param center center location of the plot
+     * @param radius radius of the plot
+     */
+    public void claimPlot(Player player, Location center, int radius) {
+        plots.put(player.getUniqueId(), new Plot(center, radius));
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        // No args → show help
-        if (args.length == 0) {
-            sender.sendMessage(ChatColor.YELLOW + "=== ProShield Commands ===");
-            sender.sendMessage(ChatColor.AQUA + "/proshield reload " + ChatColor.GRAY + " - Reloads the plugin configuration");
-            sender.sendMessage(ChatColor.AQUA + "/proshield claim <radius> " + ChatColor.GRAY + " - Claim a plot");
-            sender.sendMessage(ChatColor.AQUA + "/proshield check " + ChatColor.GRAY + " - Check your plot info");
-            return true;
-        }
+    /**
+     * Check if a player is inside their own plot
+     *
+     * @param player   player to check
+     * @param location location being tested
+     * @return true if inside own plot, false otherwise
+     */
+    public boolean isInsideOwnPlot(Player player, Location location) {
+        Plot plot = plots.get(player.getUniqueId());
+        if (plot == null) return false;
+        return plot.isInside(location);
+    }
 
-        // Handle `/proshield reload`
-        if (args[0].equalsIgnoreCase("reload")) {
-            if (!sender.hasPermission("proshield.reload")) {
-                sender.sendMessage(ChatColor.RED + "You don’t have permission to use this command.");
-                return true;
-            }
-
-            // Reload config only (listeners stay registered)
-            plugin.reloadConfig();
-            plugin.saveConfig();
-
-            sender.sendMessage(ChatColor.GREEN + "✅ ProShield configuration reloaded!");
-
-            // Log who executed it
-            String executor = (sender instanceof Player) ? sender.getName() : "CONSOLE";
-            plugin.getLogger().info("[ProShield] Configuration was reloaded by " + executor);
-
-            return true;
-        }
-
-        // Unknown command
-        sender.sendMessage(ChatColor.RED + "Unknown command. Type /proshiel
+    /**
+     * Get a player’s plot
+     *
+     * @param player the player
+     * @return their plot, or null if none
+     */
+    public Plot getP

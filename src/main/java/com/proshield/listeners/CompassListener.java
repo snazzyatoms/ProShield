@@ -35,10 +35,10 @@ public class CompassListener implements Listener {
         openClaimManagementGUI(player);
     }
 
-    private void openClaimManagementGUI(Player player) {
+    public static void openClaimManagementGUI(Player player) {
         Inventory gui = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Claim Management");
 
-        // Example placeholder items
+        // Claim Button
         ItemStack claim = new ItemStack(Material.GRASS_BLOCK);
         ItemMeta claimMeta = claim.getItemMeta();
         if (claimMeta != null) {
@@ -46,18 +46,20 @@ public class CompassListener implements Listener {
             claim.setItemMeta(claimMeta);
         }
 
-        ItemStack unclaim = new ItemStack(Material.BARRIER);
-        ItemMeta unclaimMeta = unclaim.getItemMeta();
-        if (unclaimMeta != null) {
-            unclaimMeta.setDisplayName(ChatColor.RED + "Remove Claim");
-            unclaim.setItemMeta(unclaimMeta);
-        }
-
+        // Info Button
         ItemStack info = new ItemStack(Material.BOOK);
         ItemMeta infoMeta = info.getItemMeta();
         if (infoMeta != null) {
             infoMeta.setDisplayName(ChatColor.YELLOW + "Claim Info");
             info.setItemMeta(infoMeta);
+        }
+
+        // Unclaim Button
+        ItemStack unclaim = new ItemStack(Material.BARRIER);
+        ItemMeta unclaimMeta = unclaim.getItemMeta();
+        if (unclaimMeta != null) {
+            unclaimMeta.setDisplayName(ChatColor.RED + "Remove Claim");
+            unclaim.setItemMeta(unclaimMeta);
         }
 
         gui.setItem(11, claim);

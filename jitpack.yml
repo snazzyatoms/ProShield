@@ -1,6 +1,6 @@
-# JitPack build configuration for ProShield
 jdk:
   - openjdk17
 
-install:
-  - mvn clean install -DskipTests
+before_install:
+  - mvn -v
+  - java -version

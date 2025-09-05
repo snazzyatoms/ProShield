@@ -1,9 +1,2 @@
 jdk:
   - openjdk17
-
-before_install:
-  - echo "Using Java 17 for build"
-
-build:
-  commands:
-    - mvn clean package

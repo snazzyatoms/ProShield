@@ -11,21 +11,24 @@ public class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Initialize PlotManager
-        plotManager = new PlotManager();
+        // Save default config if it doesn't exist
+        saveDefaultConfig();
 
-        // Register listeners
-        getServer().getPluginManager().registerEvents(new PlotProtectionListener(plotManager), this);
+        // Initialize plot manager
+        plotManager = new PlotManager(this);
+
+        // Register events
+        getServer().getPluginManager().registerEvents(new PlotProtectionListener(this), this);
 
         // Register commands
-        getCommand("proshield").setExecutor(new ProShieldCommand(plotManager));
+        getCommand("proshield").setExecutor(new ProShieldCommand(this));
 
-        getLogger().info("ProShield enabled successfully!");
+        getLogger().info("ProShield enabled!");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("ProShield disabled.");
+        getLogger().info("ProShield disabled!");
     }
 
     public static ProShield getInstance() {

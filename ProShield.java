@@ -1,80 +1,46 @@
 package com.proshield;
 
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import com.proshield.commands.ProShieldCommand;
-import com.proshield.managers.PlotManager;
-import com.proshield.managers.EconomyManager;
-import com.proshield.managers.BackupManager;
-import com.proshield.managers.DiscordManager;
-import com.proshield.managers.GUIManager;
 
 public class ProShield extends JavaPlugin {
 
-    private static ProShield instance;
-
-    private PlotManager plotManager;
-    private EconomyManager economyManager;
-    private BackupManager backupManager;
-    private DiscordManager discordManager;
-    private GUIManager guiManager;
-
     @Override
-public void onEnable() {
-    instance = this;
+    public void onEnable() {
+        getLogger().info("ProShield has been enabled!");
 
-    saveDefaultConfig(); // generate config.yml if missing
+        // Register commands and listeners
+        registerCommands();
+        registerListeners();
 
-    // Initialize managers
-    plotManager = new PlotManager(this);
-    economyManager = new EconomyManager(this);
-    backupManager = new BackupManager(this);
-    discordManager = new DiscordManager(this);
-    guiManager = new GUIManager(this);
-
-    // Register commands
-    getCommand("proshield").setExecutor(new ProShieldCommand(this));
-
-    // Register events/listeners
-    getServer().getPluginManager().registerEvents(new com.proshield.listeners.PlayerGUIListener(this), this);
-    getServer().getPluginManager().registerEvents(new com.proshield.listeners.PlotProtectionListener(this), this);
-
-    // Log startup
-    Bukkit.getLogger().info("[ProShield] Plugin enabled successfully!");
-}
-
+        // Optional: Hook into DiscordSRV if available
+        if (getServer().getPluginManager().getPlugin("DiscordSRV") != null) {
+            getLogger().info("DiscordSRV detected! Hooking into it...");
+            hookIntoDiscordSRV();
+        }
+    }
 
     @Override
     public void onDisable() {
-        if (backupManager != null) backupManager.shutdown();
-        if (discordManager != null) discordManager.shutdown();
-
-        Bukkit.getLogger().info("[ProShield] Plugin disabled.");
+        getLogger().info("ProShield has been disabled!");
     }
 
-    // --- Getters ---
-    public static ProShield getInstance() {
-        return instance;
+    private void registerCommands() {
+        // Example: register your plugin commands here
+        // this.getCommand("proshield").setExecutor(new ProShieldCommand());
     }
 
-    public PlotManager getPlotManager() {
-        return plotManager;
+    private void registerListeners() {
+        // Example: register your plugin listeners here
+        // getServer().getPluginManager().registerEvents(new PlotProtectionListener(), this);
     }
 
-    public EconomyManager getEconomyManager() {
-        return economyManager;
-    }
-
-    public BackupManager getBackupManager() {
-        return backupManager;
-    }
-
-    public DiscordManager getDiscordManager() {
-        return discordManager;
-    }
-
-    public GUIManager getGuiManager() {
-        return guiManager;
+    private void hookIntoDiscordSRV() {
+        try {
+            // TODO: Add actual DiscordSRV integration here
+            // Example: DiscordSRV.getPlugin().sendMessage("ProShield is active!");
+            getLogger().info("Successfully hooked into DiscordSRV!");
+        } catch (Exception e) {
+            getLogger().warning("Failed to hook into DiscordSRV: " + e.getMessage());
+        }
     }
 }

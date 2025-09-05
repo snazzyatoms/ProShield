@@ -35,12 +35,19 @@ public class PlotManager {
         int finalRadius = Math.min(requestedRadius, maxRadius);
 
         Location center = player.getLocation();
-        Plot plot = new Plot(center, finalRadius);
+        Plot newPlot = new Plot(center, finalRadius);
 
-        // TODO: Add overlap checks with other plots here
-        plots.put(uuid, plot);
+        // Check for overlap with existing plots
+        for (Plot existing : plots.values()) {
+            if (newPlot.overlaps(existing)) {
+                player.sendMessage(ChatColor.RED + "This area overlaps with another player’s plot!");
+                return false;
+            }
+        }
 
-        Bukkit.getLogger().info(ChatColor.GREEN + "[ProShield] " + player.getName() 
+        plots.put(uuid, newPlot);
+
+        Bukkit.getLogger().info(ChatColor.GREEN + "[ProShield] " + player.getName()
                 + " claimed a plot with radius " + finalRadius + ".");
         return true;
     }
@@ -96,6 +103,18 @@ public class PlotManager {
             return loc.getWorld().equals(center.getWorld()) &&
                     Math.abs(loc.getBlockX() - center.getBlockX()) <= radius &&
                     Math.abs(loc.getBlockZ() - center.getBlockZ()) <= radius;
+        }
+
+        public boolean overlaps(Plot other) {
+            if (!center.getWorld().equals(other.getCenter().getWorld())) {
+                return false; // Different worlds can't overlap
+            }
+
+            int dx = Math.abs(center.getBlockX() - other.center.getBlockX());
+            int dz = Math.abs(center.getBlockZ() - other.center.getBlockZ());
+
+            int distance = Math.max(dx, dz); // Chebyshev distance for square plots
+            return distance <= (radius + other.radius);
         }
     }
 }

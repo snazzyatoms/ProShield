@@ -1,20 +1,21 @@
 # =====================================================
 # ProShield Configuration
 # =====================================================
-# This file is automatically created on first startup.
-# Manage claims and plugin behavior here.
+# This file is created on first startup.
 # =====================================================
 
 settings:
   debug: false
   allow-multiple-claims: false
+  default-radius: 16
 
-# Player claims
+# Player claims are stored here by UUID
 claims: {}
-# Example (auto-generated when players create claims):
+# Example:
 # claims:
-#   16c55c1d-bdab-4292-8e17-2d0936d68d0:
+#   00000000-0000-0000-0000-000000000000:
 #     world: world
 #     x: 100
-#     y: 65
+#     y: 64
 #     z: 200
+#     radius: 16

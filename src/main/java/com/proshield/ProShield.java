@@ -8,31 +8,22 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
-    private static ProShield instance;
-
     @Override
     public void onEnable() {
-        instance = this;
+        getLogger().info("ProShield enabled!");
 
         // Register commands
-        this.getCommand("proshield").setExecutor(new ProShieldCommand());
+        this.getCommand("proshield").setExecutor(new ProShieldCommand(this));
 
         // Register listeners
-        getServer().getPluginManager().registerEvents(new PlotProtectionListener(), this);
-        getServer().getPluginManager().registerEvents(new AdminJoinListener(), this);
+        Bukkit.getPluginManager().registerEvents(new PlotProtectionListener(), this);
+        Bukkit.getPluginManager().registerEvents(new AdminJoinListener(this), this);
 
-        // Create and save default config
-        saveDefaultConfig();
-
-        Bukkit.getLogger().info("[ProShield] v" + getDescription().getVersion() + " has been enabled.");
+        saveDefaultConfig(); // creates config folder + file if missing
     }
 
     @Override
     public void onDisable() {
-        Bukkit.getLogger().info("[ProShield] v" + getDescription().getVersion() + " has been disabled.");
-    }
-
-    public static ProShield getInstance() {
-        return instance;
+        getLogger().info("ProShield disabled!");
     }
 }

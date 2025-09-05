@@ -1,27 +1,39 @@
-# ProShield Default Config
+# ============================================================
+# ProShield - Main Configuration File
+# ============================================================
+# This file controls plot protection, economy, backups,
+# Discord integration, and debug options.
+#
+# Restart the server after making changes.
+# ============================================================
 
 protection:
+  # Default radius of a claimed plot
   default-radius: 25
-  max-radius: 100
+
+  # Minimum and maximum allowed plot sizes
+  min-radius: 10
+  max-radius: 256
+
+  # Build limits
   height-limit: 256
   depth-limit: 0
 
+  # Should block building outside of plots?
+  # false = players can build anywhere not claimed
+  # true  = building only allowed inside plots
+  protect-outside-plots: false
+
 economy:
   enabled: true
+
+  # Base cost for expanding a claim
   base-expansion-cost: 100
+
+  # Multiplier applied as claims grow larger
   cost-scale-factor: 1.5
 
 backups:
   enabled: true
-  mode: "hybrid" # options: full, differential, hybrid
-  schedule:
-    full: "1d"
-    differential: "1h"
 
-discord:
-  integration: false
-  webhook-url: ""
-
-debug:
-  enabled: false
-  auto-disable-on-restart: true
+  # Available modes:

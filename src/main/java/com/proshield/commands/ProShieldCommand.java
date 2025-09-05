@@ -1,7 +1,7 @@
 package com.snazzyatoms.proshield.commands;
 
-import com.snazzyatoms.proshield.managers.GUIManager;
-import org.bukkit.Bukkit;
+import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -11,24 +11,18 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Collections;
-
 public class ProShieldCommand implements CommandExecutor {
 
-    private final GUIManager guiManager;
+    private final ProShield plugin;
 
-    public ProShieldCommand(GUIManager guiManager) {
-        this.guiManager = guiManager;
+    public ProShieldCommand(ProShield plugin) {
+        this.plugin = plugin;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.GREEN + "⚔ ProShield v" + Bukkit.getPluginManager().getPlugin("ProShield").getDescription().getVersion());
-            sender.sendMessage(ChatColor.YELLOW + "Available commands:");
-            sender.sendMessage(ChatColor.AQUA + "/proshield compass" + ChatColor.GRAY + " - Get the admin claim compass.");
-            sender.sendMessage(ChatColor.AQUA + "/proshield reload" + ChatColor.GRAY + " - Reload configuration.");
+            sender.sendMessage(ChatColor.GREEN + "ProShield Commands: /proshield compass, /proshield reload, /proshield info");
             return true;
         }
 
@@ -37,40 +31,39 @@ public class ProShieldCommand implements CommandExecutor {
                 sender.sendMessage(ChatColor.RED + "Only players can use this command.");
                 return true;
             }
-
             Player player = (Player) sender;
-
             if (!player.hasPermission("proshield.compass")) {
-                sender.sendMessage(ChatColor.RED + "You don’t have permission to use this command.");
+                player.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
                 return true;
             }
 
-            // ✅ Create the ProShield Compass
-            ItemStack compass = new ItemStack(Material.COMPASS, 1);
+            ItemStack compass = new ItemStack(Material.COMPASS);
             ItemMeta meta = compass.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.GOLD + "ProShield Admin Compass");
-                meta.setLore(Collections.singletonList(ChatColor.GRAY + "Right-click to open Claim Manager"));
+                meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
                 compass.setItemMeta(meta);
             }
-
             player.getInventory().addItem(compass);
-            player.sendMessage(ChatColor.GREEN + "✅ You have received the ProShield Admin Compass!");
+            player.sendMessage(ChatColor.GREEN + "You received the ProShield Compass!");
             return true;
         }
 
         if (args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("proshield.reload")) {
-                sender.sendMessage(ChatColor.RED + "You don’t have permission to reload ProShield.");
+                sender.sendMessage(ChatColor.RED + "You don't have permission to reload.");
                 return true;
             }
-
-            Bukkit.getPluginManager().getPlugin("ProShield").reloadConfig();
-            sender.sendMessage(ChatColor.GREEN + "✅ ProShield configuration reloaded.");
+            plugin.reloadConfig();
+            sender.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
             return true;
         }
 
-        sender.sendMessage(ChatColor.RED + "Unknown subcommand. Use /proshield for help.");
+        if (args[0].equalsIgnoreCase("info")) {
+            sender.sendMessage(ChatColor.AQUA + "ProShield v" + plugin.getDescription().getVersion() + " by " + plugin.getDescription().getAuthors());
+            return true;
+        }
+
+        sender.sendMessage(ChatColor.RED + "Unknown subcommand.");
         return true;
     }
 }

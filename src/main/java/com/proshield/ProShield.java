@@ -1,8 +1,8 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
+import com.snazzyatoms.proshield.listeners.AdminJoinListener;
 import com.snazzyatoms.proshield.listeners.GUIListener;
-import com.snazzyatoms.proshield.listeners.PlotProtectionListener;
 import com.snazzyatoms.proshield.managers.GUIManager;
 import com.snazzyatoms.proshield.managers.PlotManager;
 import org.bukkit.Bukkit;
@@ -20,35 +20,44 @@ public class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // ✅ Ensure plugin folder exists
-        if (!getDataFolder().exists()) {
-            getDataFolder().mkdirs();
-        }
-
-        // ✅ Save default config.yml if missing
-        saveDefaultConfig();
+        // ✅ Ensure plugin folder & config exists
+        setupFiles();
 
         // ✅ Initialize managers
-        plotManager = new PlotManager();
-        guiManager = new GUIManager(plotManager);
+        this.plotManager = new PlotManager(this);
+        this.guiManager = new GUIManager(this, plotManager);
+
+        // ✅ Register command
+        getCommand("proshield").setExecutor(new ProShieldCommand(this, guiManager));
 
         // ✅ Register listeners
-        Bukkit.getPluginManager().registerEvents(new PlotProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new GUIListener(guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new AdminJoinListener(), this);
 
-        // ✅ Register commands
-        if (getCommand("proshield") != null) {
-            getCommand("proshield").setExecutor(new ProShieldCommand(guiManager));
-        }
-
-        getLogger().info("✅ ProShield v" + getDescription().getVersion() + " has been enabled!");
+        getLogger().info("✅ ProShield enabled successfully!");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("❌ ProShield has been disabled!");
+        getLogger().info("⛔ ProShield disabled.");
     }
 
+    /**
+     * Makes sure the ProShield plugin folder & config.yml exist.
+     */
+    private void setupFiles() {
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
+        }
+
+        File configFile = new File(getDataFolder(), "config.yml");
+        if (!configFile.exists()) {
+            saveDefaultConfig(); // Copies config.yml from resources
+            getLogger().info("📂 Created default config.yml in ProShield folder.");
+        }
+    }
+
+    // 🔑 Getters
     public static ProShield getInstance() {
         return instance;
     }

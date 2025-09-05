@@ -1,20 +1,12 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.0.6
-author: snazzyatoms
-description: A protection plugin to manage player plots with buffer zones.
+version: 1.0.7
 api-version: 1.16
-
+author: snazzyatoms
+description: A simple plot protection plugin.
 commands:
   proshield:
-    description: Main command for ProShield
+    description: Main command for ProShield.
     usage: /<command>
-    permission: proshield.use
-
-permissions:
-  proshield.use:
-    description: Allows use of the ProShield command
-    default: true
-
 softdepend:
   - DiscordSRV

@@ -6,35 +6,21 @@
 
     <groupId>com.snazzyatoms</groupId>
     <artifactId>ProShield</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>Advanced plot protection &amp; management system with customizable radius, buffers, and rules.</description>
+    <description>Advanced plot protection and management plugin for Minecraft servers.</description>
     <url>https://github.com/snazzyatoms/ProShield</url>
-
-    <licenses>
-        <license>
-            <name>MIT License</name>
-            <url>https://opensource.org/licenses/MIT</url>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <id>snazzyatoms</id>
-            <name>snazzyatoms</name>
-            <url>https://github.com/snazzyatoms</url>
-        </developer>
-    </developers>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
-        <!-- Spigot API -->
+        <!-- Spigot / Paper API -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
@@ -42,7 +28,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Vault (optional) -->
+        <!-- Vault (Economy) -->
         <dependency>
             <groupId>com.github.MilkBowl</groupId>
             <artifactId>VaultAPI</artifactId>
@@ -50,11 +36,11 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- DiscordSRV (optional) -->
+        <!-- DiscordSRV (Optional Integration) -->
         <dependency>
             <groupId>com.discordsrv</groupId>
             <artifactId>discordsrv</artifactId>
-            <version>1.25.0</version>
+            <version>1.26.2</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -64,7 +50,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.10.1</version>
                 <configuration>
                     <source>17</source>
                     <target>17</target>
@@ -74,7 +60,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.4.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -83,10 +69,18 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <relocations>
+                                <!-- Prevent conflicts -->
+                                <relocation>
+                                    <pattern>net.kyori</pattern>
+                                    <shadedPattern>com.snazzyatoms.shaded.net.kyori</shadedPattern>
+                                </relocation>
+                            </relocations>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
+
 </project>

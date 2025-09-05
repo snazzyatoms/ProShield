@@ -15,6 +15,9 @@ protection:
   # Maximum allowed plot radius
   max-radius: 100
 
+  # Minimum required gap between plots (buffer zone)
+  min-gap: 10
+
   # Should players be prevented from building outside plots?
   # false = players can build anywhere except inside someone else’s plot
   # true  = players can ONLY build inside their own plot

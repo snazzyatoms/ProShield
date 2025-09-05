@@ -1,6 +1,6 @@
-package com.snazzyatoms.proshield.listeners;
+package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.managers.GUIManager;
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -13,35 +13,44 @@ import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
 
+    private final ProShield plugin;
     private final GUIManager guiManager;
 
-    public GUIListener(GUIManager guiManager) {
+    public GUIListener(ProShield plugin, GUIManager guiManager) {
+        this.plugin = plugin;
         this.guiManager = guiManager;
     }
 
-    /**
-     * Opens Claim Management GUI when a player right-clicks with the ProShield Compass
-     */
     @EventHandler
-    public void onPlayerUseCompass(PlayerInteractEvent event) {
-        // Ignore off-hand interactions to avoid double-triggering
+    public void onCompassUse(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
 
-        Player player = event.getPlayer();
         ItemStack item = event.getItem();
-
         if (item != null && item.getType() == Material.COMPASS && item.hasItemMeta()
                 && ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase("ProShield Compass")) {
             event.setCancelled(true);
-            guiManager.openClaimGUI(player);
+            guiManager.openClaimGUI(event.getPlayer());
         }
     }
 
-    /**
-     * Handles clicks inside the Claim Management GUI
-     */
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        guiManager.handleGUIClick(event);
+    public void onGUIClick(InventoryClickEvent event) {
+        if (event.getView().getTitle().equals(ChatColor.BLUE + "ProShield Claim Manager")) {
+            event.setCancelled(true);
+            Player player = (Player) event.getWhoClicked();
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null) return;
+
+            if (clicked.getType() == Material.GRASS_BLOCK) {
+                plugin.getPlotManager().createClaim(player);
+                player.closeInventory();
+            } else if (clicked.getType() == Material.PAPER) {
+                plugin.getPlotManager().getClaimInfo(player);
+                player.closeInventory();
+            } else if (clicked.getType() == Material.BARRIER) {
+                plugin.getPlotManager().removeClaim(player);
+                player.closeInventory();
+            }
+        }
     }
 }

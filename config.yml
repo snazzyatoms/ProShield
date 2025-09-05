@@ -1,41 +1,64 @@
-# ======================================================
-# ProShield Configuration
-# ======================================================
+# ======================================
+# ProShield - Configuration File
+# ======================================
+# This file controls all core settings for ProShield.
+# Customize to fit your server’s protection system.
+# ======================================
 
+# ----------------------------
+# Plot Protection Settings
+# ----------------------------
 protection:
-  # Default plot radius for new claims
-  default-radius: 25
+  # Default radius for newly claimed plots
+  default-radius: 10
 
-  # Allowed plot size limits
-  min-radius: 5
-  max-radius: 256
+  # Maximum allowed plot radius
+  max-radius: 100
 
-  # Plot build height limits
-  height-limit: 256
-  depth-limit: 0
-
-  # Should players be blocked from building outside of plots?
-  # false = players can build anywhere (default, survival-friendly)
-  # true  = players may only build inside claimed plots
+  # Should players be prevented from building outside plots?
+  # false = players can build anywhere except inside someone else’s plot
+  # true  = players can ONLY build inside their own plot
   protect-outside-plots: false
 
+# ----------------------------
+# Economy Integration
+# ----------------------------
 economy:
   enabled: true
-  base-expansion-cost: 100
-  cost-scale-factor: 1.5
+  claim-cost: 100.0
+  expansion-cost-base: 50.0
+  expansion-cost-multiplier: 1.25
+  currency: "Coins"
 
+# ----------------------------
+# Backups
+# ----------------------------
 backups:
   enabled: true
-  # Options: full, differential, hybrid
-  mode: hybrid
-  schedule:
-    full: "1d"          # Full backup every 1 day
-    differential: "1h"  # Differential backup every 1 hour
+  type: "hybrid" # full, differential, or hybrid
+  full-backup-interval: 24h
+  differential-backup-interval: 1h
+  include-economy: true
 
+# ----------------------------
+# Discord Integration
+# ----------------------------
 discord:
-  integration: false
+  enabled: false
   webhook-url: ""
+  send-plot-expansion-requests: true
+  send-admin-alerts: true
 
+# ----------------------------
+# Debug & Logging
+# ----------------------------
 debug:
   enabled: false
   auto-disable-on-restart: true
+  require-confirmation: true
+  cooldown-seconds: 10
+
+logging:
+  level: INFO # INFO, WARN, DEBUG
+  track-admin-commands: true
+  track-expansion-requests: true

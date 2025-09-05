@@ -1,22 +1,22 @@
-package com.proshield.managers;
+package com.snazzyatoms.proshield.managers;
 
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Location;
-import java.util.HashSet;
-import java.util.Set;
+import org.bukkit.entity.Player;
 
 public class PlotManager {
 
-    private final Set<Location> protectedPlots = new HashSet<>();
+    private final ProShield plugin;
 
-    public boolean isPlotProtected(Location location) {
-        return protectedPlots.contains(location);
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
     }
 
-    public void addProtectedPlot(Location location) {
-        protectedPlots.add(location);
-    }
-
-    public void removeProtectedPlot(Location location) {
-        protectedPlots.remove(location);
+    /**
+     * Simple placeholder logic: Always allow ops, deny everyone else.
+     * Later this can be expanded into real plot ownership logic.
+     */
+    public boolean canBuild(Player player, Location location) {
+        return player.isOp();
     }
 }

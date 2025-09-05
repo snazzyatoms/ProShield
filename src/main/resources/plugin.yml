@@ -1,5 +1,5 @@
 name: ProShield
-main: com.snazzyatoms.proshield.ProShield
+main: com.proshield.ProShield
 version: 1.1.5
 api-version: 1.20
 author: SnazzyAtoms
@@ -9,7 +9,7 @@ commands:
   proshield:
     description: Main command for ProShield
     usage: /<command> <add|remove>
-    permission: proshield.use
+    permissions: proshield.use
 
 permissions:
   proshield.*:

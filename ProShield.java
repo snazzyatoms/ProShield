@@ -1,46 +1,56 @@
-package com.proshield;
+package com.yourname.proshield;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
+    private static ProShield instance;
+
     @Override
     public void onEnable() {
-        getLogger().info("ProShield has been enabled!");
+        instance = this;
 
-        // Register commands and listeners
-        registerCommands();
-        registerListeners();
+        // Save default config if missing
+        saveDefaultConfig();
 
-        // Optional: Hook into DiscordSRV if available
-        if (getServer().getPluginManager().getPlugin("DiscordSRV") != null) {
-            getLogger().info("DiscordSRV detected! Hooking into it...");
-            hookIntoDiscordSRV();
-        }
+        getLogger().info("===================================");
+        getLogger().info(" ProShield Enabled!");
+        getLogger().info(" Version: " + getDescription().getVersion());
+        getLogger().info("===================================");
+
+        // Register commands
+        getCommand("proshield").setExecutor(new ProShieldCommand(this));
+
+        // Register listeners
+        getServer().getPluginManager().registerEvents(new PlotProtectionListener(this), this);
+
+        // Handle Discord integration
+        setupDiscordIntegration();
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("ProShield has been disabled!");
+        getLogger().info("ProShield Disabled.");
     }
 
-    private void registerCommands() {
-        // Example: register your plugin commands here
-        // this.getCommand("proshield").setExecutor(new ProShieldCommand());
-    }
+    private void setupDiscordIntegration() {
+        boolean discordEnabled = getConfig().getBoolean("discord.enabled", false);
 
-    private void registerListeners() {
-        // Example: register your plugin listeners here
-        // getServer().getPluginManager().registerEvents(new PlotProtectionListener(), this);
-    }
-
-    private void hookIntoDiscordSRV() {
-        try {
-            // TODO: Add actual DiscordSRV integration here
-            // Example: DiscordSRV.getPlugin().sendMessage("ProShield is active!");
-            getLogger().info("Successfully hooked into DiscordSRV!");
-        } catch (Exception e) {
-            getLogger().warning("Failed to hook into DiscordSRV: " + e.getMessage());
+        if (!discordEnabled) {
+            getLogger().info("Discord integration is disabled in config.yml.");
+            return;
         }
+
+        if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
+            getLogger().info("DiscordSRV found! Hooking into Discord...");
+            // TODO: Add Discord hook logic here if you want later
+        } else {
+            getLogger().warning("DiscordSRV is not installed! Skipping Discord integration.");
+        }
+    }
+
+    public static ProShield getInstance() {
+        return instance;
     }
 }

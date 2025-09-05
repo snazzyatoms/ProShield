@@ -1,5 +1,6 @@
 package com.snazzyatoms.proshield.listeners;
 
+import com.snazzyatoms.proshield.managers.GUIManager;
 import com.snazzyatoms.proshield.managers.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -20,40 +21,41 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
-
         Player player = (Player) event.getWhoClicked();
 
-        // Only handle clicks inside our GUI
-        if (event.getView().getTitle().equals(ChatColor.DARK_GREEN + "Claim Management")) {
-            event.setCancelled(true); // prevent item pickup
+        String title = event.getView().getTitle();
+        if (!GUIManager.TITLE.equals(title)) return;
 
-            ItemStack clicked = event.getCurrentItem();
-            if (clicked == null || !clicked.hasItemMeta()) return;
+        event.setCancelled(true);
 
-            Material type = clicked.getType();
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
 
-            switch (type) {
-                case GRASS_BLOCK: // Create claim
-                    plotManager.createClaim(player);
-                    player.closeInventory();
-                    player.sendMessage(ChatColor.GREEN + "✅ Claim created successfully!");
-                    break;
-
-                case BOOK: // Claim info
-                    plotManager.getClaimInfo(player);
-                    player.closeInventory();
-                    player.sendMessage(ChatColor.AQUA + "📖 Showing claim information...");
-                    break;
-
-                case BARRIER: // Remove claim
-                    plotManager.removeClaim(player);
-                    player.closeInventory();
-                    player.sendMessage(ChatColor.RED + "❌ Claim removed.");
-                    break;
-
-                default:
-                    break;
+        Material type = clicked.getType();
+        switch (type) {
+            case GRASS_BLOCK: { // Create
+                boolean ok = plotManager.createClaim(player);
+                if (ok) player.sendMessage(ChatColor.GREEN + "✅ Claim created successfully.");
+                else    player.sendMessage(ChatColor.RED + "You already have a claim.");
+                player.closeInventory();
+                break;
             }
+            case BOOK: { // Info
+                String info = plotManager.getClaimInfo(player);
+                if (info == null) player.sendMessage(ChatColor.RED + "You don’t have a claim yet.");
+                else              player.sendMessage(ChatColor.AQUA + "📖 " + info);
+                player.closeInventory();
+                break;
+            }
+            case BARRIER: { // Remove
+                boolean removed = plotManager.removeClaim(player);
+                if (removed) player.sendMessage(ChatColor.RED + "❌ Claim removed.");
+                else         player.sendMessage(ChatColor.RED + "No claim to remove.");
+                player.closeInventory();
+                break;
+            }
+            default:
+                break;
         }
     }
 }

@@ -1,28 +1,20 @@
 name: ProShield
-main: com.proshield.ProShield
-version: 1.1.5
-api-version: 1.20
+main: com.snazzyatoms.proshield.ProShield
+version: 1.1.6
+api-version: 1.17
 author: SnazzyAtoms
-description: Land protection plugin for Spigot/Paper servers.
+description: A flexible plot protection and management system for Minecraft servers.
 
 commands:
   proshield:
-    description: Main command for ProShield
-    usage: /<command> <add|remove>
-    permissions: proshield.use
+    description: Main command for ProShield.
+    usage: /<command> [reload|info|help]
+    aliases: [pshield, shield]
 
 permissions:
-  proshield.*:
-    description: Grants access to all ProShield commands
-    default: op
-    children:
-      proshield.use: true
-      proshield.admin: true
-
-  proshield.use:
-    description: Allows using basic ProShield commands (claim, manage plots, etc.)
-    default: true
-
   proshield.admin:
-    description: Allows admin-level ProShield commands (reset, reload, bypass, etc.)
+    description: Full access to ProShield admin features.
     default: op
+  proshield.use:
+    description: Basic ProShield user commands.
+    default: true

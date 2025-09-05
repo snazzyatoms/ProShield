@@ -1,5 +1,7 @@
-package com.snazzyatoms.proshield.managers;
+package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -9,60 +11,66 @@ import java.util.UUID;
 
 public class PlotManager {
 
-    private final Map<UUID, Claim> claims = new HashMap<>();
+    private final ProShield plugin;
+    private final Map<UUID, Location> playerClaims;
 
-    public static class Claim {
-        public final UUID owner;
-        public final String world;
-        public final int x, z;
-        public final int radius;
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
+        this.playerClaims = new HashMap<>();
+    }
 
-        public Claim(UUID owner, String world, int x, int z, int radius) {
-            this.owner = owner;
-            this.world = world;
-            this.x = x;
-            this.z = z;
-            this.radius = radius;
+    /**
+     * Create a claim at the player's current location.
+     */
+    public void createClaim(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (playerClaims.containsKey(uuid)) {
+            player.sendMessage(ChatColor.RED + "You already have a claim!");
+            return;
         }
+
+        Location loc = player.getLocation();
+        playerClaims.put(uuid, loc);
+        player.sendMessage(ChatColor.GREEN + "New claim created at your current location: "
+                + ChatColor.YELLOW + formatLocation(loc));
     }
 
-    public boolean createClaim(Player player, Location loc, int radius) {
-        UUID id = player.getUniqueId();
-        if (claims.containsKey(id)) {
-            player.sendMessage("§cYou already own a claim!");
-            return false;
+    /**
+     * Get information about the player's claim.
+     */
+    public void getClaimInfo(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (!playerClaims.containsKey(uuid)) {
+            player.sendMessage(ChatColor.RED + "You don't have a claim yet.");
+            return;
         }
-        Claim c = new Claim(id, loc.getWorld().getName(), loc.getBlockX(), loc.getBlockZ(), radius);
-        claims.put(id, c);
-        player.sendMessage("§aClaim created at " + loc.getBlockX() + ", " + loc.getBlockZ() + " with radius " + radius);
-        return true;
+
+        Location loc = playerClaims.get(uuid);
+        player.sendMessage(ChatColor.AQUA + "Your claim is located at: "
+                + ChatColor.YELLOW + formatLocation(loc));
     }
 
-    public String getClaimInfo(Player player) {
-        Claim c = claims.get(player.getUniqueId());
-        if (c == null) return "§cYou do not own a claim.";
-        return "§aClaim at " + c.x + ", " + c.z + " in " + c.world + " radius " + c.radius;
-    }
-
-    public boolean removeClaim(Player player) {
-        if (claims.remove(player.getUniqueId()) != null) {
-            player.sendMessage("§cYour claim has been removed.");
-            return true;
+    /**
+     * Remove the player's claim.
+     */
+    public void removeClaim(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (!playerClaims.containsKey(uuid)) {
+            player.sendMessage(ChatColor.RED + "You don't have a claim to remove.");
+            return;
         }
-        player.sendMessage("§cYou do not own a claim.");
-        return false;
+
+        playerClaims.remove(uuid);
+        player.sendMessage(ChatColor.GREEN + "Your claim has been removed.");
     }
 
-    public boolean canBuild(Player player, Location loc) {
-        Claim c = claims.get(player.getUniqueId());
-        if (c == null) return true;
-
-        if (!c.world.equals(loc.getWorld().getName())) return true;
-
-        double dx = loc.getBlockX() - c.x;
-        double dz = loc.getBlockZ() - c.z;
-        double distanceSquared = dx * dx + dz * dz;
-
-        return distanceSquared <= (c.radius * c.radius);
+    /**
+     * Helper to format a location as x,y,z,world.
+     */
+    private String formatLocation(Location loc) {
+        return "X:" + loc.getBlockX() +
+                " Y:" + loc.getBlockY() +
+                " Z:" + loc.getBlockZ() +
+                " World:" + loc.getWorld().getName();
     }
 }

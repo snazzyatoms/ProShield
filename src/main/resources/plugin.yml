@@ -3,32 +3,26 @@ main: com.snazzyatoms.proshield.ProShield
 version: 1.1.6
 api-version: 1.17
 author: SnazzyAtoms
-description: A powerful claim protection and management plugin with GUI support.
-
+description: Advanced plot protection and claim management with an admin compass tool.
 commands:
   proshield:
-    description: Main command for ProShield.
+    description: Base command for ProShield
     usage: /<command> <subcommand>
     aliases: [ps]
-    permission: proshield.use
-    subcommands:
-      compass:
-        description: Gives you the ProShield Compass (admins only).
-        usage: /proshield compass
-        permission: proshield.compass
-
 permissions:
   proshield.*:
-    description: Grants access to all ProShield commands and features.
+    description: Gives access to all ProShield commands
     default: op
     children:
-      proshield.use: true
       proshield.compass: true
-
-  proshield.use:
-    description: Allows basic usage of ProShield commands.
-    default: true
-
+      proshield.reload: true
+      proshield.info: true
   proshield.compass:
-    description: Allows receiving and using the ProShield Compass.
+    description: Allows use of the ProShield Compass command
+    default: op
+  proshield.reload:
+    description: Allows reloading the ProShield config
+    default: op
+  proshield.info:
+    description: Allows viewing plugin information
     default: op

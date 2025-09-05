@@ -7,34 +7,36 @@ import org.bukkit.entity.Player;
 
 public class ProShieldCommand implements CommandExecutor {
 
-    private final PlotManager plotManager;
+    private final ProShield plugin;
 
-    public ProShieldCommand(PlotManager plotManager) {
-        this.plotManager = plotManager;
+    public ProShieldCommand(ProShield plugin) {
+        this.plugin = plugin;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("§cOnly players can use this command.");
+            sender.sendMessage("Only players can use this command.");
             return true;
         }
 
         Player player = (Player) sender;
 
-        if (args.length == 0) {
-            player.sendMessage("§eProShield is active! Use /proshield help for commands.");
+        if (args.length > 0 && args[0].equalsIgnoreCase("claim")) {
+            int radius = 0;
+            if (args.length > 1) {
+                try {
+                    radius = Integer.parseInt(args[1]);
+                } catch (NumberFormatException e) {
+                    player.sendMessage("§cInvalid radius. Please use a number.");
+                    return true;
+                }
+            }
+            plugin.getPlotManager().claimPlot(player, radius);
             return true;
         }
 
-        if (args[0].equalsIgnoreCase("help")) {
-            player.sendMessage("§a--- ProShield Commands ---");
-            player.sendMessage("§e/proshield help §7- Show this help message");
-            // Later: add more subcommands here
-            return true;
-        }
-
-        player.sendMessage("§cUnknown subcommand. Try /proshield help.");
+        player.sendMessage("§eUsage: /proshield claim [radius]");
         return true;
     }
 }

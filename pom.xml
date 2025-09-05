@@ -6,7 +6,7 @@
 
     <groupId>com.snazzyatoms</groupId>
     <artifactId>proshield</artifactId>
-    <version>1.0.8</version>
+    <version>1.0.9</version>
     <packaging>jar</packaging>
 
     <name>ProShield</name>
@@ -90,15 +90,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <relocations>
-                                <!-- Example relocation if you need to relocate -->
-                                <!--
-                                <relocation>
-                                    <pattern>some.dependency</pattern>
-                                    <shadedPattern>com.snazzyatoms.shaded.some.dependency</shadedPattern>
-                                </relocation>
-                                -->
-                            </relocations>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                         </configuration>
                     </execution>
                 </executions>

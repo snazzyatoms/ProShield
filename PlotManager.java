@@ -1,5 +1,6 @@
-package com.snazzyatoms.proshield;
+package com.snazzyatoms.proshield.managers;
 
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -7,15 +8,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Manages claimed plots for players.
- */
 public class PlotManager {
 
     private final ProShield plugin;
 
-    // Stores player UUID -> Plot data
-    private final Map<UUID, Plot> plots = new HashMap<>();
+    // Stores player UUID → Plot data
+    private final Map<UUID, Location> plots = new HashMap<>();
 
     // Config values
     private final int defaultRadius;
@@ -31,9 +29,6 @@ public class PlotManager {
         this.minGap = plugin.getConfig().getInt("protection.min-gap", 10);
     }
 
-    /**
-     * Attempts to claim a plot for a player at their current location.
-     */
     public boolean claimPlot(Player player, int radius) {
         if (radius <= 0) {
             radius = defaultRadius;
@@ -46,48 +41,21 @@ public class PlotManager {
 
         Location center = player.getLocation();
 
-        // Check for overlap with existing plots
-        for (Plot existing : plots.values()) {
-            if (center.distance(existing.getCenter()) < radius + existing.getRadius() + minGap) {
-                player.sendMessage("§cYour plot must be at least " + minGap + " blocks away from other plots.");
+        // Check overlap with existing plots
+        for (Location existing : plots.values()) {
+            if (center.getWorld().equals(existing.getWorld()) &&
+                center.distance(existing) < minGap + radius) {
+                player.sendMessage("§cYou must claim at least " + minGap + " blocks away from other plots.");
                 return false;
             }
         }
 
-        // Save new plot
-        plots.put(player.getUniqueId(), new Plot(center, radius));
-        player.sendMessage("§aPlot claimed successfully with radius " + radius + "!");
+        plots.put(player.getUniqueId(), center);
+        player.sendMessage("§aPlot claimed successfully!");
         return true;
     }
 
-    /**
-     * Check if a player can build at a given location.
-     */
-    public boolean canBuild(Player player, Location location) {
-        Plot plot = plots.get(player.getUniqueId());
-        if (plot == null) return false;
-
-        return location.distance(plot.getCenter()) <= plot.getRadius();
-    }
-
-    /**
-     * Inner class representing a single plot.
-     */
-    private static class Plot {
-        private final Location center;
-        private final int radius;
-
-        public Plot(Location center, int radius) {
-            this.center = center;
-            this.radius = radius;
-        }
-
-        public Location getCenter() {
-            return center;
-        }
-
-        public int getRadius() {
-            return radius;
-        }
+    public Location getPlot(UUID playerId) {
+        return plots.get(playerId);
     }
 }

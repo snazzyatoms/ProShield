@@ -49,4 +49,4 @@ It combines **plot protection, GUI-based management, economy hooks, backups, and
 ---
 
 ## 🧑‍💻 Authors
-- **YourName** (Main Developer)
+- **snazzyatoms** (Main Developer)

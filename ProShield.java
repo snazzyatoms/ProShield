@@ -2,6 +2,10 @@ package com.snazzyatoms.proshield;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.snazzyatoms.proshield.listeners.PlotProtectionListener;
+import com.snazzyatoms.proshield.managers.PlotManager;
+import com.snazzyatoms.proshield.commands.ProShieldCommand;
+
 public class ProShield extends JavaPlugin {
 
     private static ProShield instance;
@@ -10,20 +14,25 @@ public class ProShield extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        plotManager = new PlotManager();
 
-        // Register event listeners
+        // Load config.yml
+        saveDefaultConfig();
+
+        // Initialize Plot Manager
+        plotManager = new PlotManager(this);
+
+        // Register listeners
         getServer().getPluginManager().registerEvents(new PlotProtectionListener(plotManager), this);
 
         // Register commands
         getCommand("proshield").setExecutor(new ProShieldCommand(plotManager));
 
-        getLogger().info("ProShield enabled successfully!");
+        getLogger().info("ProShield has been enabled!");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("ProShield disabled.");
+        getLogger().info("ProShield has been disabled!");
     }
 
     public static ProShield getInstance() {

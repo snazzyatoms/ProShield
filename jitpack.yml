@@ -1,8 +1,8 @@
 jdk:
-  - openjdk17
+  - openjdk8
 
 before_install:
-  - echo "Using OpenJDK 17 for ProShield build"
+  - echo "Preparing build for ProShield v1.1.0"
 
 install:
   - mvn clean install -DskipTests

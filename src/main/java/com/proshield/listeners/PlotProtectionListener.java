@@ -1,32 +1,40 @@
-package com.proshield.listeners;
+package com.snazzyatoms.proshield.listeners;
 
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import com.proshield.managers.PlotManager;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-public class PlotProtectionListener implements Listener {
+import java.util.ArrayList;
+import java.util.List;
 
-    private final PlotManager plotManager;
-
-    public PlotProtectionListener(PlotManager plotManager) {
-        this.plotManager = plotManager;
-    }
+public class AdminJoinListener implements Listener {
 
     @EventHandler
-    public void onBlockBreak(BlockBreakEvent event) {
-        if (plotManager.isPlotProtected(event.getBlock().getLocation())) {
-            event.setCancelled(true);
-            event.getPlayer().sendMessage("This plot is protected!");
-        }
-    }
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
 
-    @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        if (plotManager.isPlotProtected(event.getBlock().getLocation())) {
-            event.setCancelled(true);
-            event.getPlayer().sendMessage("This plot is protected!");
+        if (player.isOp() || player.hasPermission("proshield.admin")) {
+            boolean hasCompass = player.getInventory().contains(Material.COMPASS);
+
+            if (!hasCompass) {
+                ItemStack compass = new ItemStack(Material.COMPASS);
+                ItemMeta meta = compass.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(ChatColor.GOLD + "🛡 ProShield Menu");
+                    List<String> lore = new ArrayList<>();
+                    lore.add(ChatColor.YELLOW + "Right-click to open ProShield GUI");
+                    meta.setLore(lore);
+                    compass.setItemMeta(meta);
+                }
+
+                player.getInventory().addItem(compass);
+                player.sendMessage(ChatColor.GREEN + "[ProShield] Compass added for testing.");
+            }
         }
     }
 }

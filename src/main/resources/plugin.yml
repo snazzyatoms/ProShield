@@ -2,7 +2,7 @@ name: ProShield
 main: com.snazzyatoms.proshield.ProShield
 version: 1.0.5
 api-version: 1.16
-author: SnazzyAtoms
+author: snazzyatoms
 description: A plugin to manage protected plots and growth control.
 commands:
   claimplot:

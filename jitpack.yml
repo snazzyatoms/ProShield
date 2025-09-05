@@ -1,8 +1,11 @@
+# JitPack build instructions for ProShield 1.0.7
 jdk:
-  - openjdk8
+  - openjdk17
 
-before_install:
-  - mvn --version
-
+# Skip the default "mvn install" step and just package the plugin
 install:
-  - mvn clean install -DskipTests
+  - echo "Skipping default install step"
+
+build:
+  script:
+    - mvn -B -DskipTests=true clean package

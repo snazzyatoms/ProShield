@@ -4,23 +4,22 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.snazzyatoms</groupId>
-    <artifactId>proshield</artifactId>
-    <version>1.1.4</version>
+    <groupId>com.snazzyatoms.proshield</groupId>
+    <artifactId>ProShield</artifactId>
+    <version>1.1.5</version>
     <packaging>jar</packaging>
 
     <name>ProShield</name>
     <description>Land protection plugin for Spigot/Paper servers.</description>
-    <url>https://github.com/snazzyatoms/ProShield</url>
+    <url>https://github.com/YOUR_USERNAME/ProShield</url>
 
     <properties>
-        <java.version>17</java.version>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
     <dependencies>
-        <!-- Spigot API -->
+        <!-- Bukkit/Spigot API -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
@@ -29,57 +28,30 @@
         </dependency>
     </dependencies>
 
-    <repositories>
-        <!-- Spigot snapshots repo -->
-        <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
-        </repository>
-
-        <!-- Sonatype OSS -->
-        <repository>
-            <id>sonatype-oss</id>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-        </repository>
-
-        <!-- PaperMC repo -->
-        <repository>
-            <id>papermc-repo</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
-    </repositories>
-
     <build>
         <plugins>
-            <!-- Compiler plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <source>17</source>
+                    <target>17</target>
                 </configuration>
             </plugin>
-
-            <!-- Shade plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.4.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
-                        <configuration>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
-
 </project>

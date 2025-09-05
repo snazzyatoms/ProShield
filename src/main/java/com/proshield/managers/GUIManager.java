@@ -1,94 +1,39 @@
-package com.snazzyatoms.proshield.managers;
+package com.snazzyatoms.proshield.gui;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class GUIManager {
 
-    private final PlotManager plotManager;
+    private final String GUI_TITLE = ChatColor.BLUE + "ProShield Claim Manager";
 
-    public GUIManager(PlotManager plotManager) {
-        this.plotManager = plotManager;
+    public GUIManager(Object plugin) {
+        // Plugin reference not required for now, placeholder for future expansions
     }
 
-    /**
-     * Opens the Claim Management GUI for a player
-     */
     public void openClaimGUI(Player player) {
-        Inventory gui = Bukkit.createInventory(null, 9, ChatColor.DARK_GREEN + "Claim Management");
+        Inventory gui = Bukkit.createInventory(null, 9, GUI_TITLE);
 
-        // Create Claim button
-        ItemStack create = new ItemStack(Material.GRASS_BLOCK);
-        ItemMeta createMeta = create.getItemMeta();
-        if (createMeta != null) {
-            createMeta.setDisplayName(ChatColor.GREEN + "Create Claim");
-            create.setItemMeta(createMeta);
-        }
+        gui.setItem(2, createMenuItem(Material.GRASS_BLOCK, ChatColor.GREEN + "Create Claim", "Claim this area"));
+        gui.setItem(4, createMenuItem(Material.PAPER, ChatColor.YELLOW + "Claim Info", "View info about your claim"));
+        gui.setItem(6, createMenuItem(Material.BARRIER, ChatColor.RED + "Remove Claim", "Remove your claim"));
 
-        // Claim Info button
-        ItemStack info = new ItemStack(Material.BOOK);
-        ItemMeta infoMeta = info.getItemMeta();
-        if (infoMeta != null) {
-            infoMeta.setDisplayName(ChatColor.AQUA + "Claim Info");
-            info.setItemMeta(infoMeta);
-        }
-
-        // Remove Claim button
-        ItemStack remove = new ItemStack(Material.BARRIER);
-        ItemMeta removeMeta = remove.getItemMeta();
-        if (removeMeta != null) {
-            removeMeta.setDisplayName(ChatColor.RED + "Remove Claim");
-            remove.setItemMeta(removeMeta);
-        }
-
-        // Place items in GUI
-        gui.setItem(2, create);
-        gui.setItem(4, info);
-        gui.setItem(6, remove);
-
-        // Open GUI
         player.openInventory(gui);
     }
 
-    /**
-     * Handle clicks inside the Claim Management GUI
-     */
-    public void handleGUIClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getView().getTitle() == null || !ChatColor.stripColor(event.getView().getTitle()).equalsIgnoreCase("Claim Management")) {
-            return;
+    private ItemStack createMenuItem(Material material, String name, String lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            meta.setLore(java.util.Collections.singletonList(ChatColor.GRAY + lore));
+            item.setItemMeta(meta);
         }
-
-        event.setCancelled(true); // Prevent taking items
-
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
-
-        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-
-        switch (name.toLowerCase()) {
-            case "create claim" -> {
-                plotManager.createClaim(player);
-                player.closeInventory();
-                player.sendMessage(ChatColor.GREEN + "✅ Claim created successfully!");
-            }
-            case "claim info" -> {
-                String info = plotManager.getClaimInfo(player);
-                player.closeInventory();
-                player.sendMessage(ChatColor.AQUA + "📖 Claim Info: " + info);
-            }
-            case "remove claim" -> {
-                plotManager.removeClaim(player);
-                player.closeInventory();
-                player.sendMessage(ChatColor.RED + "❌ Claim removed successfully!");
-            }
-            default -> player.sendMessage(ChatColor.GRAY + "Unknown action.");
-        }
+        return item;
     }
 }

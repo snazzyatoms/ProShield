@@ -1,11 +1,10 @@
-package com.snazzyatoms.proshield;
+package com.snazzyatoms.proshield.commands;
 
+import com.snazzyatoms.proshield.managers.PlotManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
-import java.util.UUID;
 
 public class ProShieldCommand implements CommandExecutor {
 
@@ -18,41 +17,30 @@ public class ProShieldCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
+            sender.sendMessage("§cOnly players can use this command!");
             return true;
         }
 
         Player player = (Player) sender;
-        UUID plotId = player.getWorld().getUID(); 
 
         if (args.length == 0) {
-            player.sendMessage("Usage: /proshield <protect|unprotect|check>");
+            player.sendMessage("§eUsage: /proshield <claim|unclaim>");
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
-            case "protect":
-                plotManager.protectPlot(plotId);
-                player.sendMessage("Plot protected!");
-                break;
-
-            case "unprotect":
-                plotManager.unprotectPlot(plotId);
-                player.sendMessage("Plot unprotected!");
-                break;
-
-            case "check":
-                if (plotManager.isProtected(plotId)) {
-                    player.sendMessage("This plot is protected.");
-                } else {
-                    player.sendMessage("This plot is not protected.");
-                }
-                break;
-
-            default:
-                player.sendMessage("Usage: /proshield <protect|unprotect|check>");
-                break;
+        if (args[0].equalsIgnoreCase("claim")) {
+            int radius = args.length > 1 ? Integer.parseInt(args[1]) : 0;
+            plotManager.claimPlot(player, radius);
+        } else if (args[0].equalsIgnoreCase("unclaim")) {
+            if (plotManager.hasPlot(player)) {
+                plotManager.unclaimPlot(player);
+            } else {
+                player.sendMessage("§cYou don't have a claimed plot.");
+            }
+        } else {
+            player.sendMessage("§eUsage: /proshield <claim|unclaim>");
         }
+
         return true;
     }
 }

@@ -1,21 +1,24 @@
 name: ProShield
-version: 1.0.0
 main: com.proshield.ProShield
-api-version: 1.19
-authors: [ "YourName" ]
-description: "The Ultimate Land Protection Plugin with economy, GUI, backups, and Discord integration."
-website: "https://github.com/yourname/ProShield"
+version: 1.0.0
+api-version: 1.16
+author: snazzyatoms
+description: >
+  ProShield is the ultimate land protection plugin for Spigot/Paper servers.
+  It combines plot protection, GUI-based management, economy hooks, backups,
+  and Discord integration into one simple package.
 
 commands:
   proshield:
     description: Main ProShield command
-    usage: /proshield help
+    usage: /<command> [args]
     aliases: [ps]
+    permission: proshield.use
 
 permissions:
-  proshield.admin:
-    description: Access to all admin features
+  proshield.use:
+    description: Allows basic use of ProShield commands
+    default: true
+  proshield.reload:
+    description: Allows reloading of ProShield configuration
     default: op
-  proshield.vip:
-    description: VIP plot perks
-    default: false

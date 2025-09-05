@@ -1,89 +1,56 @@
 package com.snazzyatoms.proshield.listeners;
 
-import com.snazzyatoms.proshield.managers.GUIManager;
+import com.snazzyatoms.proshield.managers.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 public class GUIListener implements Listener {
 
-    private final GUIManager guiManager;
+    private final PlotManager plotManager;
 
-    public GUIListener(GUIManager guiManager) {
-        this.guiManager = guiManager;
+    public GUIListener(PlotManager plotManager) {
+        this.plotManager = plotManager;
     }
 
-    /**
-     * Handle right-click with the ProShield Admin Compass
-     */
-    @EventHandler
-    public void onCompassUse(PlayerInteractEvent event) {
-        Player player = event.getPlayer();
-
-        // Only care about right-click
-        if (!(event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)) {
-            return;
-        }
-
-        ItemStack item = event.getItem();
-        if (item == null || item.getType() != Material.COMPASS) return;
-
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) return;
-
-        // Match display name of ProShield Admin Compass
-        if (ChatColor.stripColor(meta.getDisplayName()).equalsIgnoreCase("ProShield Admin Compass")) {
-            // Check permission
-            if (!player.hasPermission("proshield.compass")) {
-                player.sendMessage(ChatColor.RED + "You do not have permission to use the ProShield Compass.");
-                return;
-            }
-
-            // Cancel interaction and open GUI
-            event.setCancelled(true);
-            guiManager.openClaimGUI(player);
-        }
-    }
-
-    /**
-     * Handle clicks inside the Claim Management GUI
-     */
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
 
         Player player = (Player) event.getWhoClicked();
-        String title = event.getView().getTitle();
 
-        // Check GUI title from GUIManager
-        if (title.equals(ChatColor.DARK_GREEN + "Claim Management")) {
-            event.setCancelled(true); // Prevent item grabbing
+        // Only handle clicks inside our GUI
+        if (event.getView().getTitle().equals(ChatColor.DARK_GREEN + "Claim Management")) {
+            event.setCancelled(true); // prevent item pickup
 
             ItemStack clicked = event.getCurrentItem();
             if (clicked == null || !clicked.hasItemMeta()) return;
 
-            String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+            Material type = clicked.getType();
 
-            switch (name.toLowerCase()) {
-                case "create claim":
-                    player.performCommand("proshield createclaim");
+            switch (type) {
+                case GRASS_BLOCK: // Create claim
+                    plotManager.createClaim(player);
                     player.closeInventory();
+                    player.sendMessage(ChatColor.GREEN + "✅ Claim created successfully!");
                     break;
-                case "claim info":
-                    player.performCommand("proshield claiminfo");
+
+                case BOOK: // Claim info
+                    plotManager.getClaimInfo(player);
                     player.closeInventory();
+                    player.sendMessage(ChatColor.AQUA + "📖 Showing claim information...");
                     break;
-                case "remove claim":
-                    player.performCommand("proshield removeclaim");
+
+                case BARRIER: // Remove claim
+                    plotManager.removeClaim(player);
                     player.closeInventory();
+                    player.sendMessage(ChatColor.RED + "❌ Claim removed.");
                     break;
+
                 default:
                     break;
             }

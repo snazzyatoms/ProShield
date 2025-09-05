@@ -1,7 +1,7 @@
-package com.yourname.proshield;
+package com.proshield.managers;
 
+import com.proshield.ProShield;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -9,83 +9,78 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Manages claimed plots for players.
+ */
 public class PlotManager {
 
     private final ProShield plugin;
 
-    // Store player plots (UUID -> Plot)
+    // Stores player UUID -> Plot data
     private final Map<UUID, Plot> plots = new HashMap<>();
+
+    // Config values
+    private final int defaultRadius;
+    private final int maxRadius;
+    private final int minGap;
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+
+        // Load settings from config.yml
+        this.defaultRadius = plugin.getConfig().getInt("protection.default-radius", 10);
+        this.maxRadius = plugin.getConfig().getInt("protection.max-radius", 50);
+        this.minGap = plugin.getConfig().getInt("protection.min-gap", 10);
     }
 
     /**
-     * Attempt to claim a new plot for a player
+     * Attempts to claim a plot for a player at their current location.
      */
-    public boolean claimPlot(Player player, int requestedRadius) {
-        UUID uuid = player.getUniqueId();
-
-        if (plots.containsKey(uuid)) {
-            player.sendMessage(ChatColor.RED + "You already own a plot!");
-            return false; // Player already has a plot
+    public boolean claimPlot(Player player, int radius) {
+        if (radius <= 0) {
+            radius = defaultRadius;
+        }
+        if (radius > maxRadius) {
+            player.sendMessage("§cThe maximum plot radius allowed is " + maxRadius + ".");
+            return false;
         }
 
-        // Load radius limits from config
-        int maxRadius = plugin.getConfig().getInt("protection.max-radius", 50);
-        int minGap = plugin.getConfig().getInt("protection.min-gap", 10);
-        int finalRadius = Math.min(requestedRadius, maxRadius);
-
         Location center = player.getLocation();
-        Plot newPlot = new Plot(center, finalRadius);
 
-        // Check for overlap with existing plots (respecting min-gap)
+        // Check for overlap with existing plots
         for (Plot existing : plots.values()) {
-            if (newPlot.overlaps(existing, minGap)) {
-                player.sendMessage(ChatColor.RED + "This area is too close to another player’s plot! "
-                        + "You must leave at least " + minGap + " blocks of space.");
+            if (arePlotsTooClose(center, radius, existing)) {
+                player.sendMessage("§cYou must claim at least " + minGap + " blocks away from other plots.");
                 return false;
             }
         }
 
-        plots.put(uuid, newPlot);
-
-        Bukkit.getLogger().info(ChatColor.GREEN + "[ProShield] " + player.getName()
-                + " claimed a plot with radius " + finalRadius + ".");
-        player.sendMessage(ChatColor.GREEN + "You successfully claimed a plot with radius " + finalRadius + "!");
+        // Store the new plot
+        plots.put(player.getUniqueId(), new Plot(center, radius));
+        player.sendMessage("§aSuccessfully claimed a plot with radius " + radius + ".");
         return true;
     }
 
     /**
-     * Check if the player already has a plot
-     */
-    public boolean hasPlot(Player player) {
-        return plots.containsKey(player.getUniqueId());
-    }
-
-    /**
-     * Get plot info for a player
-     */
-    public String getPlotInfo(Player player) {
-        Plot plot = plots.get(player.getUniqueId());
-        if (plot == null) {
-            return "No plot claimed.";
-        }
-        Location center = plot.getCenter();
-        return "Center: " + center.getBlockX() + ", " + center.getBlockY() + ", " + center.getBlockZ() +
-                " | Radius: " + plot.getRadius();
-    }
-
-    /**
-     * Check if a location is inside a player’s plot
+     * Checks if the player is inside their own claimed plot.
      */
     public boolean isInsideOwnPlot(Player player, Location loc) {
         Plot plot = plots.get(player.getUniqueId());
-        if (plot == null) return false;
-        return plot.contains(loc);
+        return plot != null && plot.contains(loc);
     }
 
-    // Inner class representing a plot
+    /**
+     * Checks if two plots are overlapping or too close.
+     */
+    private boolean arePlotsTooClose(Location center, int radius, Plot other) {
+        double distance = center.distance(other.getCenter());
+        int minAllowed = radius + other.getRadius() + minGap;
+        return distance < minAllowed;
+    }
+
+    /**
+     * Inner class representing a plot.
+     */
     private static class Plot {
         private final Location center;
         private final int radius;
@@ -104,21 +99,8 @@ public class PlotManager {
         }
 
         public boolean contains(Location loc) {
-            return loc.getWorld().equals(center.getWorld()) &&
-                    Math.abs(loc.getBlockX() - center.getBlockX()) <= radius &&
-                    Math.abs(loc.getBlockZ() - center.getBlockZ()) <= radius;
-        }
-
-        public boolean overlaps(Plot other, int minGap) {
-            if (!center.getWorld().equals(other.getCenter().getWorld())) {
-                return false; // Different worlds can't overlap
-            }
-
-            int dx = Math.abs(center.getBlockX() - other.center.getBlockX());
-            int dz = Math.abs(center.getBlockZ() - other.center.getBlockZ());
-
-            int distance = Math.max(dx, dz); // Chebyshev distance for square plots
-            return distance <= (radius + other.radius + minGap);
+            return center.getWorld().equals(loc.getWorld()) &&
+                   center.distance(loc) <= radius;
         }
     }
 }

@@ -1,21 +1,11 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.0.5
+version: 1.0.6
 api-version: 1.16
-author: snazzyatoms
-description: A plugin to manage protected plots and growth control.
+author: YourName
+description: A flexible land/plot protection system with GUI and optional economy/Discord integration.
 commands:
-  claimplot:
-    description: Claim a plot of land.
+  proshield:
+    description: Main command for ProShield.
     usage: /<command>
-  unclaimplot:
-    description: Unclaim your current plot.
-    usage: /<command>
-  addmember:
-    description: Add a player to your plot.
-    usage: /<command> <player>
-  removemember:
-    description: Remove a player from your plot.
-    usage: /<command> <player>
-softdepend:
-  - DiscordSRV
+softdepend: [DiscordSRV]

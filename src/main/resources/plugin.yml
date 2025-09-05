@@ -9,3 +9,20 @@ commands:
   proshield:
     description: Main command for ProShield
     usage: /<command> <add|remove>
+    permission: proshield.use
+
+permissions:
+  proshield.*:
+    description: Grants access to all ProShield commands
+    default: op
+    children:
+      proshield.use: true
+      proshield.admin: true
+
+  proshield.use:
+    description: Allows using basic ProShield commands (claim, manage plots, etc.)
+    default: true
+
+  proshield.admin:
+    description: Allows admin-level ProShield commands (reset, reload, bypass, etc.)
+    default: op

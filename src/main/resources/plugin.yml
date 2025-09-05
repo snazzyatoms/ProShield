@@ -1,15 +1,13 @@
 name: ProShield
-main: com.proshield.ProShield
-version: 1.0.0
-author: snazzyatoms
-description: >
-  Advanced plot protection and management system with customizable radius,
-  buffer zones, and protection rules.
+main: com.snazzyatoms.ProShield
+version: 1.0.3
+author: YourName
+description: A plot protection and management system with customizable radius, buffers, and protection rules.
 
 commands:
   proshield:
-    description: Main command for ProShield
-    usage: /<command> [reload|claim|check|help]
+    description: Main command for ProShield.
+    usage: /<command> [reload|claim|check]
     aliases: [ps]
 
 permissions:
@@ -22,9 +20,5 @@ permissions:
     default: true
 
   proshield.check:
-    description: Allows players to check if they are inside their own plot.
-    default: true
-
-  proshield.help:
-    description: Allows access to the ProShield help command.
+    description: Allows players to check if they're inside their own plot.
     default: true

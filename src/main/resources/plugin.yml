@@ -1,23 +1,22 @@
 name: ProShield
+main: com.yourname.proshield.ProShield
 version: 1.0.6
-main: com.snazzyatoms.proshield.ProShield
-api-version: 1.19
-author: snazzyatoms
-description: A lightweight protection plugin for Minecraft servers.
+api-version: 1.16
+author: YourName
+description: A flexible plot protection and management system with GUI and Discord integration support.
 
 commands:
   proshield:
     description: Main command for ProShield
-    usage: /<command>
-    aliases: [pshield, shield]
+    usage: /<command> [subcommand]
 
 permissions:
-  proshield.use:
-    description: Allows use of ProShield commands
-    default: true
   proshield.admin:
-    description: Allows access to all ProShield admin commands
+    description: Allows access to all ProShield admin features
     default: op
+  proshield.use:
+    description: Allows players to use ProShield plot features
+    default: true
 
 softdepend:
   - DiscordSRV

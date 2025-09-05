@@ -74,3 +74,6 @@ If you want to include ProShield as a dependency in your own project:
   <artifactId>ProShield</artifactId>
   <version>1.1.6</version>
 </dependency>
+
+[![](https://jitpack.io/v/snazzyatoms/ProShield.svg)](https://jitpack.io/#snazzyatoms/ProShield)
+

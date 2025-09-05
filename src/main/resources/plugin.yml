@@ -3,33 +3,37 @@ version: 1.1.6
 main: com.snazzyatoms.proshield.ProShield
 api-version: 1.18
 authors: [ snazzyatoms ]
-description: A lightweight land and plot protection plugin for Paper/Spigot servers.
+description: Lightweight land/plot claiming with a simple GUI and admin compass.
 
 commands:
   proshield:
     description: Main ProShield command
-    usage: /proshield <subcommand>
+    usage: /proshield <reload|info|compass>
     aliases: [ps]
     permission: proshield.use
 
 permissions:
   proshield.*:
-    description: Gives access to all ProShield commands and features
+    description: Access to all ProShield features
     default: op
     children:
       proshield.use: true
       proshield.reload: true
       proshield.info: true
       proshield.compass: true
+
   proshield.use:
     description: Base permission to use ProShield
     default: true
+
   proshield.reload:
     description: Reload ProShield configuration
     default: op
+
   proshield.info:
-    description: Show plugin info
+    description: Show ProShield info
     default: true
+
   proshield.compass:
-    description: Access the ProShield admin compass tool
+    description: Use /proshield compass and the admin compass
     default: op

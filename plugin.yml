@@ -1,30 +1,25 @@
 name: ProShield
 main: com.proshield.ProShield
 version: 1.0.0
-api-version: 1.19
-author: snazzyatons
-description: A flexible plot protection plugin with configurable building rules.
+author: YourName
+api-version: 1.16
+description: >
+  ProShield is a flexible land protection plugin with plot claiming,
+  expansion, admin tools, backups, economy integration, and Discord support.
 
 commands:
   proshield:
-    description: Main ProShield command.
-    usage: /<command> [reload|claim|check]
-    aliases: [ps]
-    permission: proshield.use
+    description: Main command for ProShield
+    usage: /proshield <claim|check|reload>
+    aliases: [pshield]
 
 permissions:
   proshield.use:
-    description: Allows access to base ProShield commands.
+    description: Allows use of /proshield claim and check
     default: true
-
   proshield.reload:
-    description: Allows reloading the ProShield configuration.
+    description: Allows reloading of the ProShield configuration
     default: op
-
-  proshield.claim:
-    description: Allows players to claim plots.
-    default: true
-
-  proshield.check:
-    description: Allows players to check their plot info.
-    default: true
+  proshield.admin:
+    description: Grants access to admin-only features
+    default: op

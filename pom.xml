@@ -62,7 +62,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin (for packaging if needed) -->
+            <!-- Shade plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

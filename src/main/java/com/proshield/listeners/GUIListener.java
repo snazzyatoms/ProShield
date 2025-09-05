@@ -6,10 +6,10 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 public class GUIListener implements Listener {
 
@@ -19,39 +19,29 @@ public class GUIListener implements Listener {
         this.guiManager = guiManager;
     }
 
+    /**
+     * Opens Claim Management GUI when a player right-clicks with the ProShield Compass
+     */
     @EventHandler
     public void onPlayerUseCompass(PlayerInteractEvent event) {
+        // Ignore off-hand interactions to avoid double-triggering
+        if (event.getHand() != EquipmentSlot.HAND) return;
+
         Player player = event.getPlayer();
+        ItemStack item = event.getItem();
 
-        // Only check right-clicks
-        if (!(event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)) {
-            return;
+        if (item != null && item.getType() == Material.COMPASS && item.hasItemMeta()
+                && ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase("ProShield Compass")) {
+            event.setCancelled(true);
+            guiManager.openClaimGUI(player);
         }
+    }
 
-        ItemStack item = player.getInventory().getItemInMainHand();
-        if (item == null || item.getType() != Material.COMPASS) {
-            return;
-        }
-
-        // Verify it’s the ProShield Admin Compass
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) {
-            return;
-        }
-
-        String displayName = ChatColor.stripColor(meta.getDisplayName());
-        if (!displayName.equalsIgnoreCase("ProShield Admin Compass")) {
-            return;
-        }
-
-        // Check permission
-        if (!player.hasPermission("proshield.compass")) {
-            player.sendMessage(ChatColor.RED + "You don’t have permission to use this item.");
-            return;
-        }
-
-        // ✅ Open the Claim Management GUI
-        guiManager.openClaimGUI(player);
-        event.setCancelled(true);
+    /**
+     * Handles clicks inside the Claim Management GUI
+     */
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        guiManager.handleGUIClick(event);
     }
 }

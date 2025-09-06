@@ -1,9 +1,31 @@
+# ===========================
+# ProShield — Configuration
+# Version: 1.1.9
+# ===========================
+
+messages:
+  prefix: "&3[ProShield]&r "
+
+# ---- Claim limits / quotas ----
+limits:
+  # -1 = unlimited (players with proshield.unlimited always bypass regardless)
+  max-claims: 5
+
+# ---- Claim expiry (inactive owners) ----
+expiry:
+  enabled: false         # If true, remove claims whose owners have been inactive for N days
+  days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
+
+# ---- Core protection toggles ----
 protection:
+  # Container access (chests, barrels, shulkers, hoppers, etc.)
   containers: true
+
+  # PvP inside claimed chunks: if true, allow PvP; if false, cancel PvP in claims
   pvp-in-claims: false
 
-  # Explosion block-breaking in claims
-  mob-grief: true
+  # --- Explosion block-breaking in claims ---
+  mob-grief: true           # Master toggle for explosion block-list trimming in claims
   creeper-explosions: true
   tnt-explosions: true
   wither-explosions: true
@@ -11,33 +33,54 @@ protection:
   ender-crystal-explosions: true
   ender-dragon-explosions: true
 
-  # Fire behavior inside claims
+  # --- Fire behavior in claims ---
   fire:
-    spread: true   # cancel FIRE spread in claimed chunks
-    burn: true     # reserve for future BlockBurn handlers; kept for clarity
+    spread: true   # Cancel classic FIRE spread in claimed chunks
+    burn: true     # Reserved for future BlockBurn handlers; on by default for parity
     ignite:
-      flint_and_steel: true   # blocks players from igniting inside others' claims
-      lava: true              # lava-caused ignition blocked in claims
+      flint_and_steel: true   # Players cannot ignite fire inside others' claims
+      lava: true              # Lava-caused ignition blocked in claims
       lightning: true
       explosion: true
       spread: true
 
-  # Non-container interaction controls
+  # (Legacy key from earlier draft — not used by code anymore; keep for familiarity)
+  # fire-spread: true
+
+  # --- Non-container interaction controls (doors, buttons, etc.) ---
   interactions:
     enabled: true
+    # Mode decides how 'categories' and 'list' are treated:
+    #   blacklist = block when it matches
+    #   whitelist = allow only when it matches (block all others)
     mode: blacklist
-    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
+    categories:
+      - doors
+      - trapdoors
+      - fence_gates
+      - buttons
+      - levers
+      - pressure_plates
+    # Explicit additional materials; example: [NOTE_BLOCK, BELL]
     list: []
 
-  # Bucket protection
+  # --- Bucket usage ---
   buckets:
-    block-empty: true
-    block-fill: true
+    block-empty: true    # Block pouring water/lava in other players' claims
+    block-fill: true     # Block picking up source blocks from other players' claims
 
-  # Entity grief that changes blocks (non-explosion)
+  # --- Entity grief that changes blocks (non-explosions) ---
   entity-grief:
-    enderman: true       # stop block pickup/place in claims
-    ravager: true        # stop crop trampling / block change
-    silverfish: true     # stop infestation block changes
-    ender-dragon: true   # stop dragon block change (non-explosion)
-    wither: true         # stop wither block change (non-explosion)
+    enderman: true       # Stop pickup/place inside claims
+    ravager: true        # Stop crop trampling / block change
+    silverfish: true     # Stop infestation block changes
+    ender-dragon: true   # Stop dragon block changes (non-explosion)
+    wither: true         # Stop wither block changes (non-explosion)
+
+# ---- Claims store (auto-managed by the plugin) ----
+claims: {}
+
+# ---- Quality of life ----
+autogive:
+  # Give ProShield compass to OPs/admins with permission on first join / join if missing
+  compass-on-join: true

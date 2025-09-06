@@ -11,7 +11,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
@@ -19,40 +18,39 @@ public class GUIListener implements Listener {
     private final PlotManager plotManager;
     private final GUIManager guiManager;
 
-    // 🔧 FIX: expect both managers
     public GUIListener(PlotManager plotManager, GUIManager guiManager) {
         this.plotManager = plotManager;
         this.guiManager = guiManager;
     }
 
-    // Right-click compass opens menu
+    // Right-click ProShield compass opens the menu
     @EventHandler
     public void onCompassUse(PlayerInteractEvent e) {
-        if (e.getItem() == null) return;
         ItemStack it = e.getItem();
-        if (it.getType() != Material.COMPASS || !it.hasItemMeta()) return;
-        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName());
+        if (it == null || it.getType() != Material.COMPASS || !it.hasItemMeta()) return;
+        String name = it.getItemMeta().getDisplayName();
         if (name == null) return;
 
-        if (name.equalsIgnoreCase("ProShield Compass")) {
+        if (ChatColor.stripColor(name).equalsIgnoreCase("ProShield Compass")) {
             e.setCancelled(true);
-            guiManager.openMain(e.getPlayer());
+            guiManager.openMainGUI(e.getPlayer()); // ✅ correct method name
         }
     }
 
-    // Handle menu clicks
+    // Handle clicks in the ProShield GUI
     @EventHandler
     public void onInvClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player)) return;
-        Player p = (Player) e.getWhoClicked();
-        Inventory inv = e.getInventory();
-        if (inv == null || inv.getHolder() != null) return; // only our simple GUI
+        if (!(e.getWhoClicked() instanceof Player p)) return;
 
-        if (!inv.getTitle().contains("ProShield Menu")) return; // Paper <1.20 API; for newer use view.title()
+        // ✅ use the view title (works across supported API versions)
+        String title = e.getView().getTitle();
+        if (!title.equals(ChatColor.DARK_GREEN + "ProShield Menu")) return;
+
         e.setCancelled(true);
 
         ItemStack clicked = e.getCurrentItem();
-        if (clicked == null) return;
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
         Material type = clicked.getType();
         Location loc = p.getLocation();
 
@@ -70,25 +68,4 @@ public class GUIListener implements Listener {
             case PAPER: // Claim Info
                 plotManager.getClaim(loc).ifPresentOrElse(c -> {
                     p.sendMessage(ChatColor.GOLD + "Owner: " + plotManager.ownerName(c.getOwner()));
-                    p.sendMessage(ChatColor.GOLD + "World: " + c.getWorld() + " Chunk: " + c.getChunkX() + "," + c.getChunkZ());
-                    p.sendMessage(ChatColor.GOLD + "Trusted: " +
-                            (c.getTrusted().isEmpty() ? "(none)" : c.getTrusted().size() + " player(s)"));
-                    ProShield.getInstance().getBorderVisualizer().showChunkBorder(p, loc);
-                }, () -> p.sendMessage(ChatColor.GRAY + "This chunk is not claimed."));
-                break;
-
-            case BARRIER: // Remove Claim
-                // 🔧 FIX: new PlotManager signature requires adminForce boolean
-                if (plotManager.removeClaim(p.getUniqueId(), loc, false)) {
-                    p.sendMessage(ChatColor.YELLOW + "Chunk unclaimed.");
-                } else {
-                    p.sendMessage(ChatColor.RED + "You don't own this claim.");
-                }
-                p.closeInventory();
-                break;
-
-            default:
-                break;
-        }
-    }
-}
+                    p.sendMessage(ChatColor.GOLD + "World: " + c.getWorld() + "  Chunk: " + c.getChunkX() + "," + c.get

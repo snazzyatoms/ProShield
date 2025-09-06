@@ -1,9 +1,12 @@
 package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
 
 public class PlayerJoinListener implements Listener {
 
@@ -14,7 +17,12 @@ public class PlayerJoinListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        plugin.getLogger().info(event.getPlayer().getName() + " joined the server.");
+    public void onJoin(PlayerJoinEvent e) {
+        if (!e.getPlayer().hasPermission("proshield.admin")) return;
+        boolean has = e.getPlayer().getInventory().contains(Material.COMPASS);
+        if (!has) {
+            ItemStack compass = GUIManager.createAdminCompass();
+            e.getPlayer().getInventory().addItem(compass);
+        }
     }
 }

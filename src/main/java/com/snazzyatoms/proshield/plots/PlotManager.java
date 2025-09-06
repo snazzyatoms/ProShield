@@ -15,7 +15,6 @@ public class PlotManager {
     private final ProShield plugin;
 
     private final Map<String, Claim> claims = new HashMap<>();
-    // quick owner -> count cache
     private final Map<UUID, Integer> ownerCounts = new HashMap<>();
 
     public PlotManager(ProShield plugin) {
@@ -23,23 +22,22 @@ public class PlotManager {
         loadAll();
     }
 
-    /* -------------------- Keys -------------------- */
-
     private String key(Location loc) {
         return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
     }
-
-    /* -------------------- CRUD -------------------- */
 
     public boolean createClaim(UUID owner, Location loc) {
         String k = key(loc);
         if (claims.containsKey(k)) return false;
 
-        // claim limits
         int max = plugin.getConfig().getInt("limits.max-claims", -1);
-        if (max >= 0 && !plugin.getServer().getPlayer(owner).hasPermission("proshield.unlimited")) {
-            int used = ownerCounts.getOrDefault(owner, 0);
-            if (used >= max) return false;
+        if (max >= 0) {
+            var player = plugin.getServer().getPlayer(owner);
+            boolean bypass = player != null && player.hasPermission("proshield.unlimited");
+            if (!bypass) {
+                int used = ownerCounts.getOrDefault(owner, 0);
+                if (used >= max) return false;
+            }
         }
 
         Claim c = new Claim(owner, loc.getWorld().getName(),
@@ -80,8 +78,6 @@ public class PlotManager {
         return Optional.ofNullable(claims.get(key(loc)));
     }
 
-    /* -------------------- Trust -------------------- */
-
     public boolean trust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
@@ -113,14 +109,10 @@ public class PlotManager {
                 .collect(Collectors.toList());
     }
 
-    /* -------------------- Info -------------------- */
-
     public String ownerName(UUID uuid) {
         var op = Bukkit.getOfflinePlayer(uuid);
         return op.getName() != null ? op.getName() : uuid.toString();
     }
-
-    /* -------------------- Persistence -------------------- */
 
     private void loadAll() {
         claims.clear();
@@ -141,7 +133,6 @@ public class PlotManager {
 
                 Claim c = new Claim(owner, world, cx, cz, created);
 
-                // trusted
                 List<String> t = sec.getStringList("trusted");
                 if (t != null) for (String s : t) c.getTrusted().add(UUID.fromString(s));
 
@@ -177,8 +168,6 @@ public class PlotManager {
         plugin.getConfig().set("claims." + key, null);
         plugin.saveConfig();
     }
-
-    /* -------------------- Counts -------------------- */
 
     public int getClaimCount() { return claims.size(); }
     public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }

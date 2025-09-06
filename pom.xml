@@ -1,39 +1,26 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.snazzyatoms</groupId>
   <artifactId>proshield</artifactId>
   <version>1.1.8</version>
-  <packaging>jar</packaging>
-
   <name>ProShield</name>
-  <description>Land and plot protection plugin with GUI-based management.</description>
+  <description>Land and plot protection plugin with GUI management and admin tools.</description>
+  <url>https://github.com/snazzyatoms/ProShield</url>
 
   <properties>
-    <java.version>17</java.version>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <paper.api.version>1.18.2-R0.1-SNAPSHOT</paper.api.version>
   </properties>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
-        <configuration>
-          <source>${maven.compiler.source}</source>
-          <target>${maven.compiler.target}</target>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 
   <repositories>
     <repository>
-      <id>papermc-repo</id>
+      <id>papermc</id>
       <url>https://repo.papermc.io/repository/maven-public/</url>
     </repository>
   </repositories>
@@ -42,8 +29,48 @@
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
-      <version>1.20.1-R0.1-SNAPSHOT</version>
+      <version>${paper.api.version}</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Ensure Java 17 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
+          <release>17</release>
+        </configuration>
+      </plugin>
+
+      <!-- Put plugin.yml and resources into the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.3.1</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+
+      <!-- Build a clean jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Built-By>ProShield</Built-By>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

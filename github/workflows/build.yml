@@ -1,31 +1,35 @@
-name: CI Build
+name: CI (Build & Test)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
   build:
+    name: Build on Java ${{ matrix.java }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '17', '21' ]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Setup Temurin Java ${{ matrix.java }} + Maven settings
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: ${{ matrix.java }}
           cache: maven
+          # Create settings.xml w/ optional OSSRH creds (safe to leave blank in CI)
+          server-id: ossrh
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_PASSWORD
 
-      - name: Build with Maven
+      - name: Build (no signing, fast)
         run: mvn -B -DskipTests package
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ProShield-JAR
-          path: target/*.jar

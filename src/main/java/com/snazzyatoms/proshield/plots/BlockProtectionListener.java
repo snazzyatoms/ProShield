@@ -1,5 +1,5 @@
 // path: src/main/java/com/snazzyatoms/proshield/listeners/BlockProtectionListener.java
-package com.snazzyatoms.proshield.listeners;
+package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;

@@ -2,25 +2,20 @@
 # ProShield Default Configuration
 # ================================
 
-# Storage format:
-# Each claim is stored under claims.<world>.<chunkX>.<chunkZ>
-# Example is created automatically at runtime.
-
 messages:
   prefix: "&7[&bProShield&7] "
-  no-permission: "&cYou do not have permission to use this command."
-  claim-created: "&aSuccessfully created a new claim."
+  no-permission: "&cYou do not have permission."
+  claim-created: "&aClaim created."
   claim-removed: "&eClaim removed."
-  already-claimed: "&cThis land is already claimed."
-  not-claimed: "&cThis land is not claimed."
-  reload-complete: "&aConfiguration reloaded successfully."
+  already-claimed: "&cThis chunk is already claimed."
+  not-owner: "&cYou do not own this claim."
+  reload-complete: "&aConfiguration reloaded."
 
 gui:
-  title: "&bProShield Menu"
-  claim-item: "GRASS_BLOCK"
-  unclaim-item: "BARRIER"
-  info-item: "BOOK"
+  title: "&2ProShield Menu"
+  items:
+    create: "GRASS_BLOCK"
+    info: "BOOK"
+    remove: "BARRIER"
 
-# Claims storage section
-# Do not edit manually unless you know what you are doing.
 claims: {}

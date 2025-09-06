@@ -1,0 +1,23 @@
+admin-menu:
+  enabled: true
+  open-when-sneaking-with-compass: true
+  title: "&3ProShield Admin"
+
+defaults:
+  give-compass-on-join: true
+  compass-slot: 8
+
+teleport:
+  enabled: true
+  max-list: 27
+  title: "&3Claims (click to TP)"
+
+messages:
+  prefix: "&3[ProShield]&r "
+  no-permission: "&cNo permission."
+  reloaded: "&aProShield configs reloaded."
+  compass-given: "&aAdmin compass added to your inventory."
+  bypass-on: "&eBypass &aENABLED"
+  bypass-off: "&eBypass &cDISABLED"
+  tp-disabled: "&cTeleporting to claims is disabled."
+  no-claims: "&7No claims found."

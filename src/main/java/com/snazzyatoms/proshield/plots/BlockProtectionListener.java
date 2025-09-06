@@ -1,7 +1,6 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/BlockProtectionListener.java
-package com.snazzyatoms.proshield.plots;
+package com.snazzytom.proshield.listeners;
 
-import com.snazzyatoms.proshield.ProShield;
+import com.snazzytom.proshield.plots.PlotManager;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -11,12 +10,10 @@ import org.bukkit.event.block.BlockPlaceEvent;
 
 public class BlockProtectionListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plotManager;
 
-    public BlockProtectionListener(ProShield plugin) {
-        this.plugin = plugin;
-        this.plotManager = plugin.getPlotManager();
+    public BlockProtectionListener(PlotManager plotManager) {
+        this.plotManager = plotManager;
     }
 
     @EventHandler
@@ -24,9 +21,9 @@ public class BlockProtectionListener implements Listener {
         Player player = event.getPlayer();
         Location location = event.getBlock().getLocation();
 
-        if (!plotManager.canModify(player, location)) {
+        if (!plotManager.isOwner(player, location)) {
             event.setCancelled(true);
-            player.sendMessage("§cYou cannot break blocks here!");
+            player.sendMessage("You cannot break blocks here!");
         }
     }
 
@@ -35,9 +32,9 @@ public class BlockProtectionListener implements Listener {
         Player player = event.getPlayer();
         Location location = event.getBlock().getLocation();
 
-        if (!plotManager.canModify(player, location)) {
+        if (!plotManager.isOwner(player, location)) {
             event.setCancelled(true);
-            player.sendMessage("§cYou cannot place blocks here!");
+            player.sendMessage("You cannot place blocks here!");
         }
     }
 }

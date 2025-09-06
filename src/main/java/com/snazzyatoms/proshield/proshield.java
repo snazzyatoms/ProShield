@@ -1,19 +1,22 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.GUI.GUIListener;
-import com.snazzyatoms.proshield.GUI.GUIManager;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.listeners.AdminJoinListener;
-import com.snazzyatoms.proshield.listeners.PlotProtectionListener;
+import com.snazzyatoms.proshield.gui.GUIListener;
+import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.plots.BlockProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.PlayerJoinListener;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class ProShield extends JavaPlugin {
+public final class ProShield extends JavaPlugin {
 
     private static ProShield instance;
-
     private PlotManager plotManager;
     private GUIManager guiManager;
 
@@ -33,32 +36,51 @@ public class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // ensure data folder + config
+        // Ensure config exists
         saveDefaultConfig();
-        getConfig().options().copyDefaults(true);
-        saveConfig();
+        // Also ensure claims section exists
+        if (!getConfig().isConfigurationSection("claims")) {
+            getConfig().createSection("claims");
+            saveConfig();
+        }
 
-        // managers
+        // Managers
         plotManager = new PlotManager(this);
-        guiManager = new GUIManager(this, plotManager);
+        guiManager = new GUIManager(this);
 
-        // listeners
-        Bukkit.getPluginManager().registerEvents(new GUIListener(guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new PlotProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new AdminJoinListener(this), this);
-
-        // command
+        // Commands
         getCommand("proshield").setExecutor(new ProShieldCommand(this));
 
-        getLogger().info("ProShield enabled.");
+        // Listeners (no standalone listeners/ package; grouped by concern)
+        Bukkit.getPluginManager().registerEvents(new GUIListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+
+        registerCompassRecipe();
+
+        getLogger().info("ProShield enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
     public void onDisable() {
-        // persist any in-memory updates to config
-        FileConfiguration cfg = getConfig();
-        plotManager.flushToConfig(cfg);
+        // Persist everything
+        plotManager.saveAll();
         saveConfig();
         getLogger().info("ProShield disabled.");
+    }
+
+    private void registerCompassRecipe() {
+        // Cosmetic, optional recipe that crafts the admin compass (iron + redstone + compass)
+        ItemStack compass = GUIManager.createAdminCompass();
+        NamespacedKey key = new NamespacedKey(this, "proshield_admin_compass");
+        ShapedRecipe recipe = new ShapedRecipe(key, compass);
+        recipe.shape("IRI", "RCR", "IRI");
+        recipe.setIngredient('I', Material.IRON_INGOT);
+        recipe.setIngredient('R', Material.REDSTONE);
+        recipe.setIngredient('C', Material.COMPASS);
+
+        // Avoid duplicate on reload
+        Bukkit.removeRecipe(key);
+        Bukkit.addRecipe(recipe);
     }
 }

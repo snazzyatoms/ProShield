@@ -1,21 +1,12 @@
-# =====================================================
-# ProShield Configuration
-# =====================================================
-# This file is created on first startup.
-# =====================================================
+config-version: 1
 
 settings:
-  debug: false
-  allow-multiple-claims: false
-  default-radius: 16
+  give-admin-compass-on-join: true
+  compass-name: "&aProShield Admin Compass"
+  gui-title: "&aClaim Management"
 
-# Player claims are stored here by UUID
-claims: {}
-# Example:
-# claims:
-#   00000000-0000-0000-0000-000000000000:
-#     world: world
-#     x: 100
-#     y: 64
-#     z: 200
-#     radius: 16
+claims:
+  # Claim storage format: world:x:z -> owner-uuid
+  # These entries will be generated when claims are created
+  # Example:
+  # "world:100:200": "1f3a5a52-3e0c-4e59-9c1f-9a7c9e63c111"

@@ -1,0 +1,30 @@
+name: Release Notes Automation
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Extract changelog section
+        id: extract_changelog
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Looking for changelog entry for $VERSION"
+          awk "/## \\[$VERSION\\]/,/^## \\[/" CHANGELOG.md | sed '$d' > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "❌ Could not find changelog entry for $VERSION"
+            exit 1
+          fi
+
+      - name: Upload Release Notes
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,78 +1,167 @@
-# 🛡️ ProShield  
-*A lightweight land protection plugin for Paper/Spigot servers.*
+# 🛡️ ProShield
 
-![Build Status](https://jitpack.io/v/snazzyatoms/ProShield.svg)  
-[![](https://img.shields.io/badge/Java-17+-blue.svg)](https://adoptium.net/)  
-[![](https://img.shields.io/badge/MC-Paper%20%2F%20Spigot%201.20+-brightgreen.svg)]()  
+**ProShield** is an all-in-one land and plot protection plugin for Paper/Spigot servers.  
+It provides a lightweight and modern alternative to heavy claim systems, offering **simple land protection, GUIs, and admin tools**.
 
 ---
 
 ## ✨ Features
-- ✅ **Claim Protection** – Prevent griefing by claiming plots.  
-- ✅ **Admin Compass** – Operators receive a special compass on join to test menus.  
-- ✅ **Interactive GUI** – Easy-to-use menu for managing plots.  
-- ✅ **Permissions System** – Works with Bukkit’s native system and supports permission managers (LuckPerms, PermissionsEx, etc.).  
-- ✅ **Reload Command** – Quickly reload configuration without restarting.  
-- ✅ **Info Command** – View plugin version & basic information.  
-- ✅ **Configurable** – Automatic `ProShield/` folder with editable `.yml` configs.  
+
+- ✅ **Land Claiming** – Players can claim chunks of land with simple commands or via the ProShield GUI.  
+- ✅ **Unclaiming** – Easily release land back for reuse.  
+- ✅ **Protection System** – Prevents block breaking/placing in claimed areas for non-owners.  
+- ✅ **GUI Menu** – Clean, intuitive inventory-based interface:  
+  - 🌱 Create Claim  
+  - 📜 Claim Info  
+  - ⛔ Remove Claim  
+- ✅ **Admin Compass** – Custom craftable tool that opens the ProShield menu.  
+- ✅ **Automatic Data Saving** – Claims are persisted in `config.yml` and restored on restart.  
+- ✅ **Admin/Operator Tools** – OPs receive a compass automatically on join if missing.  
+- ✅ **Lightweight & Stable** – Minimal configuration, designed for survival/vanilla-style servers.  
 
 ---
 
 ## 📥 Installation
-1. Download the latest release from the [Releases page](https://github.com/snazzyatoms/ProShield/releases).  
-2. Place the `.jar` in your server’s `plugins/` folder.  
-3. Restart your server.  
-4. Configure settings in the new `plugins/ProShield/` folder.  
+
+1. Download the latest `ProShield-x.x.x.jar` from [Releases](https://github.com/snazzyatoms/ProShield/releases).  
+2. Place it into your server’s `plugins/` folder.  
+3. Restart the server.  
+4. Configuration (`config.yml`) will be auto-generated under `plugins/ProShield/`.
 
 ---
 
-## ⚙️ Commands
-| Command | Description |
-|---------|-------------|
-| `/proshield` | Base command, shows help. |
-| `/proshield reload` | Reloads the plugin config. |
-| `/proshield info` | Displays plugin info. |
+## ⚙️ Configuration
+
+Default `config.yml`:
+
+```yaml
+# ProShield default configuration
+messages:
+  prefix: "&3[ProShield]&r"
+
+# Claims are stored automatically by PlotManager
+claims: {}
+HTML + CSS + Javascript said:
+
+Perfect 👍 I’ll wrap everything (including commands, permissions, admin compass, changelog, technical notes, links, and support section) into the same code block, so you can just copy-paste the whole thing into your repo’s README.md.
+
+Here it is:
+
+# 🛡️ ProShield
+
+**ProShield** is an all-in-one land and plot protection plugin for Paper/Spigot servers.  
+It provides a lightweight and modern alternative to heavy claim systems, offering **simple land protection, GUIs, and admin tools**.
 
 ---
 
-## 🔑 Permissions
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `proshield.*` | Grants access to all ProShield commands | OP |
-| `proshield.use` | Allows using basic commands (claim, manage plots, etc.) | true |
-| `proshield.admin` | Grants admin-level commands (reload, reset, bypass, etc.) | OP |
+## ✨ Features
+
+- ✅ **Land Claiming** – Players can claim chunks of land with simple commands or via the ProShield GUI.  
+- ✅ **Unclaiming** – Easily release land back for reuse.  
+- ✅ **Protection System** – Prevents block breaking/placing in claimed areas for non-owners.  
+- ✅ **GUI Menu** – Clean, intuitive inventory-based interface:  
+  - 🌱 Create Claim  
+  - 📜 Claim Info  
+  - ⛔ Remove Claim  
+- ✅ **Admin Compass** – Custom craftable tool that opens the ProShield menu.  
+- ✅ **Automatic Data Saving** – Claims are persisted in `config.yml` and restored on restart.  
+- ✅ **Admin/Operator Tools** – OPs receive a compass automatically on join if missing.  
+- ✅ **Lightweight & Stable** – Minimal configuration, designed for survival/vanilla-style servers.  
 
 ---
 
-## 📜 Changelog  
+## 📥 Installation
 
-### v1.1.6 (Latest)
-- Added `/proshield reload` command.  
-- Added `/proshield info` command.  
-- Operators automatically receive a **ProShield Compass** on join.  
-- Config system improvements – config files auto-generate in `plugins/ProShield/`.  
-- Improved error handling & stability fixes.  
-- Unified branding and consistent plugin.yml.  
-
-### v1.1.5
-- Added OP-level permission fallback (server operators get full access).  
-- Minor bug fixes and internal improvements.  
+1. Download the latest `ProShield-x.x.x.jar` from [Releases](https://github.com/snazzyatoms/ProShield/releases).  
+2. Place it into your server’s `plugins/` folder.  
+3. Restart the server.  
+4. Configuration (`config.yml`) will be auto-generated under `plugins/ProShield/`.
 
 ---
 
-## 🏗️ Build with JitPack
-If you want to include ProShield as a dependency in your own project:
+## ⚙️ Configuration
 
-```xml
-<repository>
-  <id>jitpack.io</id>
-  <url>https://jitpack.io</url>
-</repository>
+Default `config.yml`:
 
-<dependency>
-  <groupId>com.github.snazzyatoms</groupId>
-  <artifactId>ProShield</artifactId>
-  <version>1.1.6</version>
-</dependency>
+```yaml
+# ProShield default configuration
+messages:
+  prefix: "&3[ProShield]&r"
+
+# Claims are stored automatically by PlotManager
+claims: {}
 
 
+Claims are saved automatically when the server shuts down.
+
+Stored claims are reloaded on startup.
+
+⌨️ Commands
+Command	Description
+/proshield	Shows plugin status.
+/proshield claim	Claims the chunk at the player’s location.
+/proshield unclaim	Unclaims the chunk (if owned by the player).
+🔑 Permissions
+Permission	Description	Default
+proshield.use	Allows using ProShield commands and GUI.	true
+proshield.admin	Grants admin compass recipe and OP join features.	op
+🧭 Admin Compass
+Crafting Recipe
+I R I
+R C R
+I R I
+I = Iron Ingot
+
+R = Redstone
+
+C = Compass
+
+Behavior
+
+Opens the ProShield GUI menu when right-clicked.
+
+Operators automatically receive one on join if they don’t already have it.
+
+📜 Changelog
+v1.1.7 (Current Release)
+
+Reworked & synchronized all core classes (ProShieldCommand, PlotManager, GUIManager, PlayerGUI, GUIListener, BlockProtectionListener, PlayerJoinListener).
+
+Added Admin Compass recipe and auto-give for OPs.
+
+Fixed constructor mismatches and duplicate class errors.
+
+Synced GUI clicks with claim system logic.
+
+Claims stored in config.yml, auto-loaded on enable, and saved on disable.
+
+First stable public build!
+
+🛠️ Technical Notes
+
+Built against PaperMC API 1.18+ (backwards-compatible with Spigot).
+
+Requires Java 17+.
+
+Designed for survival servers with lightweight protection needs.
+
+📌 Links
+
+GitHub Repository
+
+Issue Tracker
+
+SpigotMC Resource Page
+ (to be added)
+
+BukkitDev Project Page
+ (to be added)
+
+❤️ Support Development
+
+If you enjoy this plugin, consider leaving a ⭐ on GitHub or supporting future updates!
+
+---
+
+✅ Now everything is **inside one code section**.  
+Do you also want me to make a **SpigotMC/Bukkit version** in **BBCode format** (so it looks nice on the forums)?

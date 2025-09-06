@@ -1,36 +1,22 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
 version: 1.1.6
-api-version: 1.17
-author: SnazzyAtoms
-description: >
-  ProShield provides claim management, plot protection, and admin tools
-  including the ProShield Admin Compass for managing plots via a GUI.
+api-version: 1.18
+author: snazzyatoms
+website: https://github.com/snazzyatoms/ProShield
+description: All-in-one land and plot protection for Paper/Spigot
 
 commands:
   proshield:
-    description: Main ProShield command with subcommands for management.
-    usage: /<command> [subcommand]
-    aliases: [pshield]
+    description: Main ProShield command
+    usage: /<command>
+    aliases: [ps, shield]
     permission: proshield.use
 
 permissions:
-  proshield.*:
-    description: Grants access to all ProShield features.
-    default: op
-    children:
-      proshield.use: true
-      proshield.admin: true
-      proshield.compass: true
-
   proshield.use:
-    description: Allows players to use basic ProShield commands.
+    description: Allows basic ProShield commands
     default: true
-
   proshield.admin:
-    description: Grants access to all administrative features of ProShield.
-    default: op
-
-  proshield.compass:
-    description: Allows the player to use /proshield compass and receive the Admin Compass.
+    description: Allows admin-only features (force unclaim, reload, etc.)
     default: op

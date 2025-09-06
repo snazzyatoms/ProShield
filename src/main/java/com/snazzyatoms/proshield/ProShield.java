@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -11,6 +10,7 @@ import com.snazzyatoms.proshield.plots.PlayerJoinListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -26,6 +26,7 @@ public final class ProShield extends JavaPlugin {
     private GUIManager guiManager;
     private BorderVisualizer borderVisualizer;
 
+    // Admin bypass memory
     private final Set<UUID> bypass = new HashSet<>();
 
     public static ProShield getInstance() { return instance; }
@@ -50,21 +51,31 @@ public final class ProShield extends JavaPlugin {
         guiManager = new GUIManager(this);
         borderVisualizer = new BorderVisualizer(this);
 
+        // Commands
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
-        // 🔧 FIX: pass BOTH managers to GUIListener
+        // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(plotManager, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
+        // Ensure currently online OPs/admins have our compass
+        for (Player p : getServer().getOnlinePlayers()) {
+            if (p.hasPermission("proshield.admin") && !GUIManager.hasProShieldCompass(p)) {
+                p.getInventory().addItem(GUIManager.createAdminCompass());
+            }
+        }
+
         registerCompassRecipe();
-        getLogger().info("ProShield enabled. Claims loaded: " + plotManager.getClaimCount());
+
+        getLogger().info("ProShield 1.1.8 enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
     public void onDisable() {
         plotManager.saveAll();
         saveConfig();
+        getLogger().info("ProShield disabled.");
     }
 
     private void registerCompassRecipe() {

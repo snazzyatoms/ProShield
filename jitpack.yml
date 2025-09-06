@@ -1,5 +1,2 @@
 jdk:
   - openjdk17
-
-install:
-  - mvn -B clean package

@@ -1,8 +1,7 @@
-// path: src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
-package com.snazzyatoms.proshield.commands;
+package com.snazyatoms.proshield.commands;
 
-import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazyatoms.proshield.ProShield;
+import com.snazyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -22,13 +21,15 @@ public class ProShieldCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use this command!");
             return true;
         }
 
-        if (args.length == 0) {
-            sender.sendMessage(ChatColor.YELLOW + "Usage: /proshield <claim|unclaim>");
+        Player player = (Player) sender;
+
+        if (args.length < 1) {
+            player.sendMessage(ChatColor.YELLOW + "Usage: /proshield <claim|unclaim>");
             return true;
         }
 

@@ -32,34 +32,34 @@ public final class ProShield extends JavaPlugin {
         return guiManager;
     }
 
-    @Override
-    public void onEnable() {
-        instance = this;
+   @Override
+public void onEnable() {
+    instance = this;
 
-        // Ensure config exists
-        saveDefaultConfig();
-        // Also ensure claims section exists
-        if (!getConfig().isConfigurationSection("claims")) {
-            getConfig().createSection("claims");
-            saveConfig();
-        }
-
-        // Managers
-        plotManager = new PlotManager(this);
-        guiManager = new GUIManager(this);
-
-        // Commands
-        getCommand("proshield").setExecutor(new ProShieldCommand(this));
-
-        // Listeners (no standalone listeners/ package; grouped by concern)
-        Bukkit.getPluginManager().registerEvents(new GUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
-
-        registerCompassRecipe();
-
-        getLogger().info("ProShield enabled. Claims loaded: " + plotManager.getClaimCount());
+    // Ensure config exists
+    saveDefaultConfig();
+    if (!getConfig().isConfigurationSection("claims")) {
+        getConfig().createSection("claims");
+        saveConfig();
     }
+
+    // Managers
+    plotManager = new PlotManager(this);
+    guiManager = new GUIManager(this);
+
+    // Commands (pass plugin + plotManager)
+    getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
+
+    // Listeners (pass plotManager where needed)
+    Bukkit.getPluginManager().registerEvents(new GUIListener(plotManager), this);
+    Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this), this);
+    Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+
+    registerCompassRecipe();
+
+    getLogger().info("ProShield enabled. Claims loaded: " + plotManager.getClaimCount());
+}
+
 
     @Override
     public void onDisable() {

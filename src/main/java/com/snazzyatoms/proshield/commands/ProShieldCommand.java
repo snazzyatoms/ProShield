@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -55,12 +56,23 @@ public class ProShieldCommand implements CommandExecutor {
                 p.sendMessage(ChatColor.AQUA + "---- ProShield ----");
                 p.sendMessage("/" + label + " claim | unclaim | info");
                 p.sendMessage("/" + label + " trust <player> | untrust <player> | trusted");
-                p.sendMessage("/" + label + " show | compass");
+                p.sendMessage("/" + label + " show | compass | permdebug");
                 if (has(p, "proshield.admin")) {
                     p.sendMessage("/" + label + " bypass");
                     p.sendMessage("/" + label + " admin claim <player> | admin unclaim");
                 }
                 return true;
+
+            case "permdebug": {
+                p.sendMessage(px() + ChatColor.AQUA + "Perm Debug:");
+                p.sendMessage("  isOp: " + p.isOp());
+                p.sendMessage("  proshield.use: " + p.hasPermission("proshield.use"));
+                p.sendMessage("  proshield.admin: " + p.hasPermission("proshield.admin"));
+                p.sendMessage("  proshield.compass: " + p.hasPermission("proshield.compass"));
+                p.sendMessage("  proshield.bypass: " + p.hasPermission("proshield.bypass"));
+                p.sendMessage("  proshield.unlimited: " + p.hasPermission("proshield.unlimited"));
+                return true;
+            }
 
             case "claim": {
                 boolean ok = plotManager.createClaim(p.getUniqueId(), loc);
@@ -126,7 +138,7 @@ public class ProShieldCommand implements CommandExecutor {
                 return true;
             }
 
-            case "compass": { // ✅ OP fallback here too
+            case "compass": { // OP fallback here too
                 if (!(has(p, "proshield.compass") || has(p, "proshield.admin"))) {
                     p.sendMessage(px() + ChatColor.RED + "No permission.");
                     return true;

@@ -1,6 +1,8 @@
-package com.snazzytom.proshield.listeners;
+// path: src/main/java/com/snazzyatoms/proshield/listeners/BlockProtectionListener.java
+package com.snazzyatoms.proshield.listeners;
 
-import com.snazzytom.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,22 +21,22 @@ public class BlockProtectionListener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        Location location = event.getBlock().getLocation();
+        Location loc = event.getBlock().getLocation();
 
-        if (!plotManager.isOwner(player, location)) {
+        if (plotManager.isClaimed(loc) && !plotManager.isOwner(player.getUniqueId(), loc)) {
             event.setCancelled(true);
-            player.sendMessage("You cannot break blocks here!");
+            player.sendMessage(ChatColor.RED + "You cannot break blocks here!");
         }
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        Location location = event.getBlock().getLocation();
+        Location loc = event.getBlock().getLocation();
 
-        if (!plotManager.isOwner(player, location)) {
+        if (plotManager.isClaimed(loc) && !plotManager.isOwner(player.getUniqueId(), loc)) {
             event.setCancelled(true);
-            player.sendMessage("You cannot place blocks here!");
+            player.sendMessage(ChatColor.RED + "You cannot place blocks here!");
         }
     }
 }

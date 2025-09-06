@@ -1,8 +1,9 @@
 package com.snazzyatoms.proshield.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,24 +20,22 @@ public class AdminJoinListener implements Listener {
     }
 
     @EventHandler
-    public void onAdminJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
+    public void onJoin(PlayerJoinEvent event) {
+        Player p = event.getPlayer();
+        FileConfiguration cfg = plugin.getConfig();
 
-        if (player.isOp()) {
-            ItemStack compass = new ItemStack(Material.COMPASS, 1);
-            ItemMeta meta = compass.getItemMeta();
+        if (!cfg.getBoolean("settings.give-admin-compass-on-join", true)) return;
+        if (!p.hasPermission("proshield.compass")) return;
 
-            if (meta != null) {
-                meta.setDisplayName("§bProShield Menu");
-                compass.setItemMeta(meta);
-            }
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&',
+                cfg.getString("settings.compass-name", "&aProShield Admin Compass")));
+        compass.setItemMeta(meta);
 
-            // Give compass if they don't already have one
-            if (!player.getInventory().contains(compass)) {
-                player.getInventory().addItem(compass);
-            }
-
-            Bukkit.getLogger().info("Gave ProShield menu compass to admin: " + player.getName());
+        if (!p.getInventory().contains(compass)) {
+            p.getInventory().addItem(compass);
+            p.sendMessage(ChatColor.GREEN + "Admin compass granted.");
         }
     }
 }

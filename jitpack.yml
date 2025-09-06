@@ -1,4 +1,10 @@
 jdk:
   - openjdk17
-install:
-  - mvn -q -DskipTests install
+
+before_install:
+  - echo "Using Java 17 for build"
+
+build:
+  provider: maven
+  commands:
+    - mvn clean install -DskipTests

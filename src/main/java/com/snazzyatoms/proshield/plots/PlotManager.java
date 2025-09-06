@@ -1,39 +1,39 @@
 package com.snazzyatoms.proshield.plots;
 
-import java.util.*;
-
-import org.bukkit.Location;
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.entity.Player;
 
+import java.util.HashMap;
+import java.util.UUID;
+
 public class PlotManager {
-    private final Map<UUID, List<Claim>> playerClaims = new HashMap<>();
+    private final ProShield plugin;
+    private final HashMap<UUID, Claim> claims;
 
-    public Claim createClaim(Player player, Location corner1, Location corner2) {
-        Claim claim = new Claim(player.getUniqueId(), corner1, corner2);
-        playerClaims.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>()).add(claim);
-        return claim;
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
+        this.claims = new HashMap<>();
     }
 
-    public List<Claim> getClaims(UUID owner) {
-        return playerClaims.getOrDefault(owner, Collections.emptyList());
+    public void createClaim(Player player) {
+        claims.put(player.getUniqueId(), new Claim(player.getUniqueId(), player.getLocation()));
+        player.sendMessage("✅ Claim created at your current location.");
     }
 
-    public boolean removeClaim(Player player, Claim claim) {
-        List<Claim> claims = playerClaims.get(player.getUniqueId());
-        if (claims != null) {
-            return claims.remove(claim);
+    public void getClaimInfo(Player player) {
+        Claim claim = claims.get(player.getUniqueId());
+        if (claim != null) {
+            player.sendMessage("📍 Claim Info: " + claim.toString());
+        } else {
+            player.sendMessage("⚠️ You don’t have a claim yet.");
         }
-        return false;
     }
 
-    public Claim getClaimAt(Location location) {
-        for (List<Claim> claims : playerClaims.values()) {
-            for (Claim claim : claims) {
-                if (claim.isInside(location)) {
-                    return claim;
-                }
-            }
+    public void removeClaim(Player player) {
+        if (claims.remove(player.getUniqueId()) != null) {
+            player.sendMessage("❌ Claim removed.");
+        } else {
+            player.sendMessage("⚠️ You don’t have a claim to remove.");
         }
-        return null;
     }
 }

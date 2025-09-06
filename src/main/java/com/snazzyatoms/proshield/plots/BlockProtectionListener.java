@@ -1,9 +1,12 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/BlockProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Container;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,9 +17,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.Container;
 
 public class BlockProtectionListener implements Listener {
 
@@ -50,10 +50,9 @@ public class BlockProtectionListener implements Listener {
         }
     }
 
-    // Container protection
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
-        if (e.getHand() == EquipmentSlot.OFF_HAND) return; // avoid double triggers
+        if (e.getHand() == EquipmentSlot.OFF_HAND) return;
         Block b = e.getClickedBlock();
         if (b == null || !plugin.getConfig().getBoolean("protection.containers", true)) return;
 
@@ -65,7 +64,6 @@ public class BlockProtectionListener implements Listener {
         }
     }
 
-    // PVP toggle inside claims
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent e) {
         if (!plugin.getConfig().getBoolean("protection.pvp-in-claims", false)) {
@@ -79,12 +77,12 @@ public class BlockProtectionListener implements Listener {
         }
     }
 
-    // Mob grief prevention (explosions)
     @EventHandler
     public void onExplode(EntityExplodeEvent e) {
         if (!plugin.getConfig().getBoolean("protection.mob-grief", true)) return;
-        if (e.getEntityType() == EntityType.CREEPER || e.getEntityType() == EntityType.TNT) {
-            // if any block in explosion is within a claim, cancel damage to blocks in claims
+
+        // 🔧 FIX: PRIMED_TNT is the TNT entity; TNT (block) is not an EntityType
+        if (e.getEntityType() == EntityType.CREEPER || e.getEntityType() == EntityType.PRIMED_TNT) {
             e.blockList().removeIf(block -> plotManager.isClaimed(block.getLocation()));
         }
     }

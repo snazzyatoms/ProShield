@@ -1,10 +1,26 @@
-# ProShield default configuration
-# Storage format: chunks claimed per world.
-# Each claim is stored under claims.<world:chunkX_chunkZ>
-# Example created at runtime.
+# ================================
+# ProShield Default Configuration
+# ================================
+
+# Storage format:
+# Each claim is stored under claims.<world>.<chunkX>.<chunkZ>
+# Example is created automatically at runtime.
 
 messages:
-  prefix: "&3[ProShield]&r "
+  prefix: "&7[&bProShield&7] "
+  no-permission: "&cYou do not have permission to use this command."
+  claim-created: "&aSuccessfully created a new claim."
+  claim-removed: "&eClaim removed."
+  already-claimed: "&cThis land is already claimed."
+  not-claimed: "&cThis land is not claimed."
+  reload-complete: "&aConfiguration reloaded successfully."
 
-# Claims are stored/rewritten automatically by PlotManager.
+gui:
+  title: "&bProShield Menu"
+  claim-item: "GRASS_BLOCK"
+  unclaim-item: "BARRIER"
+  info-item: "BOOK"
+
+# Claims storage section
+# Do not edit manually unless you know what you are doing.
 claims: {}

@@ -1,60 +1,45 @@
-// path: src/main/java/com/snazzyatoms/proshield/gui/PlayerGUI.java
 package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.plots.Claim;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-public class PlayerGUI {
+/**
+ * Simple UI builder for ProShield menus.
+ * No PlotManager calls or claim logic here — that is handled in GUIListener.
+ */
+public final class PlayerGUI {
 
-    private final ProShield plugin;
-    private final PlotManager plotManager;
+    private PlayerGUI() {}
 
-    public PlayerGUI(ProShield plugin) {
-        this.plugin = plugin;
-        this.plotManager = plugin.getPlotManager();
+    /**
+     * Build the main ProShield menu (9 slots).
+     * Slots:
+     *  2 = Create Claim   (GRASS_BLOCK)
+     *  4 = Claim Info     (PAPER)
+     *  6 = Remove Claim   (BARRIER)
+     */
+    public static Inventory buildMain() {
+        Inventory gui = Bukkit.createInventory(null, 9, ChatColor.DARK_GREEN + "ProShield Menu");
+
+        gui.setItem(2, make(Material.GRASS_BLOCK, ChatColor.GREEN + "Create Claim"));
+        gui.setItem(4, make(Material.PAPER, ChatColor.YELLOW + "Claim Info"));
+        gui.setItem(6, make(Material.BARRIER, ChatColor.RED + "Remove Claim"));
+
+        return gui;
     }
 
-    public void open(Player player) {
-        Inventory gui = Bukkit.createInventory(null, 9, "Claim Management");
-
-        gui.setItem(2, createItem(Material.GRASS_BLOCK, "§aCreate Claim"));
-        gui.setItem(4, createItem(Material.PAPER, "§bClaim Info"));
-        gui.setItem(6, createItem(Material.BARRIER, "§cRemove Claim"));
-
-        player.openInventory(gui);
+    /** Convenience: open the main GUI for a player. */
+    public static void open(Player player) {
+        player.openInventory(buildMain());
     }
 
-    public void handleClick(InventoryClickEvent event, Player player) {
-        event.setCancelled(true);
-
-        if (event.getCurrentItem() == null) return;
-        Material type = event.getCurrentItem().getType();
-
-        if (type == Material.GRASS_BLOCK) {
-            plotManager.createClaim(player.getUniqueId(), player.getLocation());
-            player.sendMessage("§aClaim created at your current location.");
-        } else if (type == Material.PAPER) {
-            Claim claim = plotManager.getClaim(player.getUniqueId(), player.getLocation());
-            if (claim != null) {
-                player.sendMessage("§bClaim Info: Owner = " + claim.getOwner());
-            } else {
-                player.sendMessage("§cNo claim found at your location.");
-            }
-        } else if (type == Material.BARRIER) {
-            plotManager.removeClaim(player.getUniqueId(), player.getLocation());
-            player.sendMessage("§cClaim removed at your current location.");
-        }
-    }
-
-    private ItemStack createItem(Material material, String name) {
+    /** Utility to make a named item. */
+    private static ItemStack make(Material material, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {

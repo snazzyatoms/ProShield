@@ -8,8 +8,21 @@ description: A powerful region and claim protection system with admin GUI and co
 commands:
   proshield:
     description: Main command for ProShield
-    usage: /<command> [subcommand]
+    usage: /<command> <subcommand>
     aliases: [ps]
+    subcommands:
+      compass:
+        description: Gives the ProShield Admin Compass
+        usage: /proshield compass
+      create:
+        description: Create a new claim at your current position
+        usage: /proshield create
+      info:
+        description: Show claim info for your current location
+        usage: /proshield info
+      remove:
+        description: Remove your claim at the current position
+        usage: /proshield remove
 
 permissions:
   proshield.*:

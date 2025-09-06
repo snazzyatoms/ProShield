@@ -1,30 +1,99 @@
-name: Release Notes Automation
+name: Create Release from Changelog
 
 on:
-  release:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (optional, e.g. 1.1.8). If empty, parsed from plugin.yml'
+        required: false
+        type: string
+
+  push:
+    branches: [ "main" ]
+    paths:
+      - "CHANGELOG.md"
+      - "src/main/resources/plugin.yml"
+
+permissions:
+  contents: write
 
 jobs:
-  changelog:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # we need tags for tag existence checks
 
-      - name: Extract changelog section
-        id: extract_changelog
+      - name: Determine version
+        id: ver
         run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          echo "Looking for changelog entry for $VERSION"
-          awk "/## \\[$VERSION\\]/,/^## \\[/" CHANGELOG.md | sed '$d' > RELEASE_NOTES.md
-          if [ ! -s RELEASE_NOTES.md ]; then
-            echo "❌ Could not find changelog entry for $VERSION"
-            exit 1
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            if [ ! -f src/main/resources/plugin.yml ]; then
+              echo "plugin.yml not found at src/main/resources/plugin.yml"; exit 1
+            fi
+            VERSION=$(grep -E '^version:' -m1 src/main/resources/plugin.yml | sed 's/version:[[:space:]]*//')
           fi
 
-      - name: Upload Release Notes
-        uses: softprops/action-gh-release@v1
+          if [ -z "$VERSION" ]; then
+            echo "Could not determine version"; exit 1
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Resolved version: $VERSION"
+
+      - name: Generate release notes from CHANGELOG.md
+        id: notes
+        run: |
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md not found"; exit 1
+          fi
+
+          # Extract lines between "## [X.Y.Z]" and the next "## ["
+          awk -v ver="${{ env.VERSION }}" '
+            $0 ~ "^## \\[" ver "\\]" {flag=1; next}
+            /^## \\[/ && flag {exit}
+            flag {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md
+
+          # If empty, provide a fallback message
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "Release notes for ${{ env.VERSION }} not found in CHANGELOG.md." > RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "_(Add a section like \`## [${{ env.VERSION }}] - YYYY-MM-DD\` to CHANGELOG.md for nicer notes.)_" >> RELEASE_NOTES.md
+          fi
+
+          echo "Notes preview:"
+          head -n 50 RELEASE_NOTES.md || true
+
+      - name: Create tag if needed
+        run: |
+          TAG="v${{ env.VERSION }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+      - name: Create / Update GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VERSION }}
+          name: ProShield v${{ env.VERSION }}
           body_path: RELEASE_NOTES.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
+
+      # OPTIONAL: Attach a built JAR if you build in CI instead of JitPack.
+      # - name: Upload JAR
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     files: |
+      #       target/ProShield-*.jar

@@ -1,105 +1,84 @@
-name: Create Release from Changelog
+name: Release (Signed Artifacts)
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (optional, e.g. 1.1.8). If empty, parsed from plugin.yml'
-        required: false
-        type: string
-
   push:
-    branches: [ "main" ]
-    paths:
-      - "CHANGELOG.md"
-      - "src/main/resources/plugin.yml"
+    tags:
+      - 'v*'          # e.g. v1.1.8
 
 permissions:
-  contents: write
+  contents: write    # allow creating GitHub Releases
 
 jobs:
   release:
+    name: Build & Sign on Java ${{ matrix.java }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '17', '21' ]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # need tags
+          fetch-depth: 0
 
-      - name: Determine version
-        id: ver
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            if [ ! -f src/main/resources/plugin.yml ]; then
-              echo "plugin.yml not found at src/main/resources/plugin.yml"; exit 1
-            fi
-            VERSION=$(grep -E '^version:' -m1 src/main/resources/plugin.yml | sed 's/version:[[:space:]]*//')
-          fi
-
-          if [ -z "$VERSION" ]; then
-            echo "Could not determine version"; exit 1
-          fi
-
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Resolved version: $VERSION"
-
-      - name: Generate release notes from CHANGELOG.md
-        id: notes
-        run: |
-          if [ ! -f CHANGELOG.md ]; then
-            echo "CHANGELOG.md not found"; exit 1
-          fi
-
-          awk -v ver="${{ env.VERSION }}" '
-            $0 ~ "^## \\[" ver "\\]" {flag=1; next}
-            /^## \\[/ && flag {exit}
-            flag {print}
-          ' CHANGELOG.md > RELEASE_NOTES.md
-
-          if [ ! -s RELEASE_NOTES.md ]; then
-            echo "Release notes for ${{ env.VERSION }} not found in CHANGELOG.md." > RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-            echo "_(Add a section like \`## [${{ env.VERSION }}] - YYYY-MM-DD\` to CHANGELOG.md.)_" >> RELEASE_NOTES.md
-          fi
-
-      - name: Set up Java 17
+      - name: Setup Temurin Java ${{ matrix.java }} + GPG + OSSRH
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: ${{ matrix.java }}
           cache: maven
+          server-id: ossrh                                  # <servers><server><id>ossrh</id>...
+          server-username: OSSRH_USERNAME                   # from secrets
+          server-password: OSSRH_PASSWORD                   # from secrets
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}   # ASCII-armored key
+          gpg-passphrase:  ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Build with Maven
-        run: mvn -B -DskipTests package
-
-      - name: Create tag if needed
+      - name: Build & Sign (GPG)
         run: |
-          TAG="v${{ env.VERSION }}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag "$TAG"
-            git push origin "$TAG"
+          mvn -B -Psign -DskipTests verify
+
+      - name: Collect Artifacts
+        run: |
+          mkdir -p release
+          cp target/*.jar release/ || true
+          cp target/*.asc release/ || true
+
+      - name: Upload build artifacts (per Java)
+        uses: actions/upload-artifact@v4
+        with:
+          name: proshield-${{ github.ref_name }}-java${{ matrix.java }}
+          path: release/*
+
+  publish:
+    name: Publish GitHub Release (attach all artifacts)
+    runs-on: ubuntu-latest
+    needs: [ release ]
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Generate release notes (CHANGELOG.md fallback)
+        id: notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          if [ -f CHANGELOG.md ]; then
+            awk 'BEGIN{p=0}/^## /{if(p)exit; if($2==ENVIRON["TAG"])p=1} p' CHANGELOG.md > body.md
+          fi
+          if [ ! -s body.md ]; then
+            echo "Release ${TAG}" > body.md
           fi
 
-      - name: Create / Update GitHub Release (notes only first)
-        id: ghrel
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.VERSION }}
-          name: ProShield v${{ env.VERSION }}
-          body_path: RELEASE_NOTES.md
-          draft: false
-          prerelease: false
-
-      - name: Attach JAR(s) to release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.VERSION }}
+          tag_name: ${{ steps.notes.outputs.tag }}
+          name: ProShield ${{ steps.notes.outputs.tag }}
+          body_path: body.md
           files: |
-            target/*.jar
+            dist/**/*

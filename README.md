@@ -28,24 +28,6 @@ It provides a lightweight and modern alternative to heavy claim systems, offerin
 3. Restart the server.  
 4. Configuration (`config.yml`) will be auto-generated under `plugins/ProShield/`.
 
----
-
-## ⚙️ Configuration
-
-Default `config.yml`:
-
-```yaml
-# ProShield default configuration
-messages:
-  prefix: "&3[ProShield]&r"
-
-# Claims are stored automatically by PlotManager
-claims: {}
-
-Claims are saved automatically when the server shuts down.
-
-Stored claims are reloaded on startup.
-
 
 
 ---

@@ -51,9 +51,10 @@ public void onEnable() {
     getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
     // Listeners (pass plotManager where needed)
-    Bukkit.getPluginManager().registerEvents(new GUIListener(plotManager), this);
-    Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this), this);
-    Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+Bukkit.getPluginManager().registerEvents(new GUIListener(plotManager), this);
+Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
+Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+
 
     registerCompassRecipe();
 

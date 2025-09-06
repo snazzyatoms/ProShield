@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -28,10 +29,7 @@ public class ProShieldCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Players only.");
-            return true;
-        }
+        if (!(sender instanceof Player)) { sender.sendMessage("Players only."); return true; }
         Player p = (Player) sender;
         if (!p.hasPermission("proshield.use")) {
             p.sendMessage(px() + ChatColor.RED + "You don't have permission.");
@@ -50,7 +48,7 @@ public class ProShieldCommand implements CommandExecutor {
                 p.sendMessage(ChatColor.AQUA + "---- ProShield ----");
                 p.sendMessage("/" + label + " claim | unclaim | info");
                 p.sendMessage("/" + label + " trust <player> | untrust <player> | trusted");
-                p.sendMessage("/" + label + " show");
+                p.sendMessage("/" + label + " show | compass");
                 if (p.hasPermission("proshield.admin")) {
                     p.sendMessage("/" + label + " bypass");
                     p.sendMessage("/" + label + " admin claim <player> | admin unclaim");
@@ -80,18 +78,15 @@ public class ProShieldCommand implements CommandExecutor {
 
             case "info": {
                 var cOpt = plotManager.getClaim(loc);
-                if (cOpt.isEmpty()) {
-                    p.sendMessage(px() + ChatColor.GRAY + "This chunk is not claimed.");
-                    return true;
-                }
+                if (cOpt.isEmpty()) { p.sendMessage(px() + ChatColor.GRAY + "This chunk is not claimed."); return true; }
                 var c = cOpt.get();
                 String owner = plotManager.ownerName(c.getOwner());
                 String date = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(c.getCreatedAt()));
                 p.sendMessage(px() + ChatColor.GOLD + "Owner: " + owner);
                 p.sendMessage(px() + ChatColor.GOLD + "World: " + c.getWorld() + "  Chunk: " + c.getChunkX() + "," + c.getChunkZ());
-                p.sendMessage(px() + ChatColor.GOLD + "Created: " + date);
                 var trusted = plotManager.listTrusted(loc);
                 p.sendMessage(px() + ChatColor.GOLD + "Trusted: " + (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
+                p.sendMessage(px() + ChatColor.GOLD + "Created: " + date);
                 return true;
             }
 
@@ -124,6 +119,20 @@ public class ProShieldCommand implements CommandExecutor {
                 return true;
             }
 
+            case "compass": {
+                if (!p.hasPermission("proshield.compass") && !p.hasPermission("proshield.admin")) {
+                    p.sendMessage(px() + ChatColor.RED + "No permission.");
+                    return true;
+                }
+                if (!GUIManager.hasProShieldCompass(p)) {
+                    p.getInventory().addItem(GUIManager.createAdminCompass());
+                    p.sendMessage(px() + ChatColor.GREEN + "Given ProShield Compass.");
+                } else {
+                    p.sendMessage(px() + ChatColor.YELLOW + "You already have a ProShield Compass.");
+                }
+                return true;
+            }
+
             case "bypass": {
                 if (!p.hasPermission("proshield.bypass")) { p.sendMessage(px() + ChatColor.RED + "No permission."); return true; }
                 plugin.toggleBypass(p.getUniqueId());
@@ -142,13 +151,11 @@ public class ProShieldCommand implements CommandExecutor {
                     p.sendMessage(px() + (ok ? ChatColor.GREEN + "Claimed for " + args[2] + "." : ChatColor.RED + "Failed to claim here."));
                     return true;
                 }
-
                 if (args[1].equalsIgnoreCase("unclaim")) {
                     boolean ok = plotManager.removeClaim(p.getUniqueId(), loc, true);
                     p.sendMessage(px() + (ok ? ChatColor.YELLOW + "Force-unclaimed." : ChatColor.RED + "Nothing to unclaim."));
                     return true;
                 }
-
                 p.sendMessage(px() + "Usage: /" + label + " admin <claim|unclaim> [player]");
                 return true;
             }

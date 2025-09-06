@@ -1,4 +1,5 @@
-package com.snazzyatoms.proshield.GUI;
+// path: src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
+package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
@@ -7,50 +8,74 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.Arrays;
 
 public class GUIManager {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final String title;
 
-    public GUIManager(ProShield plugin, PlotManager plotManager) {
+    public GUIManager(ProShield plugin) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.title = ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("settings.gui-title", "&aClaim Management"));
     }
 
     public void openClaimGUI(Player player) {
-        Inventory gui = Bukkit.createInventory(player, 27, title);
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.GREEN + "Claim Management");
 
-        // slots 11, 13, 15 for Create / Info / Remove
-        gui.setItem(11, make(Material.LIME_DYE, ChatColor.GREEN + "Create Claim"));
-        gui.setItem(13, make(Material.WRITABLE_BOOK, ChatColor.GOLD + "Claim Info"));
-        gui.setItem(15, make(Material.BARRIER, ChatColor.RED + "Remove Claim"));
+        // Polish a bit: borders with gray panes
+        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemMeta fMeta = filler.getItemMeta();
+        fMeta.setDisplayName(" ");
+        filler.setItemMeta(fMeta);
+        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
 
-        player.openInventory(gui);
+        inv.setItem(11, makeBtn(Material.LIME_CONCRETE, ChatColor.GREEN + "Create Claim",
+                "Claim the current chunk for yourself."));
+        inv.setItem(13, makeBtn(Material.MAP, ChatColor.AQUA + "Claim Info",
+                "Show info about the current chunk claim."));
+        inv.setItem(15, makeBtn(Material.RED_CONCRETE, ChatColor.RED + "Remove Claim",
+                "Remove your claim for the current chunk."));
+
+        player.openInventory(inv);
     }
 
-    private ItemStack make(Material type, String name) {
-        ItemStack it = new ItemStack(type);
+    public static ItemStack createAdminCompass() {
+        ItemStack stack = new ItemStack(Material.COMPASS);
+        ItemMeta meta = stack.getItemMeta();
+        meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "ProShield Admin Compass");
+        meta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Right-click to open claim manager",
+                ChatColor.DARK_GRAY + "Requires: proshield.compass (or OP)"));
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        stack.setItemMeta(meta);
+        return stack;
+    }
+
+    private ItemStack makeBtn(Material mat, String name, String lore) {
+        ItemStack it = new ItemStack(mat);
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName(name);
+        meta.setLore(Arrays.asList(ChatColor.DARK_GRAY + lore));
         it.setItemMeta(meta);
         return it;
     }
 
-    public void handleClick(Player player, String buttonName) {
-        switch (ChatColor.stripColor(buttonName).toLowerCase()) {
-            case "create claim" -> plotManager.createClaim(player);
-            case "claim info" -> plotManager.sendClaimInfo(player);
-            case "remove claim" -> plotManager.removeClaim(player);
-        }
+    /* Delegations used by GUIListener */
+    public void handleCreate(Player p) {
+        PlotManager pm = plugin.getPlotManager();
+        pm.createClaim(p);
     }
 
-    public String getTitle() {
-        return title;
+    public void handleInfo(Player p) {
+        PlotManager pm = plugin.getPlotManager();
+        pm.getClaimInfo(p);
+    }
+
+    public void handleRemove(Player p) {
+        PlotManager pm = plugin.getPlotManager();
+        pm.removeClaim(p);
     }
 }

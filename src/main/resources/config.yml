@@ -1,12 +1,10 @@
-config-version: 1
+# ProShield default configuration
+# Storage format: chunks claimed per world.
+# Each claim is stored under claims.<world:chunkX_chunkZ>
+# Example created at runtime.
 
-settings:
-  give-admin-compass-on-join: true
-  compass-name: "&aProShield Admin Compass"
-  gui-title: "&aClaim Management"
+messages:
+  prefix: "&3[ProShield]&r "
 
-claims:
-  # Claim storage format: world:x:z -> owner-uuid
-  # These entries will be generated when claims are created
-  # Example:
-  # "world:100:200": "1f3a5a52-3e0c-4e59-9c1f-9a7c9e63c111"
+# Claims are stored/rewritten automatically by PlotManager.
+claims: {}

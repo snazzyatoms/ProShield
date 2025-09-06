@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -15,7 +14,6 @@ import java.util.stream.Collectors;
 public class PlotManager {
 
     private final ProShield plugin;
-
     private final Map<String, Claim> claims = new HashMap<>();
     private final Map<UUID, Integer> ownerCounts = new HashMap<>();
 
@@ -51,12 +49,10 @@ public class PlotManager {
         return true;
     }
 
-    /** Convenience overload used by GUI: remove only if requester is owner. */
     public boolean removeClaim(UUID requester, Location loc) {
         return removeClaim(requester, loc, false);
     }
 
-    /** Core remover; if adminForce=true, bypasses owner check. */
     public boolean removeClaim(UUID requester, Location loc, boolean adminForce) {
         String k = key(loc);
         Claim c = claims.get(k);
@@ -82,27 +78,20 @@ public class PlotManager {
         return c.getOwner().equals(uuid) || c.getTrusted().contains(uuid);
     }
 
-    public Optional<Claim> getClaim(Location loc) {
-        return Optional.ofNullable(claims.get(key(loc)));
-    }
+    public Optional<Claim> getClaim(Location loc) { return Optional.ofNullable(claims.get(key(loc))); }
 
+    // Trust system
     public boolean trust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().add(target)) {
-            saveClaim(c);
-            return true;
-        }
+        if (c.getTrusted().add(target)) { saveClaim(c); return true; }
         return false;
     }
 
     public boolean untrust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().remove(target)) {
-            saveClaim(c);
-            return true;
-        }
+        if (c.getTrusted().remove(target)) { saveClaim(c); return true; }
         return false;
     }
 
@@ -122,7 +111,7 @@ public class PlotManager {
         return op.getName() != null ? op.getName() : uuid.toString();
     }
 
-    /** Load all claims from config. */
+    // Load/save
     public void loadAll() {
         claims.clear();
         ownerCounts.clear();
@@ -141,9 +130,7 @@ public class PlotManager {
                 long created = sec.getLong("createdAt", System.currentTimeMillis());
 
                 Claim c = new Claim(owner, world, cx, cz, created);
-
-                List<String> t = sec.getStringList("trusted");
-                if (t != null) for (String s : t) c.getTrusted().add(UUID.fromString(s));
+                for (String s : sec.getStringList("trusted")) c.getTrusted().add(UUID.fromString(s));
 
                 claims.put(k, c);
                 ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
@@ -167,9 +154,7 @@ public class PlotManager {
         plugin.getConfig().set(path + "chunkX", c.getChunkX());
         plugin.getConfig().set(path + "chunkZ", c.getChunkZ());
         plugin.getConfig().set(path + "createdAt", c.getCreatedAt());
-
-        List<String> t = c.getTrusted().stream().map(UUID::toString).collect(Collectors.toList());
-        plugin.getConfig().set(path + "trusted", t);
+        plugin.getConfig().set(path + "trusted", c.getTrusted().stream().map(UUID::toString).collect(Collectors.toList()));
         plugin.saveConfig();
     }
 
@@ -181,14 +166,9 @@ public class PlotManager {
     public int getClaimCount() { return claims.size(); }
     public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }
 
-    // ==== Admin utilities ====
+    // Admin utilities
+    public Set<String> getAllClaimKeys() { return Collections.unmodifiableSet(claims.keySet()); }
 
-    /** Return all claim keys (e.g., world:chunkX:chunkZ) */
-    public Set<String> getAllClaimKeys() {
-        return Collections.unmodifiableSet(claims.keySet());
-    }
-
-    /** Turn a claim key into the center location of that chunk (safe TP target) */
     public Location keyToCenter(String key) {
         try {
             String[] parts = key.split(":");
@@ -204,8 +184,24 @@ public class PlotManager {
         } catch (Exception ignored) { return null; }
     }
 
-    /** Called after /proshield reload */
-    public void reloadFromConfig() {
-        loadAll();
+    public void reloadFromConfig() { loadAll(); }
+
+    /** Remove claims whose owners have been inactive for N days. Returns removed count. */
+    public int cleanupExpiredClaims(int days) {
+        if (days <= 0) return 0;
+        long cutoff = System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L;
+        List<String> toRemove = new ArrayList<>();
+        for (Map.Entry<String, Claim> e : claims.entrySet()) {
+            UUID owner = e.getValue().getOwner();
+            OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
+            long last = op.getLastPlayed();    // 0 if never seen
+            if (last > 0 && last < cutoff) toRemove.add(e.getKey());
+        }
+        for (String k : toRemove) {
+            Claim c = claims.remove(k);
+            ownerCounts.put(c.getOwner(), Math.max(0, ownerCounts.getOrDefault(c.getOwner(), 1) - 1));
+            removeClaimFromConfig(k);
+        }
+        return toRemove.size();
     }
 }

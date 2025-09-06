@@ -23,26 +23,28 @@ public class GUIListener implements Listener {
         this.guiManager = guiManager;
     }
 
-    // Right-click ProShield compass opens the menu
+    /** Right-click ProShield compass opens the menu. */
     @EventHandler
     public void onCompassUse(PlayerInteractEvent e) {
         ItemStack it = e.getItem();
         if (it == null || it.getType() != Material.COMPASS || !it.hasItemMeta()) return;
+
         String name = it.getItemMeta().getDisplayName();
         if (name == null) return;
 
         if (ChatColor.stripColor(name).equalsIgnoreCase("ProShield Compass")) {
             e.setCancelled(true);
-            guiManager.openMainGUI(e.getPlayer()); // ✅ correct method name
+            guiManager.openMainGUI(e.getPlayer()); // correct method on GUIManager
         }
     }
 
-    // Handle clicks in the ProShield GUI
+    /** Handle clicks inside the ProShield GUI. */
     @EventHandler
     public void onInvClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
+        if (!(e.getWhoClicked() instanceof Player)) return;
+        Player p = (Player) e.getWhoClicked();
 
-        // ✅ use the view title (works across supported API versions)
+        // Title check (works across supported API versions)
         String title = e.getView().getTitle();
         if (!title.equals(ChatColor.DARK_GREEN + "ProShield Menu")) return;
 
@@ -68,4 +70,24 @@ public class GUIListener implements Listener {
             case PAPER: // Claim Info
                 plotManager.getClaim(loc).ifPresentOrElse(c -> {
                     p.sendMessage(ChatColor.GOLD + "Owner: " + plotManager.ownerName(c.getOwner()));
-                    p.sendMessage(ChatColor.GOLD + "World: " + c.getWorld() + "  Chunk: " + c.getChunkX() + "," + c.get
+                    p.sendMessage(ChatColor.GOLD + "World: " + c.getWorld() + "  Chunk: " + c.getChunkX() + "," + c.getChunkZ());
+                    p.sendMessage(ChatColor.GOLD + "Trusted: " +
+                            (c.getTrusted().isEmpty() ? "(none)" : c.getTrusted().size() + " player(s)"));
+                    ProShield.getInstance().getBorderVisualizer().showChunkBorder(p, loc);
+                }, () -> p.sendMessage(ChatColor.GRAY + "This chunk is not claimed."));
+                break;
+
+            case BARRIER: // Remove Claim
+                if (plotManager.removeClaim(p.getUniqueId(), loc, false)) { // adminForce = false
+                    p.sendMessage(ChatColor.YELLOW + "Chunk unclaimed.");
+                } else {
+                    p.sendMessage(ChatColor.RED + "You don't own this claim.");
+                }
+                p.closeInventory();
+                break;
+
+            default:
+                break;
+        }
+    }
+}

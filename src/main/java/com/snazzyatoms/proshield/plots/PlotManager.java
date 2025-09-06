@@ -1,9 +1,11 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
@@ -49,6 +51,12 @@ public class PlotManager {
         return true;
     }
 
+    /** Convenience overload used by GUI: remove only if requester is owner. */
+    public boolean removeClaim(UUID requester, Location loc) {
+        return removeClaim(requester, loc, false);
+    }
+
+    /** Core remover; if adminForce=true, bypasses owner check. */
     public boolean removeClaim(UUID requester, Location loc, boolean adminForce) {
         String k = key(loc);
         Claim c = claims.get(k);
@@ -114,7 +122,8 @@ public class PlotManager {
         return op.getName() != null ? op.getName() : uuid.toString();
     }
 
-    private void loadAll() {
+    /** Load all claims from config. */
+    public void loadAll() {
         claims.clear();
         ownerCounts.clear();
 
@@ -172,34 +181,31 @@ public class PlotManager {
     public int getClaimCount() { return claims.size(); }
     public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }
 
-// return all claim keys (e.g., world:chunkX:chunkZ)
-public java.util.Set<String> getAllClaimKeys() {
-    return java.util.Collections.unmodifiableSet(claims.keySet());
-}
+    // ==== Admin utilities ====
 
-// turn a claim key into the center location of that chunk (safe TP target)
-public org.bukkit.Location keyToCenter(String key) {
-    try {
-        String[] parts = key.split(":");
-        String world = parts[0];
-        int cx = Integer.parseInt(parts[1]);
-        int cz = Integer.parseInt(parts[2]);
-        org.bukkit.World w = org.bukkit.Bukkit.getWorld(world);
-        if (w == null) return null;
-        int x = (cx << 4) + 8;
-        int z = (cz << 4) + 8;
-        int y = Math.max(w.getHighestBlockYAt(x, z), 64);
-        return new org.bukkit.Location(w, x, y, z);
-    } catch (Exception ignored) { return null; }
-}
+    /** Return all claim keys (e.g., world:chunkX:chunkZ) */
+    public Set<String> getAllClaimKeys() {
+        return Collections.unmodifiableSet(claims.keySet());
+    }
 
-// called after /proshield reload
-public void reloadFromConfig() {
-    // same as your loadAll() logic; you can call it directly if you’ve kept it public
-    try {
-        java.lang.reflect.Method m = this.getClass().getDeclaredMethod("loadAll");
-        m.setAccessible(true);
-        m.invoke(this);
-    } catch (Exception ignored) {}
-}
+    /** Turn a claim key into the center location of that chunk (safe TP target) */
+    public Location keyToCenter(String key) {
+        try {
+            String[] parts = key.split(":");
+            String world = parts[0];
+            int cx = Integer.parseInt(parts[1]);
+            int cz = Integer.parseInt(parts[2]);
+            World w = Bukkit.getWorld(world);
+            if (w == null) return null;
+            int x = (cx << 4) + 8;
+            int z = (cz << 4) + 8;
+            int y = Math.max(w.getHighestBlockYAt(x, z), 64);
+            return new Location(w, x, y, z);
+        } catch (Exception ignored) { return null; }
+    }
+
+    /** Called after /proshield reload */
+    public void reloadFromConfig() {
+        loadAll();
+    }
 }

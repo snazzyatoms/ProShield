@@ -57,12 +57,14 @@ public class GUIListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        Inventory inv = event.getInventory();
-        if (inv == null || event.getCurrentItem() == null) return;
+        if (event.getCurrentItem() == null) return;
 
-        String title = ChatColor.stripColor(inv.getTitle());
-        Player p = (Player) event.getWhoClicked();
-        Material clicked = event.getCurrentItem().getType();
+        // IMPORTANT: read title from the view, not the raw Inventory
+        final String title = ChatColor.stripColor(event.getView().getTitle());
+        final Player p = (Player) event.getWhoClicked();
+        final Material clicked = event.getCurrentItem().getType();
+
+        // Prevent taking items from our GUIs
         event.setCancelled(true);
 
         // Player main menu
@@ -85,7 +87,7 @@ public class GUIListener implements Listener {
                     }
                     p.closeInventory();
                 }
-                default -> { /* ignore */ }
+                default -> { /* ignore other clicks */ }
             }
             return;
         }
@@ -98,18 +100,19 @@ public class GUIListener implements Listener {
                 return;
             }
             switch (clicked) {
-                case LEVER -> {
-                    // simple bypass toggle via metadata on player (lightweight)
+                case LEVER -> { // Toggle bypass via player metadata
                     boolean newBypass = !p.hasMetadata("proshield_bypass");
                     if (newBypass) p.setMetadata("proshield_bypass", new org.bukkit.metadata.FixedMetadataValue(ProShield.getInstance(), true));
                     else p.removeMetadata("proshield_bypass", ProShield.getInstance());
                     String msgKey = newBypass ? "messages.bypass-on" : "messages.bypass-off";
-                    p.sendMessage(prefix() + ChatColor.translateAlternateColorCodes('&', ProShield.getInstance().getAdminConfig().getString(msgKey, newBypass ? "&aBypass enabled" : "&cBypass disabled")));
+                    p.sendMessage(prefix() + ChatColor.translateAlternateColorCodes('&',
+                            ProShield.getInstance().getAdminConfig().getString(msgKey, newBypass ? "&aBypass enabled" : "&cBypass disabled")));
                     p.closeInventory();
                 }
                 case COMPASS -> {
                     p.getInventory().addItem(GUIManager.createAdminCompass());
-                    p.sendMessage(prefix() + ChatColor.GREEN + ProShield.getInstance().getAdminConfig().getString("messages.compass-given", "Admin compass added."));
+                    p.sendMessage(prefix() + ChatColor.GREEN +
+                            ProShield.getInstance().getAdminConfig().getString("messages.compass-given", "Admin compass added."));
                     p.closeInventory();
                 }
                 case ENDER_PEARL -> {
@@ -123,7 +126,7 @@ public class GUIListener implements Listener {
                         p.closeInventory();
                         return;
                     }
-                    // sort nearby claims by distance to player
+                    // Sort nearby claims by distance to player and show up to configured max
                     List<String> keys = new ArrayList<>(plotManager.getAllClaimKeys());
                     Location ploc = p.getLocation();
                     keys.sort(Comparator.comparingDouble(k -> plotManager.keyToCenter(k).distanceSquared(ploc)));
@@ -142,6 +145,7 @@ public class GUIListener implements Listener {
                         return;
                     }
                     ProShield.getInstance().reloadAllConfigs();
+                    // also refresh interaction caches in protection listener, if you store a reference
                     p.sendMessage(prefix() + ChatColor.GREEN + ProShield.getInstance().getAdminConfig().getString("messages.reloaded", "Configs reloaded."));
                     p.closeInventory();
                 }
@@ -153,6 +157,7 @@ public class GUIListener implements Listener {
         // Admin claims list
         if (title.equals(ChatColor.stripColor(GUIManager.CLAIMS_TITLE))) {
             if (!p.hasPermission("proshield.admin.tp")) return;
+            if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
             String key = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
             Location center = plotManager.keyToCenter(key);
             if (center != null) p.teleport(center.add(0.5, 1, 0.5));

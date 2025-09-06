@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -18,22 +17,6 @@ public class GUIManager {
         this.plugin = plugin;
     }
 
-    /** ==============================
-     *  CREATE COMPASS ITEM
-     *  ============================== */
-    public static ItemStack createAdminCompass() {
-        ItemStack compass = new ItemStack(Material.COMPASS);
-        ItemMeta meta = compass.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
-            compass.setItemMeta(meta);
-        }
-        return compass;
-    }
-
-    /** ==============================
-     *  OPEN MAIN GUI
-     *  ============================== */
     public void openMainGUI(Player player) {
         Inventory gui = Bukkit.createInventory(null, 9, ChatColor.DARK_GREEN + "ProShield Menu");
 
@@ -42,6 +25,16 @@ public class GUIManager {
         gui.setItem(6, makeItem(Material.BARRIER, ChatColor.RED + "Remove Claim"));
 
         player.openInventory(gui);
+    }
+
+    public static ItemStack createAdminCompass() {
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
+            compass.setItemMeta(meta);
+        }
+        return compass;
     }
 
     private ItemStack makeItem(Material mat, String name) {

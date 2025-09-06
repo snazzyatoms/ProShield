@@ -1,12 +1,13 @@
 package com.snazzyatoms.proshield.listeners;
 
-import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.GUI.GUIManager;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -18,20 +19,21 @@ public class GUIListener implements Listener {
         this.guiManager = guiManager;
     }
 
-    // Open GUI when compass is right-clicked
     @EventHandler
     public void onCompassUse(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
+
         if (item != null && item.getType() == Material.COMPASS &&
-            item.hasItemMeta() &&
-            ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase("ProShield Admin Compass")) {
-            event.setCancelled(true);
-            guiManager.openClaimGUI(player);
+            item.hasItemMeta() && ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase("ProShield Admin Compass")) {
+
+            if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                event.setCancelled(true);
+                guiManager.openClaimGUI(player);
+            }
         }
     }
 
-    // Handle GUI button clicks
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
@@ -46,16 +48,15 @@ public class GUIListener implements Listener {
             String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
             switch (name) {
                 case "Create Claim":
-                    guiManager.handleCreate(player);
+                    guiManager.handleCreateClaim(player);
                     break;
                 case "Claim Info":
-                    guiManager.handleInfo(player);
+                    guiManager.handleInfoClaim(player);
                     break;
                 case "Remove Claim":
-                    guiManager.handleRemove(player);
+                    guiManager.handleRemoveClaim(player);
                     break;
             }
-            player.closeInventory();
         }
     }
 }

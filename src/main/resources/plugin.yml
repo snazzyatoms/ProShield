@@ -1,22 +1,30 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.1.7
-api-version: 1.19
-author: snazzyatoms
+version: 1.1.8
+api-version: '1.18'
+authors: [ snazzyatoms ]
 website: https://github.com/snazzyatoms/ProShield
-description: Land/plot protection with a simple GUI and an admin compass.
+description: All-in-one land & plot protection for Paper/Spigot.
 
 commands:
   proshield:
     description: ProShield main command
-    usage: /proshield <claim|unclaim>
-    aliases: [ps]
-    permission: proshield.use
+    usage: /proshield [claim|unclaim|info|trust|untrust|trusted|show|bypass|admin ...]
+    aliases: [ps, psd]
 
 permissions:
   proshield.use:
-    description: Use basic ProShield commands and GUI
+    description: Use ProShield commands and GUI.
     default: true
+
   proshield.admin:
-    description: Admin-level control (future)
+    description: Admin features (compass, admin subcommands).
+    default: op
+
+  proshield.bypass:
+    description: Build/Interact bypass in all claims.
+    default: op
+
+  proshield.unlimited:
+    description: Ignore max-claims limit.
     default: op

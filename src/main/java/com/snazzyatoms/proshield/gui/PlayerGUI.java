@@ -1,8 +1,11 @@
-package com.snazzyatoms.proshield.GUI;
+// path: src/main/java/com/snazzyatoms/proshield/gui/PlayerGUI.java
+package com.snazzyatoms.proshield.gui;
 
-// Placeholder class in case you expand per-player GUI logic later.
-// Keeping this here avoids "missing symbol" imports if you had it before.
-
+/**
+ * Reserved for future per-player view/state needs.
+ * Currently not required by the flow; kept to preserve API compatibility
+ * with earlier iterations of the project.
+ */
 public class PlayerGUI {
-    // Add per-player GUI state if needed in future.
+    // Intentionally minimal
 }

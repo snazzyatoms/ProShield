@@ -8,8 +8,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
@@ -21,47 +19,47 @@ public class GUIListener implements Listener {
     }
 
     @EventHandler
-    public void onCompassUse(PlayerInteractEvent e) {
-        // Only right hand triggers; ignore offhand duplicate fires
-        if (e.getHand() != EquipmentSlot.HAND) return;
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) {
+            return;
+        }
 
-        ItemStack it = e.getItem();
-        if (it == null || it.getType() != Material.COMPASS || !it.hasItemMeta()) return;
+        Player player = (Player) event.getWhoClicked();
 
-        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName());
-        if (!"ProShield Admin Compass".equalsIgnoreCase(name)) return;
+        // Make sure inventory belongs to our GUI
+        if (event.getView().getTitle() == null) return;
+        String title = ChatColor.stripColor(event.getView().getTitle());
 
-        e.setCancelled(true);
-        plugin.getGuiManager().openClaimGUI(e.getPlayer());
-    }
+        if (title.equalsIgnoreCase("ProShield Menu")) {
+            event.setCancelled(true); // Prevent taking items from GUI
 
-    @EventHandler
-    public void onGuiClick(InventoryClickEvent e) {
-        if (e.getView() == null || e.getView().getTitle() == null) return;
-        String title = ChatColor.stripColor(e.getView().getTitle());
-        if (!"Claim Management".equalsIgnoreCase(title)) return;
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || clicked.getType() == Material.AIR) {
+                return;
+            }
 
-        e.setCancelled(true);
-        if (!(e.getWhoClicked() instanceof Player)) return;
+            // Handle clicks
+            switch (clicked.getType()) {
+                case GRASS_BLOCK:
+                    player.sendMessage(ChatColor.GREEN + "Opening plot management...");
+                    // open plot GUI
+                    plugin.getGuiManager().openPlayerGUI(player);
+                    break;
 
-        ItemStack clicked = e.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
+                case COMPASS:
+                    player.sendMessage(ChatColor.YELLOW + "You clicked the Admin Compass!");
+                    // Add admin compass logic if needed
+                    break;
 
-        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        Player p = (Player) e.getWhoClicked();
+                case BARRIER:
+                    player.closeInventory();
+                    player.sendMessage(ChatColor.RED + "Closed ProShield menu.");
+                    break;
 
-        switch (name.toLowerCase()) {
-            case "create claim":
-                plugin.getGuiManager().handleCreate(p);
-                break;
-            case "claim info":
-                plugin.getGuiManager().handleInfo(p);
-                break;
-            case "remove claim":
-                plugin.getGuiManager().handleRemove(p);
-                break;
-            default:
-                break;
+                default:
+                    player.sendMessage(ChatColor.GRAY + "This option is not implemented yet.");
+                    break;
+            }
         }
     }
 }

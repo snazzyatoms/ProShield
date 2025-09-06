@@ -3,7 +3,8 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,19 +20,38 @@ public class PlayerJoinListener implements Listener {
     }
 
     @EventHandler
-    public void onJoin(PlayerJoinEvent e) {
-        Player p = e.getPlayer();
-        FileConfiguration ac = plugin.getAdminConfig();
-        if (!ac.getBoolean("defaults.give-compass-on-join", true)) return;
-        if (!p.hasPermission("proshield.compass")) return;
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player p = event.getPlayer();
 
-        // if player lacks a ProShield Compass, give one in configured slot if empty
-        boolean has = p.getInventory().containsAtLeast(GUIManager.createAdminCompass(), 1);
-        if (!has) {
-            int slot = Math.max(0, Math.min(8, ac.getInt("defaults.compass-slot", 8)));
-            ItemStack compass = GUIManager.createAdminCompass();
-            if (p.getInventory().getItem(slot) == null) p.getInventory().setItem(slot, compass);
-            else p.getInventory().addItem(compass);
+        // Config toggle (falls back to true if absent)
+        boolean autoGive = plugin.getConfig().getBoolean("autogive.compass-on-join", true);
+        if (!autoGive) return;
+
+        // Only OPs or players with compass/admin perms should receive it automatically
+        boolean eligible = p.isOp() || p.hasPermission("proshield.compass") || p.hasPermission("proshield.admin");
+        if (!eligible) return;
+
+        // Do not give duplicates
+        if (hasProShieldCompass(p)) return;
+
+        p.getInventory().addItem(GUIManager.createAdminCompass());
+        p.sendMessage(prefix() + ChatColor.GREEN + "ProShield compass added to your inventory.");
+    }
+
+    private boolean hasProShieldCompass(Player p) {
+        for (ItemStack it : p.getInventory().getContents()) {
+            if (it == null) continue;
+            if (it.getType() != Material.COMPASS) continue;
+            if (it.hasItemMeta() && it.getItemMeta().hasDisplayName()) {
+                String name = ChatColor.stripColor(it.getItemMeta().getDisplayName());
+                if ("ProShield Compass".equalsIgnoreCase(name)) return true;
+            }
         }
+        return false;
+    }
+
+    private String prefix() {
+        return ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

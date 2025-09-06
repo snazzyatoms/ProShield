@@ -1,34 +1,44 @@
 package com.snazzyatoms.proshield.plots;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class PlotManager {
 
-    private final Map<String, Location> claims = new HashMap<>();
+    private final Map<UUID, Location> claims = new HashMap<>();
 
     public PlotManager(Object plugin) {
-        // plugin reference stored if needed
+        // plugin reference if needed later
     }
 
+    // --- Preferred methods (Player-based) ---
     public boolean createClaim(Player player, Location location) {
-        String key = player.getUniqueId().toString();
-        if (claims.containsKey(key)) {
-            return false; // already has a claim
-        }
-        claims.put(key, location);
-        return true;
+        return createClaim(player.getUniqueId(), location);
     }
 
     public boolean removeClaim(Player player, Location location) {
-        String key = player.getUniqueId().toString();
-        if (!claims.containsKey(key)) {
-            return false; // no claim to remove
+        return removeClaim(player.getUniqueId(), location);
+    }
+
+    // --- Overloaded methods (UUID-based) ---
+    public boolean createClaim(UUID playerId, Location location) {
+        if (claims.containsKey(playerId)) {
+            return false; // already claimed
         }
-        claims.remove(key);
+        claims.put(playerId, location);
+        return true;
+    }
+
+    public boolean removeClaim(UUID playerId, Location location) {
+        if (!claims.containsKey(playerId)) {
+            return false; // nothing to remove
+        }
+        claims.remove(playerId);
         return true;
     }
 
@@ -37,6 +47,6 @@ public class PlotManager {
     }
 
     public void saveAll() {
-        // TODO: persist claims to config or database
+        // TODO: persist claims to config or DB
     }
 }

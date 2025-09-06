@@ -23,7 +23,7 @@ public class Claim {
 
     @Override
     public String toString() {
-        return "Owner=" + owner + ", Location=" + location.getWorld().getName() +
-               " [" + location.getBlockX() + "," + location.getBlockY() + "," + location.getBlockZ() + "]";
+        return "Owner=" + owner + ", Location=("
+                + location.getBlockX() + "," + location.getBlockY() + "," + location.getBlockZ() + ")";
     }
 }

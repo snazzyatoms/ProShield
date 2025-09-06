@@ -35,7 +35,7 @@
 
   <build>
     <plugins>
-      <!-- Ensure Java 17 -->
+      <!-- Java 17 target -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -47,7 +47,7 @@
         </configuration>
       </plugin>
 
-      <!-- Put plugin.yml and resources into the jar -->
+      <!-- Resources (includes plugin.yml) -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
@@ -57,7 +57,7 @@
         </configuration>
       </plugin>
 
-      <!-- Build a clean jar -->
+      <!-- Jar metadata -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -73,7 +73,7 @@
     </plugins>
   </build>
 
-  <!-- Sign artifacts when -Psign is used (used by GitHub Actions release workflow) -->
+  <!-- Optional signing profile (used by GitHub Actions with -Psign) -->
   <profiles>
     <profile>
       <id>sign</id>
@@ -91,7 +91,6 @@
                   <goal>sign</goal>
                 </goals>
                 <configuration>
-                  <!-- GitHub Actions injects key/passphrase via setup-java -->
                   <gpgArguments>
                     <arg>--batch</arg>
                     <arg>--pinentry-mode</arg>

@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -27,15 +26,9 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onCompassUse(PlayerInteractEvent e) {
         ItemStack it = e.getItem();
-        if (it == null || it.getType() != Material.COMPASS || !it.hasItemMeta()) return;
-
-        String name = it.getItemMeta().getDisplayName();
-        if (name == null) return;
-
-        if (ChatColor.stripColor(name).equalsIgnoreCase("ProShield Compass")) {
-            e.setCancelled(true);
-            guiManager.openMainGUI(e.getPlayer()); // correct method on GUIManager
-        }
+        if (!GUIManager.isProShieldCompass(it)) return;
+        e.setCancelled(true);
+        guiManager.openMainGUI(e.getPlayer());
     }
 
     /** Handle clicks inside the ProShield GUI. */
@@ -44,7 +37,6 @@ public class GUIListener implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
 
-        // Title check (works across supported API versions)
         String title = e.getView().getTitle();
         if (!title.equals(ChatColor.DARK_GREEN + "ProShield Menu")) return;
 
@@ -78,7 +70,7 @@ public class GUIListener implements Listener {
                 break;
 
             case BARRIER: // Remove Claim
-                if (plotManager.removeClaim(p.getUniqueId(), loc, false)) { // adminForce = false
+                if (plotManager.removeClaim(p.getUniqueId(), loc, false)) {
                     p.sendMessage(ChatColor.YELLOW + "Chunk unclaimed.");
                 } else {
                     p.sendMessage(ChatColor.RED + "You don't own this claim.");

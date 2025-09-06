@@ -16,7 +16,7 @@ visual:
 protection:
   containers: true
   pvp-in-claims: false
-  mob-grief: true      # block creeper/explosion block damage in claims
+  mob-grief: true      # block creeper/primed TNT block damage in claims
 
 # (Claims are auto-stored here)
 claims: {}

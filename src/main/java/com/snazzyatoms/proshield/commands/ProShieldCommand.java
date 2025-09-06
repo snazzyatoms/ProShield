@@ -1,7 +1,8 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.PlotManager;  // ✅ updated import
+import com.snazzyatoms.proshield.GUI.GUIManager;
+import com.snazzyatoms.proshield.plots.PlotManager;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -15,46 +16,39 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class ProShieldCommand implements CommandExecutor {
     private final ProShield plugin;
     private final PlotManager plotManager;
+    private final GUIManager guiManager;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plotManager) {
+    public ProShieldCommand(ProShield plugin, PlotManager plotManager, GUIManager guiManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+        this.guiManager = guiManager;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "This command can only be run by players.");
+            sender.sendMessage("Only players can use this command!");
             return true;
         }
 
         Player player = (Player) sender;
 
-        if (args.length == 0) {
-            player.sendMessage(ChatColor.YELLOW + "Usage: /proshield <compass|reload>");
-            return true;
-        }
-
-        if (args[0].equalsIgnoreCase("compass")) {
-            if (player.hasPermission("proshield.compass") || player.isOp()) {
-                ItemStack compass = new ItemStack(Material.COMPASS);
+        if (args.length > 0 && args[0].equalsIgnoreCase("compass")) {
+            if (player.isOp() || player.hasPermission("proshield.compass")) {
+                ItemStack compass = new ItemStack(Material.COMPASS, 1);
                 ItemMeta meta = compass.getItemMeta();
                 meta.setDisplayName(ChatColor.GREEN + "ProShield Admin Compass");
                 compass.setItemMeta(meta);
+
                 player.getInventory().addItem(compass);
-                player.sendMessage(ChatColor.GREEN + "You received the ProShield Admin Compass!");
+                player.sendMessage(ChatColor.YELLOW + "You have been given the ProShield Compass!");
             } else {
-                player.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+                player.sendMessage(ChatColor.RED + "You don’t have permission to use this!");
             }
             return true;
         }
 
-        if (args[0].equalsIgnoreCase("reload")) {
-            plugin.reloadConfig();
-            player.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
-            return true;
-        }
-
-        return false;
+        player.sendMessage(ChatColor.AQUA + "ProShield Commands: /proshield compass");
+        return true;
     }
 }

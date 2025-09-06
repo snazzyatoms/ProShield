@@ -1,17 +1,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.snazzytom</groupId>
+    <groupId>com.snazzyatoms</groupId>
     <artifactId>proshield</artifactId>
     <version>1.1.7</version>
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>A plot protection plugin with GUI support.</description>
-    <url>https://github.com/snazzytom/ProShield</url>
+    <description>Land/plot protection with a simple GUI and an admin compass.</description>
+    <url>https://github.com/snazzyatoms/ProShield</url>
 
     <properties>
         <java.version>17</java.version>
@@ -21,62 +20,30 @@
     </properties>
 
     <repositories>
-        <!-- SpigotMC Repository -->
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
-
-        <!-- Sonatype for Mojang/Adventure -->
-        <repository>
-            <id>sonatype</id>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-        </repository>
     </repositories>
 
     <dependencies>
-        <!-- Spigot API -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
             <version>1.19.4-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- Adventure API (for text handling if needed later) -->
-        <dependency>
-            <groupId>net.kyori</groupId>
-            <artifactId>adventure-api</artifactId>
-            <version>4.13.1</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
+                <version>3.11.0</version>
                 <configuration>
                     <release>${java.version}</release>
                 </configuration>
-            </plugin>
-
-            <!-- Shade (in case you want to relocate in future) -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.3.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

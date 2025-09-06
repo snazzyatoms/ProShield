@@ -2,8 +2,6 @@ package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.GUI.GUIManager;
-import com.snazzyatoms.proshield.plots.PlotManager;
-
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -14,41 +12,65 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class ProShieldCommand implements CommandExecutor {
-    private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final GUIManager guiManager;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plotManager, GUIManager guiManager) {
+    private final ProShield plugin;
+
+    public ProShieldCommand(ProShield plugin) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.guiManager = guiManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
+        if (args.length == 0) {
+            sender.sendMessage(ChatColor.YELLOW + "ProShield v" + plugin.getDescription().getVersion() +
+                    " - /" + label + " <reload|info|compass>");
             return true;
         }
 
-        Player player = (Player) sender;
-
-        if (args.length > 0 && args[0].equalsIgnoreCase("compass")) {
-            if (player.isOp() || player.hasPermission("proshield.compass")) {
-                ItemStack compass = new ItemStack(Material.COMPASS, 1);
-                ItemMeta meta = compass.getItemMeta();
-                meta.setDisplayName(ChatColor.GREEN + "ProShield Admin Compass");
-                compass.setItemMeta(meta);
-
-                player.getInventory().addItem(compass);
-                player.sendMessage(ChatColor.YELLOW + "You have been given the ProShield Compass!");
-            } else {
-                player.sendMessage(ChatColor.RED + "You don’t have permission to use this!");
+        switch (args[0].toLowerCase()) {
+            case "reload" -> {
+                if (!sender.hasPermission("proshield.reload")) {
+                    sender.sendMessage(ChatColor.RED + "No permission.");
+                    return true;
+                }
+                plugin.reloadConfig();
+                sender.sendMessage(ChatColor.GREEN + "ProShield config reloaded.");
+                return true;
             }
-            return true;
-        }
 
-        player.sendMessage(ChatColor.AQUA + "ProShield Commands: /proshield compass");
+            case "info" -> {
+                if (!sender.hasPermission("proshield.info")) {
+                    sender.sendMessage(ChatColor.RED + "No permission.");
+                    return true;
+                }
+                sender.sendMessage(ChatColor.AQUA + "ProShield v" + plugin.getDescription().getVersion());
+                sender.sendMessage(ChatColor.GRAY + "Author: " + String.join(", ", plugin.getDescription().getAuthors()));
+                return true;
+            }
+
+            case "compass" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("Players only.");
+                    return true;
+                }
+                if (!player.hasPermission("proshield.compass")) {
+                    player.sendMessage(ChatColor.RED + "No permission.");
+                    return true;
+                }
+                giveCompass(player, plugin.getConfig().getString("settings.compass-name", "&aProShield Admin Compass"));
+                player.sendMessage(ChatColor.GREEN + "Compass given. Right-click to open Claim Management.");
+                return true;
+            }
+        }
+        sender.sendMessage(ChatColor.RED + "Unknown subcommand. Use /" + label + " <reload|info|compass>");
         return true;
+    }
+
+    private void giveCompass(Player player, String displayName) {
+        ItemStack compass = new ItemStack(Material.COMPASS, 1);
+        ItemMeta meta = compass.getItemMeta();
+        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', displayName));
+        compass.setItemMeta(meta);
+        player.getInventory().addItem(compass);
     }
 }

@@ -3,19 +3,19 @@ main: com.snazzyatoms.proshield.ProShield
 version: 1.1.7
 api-version: 1.19
 author: snazzyatoms
-description: A simple land protection plugin with GUI support.
+description: A land protection plugin with claim and unclaim support via commands and GUI.
+website: https://github.com/snazzyatoms/ProShield
 
 commands:
   proshield:
-    description: Main command for ProShield.
-    usage: /proshield <claim|unclaim>
-    aliases: [ps]
-    permission: proshield.use
+    description: Main command for ProShield
+    usage: /<command> <claim|unclaim>
+    aliases: [ps, protect]
 
 permissions:
   proshield.use:
-    description: Allows using the /proshield command and GUI.
+    description: Allows use of ProShield commands and GUI
     default: true
   proshield.admin:
-    description: Allows managing other players’ claims.
+    description: Allows admin-level control over ProShield
     default: op

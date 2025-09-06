@@ -1,10 +1,13 @@
+// path: src/main/java/com/snazzyatoms/proshield/gui/PlayerGUI.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.Claim;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -20,26 +23,38 @@ public class PlayerGUI {
     }
 
     public void open(Player player) {
-        Inventory gui = Bukkit.createInventory(player, 9, "ProShield Menu");
+        Inventory gui = Bukkit.createInventory(null, 9, "Claim Management");
 
-        // Example buttons
-        gui.setItem(0, createButton(Material.GRASS_BLOCK, "§aClaim Chunk"));
-        gui.setItem(1, createButton(Material.BARRIER, "§cUnclaim Chunk"));
-        gui.setItem(8, createButton(Material.COMPASS, "§eAdmin Compass"));
+        gui.setItem(2, createItem(Material.GRASS_BLOCK, "§aCreate Claim"));
+        gui.setItem(4, createItem(Material.PAPER, "§bClaim Info"));
+        gui.setItem(6, createItem(Material.BARRIER, "§cRemove Claim"));
 
         player.openInventory(gui);
     }
 
-    public void handleClick(Player player, int slot) {
-        switch (slot) {
-            case 0 -> plotManager.claimCurrentChunk(player);
-            case 1 -> plotManager.unclaimCurrentChunk(player);
-            case 8 -> player.getInventory().addItem(GUIManager.createAdminCompass());
-            default -> player.sendMessage("§7Nothing here.");
+    public void handleClick(InventoryClickEvent event, Player player) {
+        event.setCancelled(true);
+
+        if (event.getCurrentItem() == null) return;
+        Material type = event.getCurrentItem().getType();
+
+        if (type == Material.GRASS_BLOCK) {
+            plotManager.createClaim(player.getUniqueId(), player.getLocation());
+            player.sendMessage("§aClaim created at your current location.");
+        } else if (type == Material.PAPER) {
+            Claim claim = plotManager.getClaim(player.getUniqueId(), player.getLocation());
+            if (claim != null) {
+                player.sendMessage("§bClaim Info: Owner = " + claim.getOwner());
+            } else {
+                player.sendMessage("§cNo claim found at your location.");
+            }
+        } else if (type == Material.BARRIER) {
+            plotManager.removeClaim(player.getUniqueId(), player.getLocation());
+            player.sendMessage("§cClaim removed at your current location.");
         }
     }
 
-    private ItemStack createButton(Material material, String name) {
+    private ItemStack createItem(Material material, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {

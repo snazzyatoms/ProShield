@@ -1,7 +1,7 @@
-package com.snazyatoms.proshield.commands;
+package com.snazzyatoms.proshield.commands;
 
-import com.snazyatoms.proshield.ProShield;
-import com.snazyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;

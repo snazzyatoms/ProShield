@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -10,14 +9,11 @@ import com.snazzyatoms.proshield.plots.PlayerJoinListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public final class ProShield extends JavaPlugin {
 
@@ -25,42 +21,42 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
-    // admin.yml
-    private File adminFile;
-    private FileConfiguration adminCfg;
+    // Keep these so we can reload their cached config without re-registering
+    private BlockProtectionListener protectionListener;
+    private GUIListener guiListener;
 
     public static ProShield getInstance() { return instance; }
     public PlotManager getPlotManager() { return plotManager; }
     public GUIManager getGuiManager() { return guiManager; }
-    public FileConfiguration getAdminConfig() { return adminCfg; }
 
     @Override
     public void onEnable() {
         instance = this;
 
-        // configs
         saveDefaultConfig();
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
             saveConfig();
         }
-        loadOrCreateAdminYaml();
 
-        // managers
         plotManager = new PlotManager(this);
         guiManager = new GUIManager(this);
 
-        // command
-        getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
-
         // listeners
-        Bukkit.getPluginManager().registerEvents(new GUIListener(plotManager, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
+        protectionListener = new BlockProtectionListener(plotManager);
+        guiListener = new GUIListener(plotManager, guiManager);
+        Bukkit.getPluginManager().registerEvents(protectionListener, this);
+        Bukkit.getPluginManager().registerEvents(guiListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        registerCompassRecipe();
+        // commands
+        getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
-        getLogger().info("ProShield enabled. Claims loaded: " + plotManager.getClaimCount());
+        registerCompassRecipe();
+        maybeRunExpiryNow();
+        scheduleDailyExpiry();
+
+        getLogger().info("ProShield 1.1.9 enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
@@ -72,26 +68,10 @@ public final class ProShield extends JavaPlugin {
 
     public void reloadAllConfigs() {
         reloadConfig();
-        loadOrCreateAdminYaml();
+        // Re-cache interaction settings in protection listener
+        protectionListener.reloadInteractionConfig();
+        // Reload internal plot cache from config
         plotManager.reloadFromConfig();
-    }
-
-    private void loadOrCreateAdminYaml() {
-        if (adminFile == null) adminFile = new File(getDataFolder(), "admin.yml");
-        if (!adminFile.exists()) {
-            saveResource("admin.yml", false);
-        }
-        adminCfg = YamlConfiguration.loadConfiguration(adminFile);
-        // ensure defaults (only first time if new keys are missing)
-        boolean changed = false;
-        if (!adminCfg.isSet("defaults.give-compass-on-join")) { adminCfg.set("defaults.give-compass-on-join", true); changed = true; }
-        if (!adminCfg.isSet("defaults.compass-slot")) { adminCfg.set("defaults.compass-slot", 8); changed = true; }
-        if (!adminCfg.isSet("admin-menu.open-when-sneaking-with-compass")) { adminCfg.set("admin-menu.open-when-sneaking-with-compass", true); changed = true; }
-        if (!adminCfg.isSet("teleport.enabled")) { adminCfg.set("teleport.enabled", true); changed = true; }
-        if (!adminCfg.isSet("teleport.max-list")) { adminCfg.set("teleport.max-list", 27); changed = true; }
-        if (changed) {
-            try { adminCfg.save(adminFile); } catch (IOException ignored) {}
-        }
     }
 
     private void registerCompassRecipe() {
@@ -104,5 +84,29 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('C', Material.COMPASS);
         Bukkit.removeRecipe(key);
         Bukkit.addRecipe(recipe);
+    }
+
+    private void maybeRunExpiryNow() {
+        if (getConfig().getBoolean("expiry.enabled", false)) {
+            int days = getConfig().getInt("expiry.days", 30);
+            int removed = plotManager.cleanupExpiredClaims(days);
+            if (removed > 0) {
+                getLogger().info("Expiry: removed " + removed + " expired claim(s).");
+                plotManager.saveAll();
+            }
+        }
+    }
+
+    private void scheduleDailyExpiry() {
+        if (!getConfig().getBoolean("expiry.enabled", false)) return;
+        long oneDayTicks = TimeUnit.DAYS.toSeconds(1) * 20L;
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            int days = getConfig().getInt("expiry.days", 30);
+            int removed = plotManager.cleanupExpiredClaims(days);
+            if (removed > 0) {
+                getLogger().info("Daily expiry: removed " + removed + " expired claim(s).");
+                plotManager.saveAll();
+            }
+        }, oneDayTicks, oneDayTicks);
     }
 }

@@ -59,10 +59,6 @@ proshield.admin	Grants admin compass recipe and OP join features.	op
 
 Crafting Recipe
 
-I R I
-R C R
-I R I
-
 I = Iron Ingot
 
 R = Redstone

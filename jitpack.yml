@@ -1,12 +1,5 @@
 jdk:
   - openjdk17
 
-before_install:
-  - echo "Using JDK 17 for PaperMC compatibility"
-
 install:
-  - mvn clean install -DskipTests
-
-build:
-  commands:
-    - mvn package -DskipTests
+  - mvn -B clean package

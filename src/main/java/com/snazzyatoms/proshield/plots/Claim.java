@@ -1,42 +1,47 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/Claim.java
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.Chunk;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 
 import java.util.UUID;
 
-/**
- * A simple "chunk claim" model: each claim locks 1 chunk to its owner.
- */
 public class Claim {
+
     private final UUID owner;
     private final String world;
-    private final int chunkX;
-    private final int chunkZ;
+    private final int x;
+    private final int z;
+    private final int radius = 16; // claim size around the player
 
-    public Claim(UUID owner, String world, int chunkX, int chunkZ) {
+    public Claim(UUID owner, String world, int x, int z) {
         this.owner = owner;
         this.world = world;
-        this.chunkX = chunkX;
-        this.chunkZ = chunkZ;
+        this.x = x;
+        this.z = z;
     }
 
-    public UUID getOwner() { return owner; }
-    public String getWorld() { return world; }
-    public int getChunkX() { return chunkX; }
-    public int getChunkZ() { return chunkZ; }
-
-    public static String key(String world, int chunkX, int chunkZ) {
-        return world + ":" + chunkX + "_" + chunkZ;
+    public UUID getOwner() {
+        return owner;
     }
 
-    public static String key(Chunk chunk) {
-        return key(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+    public String getWorld() {
+        return world;
     }
 
-    @Override
-    public String toString() {
-        return "Claim{" + "owner=" + owner + ", world='" + world + '\'' +
-                ", chunkX=" + chunkX + ", chunkZ=" + chunkZ + '}';
+    public int getX() {
+        return x;
+    }
+
+    public int getZ() {
+        return z;
+    }
+
+    public boolean isInside(Location loc) {
+        World w = Bukkit.getWorld(world);
+        if (w == null || !loc.getWorld().equals(w)) return false;
+
+        return Math.abs(loc.getBlockX() - x) <= radius &&
+               Math.abs(loc.getBlockZ() - z) <= radius;
     }
 }

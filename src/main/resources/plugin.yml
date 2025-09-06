@@ -1,46 +1,44 @@
 name: ProShield
-version: 1.1.6
 main: com.snazzyatoms.proshield.ProShield
-api-version: 1.19
+version: 1.1.6
+api-version: 1.17
 author: SnazzyAtoms
-description: A powerful region and claim protection system with admin GUI and compass tool.
+description: Advanced land protection and claim management plugin with GUI support.
 
 commands:
   proshield:
-    description: Main command for ProShield
-    usage: /<command> <subcommand>
+    description: Main ProShield command.
+    usage: /proshield <subcommand>
     aliases: [ps]
+    permission: proshield.use
+
     subcommands:
       compass:
-        description: Gives the ProShield Admin Compass
+        description: Gives you the ProShield admin compass.
         usage: /proshield compass
-      create:
-        description: Create a new claim at your current position
-        usage: /proshield create
-      info:
-        description: Show claim info for your current location
-        usage: /proshield info
-      remove:
-        description: Remove your claim at the current position
-        usage: /proshield remove
+        permission: proshield.compass
 
 permissions:
   proshield.*:
-    description: Gives access to all ProShield commands and features
-    default: op
-
+    description: Grants access to all ProShield features.
+    children:
+      proshield.use: true
+      proshield.compass: true
+      proshield.claim: true
+      proshield.remove: true
+      proshield.info: true
+  proshield.use:
+    description: Allows basic ProShield command usage.
+    default: true
   proshield.compass:
-    description: Allows access to the ProShield Admin Compass
+    description: Allows access to the ProShield compass tool.
     default: op
-
-  proshield.create:
-    description: Allows creating claims
+  proshield.claim:
+    description: Allows creating claims.
     default: true
-
-  proshield.info:
-    description: Allows viewing claim info
-    default: true
-
   proshield.remove:
-    description: Allows removing claims
-    default: op
+    description: Allows removing own claims.
+    default: true
+  proshield.info:
+    description: Allows viewing claim info.
+    default: true

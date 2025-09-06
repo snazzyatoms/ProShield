@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/BlockProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -19,18 +20,27 @@ import org.bukkit.inventory.EquipmentSlot;
 
 public class BlockProtectionListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plotManager;
 
-    public BlockProtectionListener(ProShield plugin, PlotManager plotManager) {
-        this.plugin = plugin;
+    public BlockProtectionListener(PlotManager plotManager) {
         this.plotManager = plotManager;
     }
 
+    private boolean isBypassing(Player p) {
+        return p.hasMetadata("proshield_bypass");
+    }
+
     private boolean denyIfNeeded(Player p, Location loc, String msg) {
-        if (plugin.isBypassing(p.getUniqueId())) return false;
-        if (plotManager.isTrustedOrOwner(p.getUniqueId(), loc)) return false;
+        // Allow admins in bypass mode
+        if (isBypassing(p)) return false;
+
+        // If not claimed, allow
         if (!plotManager.isClaimed(loc)) return false;
+
+        // Owner is allowed
+        if (plotManager.isOwner(p.getUniqueId(), loc)) return false;
+
+        // Otherwise deny
         p.sendMessage(ChatColor.RED + msg);
         return true;
     }
@@ -52,37 +62,46 @@ public class BlockProtectionListener implements Listener {
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
         if (e.getHand() == EquipmentSlot.OFF_HAND) return;
-        Block b = e.getClickedBlock();
-        if (b == null || !plugin.getConfig().getBoolean("protection.containers", true)) return;
 
-        BlockState st = b.getState();
-        if (!(st instanceof Container)) return;
+        final Block clicked = e.getClickedBlock();
+        if (clicked == null) return;
 
-        if (denyIfNeeded(e.getPlayer(), b.getLocation(), "You cannot open containers here!")) {
+        // Toggle via config: protection.containers (default true)
+        boolean protectContainers = ProShield.getInstance().getConfig().getBoolean("protection.containers", true);
+        if (!protectContainers) return;
+
+        BlockState state = clicked.getState();
+        if (!(state instanceof Container)) return;
+
+        if (denyIfNeeded(e.getPlayer(), clicked.getLocation(), "You cannot open containers here!")) {
             e.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent e) {
-        if (!plugin.getConfig().getBoolean("protection.pvp-in-claims", false)) {
-            if (e.getDamager() instanceof Player && e.getEntity() instanceof Player) {
-                Player damager = (Player) e.getDamager();
-                Location loc = e.getEntity().getLocation();
-                if (plotManager.isClaimed(loc) && !plugin.isBypassing(damager.getUniqueId())) {
-                    e.setCancelled(true);
-                }
+        // pvp-in-claims (default false) -> if false, cancel PvP inside claims
+        boolean allowPvPInClaims = ProShield.getInstance().getConfig().getBoolean("protection.pvp-in-claims", false);
+        if (allowPvPInClaims) return;
+
+        if (e.getDamager() instanceof Player damager && e.getEntity() instanceof Player) {
+            if (isBypassing(damager)) return;
+            Location loc = e.getEntity().getLocation();
+            if (plotManager.isClaimed(loc)) {
+                e.setCancelled(true);
             }
         }
     }
 
     @EventHandler
     public void onExplode(EntityExplodeEvent e) {
-        if (!plugin.getConfig().getBoolean("protection.mob-grief", true)) return;
+        // mob-grief (default true) -> if true, prevent explosions from modifying claimed land
+        boolean preventGrief = ProShield.getInstance().getConfig().getBoolean("protection.mob-grief", true);
+        if (!preventGrief) return;
 
-        if (e.getEntityType() == EntityType.CREEPER || e.getEntityType() == EntityType.PRIMED_TNT) {
+        EntityType type = e.getEntityType();
+        if (type == EntityType.CREEPER || type == EntityType.PRIMED_TNT) {
             e.blockList().removeIf(block -> plotManager.isClaimed(block.getLocation()));
         }
-  // inside onBlockBreak / onBlockPlace:
-if (player.hasMetadata("proshield_bypass")) return; // let admins build anywhere when bypass on  }
+    }
 }

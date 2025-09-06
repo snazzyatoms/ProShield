@@ -7,7 +7,3 @@ src/main/java/com/snazzyatoms/proshield/listeners/AdminJoinListener.java
 src/main/java/com/snazzyatoms/proshield/listeners/PlotProtectionListener.java
 src/main/java/com/snazzyatoms/proshield/plots/Claim.java
 src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
-src/main/resources/plugin.yml
-src/main/resources/config.yml
-pom.xml
-jitpack.yml

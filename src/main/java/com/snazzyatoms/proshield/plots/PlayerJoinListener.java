@@ -16,6 +16,5 @@ public class PlayerJoinListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         plugin.getLogger().info(event.getPlayer().getName() + " joined the server.");
-        // TODO: load player claims if needed
     }
 }

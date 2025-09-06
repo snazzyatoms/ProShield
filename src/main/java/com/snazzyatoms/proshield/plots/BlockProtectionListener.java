@@ -83,5 +83,6 @@ public class BlockProtectionListener implements Listener {
         if (e.getEntityType() == EntityType.CREEPER || e.getEntityType() == EntityType.PRIMED_TNT) {
             e.blockList().removeIf(block -> plotManager.isClaimed(block.getLocation()));
         }
-    }
+  // inside onBlockBreak / onBlockPlace:
+if (player.hasMetadata("proshield_bypass")) return; // let admins build anywhere when bypass on  }
 }

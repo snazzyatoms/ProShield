@@ -2,33 +2,31 @@ name: ProShield
 main: com.snazzyatoms.proshield.ProShield
 version: 1.1.8
 api-version: 1.18
-authors: [ snazzyatoms ]
-website: https://github.com/snazzyatoms/ProShield
-description: All-in-one land & plot protection for Paper/Spigot.
+author: snazzyatoms
+description: Land and plot protection plugin with GUI management and admin tools.
 
 commands:
   proshield:
-    description: ProShield main command
-    usage: /proshield [claim|unclaim|info|trust|untrust|trusted|show|bypass|admin|compass]
-    aliases: [ps, psd]
+    description: Main ProShield command
+    usage: /<command> [subcommand]
 
 permissions:
   proshield.use:
-    description: Use ProShield commands and GUI.
+    description: Allows players to use ProShield commands and GUI
     default: true
 
   proshield.admin:
-    description: Admin features (compass, admin subcommands).
-    default: op
-
-  proshield.bypass:
-    description: Build/Interact bypass in all claims.
-    default: op
-
-  proshield.unlimited:
-    description: Ignore max-claims limit.
+    description: Grants access to admin features (admin compass, forced unclaim, etc.)
     default: op
 
   proshield.compass:
-    description: Receive the ProShield Compass via command.
+    description: Allows a player to receive and use the ProShield compass
+    default: op
+
+  proshield.bypass:
+    description: Allows toggling protection bypass
+    default: op
+
+  proshield.unlimited:
+    description: Ignore max-claims limit
     default: op

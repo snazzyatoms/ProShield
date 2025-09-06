@@ -1,6 +1,6 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.1.8
+version: 1.1.9
 api-version: 1.18
 author: snazzyatoms
 description: Land and plot protection plugin with GUI management and admin tools.
@@ -16,7 +16,7 @@ permissions:
     default: true
 
   proshield.admin:
-    description: Grants access to admin features (admin compass, forced unclaim, etc.)
+    description: Grants admin menu and advanced tools
     default: op
 
   proshield.compass:
@@ -29,4 +29,12 @@ permissions:
 
   proshield.unlimited:
     description: Ignore max-claims limit
+    default: op
+
+  proshield.admin.tp:
+    description: Allows teleporting to other players’ claims from the admin menu
+    default: op
+
+  proshield.admin.reload:
+    description: Allows /proshield reload (config + admin.yml)
     default: op

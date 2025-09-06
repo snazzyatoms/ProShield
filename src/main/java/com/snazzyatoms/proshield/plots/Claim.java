@@ -1,58 +1,42 @@
 package com.snazzyatoms.proshield.plots;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
-/**
- * Chunk-based claim descriptor.
- * Note: PlotManager currently stores claims in config as world:chunkX:chunkZ -> owner UUID
- * and does not use this class directly. This class is provided to keep the model consistent
- * and ready for future use if you want to pass Claim objects around.
- */
+/** A single chunk-based claim */
 public class Claim {
     private final UUID owner;
     private final String world;
     private final int chunkX;
     private final int chunkZ;
+    private final long createdAt;            // epoch millis
+    private final Set<UUID> trusted = new HashSet<>();
 
-    public Claim(UUID owner, String world, int chunkX, int chunkZ) {
+    public Claim(UUID owner, String world, int chunkX, int chunkZ, long createdAt) {
         this.owner = owner;
         this.world = world;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
+        this.createdAt = createdAt;
     }
 
-    public UUID getOwner() {
-        return owner;
-    }
+    public UUID getOwner() { return owner; }
+    public String getWorld() { return world; }
+    public int getChunkX() { return chunkX; }
+    public int getChunkZ() { return chunkZ; }
+    public long getCreatedAt() { return createdAt; }
+    public Set<UUID> getTrusted() { return trusted; }
 
-    public String getWorld() {
-        return world;
-    }
-
-    public int getChunkX() {
-        return chunkX;
-    }
-
-    public int getChunkZ() {
-        return chunkZ;
-    }
-
-    /** True if the given location is in the same chunk as this claim. */
     public boolean contains(Location loc) {
-        if (loc == null || loc.getWorld() == null) return false;
-        if (!loc.getWorld().getName().equals(world)) return false;
+        World w = Bukkit.getWorld(world);
+        if (w == null || !w.equals(loc.getWorld())) return false;
         return loc.getChunk().getX() == chunkX && loc.getChunk().getZ() == chunkZ;
     }
 
-    @Override
-    public String toString() {
-        return "Claim{" +
-                "owner=" + owner +
-                ", world='" + world + '\'' +
-                ", chunkX=" + chunkX +
-                ", chunkZ=" + chunkZ +
-                '}';
-    }
+    public String key() { return world + ":" + chunkX + ":" + chunkZ; }
 }

@@ -5,7 +5,7 @@
 
   <groupId>com.snazzyatoms</groupId>
   <artifactId>proshield</artifactId>
-  <version>1.1.8</version>
+  <version>1.1.9</version>
   <name>ProShield</name>
   <description>Land and plot protection plugin with GUI management and admin tools.</description>
   <url>https://github.com/snazzyatoms/ProShield</url>

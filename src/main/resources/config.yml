@@ -1,44 +1,37 @@
 messages:
   prefix: "&3[ProShield]&r "
 
-# Max claims per player (set -1 for unlimited). Perm 'proshield.unlimited' bypasses this.
 limits:
-  max-claims: 5
+  max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
 
-# Visualize borders with particles (when claiming or /proshield show)
-visual:
-  borders-enabled: true
-  particle: REDSTONE
-  ticks: 60            # duration in ticks (~3s)
-  step: 2              # block step along edges
+expiry:
+  enabled: false         # If true, remove claims whose owners have been inactive for N days
+  days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
 
-# Protections toggles
 protection:
-  containers: true
-  pvp-in-claims: false
-  mob-grief: true      # block creeper/primed TNT block damage in claims
+  containers: true       # Block opening containers by non-owners in claims
+  pvp-in-claims: false   # If false, cancel PvP inside claims
+  mob-grief: true        # If true, explosions won't break blocks in claimed chunks
+  creeper-explosions: true
+  tnt-explosions: true
+  fire-spread: true      # (future: add fire spread handler if desired)
 
-# (Claims are auto-stored here)
-claims: {}
-protection:
-  containers: true          # Block opening containers (chests, barrels, etc.) by non-owners in claims
-  pvp-in-claims: false      # If false, cancel PvP inside claims
-  mob-grief: true           # If true, explosions won't break blocks in claimed chunks
-
+  # Non-container interactions (doors, buttons, etc.)
   interactions:
-    enabled: true           # Master toggle for non-container interactions protection
-    mode: blacklist         # "blacklist" = deny configured items; "whitelist" = deny everything EXCEPT configured items
-    categories:             # Pattern-driven groups (no need to list every wood type)
+    enabled: true
+    mode: blacklist      # "blacklist" or "whitelist"
+    categories:
       - doors
       - trapdoors
       - fence_gates
       - buttons
       - levers
       - pressure_plates
-      # Optional extras:
-      # - bells
-      # - note_blocks
-      # - lecterns
-    list:                   # Explicit materials (optional). Examples:
-      # - NOTE_BLOCK
-      # - BELL
+    list: []             # Explicit materials e.g. [NOTE_BLOCK, BELL]
+
+  # Bucket usage
+  buckets:
+    block-empty: true    # Block placing water/lava in other players' claims
+    block-fill: true     # Block picking up source blocks from other players' claims
+
+claims: {}

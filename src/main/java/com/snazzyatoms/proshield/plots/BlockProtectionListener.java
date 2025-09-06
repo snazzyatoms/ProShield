@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/BlockProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -81,7 +80,6 @@ public class BlockProtectionListener implements Listener {
     public void onExplode(EntityExplodeEvent e) {
         if (!plugin.getConfig().getBoolean("protection.mob-grief", true)) return;
 
-        // 🔧 FIX: PRIMED_TNT is the TNT entity; TNT (block) is not an EntityType
         if (e.getEntityType() == EntityType.CREEPER || e.getEntityType() == EntityType.PRIMED_TNT) {
             e.blockList().removeIf(block -> plotManager.isClaimed(block.getLocation()));
         }

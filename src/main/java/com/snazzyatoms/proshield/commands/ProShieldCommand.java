@@ -21,20 +21,17 @@ public class ProShieldCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use this command!");
             return true;
         }
 
-        Player player = (Player) sender;
-
         if (args.length < 1) {
-            player.sendMessage(ChatColor.YELLOW + "Usage: /proshield <claim|unclaim>");
+            help(player);
             return true;
         }
 
         Location loc = player.getLocation();
-
         switch (args[0].toLowerCase()) {
             case "claim":
                 if (plotManager.createClaim(player.getUniqueId(), loc)) {
@@ -53,8 +50,14 @@ public class ProShieldCommand implements CommandExecutor {
                 return true;
 
             default:
-                player.sendMessage(ChatColor.YELLOW + "Usage: /proshield <claim|unclaim>");
+                help(player);
                 return true;
         }
+    }
+
+    private void help(Player player) {
+        player.sendMessage(ChatColor.GOLD + "==== ProShield ====");
+        player.sendMessage(ChatColor.YELLOW + "/proshield claim " + ChatColor.GRAY + "- Claim current chunk");
+        player.sendMessage(ChatColor.YELLOW + "/proshield unclaim " + ChatColor.GRAY + "- Unclaim current chunk");
     }
 }

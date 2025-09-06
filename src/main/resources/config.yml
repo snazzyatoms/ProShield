@@ -20,3 +20,25 @@ protection:
 
 # (Claims are auto-stored here)
 claims: {}
+protection:
+  containers: true          # Block opening containers (chests, barrels, etc.) by non-owners in claims
+  pvp-in-claims: false      # If false, cancel PvP inside claims
+  mob-grief: true           # If true, explosions won't break blocks in claimed chunks
+
+  interactions:
+    enabled: true           # Master toggle for non-container interactions protection
+    mode: blacklist         # "blacklist" = deny configured items; "whitelist" = deny everything EXCEPT configured items
+    categories:             # Pattern-driven groups (no need to list every wood type)
+      - doors
+      - trapdoors
+      - fence_gates
+      - buttons
+      - levers
+      - pressure_plates
+      # Optional extras:
+      # - bells
+      # - note_blocks
+      # - lecterns
+    list:                   # Explicit materials (optional). Examples:
+      # - NOTE_BLOCK
+      # - BELL

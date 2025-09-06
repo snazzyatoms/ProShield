@@ -10,25 +10,25 @@ It provides a lightweight and modern alternative to heavy claim systems, offerin
 - ✅ **Land Claiming** – Players can claim chunks of land with simple commands or via the ProShield GUI.  
 - ✅ **Unclaiming** – Easily release land back for reuse.  
 - ✅ **Protection System** – Prevents block breaking/placing in claimed areas for non-owners.  
+- ✅ **Container & Interaction Protection** – Chests, furnaces, doors, buttons, levers, etc. with configurable whitelist/blacklist.  
+- ✅ **Trust System** – Claim owners can trust/untrust other players.  
 - ✅ **GUI Menu** – Clean, intuitive inventory-based interface:  
   - 🌱 Create Claim  
   - 📜 Claim Info  
   - ⛔ Remove Claim  
-- ✅ **Admin Compass** – Custom craftable tool that opens the ProShield menu.  
+- ✅ **Admin Compass** – Custom craftable tool that opens the ProShield menu. OPs auto-receive it on join if missing.  
 - ✅ **Automatic Data Saving** – Claims are persisted in `config.yml` and restored on restart.  
-- ✅ **Admin/Operator Tools** – OPs receive a compass automatically on join if missing.  
+- ✅ **Admin/Operator Tools** – Includes bypass mode, teleport to claims, and force-unclaim options.  
 - ✅ **Lightweight & Stable** – Minimal configuration, designed for survival/vanilla-style servers.  
 
 ---
 
 ## 📥 Installation
 
-1. Download the latest `ProShield-x.x.x.jar` from [Releases](https://github.com/snazzyatoms/ProShield/releases).  
+1. Download the latest `ProShield-1.1.8.jar` from [Releases](https://github.com/snazzyatoms/ProShield/releases).  
 2. Place it into your server’s `plugins/` folder.  
 3. Restart the server.  
-4. Configuration (`config.yml`) will be auto-generated under `plugins/ProShield/`.
-
-
+4. Configuration (`config.yml` + `admin.yml`) will be auto-generated under `plugins/ProShield/`.
 
 ---
 
@@ -38,7 +38,12 @@ Command	Description
 
 /proshield	Shows plugin status.
 /proshield claim	Claims the chunk at the player’s location.
-/proshield unclaim	Unclaims the chunk (if owned by the player).
+/proshield unclaim	Unclaims the chunk (if owned).
+/proshield info	Shows claim info at your location.
+/proshield trust <player>	Trusts another player in your claim.
+/proshield untrust <player>	Removes trust from a player.
+/proshield compass	Gives you the ProShield compass.
+/proshield reload	Reloads configs (config.yml + admin.yml).
 
 
 
@@ -48,8 +53,13 @@ Command	Description
 
 Permission	Description	Default
 
-proshield.use	Allows using ProShield commands and GUI.	true
-proshield.admin	Grants admin compass recipe and OP join features.	op
+proshield.use	Allows using ProShield commands and GUI	true
+proshield.admin	Grants access to admin features	op
+proshield.compass	Allows receiving and using the compass	op
+proshield.bypass	Allows toggling protection bypass	op
+proshield.unlimited	Ignore max-claims limit	op
+proshield.admin.tp	Allows teleporting to claims	op
+proshield.admin.reload	Allows reloading configs	op
 
 
 
@@ -68,9 +78,9 @@ C = Compass
 
 Behavior
 
-Opens the ProShield GUI menu when right-clicked.
+Opens the ProShield GUI when right-clicked.
 
-Operators automatically receive one on join if they don’t already have it.
+Operators automatically receive one on join if missing.
 
 
 
@@ -78,19 +88,27 @@ Operators automatically receive one on join if they don’t already have it.
 
 📜 Changelog
 
-v1.1.7 (Current Release)
+v1.1.8 (Current Release)
 
-Reworked & synchronized all core classes (ProShieldCommand, PlotManager, GUIManager, PlayerGUI, GUIListener, BlockProtectionListener, PlayerJoinListener).
+✅ Added admin.yml file for admin-only settings.
 
-Added Admin Compass recipe and auto-give for OPs.
+✅ Added auto-give compass on join (configurable).
 
-Fixed constructor mismatches and duplicate class errors.
+✅ Fixed permission issues for /proshield compass.
 
-Synced GUI clicks with claim system logic.
+✅ Reworked GUI Manager + Listener with synchronized claim logic.
 
-Claims stored in config.yml, auto-loaded on enable, and saved on disable.
+✅ Added trust/untrust system for claims.
 
-First stable public build!
+✅ Added interaction protection (doors, levers, buttons) with whitelist/blacklist.
+
+✅ Improved block protection logic (mob grief, TNT, creepers).
+
+✅ Fixed constructor mismatches and duplicate errors.
+
+✅ Synced config folder creation (ProShield folder auto-generates).
+
+✅ General stability and bug fixes.
 
 
 

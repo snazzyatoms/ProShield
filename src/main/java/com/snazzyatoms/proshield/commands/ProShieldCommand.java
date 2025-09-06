@@ -27,11 +27,18 @@ public class ProShieldCommand implements CommandExecutor {
 
     private String px() { return plugin.getConfig().getString("messages.prefix", ""); }
 
+    /** Treat OP as having any permission (fallback for raw servers). */
+    private boolean has(Player p, String node) {
+        return p.isOp() || p.hasPermission(node);
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!(sender instanceof Player)) { sender.sendMessage("Players only."); return true; }
         Player p = (Player) sender;
-        if (!p.hasPermission("proshield.use")) {
+
+        // Base gate: allow if proshield.use OR OP
+        if (!has(p, "proshield.use")) {
             p.sendMessage(px() + ChatColor.RED + "You don't have permission.");
             return true;
         }
@@ -49,7 +56,7 @@ public class ProShieldCommand implements CommandExecutor {
                 p.sendMessage("/" + label + " claim | unclaim | info");
                 p.sendMessage("/" + label + " trust <player> | untrust <player> | trusted");
                 p.sendMessage("/" + label + " show | compass");
-                if (p.hasPermission("proshield.admin")) {
+                if (has(p, "proshield.admin")) {
                     p.sendMessage("/" + label + " bypass");
                     p.sendMessage("/" + label + " admin claim <player> | admin unclaim");
                 }
@@ -119,8 +126,8 @@ public class ProShieldCommand implements CommandExecutor {
                 return true;
             }
 
-            case "compass": {
-                if (!p.hasPermission("proshield.compass") && !p.hasPermission("proshield.admin")) {
+            case "compass": { // ✅ OP fallback here too
+                if (!(has(p, "proshield.compass") || has(p, "proshield.admin"))) {
                     p.sendMessage(px() + ChatColor.RED + "No permission.");
                     return true;
                 }
@@ -134,14 +141,14 @@ public class ProShieldCommand implements CommandExecutor {
             }
 
             case "bypass": {
-                if (!p.hasPermission("proshield.bypass")) { p.sendMessage(px() + ChatColor.RED + "No permission."); return true; }
+                if (!has(p, "proshield.bypass")) { p.sendMessage(px() + ChatColor.RED + "No permission."); return true; }
                 plugin.toggleBypass(p.getUniqueId());
                 p.sendMessage(px() + (plugin.isBypassing(p.getUniqueId()) ? ChatColor.YELLOW + "Bypass: ON" : ChatColor.YELLOW + "Bypass: OFF"));
                 return true;
             }
 
             case "admin": {
-                if (!p.hasPermission("proshield.admin")) { p.sendMessage(px() + ChatColor.RED + "No permission."); return true; }
+                if (!has(p, "proshield.admin")) { p.sendMessage(px() + ChatColor.RED + "No permission."); return true; }
                 if (args.length < 2) { p.sendMessage(px() + "Usage: /" + label + " admin <claim|unclaim> [player]"); return true; }
 
                 if (args[1].equalsIgnoreCase("claim")) {

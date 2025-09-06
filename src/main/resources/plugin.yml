@@ -1,6 +1,6 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.1.0
+version: 1.1.7
 api-version: 1.19
 author: snazzyatoms
 description: A simple land protection plugin with GUI support.

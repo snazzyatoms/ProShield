@@ -171,4 +171,35 @@ public class PlotManager {
 
     public int getClaimCount() { return claims.size(); }
     public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }
+
+// return all claim keys (e.g., world:chunkX:chunkZ)
+public java.util.Set<String> getAllClaimKeys() {
+    return java.util.Collections.unmodifiableSet(claims.keySet());
+}
+
+// turn a claim key into the center location of that chunk (safe TP target)
+public org.bukkit.Location keyToCenter(String key) {
+    try {
+        String[] parts = key.split(":");
+        String world = parts[0];
+        int cx = Integer.parseInt(parts[1]);
+        int cz = Integer.parseInt(parts[2]);
+        org.bukkit.World w = org.bukkit.Bukkit.getWorld(world);
+        if (w == null) return null;
+        int x = (cx << 4) + 8;
+        int z = (cz << 4) + 8;
+        int y = Math.max(w.getHighestBlockYAt(x, z), 64);
+        return new org.bukkit.Location(w, x, y, z);
+    } catch (Exception ignored) { return null; }
+}
+
+// called after /proshield reload
+public void reloadFromConfig() {
+    // same as your loadAll() logic; you can call it directly if you’ve kept it public
+    try {
+        java.lang.reflect.Method m = this.getClass().getDeclaredMethod("loadAll");
+        m.setAccessible(true);
+        m.invoke(this);
+    } catch (Exception ignored) {}
+}
 }

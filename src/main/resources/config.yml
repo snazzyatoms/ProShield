@@ -1,39 +1,43 @@
-messages:
-  prefix: "&3[ProShield]&r "
-
-limits:
-  max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
-
-expiry:
-  enabled: false         # If true, remove claims whose owners have been inactive for N days
-  days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
-
 protection:
-  containers: true       # Block opening containers by non-owners in claims
-  pvp-in-claims: false   # If false, cancel PvP inside claims
-  mob-grief: true        # If true, explosions won't break blocks in claimed chunks
+  containers: true
+  pvp-in-claims: false
+
+  # Explosion block-breaking in claims
+  mob-grief: true
   creeper-explosions: true
   tnt-explosions: true
-  fire-spread: true      # (future: add fire spread handler if desired)
+  wither-explosions: true
+  wither-skull-explosions: true
+  ender-crystal-explosions: true
+  ender-dragon-explosions: true
 
-  # Non-container interactions (doors, buttons, etc.)
+  # Fire behavior inside claims
+  fire:
+    spread: true   # cancel FIRE spread in claimed chunks
+    burn: true     # reserve for future BlockBurn handlers; kept for clarity
+    ignite:
+      flint_and_steel: true   # blocks players from igniting inside others' claims
+      lava: true              # lava-caused ignition blocked in claims
+      lightning: true
+      explosion: true
+      spread: true
+
+  # Non-container interaction controls
   interactions:
     enabled: true
-    mode: blacklist      # "blacklist" or "whitelist"
-    categories:
-      - doors
-      - trapdoors
-      - fence_gates
-      - buttons
-      - levers
-      - pressure_plates
-    list: []             # Explicit materials e.g. [NOTE_BLOCK, BELL]
+    mode: blacklist
+    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
+    list: []
 
-  # Bucket usage
+  # Bucket protection
   buckets:
-    block-empty: true    # Block placing water/lava in other players' claims
-    block-fill: true     # Block picking up source blocks from other players' claims
+    block-empty: true
+    block-fill: true
 
-claims: {}
-autogive:
-  compass-on-join: true
+  # Entity grief that changes blocks (non-explosion)
+  entity-grief:
+    enderman: true       # stop block pickup/place in claims
+    ravager: true        # stop crop trampling / block change
+    silverfish: true     # stop infestation block changes
+    ender-dragon: true   # stop dragon block change (non-explosion)
+    wither: true         # stop wither block change (non-explosion)

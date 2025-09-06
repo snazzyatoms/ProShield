@@ -35,3 +35,5 @@ protection:
     block-fill: true     # Block picking up source blocks from other players' claims
 
 claims: {}
+autogive:
+  compass-on-join: true

@@ -1,8 +1,41 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
 version: 1.1.6
-api-version: '1.20'
-author: snazzyatoms
+api-version: '1.16'
+authors: [ snazzyatoms ]
 website: https://github.com/snazzyatoms/ProShield
-description: "All-in-one land & plot protection for Paper/Spigot"
-# (rest of your plugin.yml unchanged)
+description: "All-in-one land & plot protection for Paper/Spigot."
+
+commands:
+  proshield:
+    description: ProShield root command.
+    usage: /proshield <compass|reload|help>
+    aliases: [pshield, shield]
+    permission: proshield.command
+    permission-message: "&cYou don't have permission."
+
+permissions:
+  proshield.*:
+    description: All ProShield permissions.
+    default: op
+    children:
+      proshield.command: true
+      proshield.admin: true
+      proshield.compass: true
+      proshield.bypass: true
+
+  proshield.command:
+    description: Use /proshield command.
+    default: op
+
+  proshield.admin:
+    description: Admin actions (reload/remove others' claims).
+    default: op
+
+  proshield.compass:
+    description: Receive & use the ProShield compass.
+    default: op
+
+  proshield.bypass:
+    description: Build anywhere, ignoring claims.
+    default: op

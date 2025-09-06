@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
@@ -18,48 +19,65 @@ public class GUIListener implements Listener {
         this.plugin = plugin;
     }
 
+    /**
+     * Handle right-clicking the Admin Compass.
+     */
+    @EventHandler
+    public void onPlayerUseCompass(PlayerInteractEvent event) {
+        ItemStack item = event.getItem();
+        if (item == null || !item.hasItemMeta()) return;
+
+        String displayName = ChatColor.stripColor(item.getItemMeta().getDisplayName());
+        if (displayName != null && displayName.equalsIgnoreCase("ProShield Admin Compass")) {
+            event.setCancelled(true);
+            plugin.getGuiManager().openMainMenu(event.getPlayer());
+        }
+    }
+
+    /**
+     * Handle clicks inside ProShield menus.
+     */
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) {
-            return;
-        }
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (event.getCurrentItem() == null) return;
 
-        Player player = (Player) event.getWhoClicked();
-
-        // Make sure inventory belongs to our GUI
-        if (event.getView().getTitle() == null) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
 
-        if (title.equalsIgnoreCase("ProShield Menu")) {
-            event.setCancelled(true); // Prevent taking items from GUI
-
+        // Main ProShield Menu
+        if ("proshield menu".equalsIgnoreCase(title)) {
+            event.setCancelled(true);
             ItemStack clicked = event.getCurrentItem();
-            if (clicked == null || clicked.getType() == Material.AIR) {
-                return;
-            }
+            if (clicked == null || !clicked.hasItemMeta()) return;
 
-            // Handle clicks
-            switch (clicked.getType()) {
-                case GRASS_BLOCK:
-                    player.sendMessage(ChatColor.GREEN + "Opening plot management...");
-                    // open plot GUI
+            String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+            switch (name.toLowerCase()) {
+                case "manage your plots":
                     plugin.getGuiManager().openPlayerGUI(player);
                     break;
 
-                case COMPASS:
-                    player.sendMessage(ChatColor.YELLOW + "You clicked the Admin Compass!");
-                    // Add admin compass logic if needed
+                case "admin compass":
+                    player.getInventory().addItem(GUIManager.createAdminCompass());
+                    player.sendMessage(ChatColor.YELLOW + "You received the ProShield Admin Compass!");
                     break;
 
-                case BARRIER:
+                case "close menu":
                     player.closeInventory();
-                    player.sendMessage(ChatColor.RED + "Closed ProShield menu.");
                     break;
 
                 default:
-                    player.sendMessage(ChatColor.GRAY + "This option is not implemented yet.");
-                    break;
+                    player.sendMessage(ChatColor.GRAY + "Unknown option.");
             }
+        }
+
+        // Player Plot GUI
+        else if ("your plots".equalsIgnoreCase(title)) {
+            event.setCancelled(true);
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null) return;
+
+            PlayerGUI gui = new PlayerGUI(plugin, player);
+            gui.handleClick(clicked);
         }
     }
 }

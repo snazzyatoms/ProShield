@@ -1,9 +1,0 @@
-src/main/java/com/snazzyatoms/proshield/ProShield.java
-src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
-src/main/java/com/snazzyatoms/proshield/GUI/GUIManager.java
-src/main/java/com/snazzyatoms/proshield/GUI/GUIListener.java
-src/main/java/com/snazzyatoms/proshield/GUI/PlayerGUI.java
-src/main/java/com/snazzyatoms/proshield/listeners/AdminJoinListener.java
-src/main/java/com/snazzyatoms/proshield/listeners/PlotProtectionListener.java
-src/main/java/com/snazzyatoms/proshield/plots/Claim.java
-src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java

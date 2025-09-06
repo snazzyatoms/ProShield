@@ -1,17 +1,38 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.snazzyatoms</groupId>
+    <groupId>com.snazzyatoms.proshield</groupId>
     <artifactId>proshield</artifactId>
     <version>1.1.6</version>
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>All-in-one land & plot protection plugin</description>
+    <description>All-in-one land and plot protection plugin for Paper/Spigot.</description>
     <url>https://github.com/snazzyatoms/ProShield</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>snazzyatoms</id>
+            <name>snazzyatoms</name>
+            <url>https://github.com/snazzyatoms</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/snazzyatoms/ProShield.git</connection>
+        <developerConnection>scm:git:ssh://github.com:snazzyatoms/ProShield.git</developerConnection>
+        <url>https://github.com/snazzyatoms/ProShield</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -19,36 +40,33 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <repositories>
-        <!-- SpigotMC repository -->
-        <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
-        </repository>
-        <!-- Sonatype for Paper/other deps -->
-        <repository>
-            <id>sonatype</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </repository>
-    </repositories>
-
     <dependencies>
-        <!-- Spigot API -->
+        <!-- PaperMC API -->
         <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.16.5-R0.1-SNAPSHOT</version>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>1.20.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Shade plugin: creates one final JAR -->
+            <!-- Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <release>17</release>
+                </configuration>
+            </plugin>
+
+            <!-- Shade Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.5.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -60,5 +78,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

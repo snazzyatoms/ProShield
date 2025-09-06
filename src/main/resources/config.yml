@@ -1,21 +1,22 @@
-# ================================
-# ProShield Default Configuration
-# ================================
-
 messages:
-  prefix: "&7[&bProShield&7] "
-  no-permission: "&cYou do not have permission."
-  claim-created: "&aClaim created."
-  claim-removed: "&eClaim removed."
-  already-claimed: "&cThis chunk is already claimed."
-  not-owner: "&cYou do not own this claim."
-  reload-complete: "&aConfiguration reloaded."
+  prefix: "&3[ProShield]&r "
 
-gui:
-  title: "&2ProShield Menu"
-  items:
-    create: "GRASS_BLOCK"
-    info: "BOOK"
-    remove: "BARRIER"
+# Max claims per player (set -1 for unlimited). Perm 'proshield.unlimited' bypasses this.
+limits:
+  max-claims: 5
 
+# Visualize borders with particles (when claiming or /proshield show)
+visual:
+  borders-enabled: true
+  particle: REDSTONE
+  ticks: 60            # duration in ticks (~3s)
+  step: 2              # block step along edges
+
+# Protections toggles
+protection:
+  containers: true
+  pvp-in-claims: false
+  mob-grief: true      # block creeper/explosion block damage in claims
+
+# (Claims are auto-stored here)
 claims: {}

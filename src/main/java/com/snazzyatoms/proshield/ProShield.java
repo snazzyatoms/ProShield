@@ -21,7 +21,7 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
-    // Keep references so we can hot-reload their cached config
+    // keep refs for reloads
     private BlockProtectionListener protectionListener;
     private GUIListener guiListener;
 
@@ -33,25 +33,24 @@ public final class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Ensure config + claims section exist
         saveDefaultConfig();
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
             saveConfig();
         }
 
-        // Managers
+        // managers
         plotManager = new PlotManager(this);
         guiManager = new GUIManager(this);
 
-        // Listeners (NOTE: pass PlotManager to protection, and PlotManager+GUIManager to GUIListener)
+        // listeners — IMPORTANT: pass plotManager (not `this`)
         protectionListener = new BlockProtectionListener(plotManager);
         guiListener = new GUIListener(plotManager, guiManager);
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        // Commands
+        // commands
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
         registerCompassRecipe();
@@ -68,17 +67,11 @@ public final class ProShield extends JavaPlugin {
         getLogger().info("ProShield disabled.");
     }
 
-    /** Called by /proshield reload */
+    /** called by /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
-        // Re-cache protection & interaction toggles
-        if (protectionListener != null) {
-            protectionListener.reloadProtectionConfig();
-        }
-        // Reload claim cache from config
-        if (plotManager != null) {
-            plotManager.reloadFromConfig();
-        }
+        if (protectionListener != null) protectionListener.reloadProtectionConfig();
+        if (plotManager != null) plotManager.reloadFromConfig();
     }
 
     private void registerCompassRecipe() {
@@ -89,8 +82,7 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
-        // Avoid duplicate on reload
-        Bukkit.removeRecipe(key);
+        Bukkit.removeRecipe(key); // avoid duplicates on reload
         Bukkit.addRecipe(recipe);
     }
 

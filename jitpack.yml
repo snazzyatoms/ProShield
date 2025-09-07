@@ -1,6 +1,5 @@
+# path: jitpack.yml
 jdk:
   - openjdk17
-
-build:
-  commands:
-    - mvn -B -DskipTests install
+install:
+  - mvn -B -DskipTests install

@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -29,7 +30,7 @@ public final class ProShield extends JavaPlugin {
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
-    private ClaimMessageListener claimMessageListener;
+    private ClaimMessageListener messageListener;
 
     public static ProShield getInstance() { return instance; }
     public PlotManager getPlotManager() { return plotManager; }
@@ -48,21 +49,21 @@ public final class ProShield extends JavaPlugin {
         }
 
         // managers
-        plotManager = new PlotManager(this);
-        guiManager  = new GUIManager(this);
-        roleManager = new ClaimRoleManager(plotManager);
+        plotManager  = new PlotManager(this);
+        guiManager   = new GUIManager(this);
+        roleManager  = new ClaimRoleManager(this);
 
-        // listeners — PASS plotManager / managers (not `this`)
-        protectionListener  = new BlockProtectionListener(plotManager);
-        pvpListener         = new PvpProtectionListener(plotManager);
-        guiListener         = new GUIListener(plotManager, guiManager);
-        claimMessageListener= new ClaimMessageListener(plotManager, roleManager);
+        // listeners — pass correct managers
+        protectionListener = new BlockProtectionListener(plotManager);
+        pvpListener        = new PvpProtectionListener(plotManager);
+        guiListener        = new GUIListener(plotManager, guiManager);
+        messageListener    = new ClaimMessageListener(plotManager, roleManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
-        Bukkit.getPluginManager().registerEvents(claimMessageListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        Bukkit.getPluginManager().registerEvents(messageListener, this);
 
         // command
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
@@ -74,7 +75,7 @@ public final class ProShield extends JavaPlugin {
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
-        getLogger().info("ProShield 1.1.9 enabled. Claims loaded: " + plotManager.getClaimCount());
+        getLogger().info("ProShield 1.2 enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
@@ -107,7 +108,7 @@ public final class ProShield extends JavaPlugin {
     private void maybeRunExpiryNow() {
         if (getConfig().getBoolean("expiry.enabled", false)) {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, false /*reviewOnly*/);
+            int removed = plotManager.cleanupExpiredClaims(days, false);
             if (removed > 0) {
                 getLogger().info("Expiry: removed " + removed + " expired claim(s).");
                 plotManager.saveAll();
@@ -120,7 +121,7 @@ public final class ProShield extends JavaPlugin {
         long oneDayTicks = TimeUnit.DAYS.toSeconds(1) * 20L;
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, false /*reviewOnly*/);
+            int removed = plotManager.cleanupExpiredClaims(days, false);
             if (removed > 0) {
                 getLogger().info("Daily expiry: removed " + removed + " expired claim(s).");
                 plotManager.saveAll();

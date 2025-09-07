@@ -6,26 +6,19 @@
 messages:
   prefix: "&3[ProShield]&r "
 
-# ---- Claim limits / quotas ----
 limits:
-  # -1 = unlimited (players with proshield.unlimited always bypass regardless)
-  max-claims: 5
+  max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
 
-# ---- Claim expiry (inactive owners) ----
 expiry:
   enabled: false         # If true, remove claims whose owners have been inactive for N days
   days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
 
-# ---- Core protection toggles ----
 protection:
-  # Container access (chests, barrels, shulkers, hoppers, etc.)
   containers: true
-
-  # PvP inside claimed chunks: if true, allow PvP; if false, cancel PvP in claims
   pvp-in-claims: false
 
-  # --- Explosion block-breaking in claims ---
-  mob-grief: true           # Master toggle for explosion block-list trimming in claims
+  # Explosion block-breaking in claims
+  mob-grief: true
   creeper-explosions: true
   tnt-explosions: true
   wither-explosions: true
@@ -33,27 +26,21 @@ protection:
   ender-crystal-explosions: true
   ender-dragon-explosions: true
 
-  # --- Fire behavior in claims ---
+  # Fire behavior inside claims
   fire:
-    spread: true   # Cancel classic FIRE spread in claimed chunks
-    burn: true     # Reserved for future BlockBurn handlers; on by default for parity
+    spread: true   # cancel FIRE spread in claimed chunks
+    burn: true     # cancel BlockBurn inside claims
     ignite:
-      flint_and_steel: true   # Players cannot ignite fire inside others' claims
-      lava: true              # Lava-caused ignition blocked in claims
+      flint_and_steel: true   # block players igniting inside others' claims
+      lava: true
       lightning: true
       explosion: true
       spread: true
 
-  # (Legacy key from earlier draft — not used by code anymore; keep for familiarity)
-  # fire-spread: true
-
-  # --- Non-container interaction controls (doors, buttons, etc.) ---
+  # Non-container interaction controls
   interactions:
     enabled: true
-    # Mode decides how 'categories' and 'list' are treated:
-    #   blacklist = block when it matches
-    #   whitelist = allow only when it matches (block all others)
-    mode: blacklist
+    mode: blacklist          # "blacklist" or "whitelist"
     categories:
       - doors
       - trapdoors
@@ -61,26 +48,40 @@ protection:
       - buttons
       - levers
       - pressure_plates
-    # Explicit additional materials; example: [NOTE_BLOCK, BELL]
-    list: []
+    list: []                 # explicit materials e.g. [NOTE_BLOCK, BELL]
 
-  # --- Bucket usage ---
+  # Bucket usage
   buckets:
-    block-empty: true    # Block pouring water/lava in other players' claims
-    block-fill: true     # Block picking up source blocks from other players' claims
+    block-empty: true
+    block-fill: true
 
-  # --- Entity grief that changes blocks (non-explosions) ---
+  # Entity grief that changes blocks (non-explosion)
   entity-grief:
-    enderman: true       # Stop pickup/place inside claims
-    ravager: true        # Stop crop trampling / block change
-    silverfish: true     # Stop infestation block changes
-    ender-dragon: true   # Stop dragon block changes (non-explosion)
-    wither: true         # Stop wither block changes (non-explosion)
+    enderman: true
+    ravager: true
+    silverfish: true
+    ender-dragon: true
+    wither: true
 
-# ---- Claims store (auto-managed by the plugin) ----
+  # Entity teleport denial in claims
+  entity-teleport:
+    enderman: true
+
+# Per-world overrides (optional). Copy the structure under "protection" here.
+# worlds:
+#   world_nether:
+#     protection:
+#       pvp-in-claims: true
+#       interactions:
+#         enabled: false
+#   world_the_end:
+#     protection:
+#       entity-teleport:
+#         enderman: true
+#       ender-dragon-explosions: true
+
+# Claims store (auto-managed by the plugin)
 claims: {}
 
-# ---- Quality of life ----
 autogive:
-  # Give ProShield compass to OPs/admins with permission on first join / join if missing
   compass-on-join: true

@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -22,50 +23,47 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
-    // Keep listeners around so we can reload configs
+    // Keep references so we can reload configs safely
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
 
-    public static ProShield getInstance() {
-        return instance;
-    }
-
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
-
-    public GUIManager getGuiManager() {
-        return guiManager;
-    }
+    public static ProShield getInstance() { return instance; }
+    public PlotManager getPlotManager() { return plotManager; }
+    public GUIManager getGuiManager() { return guiManager; }
 
     @Override
     public void onEnable() {
         instance = this;
 
+        // Ensure config exists and base sections are present
         saveDefaultConfig();
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
             saveConfig();
         }
 
+        // Managers
         plotManager = new PlotManager(this);
-        guiManager = new GUIManager(this);
+        guiManager  = new GUIManager(this);
 
-        // listeners
+        // Listeners (NOTE the constructor arguments!)
         protectionListener = new BlockProtectionListener(plotManager);
-        pvpListener = new PvpProtectionListener(plotManager);
-        guiListener = new GUIListener(plotManager, guiManager);
+        pvpListener        = new PvpProtectionListener(plotManager);
+        guiListener        = new GUIListener(plotManager, guiManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        // commands
+        // Commands
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
+        // Custom recipe
         registerCompassRecipe();
+
+        // Expiry maintenance
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
@@ -79,11 +77,12 @@ public final class ProShield extends JavaPlugin {
         getLogger().info("ProShield disabled.");
     }
 
+    /** Called by /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
         if (protectionListener != null) protectionListener.reloadProtectionConfig();
-        if (pvpListener != null) pvpListener.reloadPvpFlag();
-        plotManager.reloadFromConfig();
+        if (pvpListener != null)         pvpListener.reloadPvpFlag();
+        if (plotManager != null)         plotManager.reloadFromConfig();
     }
 
     private void registerCompassRecipe() {
@@ -94,6 +93,7 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
+        // Avoid duplicates on reload
         Bukkit.removeRecipe(key);
         Bukkit.addRecipe(recipe);
     }

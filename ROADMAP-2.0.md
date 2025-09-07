@@ -1,5 +1,8 @@
 # 🛡️ ProShield 2.0 Roadmap
 
+> **Note:** Some roadmap features (like claim roles and GUI trust management) have been **partially introduced in 1.2.x**.  
+> ProShield 2.0 will **expand and refine** these systems, and introduce Towns, Shops, Economy, Claim Flags, and more.
+
 ProShield 2.0 is the next major milestone of the project.  
 While the 1.x series focuses on **core land protection** and **ease of use**, the 2.0 release will expand ProShield into a **community-driven, economy-aware protection system** — without the heavy overhead of plugins like WorldGuard or GriefPrevention.
 

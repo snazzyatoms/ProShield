@@ -3,4 +3,4 @@ jdk:
 
 build:
   commands:
-    - mvn -q -DskipTests clean package
+    - mvn -B -DskipTests install

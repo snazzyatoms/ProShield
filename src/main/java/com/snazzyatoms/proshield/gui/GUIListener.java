@@ -1,6 +1,7 @@
 // path: src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -20,7 +21,7 @@ public class GUIListener implements Listener {
 
     public GUIListener(PlotManager plotManager, GUIManager guiManager) {
         this.plotManager = plotManager;
-        this.guiManager = guiManager;
+        this.guiManager  = guiManager;
     }
 
     @EventHandler
@@ -29,6 +30,7 @@ public class GUIListener implements Listener {
         ItemStack it = e.getItem();
         if (it == null || it.getType() != Material.COMPASS) return;
         if (!it.hasItemMeta() || !it.getItemMeta().hasDisplayName()) return;
+
         String name = ChatColor.stripColor(it.getItemMeta().getDisplayName());
         if (!"ProShield Compass".equalsIgnoreCase(name)) return;
 
@@ -39,8 +41,7 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if (e.getView() == null) return;
-        String title = e.getView().getTitle();
-        if (!GUIManager.TITLE.equals(title)) return;
+        if (!GUIManager.TITLE.equals(e.getView().getTitle())) return;
 
         e.setCancelled(true);
         if (!(e.getWhoClicked() instanceof Player p)) return;
@@ -69,6 +70,6 @@ public class GUIListener implements Listener {
 
     private String prefix() {
         return ChatColor.translateAlternateColorCodes('&',
-                com.snazzyatoms.proshield.ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
+                ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

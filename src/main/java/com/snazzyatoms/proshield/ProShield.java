@@ -21,10 +21,10 @@ public final class ProShield extends JavaPlugin {
     private GUIManager guiManager;
     private ClaimRoleManager roleManager;
 
+    // keep references for reload
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
-    private ClaimMessageListener messageListener;
 
     public static ProShield getInstance() { return instance; }
     public PlotManager getPlotManager() { return plotManager; }
@@ -41,34 +41,34 @@ public final class ProShield extends JavaPlugin {
             saveConfig();
         }
 
-        // Managers
+        // managers
         plotManager = new PlotManager(this);
+        roleManager = new ClaimRoleManager(this);
+        plotManager.setRoleManager(roleManager);
         guiManager  = new GUIManager(this);
-        roleManager = new ClaimRoleManager();
 
-        // Listeners (ensure correct constructor args)
+        // listeners
         protectionListener = new BlockProtectionListener(plotManager);
         pvpListener        = new PvpProtectionListener(plotManager);
         guiListener        = new GUIListener(plotManager, guiManager);
-        messageListener    = new ClaimMessageListener(plotManager, roleManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
-        Bukkit.getPluginManager().registerEvents(messageListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager, roleManager), this);
 
-        // Command
+        // command
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
-        // Recipe
+        // recipe
         registerCompassRecipe();
 
-        // Expiry maintenance
+        // expiry maintenance
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
-        getLogger().info("ProShield 1.1.9 enabled. Claims loaded: " + plotManager.getClaimCount());
+        getLogger().info("ProShield 1.2.1 enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
@@ -84,6 +84,7 @@ public final class ProShield extends JavaPlugin {
         if (protectionListener != null) protectionListener.reloadProtectionConfig();
         if (pvpListener != null)         pvpListener.reloadPvpFlag();
         if (plotManager != null)         plotManager.reloadFromConfig();
+        if (roleManager != null)         roleManager.reloadFromConfig();
     }
 
     private void registerCompassRecipe() {

@@ -7,29 +7,22 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Claim storage + logic with robust expiry handling for offline players.
+ * Claim storage + logic with robust expiry handling and archival.
  *
- * Stores claims both in-memory and under config path: claims.<key>...
+ * Active claims live under: claims.<key>
+ * Expired claims are archived under: claims_expired.<key>
+ *
  * Key format: world:chunkX:chunkZ
- *
- * Features:
- *  - create/remove claims with max-claims limit & admin force remove
- *  - trust / untrust users per claim
- *  - owner/trusted checks & lookups
- *  - list trusted, owner display name
- *  - reload from config & save all
- *  - expiry cleanup based on OfflinePlayer last played (safe)
  */
 public class PlotManager {
 
     private final ProShield plugin;
 
-    // In-memory cache
+    // In-memory cache of active claims
     private final Map<String, Claim> claims = new HashMap<>();
     private final Map<UUID, Integer> ownerCounts = new HashMap<>();
 
@@ -46,13 +39,7 @@ public class PlotManager {
         return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
     }
 
-    private String key(String world, int chunkX, int chunkZ) {
-        return world + ":" + chunkX + ":" + chunkZ;
-    }
-
-    public boolean isClaimed(Location loc) {
-        return claims.containsKey(key(loc));
-    }
+    public boolean isClaimed(Location loc) { return claims.containsKey(key(loc)); }
 
     public boolean isOwner(UUID uuid, Location loc) {
         Claim c = claims.get(key(loc));
@@ -69,17 +56,11 @@ public class PlotManager {
         return Optional.ofNullable(claims.get(key(loc)));
     }
 
-    public int getClaimCount() {
-        return claims.size();
-    }
+    public int getClaimCount() { return claims.size(); }
 
-    public int getOwnerCount(UUID uuid) {
-        return ownerCounts.getOrDefault(uuid, 0);
-    }
+    public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }
 
-    public Set<String> getAllClaimKeys() {
-        return Collections.unmodifiableSet(claims.keySet());
-    }
+    public Set<String> getAllClaimKeys() { return Collections.unmodifiableSet(claims.keySet()); }
 
     public Location keyToCenter(String key) {
         try {
@@ -93,9 +74,7 @@ public class PlotManager {
             int z = (cz << 4) + 8;
             int y = Math.max(w.getHighestBlockYAt(x, z), 64);
             return new Location(w, x, y, z);
-        } catch (Exception ignored) {
-            return null;
-        }
+        } catch (Exception ignored) { return null; }
     }
 
     public String ownerName(UUID uuid) {
@@ -142,9 +121,7 @@ public class PlotManager {
         return true;
     }
 
-    /**
-     * Removes a claim at loc. If adminForce is true, requester doesn't need to be owner.
-     */
+    /** Removes a claim at loc. If adminForce is true, requester doesn't need to be owner. */
     public boolean removeClaim(UUID requester, Location loc, boolean adminForce) {
         String k = key(loc);
         Claim c = claims.get(k);
@@ -164,20 +141,14 @@ public class PlotManager {
     public boolean trust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().add(target)) {
-            saveClaim(c);
-            return true;
-        }
+        if (c.getTrusted().add(target)) { saveClaim(c); return true; }
         return false;
     }
 
     public boolean untrust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().remove(target)) {
-            saveClaim(c);
-            return true;
-        }
+        if (c.getTrusted().remove(target)) { saveClaim(c); return true; }
         return false;
     }
 
@@ -198,7 +169,6 @@ public class PlotManager {
         plugin.getConfig().set(path + "chunkX", c.getChunkX());
         plugin.getConfig().set(path + "chunkZ", c.getChunkZ());
         plugin.getConfig().set(path + "createdAt", c.getCreatedAt());
-
         List<String> t = c.getTrusted().stream().map(UUID::toString).collect(Collectors.toList());
         plugin.getConfig().set(path + "trusted", t);
         plugin.saveConfig();
@@ -210,9 +180,7 @@ public class PlotManager {
     }
 
     /** Reload in-memory cache from config (used by /proshield reload). */
-    public void reloadFromConfig() {
-        loadAll();
-    }
+    public void reloadFromConfig() { loadAll(); }
 
     private void loadAll() {
         claims.clear();
@@ -247,17 +215,17 @@ public class PlotManager {
     }
 
     // ------------------------------------------------------------------------
-    // Expiry (inactive owner cleanup)
+    // Expiry (inactive owner cleanup) with archival
     // ------------------------------------------------------------------------
 
     /**
-     * Remove claims whose owners have been inactive for at least 'days' (and are not online).
-     * Uses OfflinePlayer#getLastPlayed (milliseconds since epoch) safely and handles edge cases:
-     *  - If player is online -> never expires
-     *  - If player never joined / lastPlayed == 0 -> does NOT expire (safer default)
-     *  - Now - lastPlayed >= days -> expires
+     * Move claims whose owners have been inactive for >= 'days' into claims_expired tree.
+     * Rules:
+     *  - If owner is online -> never expires
+     *  - If lastPlayed == 0 (unknown) -> do NOT expire (conservative)
+     *  - Otherwise, if now - lastPlayed >= days -> archive to claims_expired and remove from active
      *
-     * @return number of claims removed
+     * @return number of claims archived
      */
     public int cleanupExpiredClaims(int days) {
         if (days <= 0) return 0;
@@ -265,41 +233,108 @@ public class PlotManager {
         final long now = System.currentTimeMillis();
         final long thresholdMs = daysToMillis(days);
 
-        int removed = 0;
-        Iterator<Map.Entry<String, Claim>> it = claims.entrySet().iterator();
+        int archived = 0;
+        List<Map.Entry<String, Claim>> toArchive = new ArrayList<>();
 
-        while (it.hasNext()) {
-            Map.Entry<String, Claim> entry = it.next();
-            Claim c = entry.getValue();
+        // Decide which to archive
+        for (Map.Entry<String, Claim> e : claims.entrySet()) {
+            Claim c = e.getValue();
             UUID owner = c.getOwner();
 
             // If owner is online, skip
             if (Bukkit.getPlayer(owner) != null) continue;
 
             OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
-
-            // If we cannot determine last played, be conservative and skip
             long lastPlayed = op.getLastPlayed(); // 0 if unknown
             if (lastPlayed <= 0L) continue;
 
             long inactiveFor = now - lastPlayed;
             if (inactiveFor >= thresholdMs) {
-                // Expire this claim
-                it.remove();
-                ownerCounts.put(owner, Math.max(0, ownerCounts.getOrDefault(owner, 1) - 1));
-                removeClaimFromConfig(c.key());
-                removed++;
+                toArchive.add(e);
             }
         }
 
-        if (removed > 0) {
-            plugin.getLogger().info("Expired " + removed + " claim(s) due to owner inactivity >= " + days + " day(s).");
+        // Apply archival + remove from active + update config
+        for (Map.Entry<String, Claim> e : toArchive) {
+            String k = e.getKey();
+            Claim c = e.getValue();
+
+            // Write to claims_expired
+            archiveClaim(c, Bukkit.getOfflinePlayer(c.getOwner()).getLastPlayed(), System.currentTimeMillis());
+
+            // Remove active
+            claims.remove(k);
+            ownerCounts.put(c.getOwner(), Math.max(0, ownerCounts.getOrDefault(c.getOwner(), 1) - 1));
+            removeClaimFromConfig(k);
+
+            archived++;
         }
-        return removed;
+
+        if (archived > 0) {
+            plugin.saveConfig(); // persist archive writes
+            plugin.getLogger().info("Archived " + archived + " expired claim(s) (>= " + days + " day(s) inactive).");
+        }
+        return archived;
+    }
+
+    private void archiveClaim(Claim c, long lastPlayed, long removedAt) {
+        String base = "claims_expired." + c.key() + ".";
+        plugin.getConfig().set(base + "owner", c.getOwner().toString());
+        plugin.getConfig().set(base + "ownerName", ownerName(c.getOwner())); // helpful snapshot
+        plugin.getConfig().set(base + "world", c.getWorld());
+        plugin.getConfig().set(base + "chunkX", c.getChunkX());
+        plugin.getConfig().set(base + "chunkZ", c.getChunkZ());
+        plugin.getConfig().set(base + "createdAt", c.getCreatedAt());
+        plugin.getConfig().set(base + "trusted", c.getTrusted().stream().map(UUID::toString).collect(Collectors.toList()));
+        plugin.getConfig().set(base + "lastPlayed", lastPlayed);
+        plugin.getConfig().set(base + "removedAt", removedAt);
+        // do not saveConfig() here; caller batches saves after archival loop
+    }
+
+    /**
+     * Restore a previously expired claim back into active claims if the space is still free.
+     * @param key world:chunkX:chunkZ
+     * @return true if restored, false otherwise
+     */
+    public boolean restoreExpiredClaim(String key) {
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("claims_expired." + key);
+        if (sec == null) return false;
+
+        // If space is taken, refuse restoration
+        if (claims.containsKey(key)) return false;
+
+        try {
+            UUID owner = UUID.fromString(sec.getString("owner"));
+            String world = sec.getString("world");
+            int cx = sec.getInt("chunkX");
+            int cz = sec.getInt("chunkZ");
+            long createdAt = sec.getLong("createdAt", System.currentTimeMillis());
+
+            Claim c = new Claim(owner, world, cx, cz, createdAt);
+
+            List<String> t = sec.getStringList("trusted");
+            if (t != null) for (String s : t) {
+                try { c.getTrusted().add(UUID.fromString(s)); } catch (IllegalArgumentException ignored) {}
+            }
+
+            // Move to active
+            claims.put(key, c);
+            ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
+            saveClaim(c);
+
+            // Remove from archive
+            plugin.getConfig().set("claims_expired." + key, null);
+            plugin.saveConfig();
+
+            return true;
+        } catch (Exception ex) {
+            plugin.getLogger().warning("Failed to restore expired claim: " + key + " -> " + ex.getMessage());
+            return false;
+        }
     }
 
     private long daysToMillis(int days) {
-        // Avoid overflow for large values
+        // Safe multiplication
         return Math.multiplyExact(24L * 60L * 60L * 1000L, days);
     }
 }

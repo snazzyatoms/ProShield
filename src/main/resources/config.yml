@@ -1,31 +1,28 @@
-# ============================
-# ProShield 1.2.0 - Config
-# ============================
-
+# path: src/main/resources/config.yml
 messages:
   prefix: "&3[ProShield]&r "
-  enter-claim-format: "&bEntering &f{owner}&b's claim."
-  leave-claim-format: "&7Leaving &f{owner}&7's claim."
-  show-as: "actionbar"     # "chat" | "title" | "actionbar"
 
 limits:
-  max-claims: 5            # -1 = unlimited (players w/ proshield.unlimited bypass)
-  max-claim-chunks: 16     # maximum total chunks in a single expanded claim region (future use)
+  max-claims: 5              # -1 = unlimited (players with proshield.unlimited bypass)
 
 expiry:
-  enabled: false
-  days: 30                 # inactive days before expiration
-  review-only: true        # if true, expiry only marks for review (no auto delete)
+  enabled: false             # If true, remove claims whose owners inactive for N days
+  days: 30                   # Days of inactivity before claim is expired (checked on startup + daily)
 
-raid-protection:
-  enabled: true
-  seconds: 86400           # 24h shield after creation; blocks PvP + explosions in the claim
+autogive:
+  compass-on-join: true      # Give ops (or players with permission) the admin compass on join
 
 protection:
-  containers: true
-  pvp-in-claims: false     # if false, cancel PvP inside claimed chunks
-  mob-grief: true
+  # Minimum role required for actions inside a claim
+  roles:
+    build: BUILDER           # break/place blocks
+    interact: MEMBER         # doors, buttons, levers, pressure plates...
+    open_containers: CONTAINER
+    use_buckets: BUILDER
 
+  containers: true
+  pvp-in-claims: false       # If false, cancel PvP inside claims
+  mob-grief: true
   creeper-explosions: true
   tnt-explosions: true
   wither-explosions: true
@@ -45,7 +42,7 @@ protection:
 
   interactions:
     enabled: true
-    mode: blacklist          # "blacklist" | "whitelist"
+    mode: blacklist          # "blacklist" or "whitelist"
     categories:
       - doors
       - trapdoors
@@ -53,11 +50,11 @@ protection:
       - buttons
       - levers
       - pressure_plates
-    list: []                 # explicit materials e.g. [BELL, NOTE_BLOCK]
+    list: []                 # explicit materials e.g. [NOTE_BLOCK, BELL]
 
   buckets:
-    block-empty: true
-    block-fill: true
+    block-empty: true        # prevent placing water/lava by under-role players
+    block-fill: true         # prevent taking source blocks
 
   entity-grief:
     enderman: true
@@ -69,18 +66,4 @@ protection:
   entity-teleport:
     enderman: true
 
-worlds:
-  # Per-world toggles (unset = inherit global)
-  # world_nether:
-  #   claims-enabled: true
-  #   protections-enabled: true
-  #   pvp-in-claims: false
-
-autogive:
-  compass-on-join: true
-
-# Data sections (managed by plugin)
 claims: {}
-roles: {}
-homes: {}
-messages-per-claim: {}    # claimKey -> { enter: "...", leave: "..." }

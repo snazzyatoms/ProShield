@@ -6,6 +6,12 @@
 messages:
   prefix: "&3[ProShield]&r "
 
+  permissions:
+  # If true, anyone with proshield.admin is treated as having unlimited claims.
+  # Default is false for safety. Can be toggled at runtime via:
+  # /proshield settings adminUnlimited <on|off|toggle>
+  admin-includes-unlimited: false
+
 limits:
   max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
 

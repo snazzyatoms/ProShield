@@ -1,14 +1,14 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.1.9
+version: 1.2.0
 api-version: 1.18
 author: snazzyatoms
-description: Land and plot protection plugin with GUI management and admin tools.
+description: Land and plot protection plugin with GUI management, roles, expansion and QoL tools.
 
-# Soft-depend so that in the future we can hook into Vault, LuckPerms, etc.
 softdepend:
   - Vault
   - LuckPerms
+  - PlaceholderAPI
 
 commands:
   proshield:
@@ -24,7 +24,11 @@ commands:
       /proshield trusted
       /proshield bypass <on|off|toggle>
       /proshield reload
-      /proshield sell <price>   # (future economy/shop integration)
+      # 1.2 placeholders (coming in 1.2.x GUI/commands)
+      /proshield expand <north|south|east|west> <amount>
+      /proshield home [#]
+      /proshield message <enter|leave> <text>
+      /proshield role <add|remove|set> <player> <member|manager>
 
 permissions:
   proshield.use:
@@ -32,7 +36,7 @@ permissions:
     default: true
 
   proshield.admin:
-    description: Grants access to admin features (admin compass, force unclaim, teleport, expired claims management)
+    description: Admin features (admin compass, force unclaim, tp, bypass, expiry review)
     default: op
 
   proshield.compass:
@@ -44,17 +48,17 @@ permissions:
     default: op
 
   proshield.unlimited:
-    description: Ignore max-claims limit (server owners can toggle in config)
+    description: Ignore max-claims limit
     default: false
 
   proshield.admin.tp:
     description: Allows teleporting to other players’ claims from the admin menu
     default: op
 
-  proshield.reload:
-    description: Allows /proshield reload (config + admin.yml)
+  proshield.admin.reload:
+    description: Allows /proshield reload (config + internal caches)
     default: op
 
   proshield.admin.expired.purge:
-    description: Allows purging expired claims manually
+    description: Allows purging expired claims
     default: op

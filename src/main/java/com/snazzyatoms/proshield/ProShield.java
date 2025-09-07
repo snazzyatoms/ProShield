@@ -3,7 +3,12 @@ package com.snazzyatoms.proshield;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.plots.*;
+import com.snazzyatoms.proshield.plots.BlockProtectionListener;
+import com.snazzyatoms.proshield.plots.ClaimMessageListener;
+import com.snazzyatoms.proshield.plots.ClaimRoleManager;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.PlayerJoinListener;
+import com.snazzyatoms.proshield.plots.PvpProtectionListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -16,88 +21,75 @@ import java.util.concurrent.TimeUnit;
 public final class ProShield extends JavaPlugin {
 
     private static ProShield instance;
-
     private PlotManager plotManager;
     private GUIManager guiManager;
+    private ClaimRoleManager roleManager;
 
-    // New 1.2 systems
-    private ClaimRolesManager rolesManager;
-    private ClaimExpansionHandler expansionHandler;
-
-    // listeners (kept as fields for reloads)
+    // keep references for reload
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
-    private PlayerJoinListener joinListener;
     private ClaimMessageListener claimMessageListener;
 
     public static ProShield getInstance() { return instance; }
-
     public PlotManager getPlotManager() { return plotManager; }
     public GUIManager getGuiManager() { return guiManager; }
-    public ClaimRolesManager getRolesManager() { return rolesManager; }
-    public ClaimExpansionHandler getExpansionHandler() { return expansionHandler; }
+    public ClaimRoleManager getRoleManager() { return roleManager; }
 
     @Override
     public void onEnable() {
         instance = this;
 
-        // Ensure config + base sections
+        // ensure config & sections
         saveDefaultConfig();
-        if (!getConfig().isConfigurationSection("claims")) getConfig().createSection("claims");
-        if (!getConfig().isConfigurationSection("roles"))  getConfig().createSection("roles");
-        if (!getConfig().isConfigurationSection("homes"))  getConfig().createSection("homes");
-        if (!getConfig().isConfigurationSection("messages-per-claim")) getConfig().createSection("messages-per-claim");
-        saveConfig();
+        if (!getConfig().isConfigurationSection("claims")) {
+            getConfig().createSection("claims");
+            saveConfig();
+        }
 
-        // Managers
-        plotManager      = new PlotManager(this);
-        rolesManager     = new ClaimRolesManager(this, plotManager);
-        expansionHandler = new ClaimExpansionHandler(this, plotManager);
-        guiManager       = new GUIManager(this);
+        // managers
+        plotManager = new PlotManager(this);
+        guiManager  = new GUIManager(this);
+        roleManager = new ClaimRoleManager(plotManager);
 
-        // Listeners
-        protectionListener   = new BlockProtectionListener(plotManager);
-        pvpListener          = new PvpProtectionListener(plotManager);
-        guiListener          = new GUIListener(plotManager, guiManager);
-        joinListener         = new PlayerJoinListener(this);
-        claimMessageListener = new ClaimMessageListener(plotManager);
+        // listeners — PASS plotManager / managers (not `this`)
+        protectionListener  = new BlockProtectionListener(plotManager);
+        pvpListener         = new PvpProtectionListener(plotManager);
+        guiListener         = new GUIListener(plotManager, guiManager);
+        claimMessageListener= new ClaimMessageListener(plotManager, roleManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
-        Bukkit.getPluginManager().registerEvents(joinListener, this);
         Bukkit.getPluginManager().registerEvents(claimMessageListener, this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        // Commands (your existing command class keeps working)
+        // command
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
-        // Custom recipe for Admin Compass
+        // recipe
         registerCompassRecipe();
 
-        // Expiry maintenance
+        // expiry maintenance
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
-        getLogger().info("ProShield 1.2.0 enabled. Claims loaded: " + plotManager.getClaimCount());
+        getLogger().info("ProShield 1.1.9 enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
     public void onDisable() {
         plotManager.saveAll();
-        rolesManager.saveAll();
         saveConfig();
         getLogger().info("ProShield disabled.");
     }
 
-    /** Invoked by /proshield reload */
+    /** /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
-        protectionListener.reloadProtectionConfig();
-        pvpListener.reloadPvpFlag();
-        rolesManager.reload();
-        plotManager.reloadFromConfig();
-        claimMessageListener.reload();
+        if (protectionListener != null) protectionListener.reloadProtectionConfig();
+        if (pvpListener != null)         pvpListener.reloadPvpFlag();
+        if (plotManager != null)         plotManager.reloadFromConfig();
     }
 
     private void registerCompassRecipe() {
@@ -108,16 +100,16 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
-        Bukkit.removeRecipe(key);
+        Bukkit.removeRecipe(key); // avoid duplicates on reload
         Bukkit.addRecipe(recipe);
     }
 
     private void maybeRunExpiryNow() {
         if (getConfig().getBoolean("expiry.enabled", false)) {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, getConfig().getBoolean("expiry.review-only", true));
+            int removed = plotManager.cleanupExpiredClaims(days, false /*reviewOnly*/);
             if (removed > 0) {
-                getLogger().info("Expiry: flagged/removed " + removed + " expired claim(s).");
+                getLogger().info("Expiry: removed " + removed + " expired claim(s).");
                 plotManager.saveAll();
             }
         }
@@ -128,9 +120,9 @@ public final class ProShield extends JavaPlugin {
         long oneDayTicks = TimeUnit.DAYS.toSeconds(1) * 20L;
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, getConfig().getBoolean("expiry.review-only", true));
+            int removed = plotManager.cleanupExpiredClaims(days, false /*reviewOnly*/);
             if (removed > 0) {
-                getLogger().info("Daily expiry: flagged/removed " + removed + " expired claim(s).");
+                getLogger().info("Daily expiry: removed " + removed + " expired claim(s).");
                 plotManager.saveAll();
             }
         }, oneDayTicks, oneDayTicks);

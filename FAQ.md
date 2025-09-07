@@ -1,8 +1,7 @@
 # ❓ ProShield FAQ
 
 This FAQ covers the most common questions, problems, and solutions for running ProShield.  
-If your issue isn’t listed here, please open a GitHub issue or post on the Spigot thread.
-
+If your issue isn’t listed here, please open a GitHub issue.
 ---
 
 ## ✅ General

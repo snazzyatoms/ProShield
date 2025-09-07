@@ -47,7 +47,7 @@ public final class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         guiManager  = new GUIManager(this);
 
-        // Listeners (NOTE the constructor arguments!)
+        // Listeners — NOTE: pass plotManager, not 'this'
         protectionListener = new BlockProtectionListener(plotManager);
         pvpListener        = new PvpProtectionListener(plotManager);
         guiListener        = new GUIListener(plotManager, guiManager);

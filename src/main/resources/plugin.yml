@@ -19,15 +19,14 @@ commands:
       /proshield trusted
       /proshield bypass <on|off|toggle>
       /proshield reload
+      /proshield expired list
+      /proshield expired restore <world:chunkX:chunkZ>
+      /proshield expired purge [days]
 
 permissions:
   proshield.use:
     description: Allows players to use ProShield commands and GUI
     default: true
-
-  proshield.admin:
-    description: Grants access to admin features (admin compass, force unclaim, teleport, bypass toggle)
-    default: op
 
   proshield.compass:
     description: Allows a player to receive and use the ProShield compass
@@ -46,5 +45,29 @@ permissions:
     default: op
 
   proshield.admin.reload:
-    description: Allows /proshield reload (config + admin.yml)
+    description: Allows /proshield reload (config + per-world protection)
     default: op
+
+  # Expired-claims management (granular)
+  proshield.admin.expired.list:
+    description: Allows /proshield expired list
+    default: op
+  proshield.admin.expired.restore:
+    description: Allows /proshield expired restore <key>
+    default: op
+  proshield.admin.expired.purge:
+    description: Allows /proshield expired purge [days]
+    default: op
+
+  # Umbrella admin permission (does NOT grant unlimited claims by default)
+  proshield.admin:
+    description: Grants access to admin features (admin compass, force unclaim, teleport, reload, expired claims management)
+    default: op
+    children:
+      proshield.compass: true
+      proshield.bypass: true
+      proshield.admin.tp: true
+      proshield.admin.reload: true
+      proshield.admin.expired.list: true
+      proshield.admin.expired.restore: true
+      proshield.admin.expired.purge: true

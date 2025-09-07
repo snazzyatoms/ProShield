@@ -19,6 +19,7 @@ commands:
       /proshield trusted
       /proshield bypass <on|off|toggle>
       /proshield reload
+      /proshield purgeexpired
 
 permissions:
   proshield.use:
@@ -38,17 +39,17 @@ permissions:
     default: op
 
   proshield.unlimited:
-    description: Ignore max-claims limit (only for server owner / configurable)
-    default: false
+    description: Ignore max-claims limit
+    default: op
 
   proshield.admin.tp:
     description: Allows teleporting to other players’ claims from the admin menu
     default: op
 
   proshield.admin.reload:
-    description: Allows /proshield reload (reloads config and admin.yml)
+    description: Allows /proshield reload (config + admin.yml)
     default: op
 
   proshield.admin.expired.purge:
-    description: Allows purging expired claims manually
+    description: Allows purging of expired claims with /proshield purgeexpired
     default: op

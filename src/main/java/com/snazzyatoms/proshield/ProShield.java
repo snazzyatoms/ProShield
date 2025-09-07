@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -22,7 +23,6 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
-    // Keep references so we can reload configs safely
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
@@ -35,7 +35,6 @@ public final class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Ensure config exists and base sections are present
         saveDefaultConfig();
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
@@ -46,10 +45,10 @@ public final class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         guiManager  = new GUIManager(this);
 
-        // Listeners — NOTE: pass plotManager, not 'this'
-protectionListener = new BlockProtectionListener(plotManager);
-pvpListener        = new PvpProtectionListener(plotManager);
-guiListener        = new GUIListener(plotManager, guiManager);
+        // Listeners — IMPORTANT: pass plotManager, not `this`
+        protectionListener = new BlockProtectionListener(plotManager);
+        pvpListener        = new PvpProtectionListener(plotManager);
+        guiListener        = new GUIListener(plotManager, guiManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);
@@ -92,7 +91,6 @@ guiListener        = new GUIListener(plotManager, guiManager);
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
-        // Avoid duplicates on reload
         Bukkit.removeRecipe(key);
         Bukkit.addRecipe(recipe);
     }

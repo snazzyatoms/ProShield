@@ -21,6 +21,7 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
+    // Keep references so we can hot-reload their cached config
     private BlockProtectionListener protectionListener;
     private GUIListener guiListener;
 
@@ -32,26 +33,26 @@ public final class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        // Ensure config + claims section exist
         saveDefaultConfig();
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
             saveConfig();
         }
 
+        // Managers
         plotManager = new PlotManager(this);
         guiManager = new GUIManager(this);
 
+        // Listeners (NOTE: pass PlotManager to protection, and PlotManager+GUIManager to GUIListener)
         protectionListener = new BlockProtectionListener(plotManager);
         guiListener = new GUIListener(plotManager, guiManager);
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        if (getCommand("proshield") != null) {
-            getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
-        } else {
-            getLogger().warning("Command 'proshield' not found in plugin.yml!");
-        }
+        // Commands
+        getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
         registerCompassRecipe();
         maybeRunExpiryNow();
@@ -70,9 +71,14 @@ public final class ProShield extends JavaPlugin {
     /** Called by /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
-        protectionListener.reloadProtectionConfig();
-        plotManager.reloadFromConfig();
-        getLogger().info("ProShield configuration reloaded.");
+        // Re-cache protection & interaction toggles
+        if (protectionListener != null) {
+            protectionListener.reloadProtectionConfig();
+        }
+        // Reload claim cache from config
+        if (plotManager != null) {
+            plotManager.reloadFromConfig();
+        }
     }
 
     private void registerCompassRecipe() {
@@ -83,6 +89,7 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
+        // Avoid duplicate on reload
         Bukkit.removeRecipe(key);
         Bukkit.addRecipe(recipe);
     }
@@ -92,7 +99,7 @@ public final class ProShield extends JavaPlugin {
             int days = getConfig().getInt("expiry.days", 30);
             int removed = plotManager.cleanupExpiredClaims(days);
             if (removed > 0) {
-                getLogger().info("Expiry: archived " + removed + " expired claim(s).");
+                getLogger().info("Expiry: removed " + removed + " expired claim(s).");
                 plotManager.saveAll();
             }
         }
@@ -105,7 +112,7 @@ public final class ProShield extends JavaPlugin {
             int days = getConfig().getInt("expiry.days", 30);
             int removed = plotManager.cleanupExpiredClaims(days);
             if (removed > 0) {
-                getLogger().info("Daily expiry: archived " + removed + " expired claim(s).");
+                getLogger().info("Daily expiry: removed " + removed + " expired claim(s).");
                 plotManager.saveAll();
             }
         }, oneDayTicks, oneDayTicks);

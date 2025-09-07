@@ -1,43 +1,75 @@
 // path: src/main/java/com/snazzyatoms/proshield/plots/ClaimRoleManager.java
 package com.snazzyatoms.proshield.plots;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
 
-/**
- * Minimal roles manager for claims.
- * Maps: ownerUUID -> (memberUUID -> roleName)
- */
+import java.util.*;
+
 public class ClaimRoleManager {
 
-    private final Map<UUID, Map<UUID, String>> roles = new ConcurrentHashMap<>();
+    private final ProShield plugin;
 
-    /**
-     * Returns the role name for 'member' within 'owner' claims, or "trusted" if none set.
-     */
-    public String getRoleName(UUID owner, UUID member) {
-        Map<UUID, String> m = roles.get(owner);
-        if (m == null) return "trusted";
-        return m.getOrDefault(member, "trusted");
+    // key -> (playerUUID -> role)
+    private final Map<String, Map<UUID, ClaimRole>> roles = new HashMap<>();
+
+    public ClaimRoleManager(ProShield plugin) {
+        this.plugin = plugin;
+        reloadFromConfig();
     }
 
-    /** Assign/overwrite a role for a member within an owner's claims. */
-    public void setRole(UUID owner, UUID member, String roleName) {
-        roles.computeIfAbsent(owner, k -> new ConcurrentHashMap<>()).put(member, roleName);
-    }
-
-    /** Remove a role entry. */
-    public void clearRole(UUID owner, UUID member) {
-        Map<UUID, String> m = roles.get(owner);
-        if (m != null) {
-            m.remove(member);
-            if (m.isEmpty()) roles.remove(owner);
+    public void reloadFromConfig() {
+        roles.clear();
+        ConfigurationSection claims = plugin.getConfig().getConfigurationSection("claims");
+        if (claims == null) return;
+        for (String key : claims.getKeys(false)) {
+            ConfigurationSection sec = claims.getConfigurationSection(key);
+            if (sec == null) continue;
+            ConfigurationSection r = sec.getConfigurationSection("roles");
+            if (r == null) continue;
+            Map<UUID, ClaimRole> map = new HashMap<>();
+            for (String uuidStr : r.getKeys(false)) {
+                try {
+                    UUID u = UUID.fromString(uuidStr);
+                    ClaimRole role = ClaimRole.from(r.getString(uuidStr), ClaimRole.MEMBER);
+                    map.put(u, role);
+                } catch (Exception ignored) {}
+            }
+            if (!map.isEmpty()) roles.put(key, map);
         }
     }
 
-    /** Read-only snapshot of a member->role map for an owner. */
-    public Map<UUID, String> getRolesForOwner(UUID owner) {
-        Map<UUID, String> m = roles.get(owner);
-        return (m == null) ? Collections.emptyMap() : Collections.unmodifiableMap(m);
+    public ClaimRole getRole(Location loc, UUID player) {
+        String key = key(loc);
+        Map<UUID, ClaimRole> map = roles.get(key);
+        if (map == null) return ClaimRole.VISITOR;
+        return map.getOrDefault(player, ClaimRole.VISITOR);
+    }
+
+    public String getRoleName(UUID owner, UUID player) {
+        // Human-readable, used by claim messages/listing
+        ClaimRole role = ClaimRole.VISITOR;
+        // (No owner context needed here; kept for future expansion)
+        return role.name();
+    }
+
+    public void setRole(String claimKey, UUID player, ClaimRole role) {
+        roles.computeIfAbsent(claimKey, k -> new HashMap<>()).put(player, role);
+        // also persist to config
+        String path = "claims." + claimKey + ".roles." + player.toString();
+        plugin.getConfig().set(path, role.name());
+        plugin.saveConfig();
+    }
+
+    public void clearRole(String claimKey, UUID player) {
+        Map<UUID, ClaimRole> map = roles.get(claimKey);
+        if (map != null) map.remove(player);
+        plugin.getConfig().set("claims." + claimKey + ".roles." + player.toString(), null);
+        plugin.saveConfig();
+    }
+
+    private String key(Location loc) {
+        return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
     }
 }

@@ -10,19 +10,9 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Claim storage + logic with robust expiry handling and archival.
- *
- * Active claims live under: claims.<key>
- * Expired claims are archived under: claims_expired.<key>
- *
- * Key format: world:chunkX:chunkZ
- */
 public class PlotManager {
 
     private final ProShield plugin;
-
-    // In-memory cache of active claims
     private final Map<String, Claim> claims = new HashMap<>();
     private final Map<UUID, Integer> ownerCounts = new HashMap<>();
 
@@ -30,10 +20,6 @@ public class PlotManager {
         this.plugin = plugin;
         loadAll();
     }
-
-    // ------------------------------------------------------------------------
-    // Keys & lookups
-    // ------------------------------------------------------------------------
 
     private String key(Location loc) {
         return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
@@ -93,42 +79,35 @@ public class PlotManager {
                 .collect(Collectors.toList());
     }
 
-    // ------------------------------------------------------------------------
-    // Create / Remove
-    // ------------------------------------------------------------------------
-
     public boolean createClaim(UUID owner, Location loc) {
-    String k = key(loc);
-    if (claims.containsKey(k)) return false;
+        String k = key(loc);
+        if (claims.containsKey(k)) return false;
 
-    int max = plugin.getConfig().getInt("limits.max-claims", -1);
+        int max = plugin.getConfig().getInt("limits.max-claims", -1);
 
-    boolean bypass = false;
-    var player = plugin.getServer().getPlayer(owner);
-    if (player != null) {
-        boolean hasUnlimitedPerm = player.hasPermission("proshield.unlimited");
-        boolean adminIncludesUnlimited = plugin.getConfig().getBoolean("permissions.admin-includes-unlimited", false);
-        boolean isAdmin = player.hasPermission("proshield.admin");
+        boolean bypass = false;
+        var player = plugin.getServer().getPlayer(owner);
+        if (player != null) {
+            boolean hasUnlimitedPerm = player.hasPermission("proshield.unlimited");
+            boolean adminIncludesUnlimited = plugin.getConfig().getBoolean("permissions.admin-includes-unlimited", false);
+            boolean isAdmin = player.hasPermission("proshield.admin");
+            bypass = hasUnlimitedPerm || (adminIncludesUnlimited && isAdmin);
+        }
 
-        bypass = hasUnlimitedPerm || (adminIncludesUnlimited && isAdmin);
+        if (max >= 0 && !bypass) {
+            int used = ownerCounts.getOrDefault(owner, 0);
+            if (used >= max) return false;
+        }
+
+        Claim c = new Claim(owner, loc.getWorld().getName(),
+                loc.getChunk().getX(), loc.getChunk().getZ(), System.currentTimeMillis());
+
+        claims.put(k, c);
+        ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
+        saveClaim(c);
+        return true;
     }
 
-    if (max >= 0 && !bypass) {
-        int used = ownerCounts.getOrDefault(owner, 0);
-        if (used >= max) return false;
-    }
-
-    Claim c = new Claim(owner, loc.getWorld().getName(),
-            loc.getChunk().getX(), loc.getChunk().getZ(), System.currentTimeMillis());
-
-    claims.put(k, c);
-    ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
-    saveClaim(c);
-    return true;
-}
-    }
-
-    /** Removes a claim at loc. If adminForce is true, requester doesn't need to be owner. */
     public boolean removeClaim(UUID requester, Location loc, boolean adminForce) {
         String k = key(loc);
         Claim c = claims.get(k);
@@ -140,10 +119,6 @@ public class PlotManager {
         removeClaimFromConfig(k);
         return true;
     }
-
-    // ------------------------------------------------------------------------
-    // Trust system
-    // ------------------------------------------------------------------------
 
     public boolean trust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
@@ -158,10 +133,6 @@ public class PlotManager {
         if (c.getTrusted().remove(target)) { saveClaim(c); return true; }
         return false;
     }
-
-    // ------------------------------------------------------------------------
-    // Persistence
-    // ------------------------------------------------------------------------
 
     public void saveAll() {
         plugin.getConfig().set("claims", null);
@@ -186,7 +157,6 @@ public class PlotManager {
         plugin.saveConfig();
     }
 
-    /** Reload in-memory cache from config (used by /proshield reload). */
     public void reloadFromConfig() { loadAll(); }
 
     private void loadAll() {
@@ -221,65 +191,45 @@ public class PlotManager {
         }
     }
 
-    // ------------------------------------------------------------------------
-    // Expiry (inactive owner cleanup) with archival
-    // ------------------------------------------------------------------------
+    // ===== Expiry + archival =====
 
-    /**
-     * Move claims whose owners have been inactive for >= 'days' into claims_expired tree.
-     * Rules:
-     *  - If owner is online -> never expires
-     *  - If lastPlayed == 0 (unknown) -> do NOT expire (conservative)
-     *  - Otherwise, if now - lastPlayed >= days -> archive to claims_expired and remove from active
-     *
-     * @return number of claims archived
-     */
     public int cleanupExpiredClaims(int days) {
         if (days <= 0) return 0;
-
         final long now = System.currentTimeMillis();
-        final long thresholdMs = daysToMillis(days);
+        final long thresholdMs = 24L * 60L * 60L * 1000L * days;
 
         int archived = 0;
         List<Map.Entry<String, Claim>> toArchive = new ArrayList<>();
 
-        // Decide which to archive
         for (Map.Entry<String, Claim> e : claims.entrySet()) {
             Claim c = e.getValue();
             UUID owner = c.getOwner();
 
-            // If owner is online, skip
             if (Bukkit.getPlayer(owner) != null) continue;
 
             OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
-            long lastPlayed = op.getLastPlayed(); // 0 if unknown
+            long lastPlayed = op.getLastPlayed();
             if (lastPlayed <= 0L) continue;
 
             long inactiveFor = now - lastPlayed;
-            if (inactiveFor >= thresholdMs) {
-                toArchive.add(e);
-            }
+            if (inactiveFor >= thresholdMs) toArchive.add(e);
         }
 
-        // Apply archival + remove from active + update config
         for (Map.Entry<String, Claim> e : toArchive) {
             String k = e.getKey();
             Claim c = e.getValue();
 
-            // Write to claims_expired
             archiveClaim(c, Bukkit.getOfflinePlayer(c.getOwner()).getLastPlayed(), System.currentTimeMillis());
 
-            // Remove active
             claims.remove(k);
             ownerCounts.put(c.getOwner(), Math.max(0, ownerCounts.getOrDefault(c.getOwner(), 1) - 1));
             removeClaimFromConfig(k);
-
             archived++;
         }
 
         if (archived > 0) {
-            plugin.saveConfig(); // persist archive writes
-            plugin.getLogger().info("Archived " + archived + " expired claim(s) (>= " + days + " day(s) inactive).");
+            plugin.saveConfig();
+            plugin.getLogger().info("Archived " + archived + " expired claim(s).");
         }
         return archived;
     }
@@ -287,7 +237,7 @@ public class PlotManager {
     private void archiveClaim(Claim c, long lastPlayed, long removedAt) {
         String base = "claims_expired." + c.key() + ".";
         plugin.getConfig().set(base + "owner", c.getOwner().toString());
-        plugin.getConfig().set(base + "ownerName", ownerName(c.getOwner())); // helpful snapshot
+        plugin.getConfig().set(base + "ownerName", ownerName(c.getOwner()));
         plugin.getConfig().set(base + "world", c.getWorld());
         plugin.getConfig().set(base + "chunkX", c.getChunkX());
         plugin.getConfig().set(base + "chunkZ", c.getChunkZ());
@@ -295,19 +245,11 @@ public class PlotManager {
         plugin.getConfig().set(base + "trusted", c.getTrusted().stream().map(UUID::toString).collect(Collectors.toList()));
         plugin.getConfig().set(base + "lastPlayed", lastPlayed);
         plugin.getConfig().set(base + "removedAt", removedAt);
-        // do not saveConfig() here; caller batches saves after archival loop
     }
 
-    /**
-     * Restore a previously expired claim back into active claims if the space is still free.
-     * @param key world:chunkX:chunkZ
-     * @return true if restored, false otherwise
-     */
     public boolean restoreExpiredClaim(String key) {
         ConfigurationSection sec = plugin.getConfig().getConfigurationSection("claims_expired." + key);
         if (sec == null) return false;
-
-        // If space is taken, refuse restoration
         if (claims.containsKey(key)) return false;
 
         try {
@@ -318,18 +260,15 @@ public class PlotManager {
             long createdAt = sec.getLong("createdAt", System.currentTimeMillis());
 
             Claim c = new Claim(owner, world, cx, cz, createdAt);
-
             List<String> t = sec.getStringList("trusted");
             if (t != null) for (String s : t) {
                 try { c.getTrusted().add(UUID.fromString(s)); } catch (IllegalArgumentException ignored) {}
             }
 
-            // Move to active
             claims.put(key, c);
             ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
             saveClaim(c);
 
-            // Remove from archive
             plugin.getConfig().set("claims_expired." + key, null);
             plugin.saveConfig();
 
@@ -338,10 +277,5 @@ public class PlotManager {
             plugin.getLogger().warning("Failed to restore expired claim: " + key + " -> " + ex.getMessage());
             return false;
         }
-    }
-
-    private long daysToMillis(int days) {
-        // Safe multiplication
-        return Math.multiplyExact(24L * 60L * 60L * 1000L, days);
     }
 }

@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -48,9 +47,9 @@ public final class ProShield extends JavaPlugin {
         guiManager  = new GUIManager(this);
 
         // Listeners — NOTE: pass plotManager, not 'this'
-        protectionListener = new BlockProtectionListener(plotManager);
-        pvpListener        = new PvpProtectionListener(plotManager);
-        guiListener        = new GUIListener(plotManager, guiManager);
+protectionListener = new BlockProtectionListener(plotManager);
+pvpListener        = new PvpProtectionListener(plotManager);
+guiListener        = new GUIListener(plotManager, guiManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);

@@ -4,106 +4,178 @@ import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
-import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Enderman;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.BlockSpreadEvent;
-import org.bukkit.event.block.BlockIgniteEvent;
-import org.bukkit.event.block.BlockBurnEvent;
-
+import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityTeleportEvent;
-
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-
 import org.bukkit.inventory.EquipmentSlot;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 public class BlockProtectionListener implements Listener {
 
+    private final ProShield plugin;
     private final PlotManager plotManager;
 
-    private WorldProtectionSettings defaultSettings = new WorldProtectionSettings();
-    private final Map<String, WorldProtectionSettings> worldOverrides = new HashMap<>();
+    // cached toggles
+    private boolean containers;
+    private boolean pvpInClaims; // (hook where you handle PvP if desired)
+    private boolean mobGrief;
+    private boolean creeper;
+    private boolean tnt;
+    private boolean wither;
+    private boolean witherSkull;
+    private boolean enderCrystal;
+    private boolean enderDragon;
+
+    private boolean fireSpread;
+    private boolean fireBurn;
+    private boolean igniteFlint;
+    private boolean igniteLava;
+    private boolean igniteLightning;
+    private boolean igniteExplosion;
+    private boolean igniteSpread;
+
+    private boolean interactionsEnabled;
+    private String interactionsMode; // blacklist | whitelist
+    private Set<Material> interactionSet = new HashSet<>();
+
+    private boolean bucketEmptyBlock;
+    private boolean bucketFillBlock;
+
+    private boolean endermanGrief;
+    private boolean ravagerGrief;
+    private boolean silverfishGrief;
+    private boolean dragonGrief;
+    private boolean witherGrief;
+
+    private boolean endermanTeleportDenied;
 
     public BlockProtectionListener(PlotManager plotManager) {
+        this.plugin = ProShield.getInstance();
         this.plotManager = plotManager;
         reloadProtectionConfig();
     }
 
-    public void reloadProtectionConfig() {
-        var pl = ProShield.getInstance();
-        var cfg = pl.getConfig();
+    /** Re-read config (called from /proshield reload) */
+    public final void reloadProtectionConfig() {
+        containers = plugin.getConfig().getBoolean("protection.containers", true);
+        pvpInClaims = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
+        mobGrief = plugin.getConfig().getBoolean("protection.mob-grief", true);
 
-        defaultSettings = WorldProtectionSettings.fromConfig(cfg.getConfigurationSection("protection"));
+        creeper = plugin.getConfig().getBoolean("protection.creeper-explosions", true);
+        tnt = plugin.getConfig().getBoolean("protection.tnt-explosions", true);
+        wither = plugin.getConfig().getBoolean("protection.wither-explosions", true);
+        witherSkull = plugin.getConfig().getBoolean("protection.wither-skull-explosions", true);
+        enderCrystal = plugin.getConfig().getBoolean("protection.ender-crystal-explosions", true);
+        enderDragon = plugin.getConfig().getBoolean("protection.ender-dragon-explosions", true);
 
-        worldOverrides.clear();
-        ConfigurationSection worlds = cfg.getConfigurationSection("worlds");
-        if (worlds != null) {
-            for (String wName : worlds.getKeys(false)) {
-                ConfigurationSection p = worlds.getConfigurationSection(wName + ".protection");
-                if (p != null) {
-                    WorldProtectionSettings merged = WorldProtectionSettings.merge(defaultSettings, WorldProtectionSettings.fromConfig(p));
-                    worldOverrides.put(wName, merged);
-                }
+        fireSpread = plugin.getConfig().getBoolean("protection.fire.spread", true);
+        fireBurn = plugin.getConfig().getBoolean("protection.fire.burn", true);
+        igniteFlint = plugin.getConfig().getBoolean("protection.fire.ignite.flint_and_steel", true);
+        igniteLava = plugin.getConfig().getBoolean("protection.fire.ignite.lava", true);
+        igniteLightning = plugin.getConfig().getBoolean("protection.fire.ignite.lightning", true);
+        igniteExplosion = plugin.getConfig().getBoolean("protection.fire.ignite.explosion", true);
+        igniteSpread = plugin.getConfig().getBoolean("protection.fire.ignite.spread", true);
+
+        interactionsEnabled = plugin.getConfig().getBoolean("protection.interactions.enabled", true);
+        interactionsMode = plugin.getConfig().getString("protection.interactions.mode", "blacklist").toLowerCase();
+
+        // Build interaction material set from categories + explicit list
+        interactionSet.clear();
+        // Categories (minimal example; extend as needed)
+        var cats = plugin.getConfig().getStringList("protection.interactions.categories");
+        for (String c : cats) {
+            switch (c.toLowerCase()) {
+                case "doors":
+                    addDoorMaterials();
+                    break;
+                case "trapdoors":
+                    addTrapdoorMaterials();
+                    break;
+                case "fence_gates":
+                    addFenceGateMaterials();
+                    break;
+                case "buttons":
+                    addButtonMaterials();
+                    break;
+                case "levers":
+                    interactionSet.add(Material.LEVER);
+                    break;
+                case "pressure_plates":
+                    addPressurePlateMaterials();
+                    break;
+                default:
+                    break;
             }
         }
-    }
+        // Explicit list
+        for (String m : plugin.getConfig().getStringList("protection.interactions.list")) {
+            try {
+                interactionSet.add(Material.valueOf(m.toUpperCase()));
+            } catch (IllegalArgumentException ignored) {}
+        }
 
-    private WorldProtectionSettings settingsFor(World w) {
-        if (w == null) return defaultSettings;
-        return worldOverrides.getOrDefault(w.getName(), defaultSettings);
-    }
+        bucketEmptyBlock = plugin.getConfig().getBoolean("protection.buckets.block-empty", true);
+        bucketFillBlock = plugin.getConfig().getBoolean("protection.buckets.block-fill", true);
 
-    private boolean isBypassing(Player p) { return p.hasMetadata("proshield_bypass"); }
+        endermanGrief = plugin.getConfig().getBoolean("protection.entity-grief.enderman", true);
+        ravagerGrief = plugin.getConfig().getBoolean("protection.entity-grief.ravager", true);
+        silverfishGrief = plugin.getConfig().getBoolean("protection.entity-grief.silverfish", true);
+        dragonGrief = plugin.getConfig().getBoolean("protection.entity-grief.ender-dragon", true);
+        witherGrief = plugin.getConfig().getBoolean("protection.entity-grief.wither", true);
 
-    private String prefix() {
-        return ChatColor.translateAlternateColorCodes('&',
-                ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
+        endermanTeleportDenied = plugin.getConfig().getBoolean("protection.entity-teleport.enderman", true);
     }
 
     private boolean denyIfNeeded(Player p, Location loc, String msg) {
-        if (isBypassing(p)) return false;
+        // Bypass?
+        if (p.hasPermission("proshield.bypass")) return false;
+        // Not claimed?
         if (!plotManager.isClaimed(loc)) return false;
+        // Owner or trusted?
         if (plotManager.isTrustedOrOwner(p.getUniqueId(), loc)) return false;
-        p.sendMessage(prefix() + ChatColor.RED + msg);
+
+        p.sendMessage(ChatColor.RED + msg);
         return true;
     }
 
-    // Place/Break
-    @EventHandler
+    /* ===== Blocks: break/place ===== */
+    @EventHandler(ignoreCancelled = true)
     public void onBreak(BlockBreakEvent e) {
-        if (denyIfNeeded(e.getPlayer(), e.getBlock().getLocation(), "You cannot break blocks here!")) e.setCancelled(true);
-    }
-    @EventHandler
-    public void onPlace(BlockPlaceEvent e) {
-        if (denyIfNeeded(e.getPlayer(), e.getBlock().getLocation(), "You cannot place blocks here!")) e.setCancelled(true);
+        if (denyIfNeeded(e.getPlayer(), e.getBlock().getLocation(), "You cannot break blocks here!")) {
+            e.setCancelled(true);
+        }
     }
 
-    // Containers + Interactions
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
+    public void onPlace(BlockPlaceEvent e) {
+        if (denyIfNeeded(e.getPlayer(), e.getBlock().getLocation(), "You cannot place blocks here!")) {
+            e.setCancelled(true);
+        }
+    }
+
+    /* ===== Containers ===== */
+    @EventHandler(ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent e) {
         if (e.getHand() == EquipmentSlot.OFF_HAND) return;
         Block b = e.getClickedBlock();
         if (b == null) return;
 
-        WorldProtectionSettings s = settingsFor(b.getWorld());
-
-        if (s.containers) {
+        // Containers
+        if (containers) {
             BlockState st = b.getState();
             if (st instanceof Container) {
                 if (denyIfNeeded(e.getPlayer(), b.getLocation(), "You cannot open containers here!")) {
@@ -113,291 +185,154 @@ public class BlockProtectionListener implements Listener {
             }
         }
 
-        if (!s.interactionsEnabled) return;
-        Material type = b.getType();
-        boolean matches = s.matchesInteraction(type);
-        boolean shouldDeny = (s.interactionsMode == WorldProtectionSettings.Mode.WHITELIST) ? !matches : matches;
-        if (shouldDeny) {
-            if (denyIfNeeded(e.getPlayer(), b.getLocation(), "You cannot interact here!")) e.setCancelled(true);
+        // Non-container interactions (doors, buttons, etc.)
+        if (interactionsEnabled && interactionSet.contains(b.getType())) {
+            boolean isOwnerOrTrusted = plotManager.isTrustedOrOwner(e.getPlayer().getUniqueId(), b.getLocation());
+            boolean claimed = plotManager.isClaimed(b.getLocation());
+
+            if (claimed) {
+                if ("blacklist".equals(interactionsMode)) {
+                    if (!isOwnerOrTrusted && !e.getPlayer().hasPermission("proshield.bypass")) {
+                        e.setCancelled(true);
+                        e.getPlayer().sendMessage(ChatColor.RED + "You cannot use that here!");
+                    }
+                } else { // whitelist
+                    if (!isOwnerOrTrusted && !e.getPlayer().hasPermission("proshield.bypass")) {
+                        e.setCancelled(true);
+                        e.getPlayer().sendMessage(ChatColor.RED + "You cannot use that here!");
+                    }
+                }
+            }
         }
     }
 
-    // PvP
-    @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent e) {
-        if (!(e.getDamager() instanceof Player damager) || !(e.getEntity() instanceof Player)) return;
-        if (isBypassing(damager)) return;
-
-        WorldProtectionSettings s = settingsFor(e.getEntity().getWorld());
-        if (s.pvpInClaims) return;
-
-        Location loc = e.getEntity().getLocation();
-        if (plotManager.isClaimed(loc)) e.setCancelled(true);
-    }
-
-    // Explosions
-    @EventHandler
-    public void onExplode(EntityExplodeEvent e) {
-        WorldProtectionSettings s = settingsFor(e.getEntity() != null ? e.getEntity().getWorld() : null);
-        if (!s.mobGrief) return;
-
-        EntityType t = (e.getEntity() != null) ? e.getEntity().getType() : null;
-        boolean block = false;
-        if (t == EntityType.CREEPER) block = s.blockCreeper;
-        else if (t == EntityType.PRIMED_TNT) block = s.blockTnt;
-        else if (t == EntityType.WITHER) block = s.blockWither;
-        else if (t == EntityType.WITHER_SKULL) block = s.blockWitherSkull;
-        else if (t == EntityType.ENDER_CRYSTAL) block = s.blockEnderCrystal;
-        else if (t == EntityType.ENDER_DRAGON) block = s.blockEnderDragon;
-
-        if (!block) return;
-        e.blockList().removeIf(b -> plotManager.isClaimed(b.getLocation()));
-    }
-
-    // Entity grief (non-explosion)
-    @EventHandler
-    public void onEntityChangeBlock(EntityChangeBlockEvent e) {
-        WorldProtectionSettings s = settingsFor(e.getBlock().getWorld());
-        if (!plotManager.isClaimed(e.getBlock().getLocation())) return;
-
-        EntityType type = e.getEntityType();
-        boolean cancel = switch (type) {
-            case ENDERMAN     -> s.griefEnderman;
-            case RAVAGER      -> s.griefRavager;
-            case SILVERFISH   -> s.griefSilverfish;
-            case ENDER_DRAGON -> s.griefEnderDragon;
-            case WITHER       -> s.griefWither;
-            default -> false;
-        };
-        if (cancel) e.setCancelled(true);
-    }
-
-    // Enderman teleport denial
-    @EventHandler
-    public void onEntityTeleport(EntityTeleportEvent e) {
-        if (e.getEntityType() != EntityType.ENDERMAN) return;
-        WorldProtectionSettings s = settingsFor(e.getTo() != null ? e.getTo().getWorld() : null);
-        if (!s.teleportEnderman) return;
-        if (e.getTo() != null && plotManager.isClaimed(e.getTo())) e.setCancelled(true);
-    }
-
-    // Fire: spread, ignite, burn
-    @EventHandler
-    public void onBlockSpread(BlockSpreadEvent e) {
-        WorldProtectionSettings s = settingsFor(e.getBlock().getWorld());
-        if (!s.fireSpread) return;
-        if (e.getBlock().getType() == Material.FIRE || e.getNewState().getType() == Material.FIRE) {
-            if (plotManager.isClaimed(e.getBlock().getLocation())) e.setCancelled(true);
+    /* ===== Buckets ===== */
+    @EventHandler(ignoreCancelled = true)
+    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
+        if (!bucketEmptyBlock) return;
+        Block b = e.getBlockClicked();
+        if (b == null) return;
+        if (plotManager.isClaimed(b.getLocation()) && !plotManager.isTrustedOrOwner(e.getPlayer().getUniqueId(), b.getLocation())
+                && !e.getPlayer().hasPermission("proshield.bypass")) {
+            e.setCancelled(true);
+            e.getPlayer().sendMessage(ChatColor.RED + "You cannot pour here!");
         }
     }
 
-    @EventHandler
-    public void onBlockIgnite(BlockIgniteEvent e) {
-        WorldProtectionSettings s = settingsFor(e.getBlock().getWorld());
-        if (!plotManager.isClaimed(e.getBlock().getLocation())) return;
+    @EventHandler(ignoreCancelled = true)
+    public void onBucketFill(PlayerBucketFillEvent e) {
+        if (!bucketFillBlock) return;
+        Block b = e.getBlockClicked();
+        if (b == null) return;
+        if (plotManager.isClaimed(b.getLocation()) && !plotManager.isTrustedOrOwner(e.getPlayer().getUniqueId(), b.getLocation())
+                && !e.getPlayer().hasPermission("proshield.bypass")) {
+            e.setCancelled(true);
+            e.getPlayer().sendMessage(ChatColor.RED + "You cannot take this source!");
+        }
+    }
+
+    /* ===== Fire control ===== */
+    @EventHandler(ignoreCancelled = true)
+    public void onSpread(BlockSpreadEvent e) {
+        if (!fireSpread) return;
+        if (e.getNewState().getType() == Material.FIRE && plotManager.isClaimed(e.getBlock().getLocation())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBurn(BlockBurnEvent e) {
+        if (!fireBurn) return;
+        if (plotManager.isClaimed(e.getBlock().getLocation())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onIgnite(BlockIgniteEvent e) {
+        if (e.isCancelled()) return;
+        Location loc = e.getBlock().getLocation();
+        if (!plotManager.isClaimed(loc)) return;
 
         switch (e.getCause()) {
-            case FLINT_AND_STEEL -> {
-                if (!s.igniteFlint) return;
-                Player p = e.getPlayer();
-                if (p != null && !isBypassing(p) && !plotManager.isTrustedOrOwner(p.getUniqueId(), e.getBlock().getLocation())) {
-                    e.setCancelled(true);
-                    p.sendMessage(prefix() + ChatColor.RED + "You cannot ignite fire here!");
-                }
-            }
-            case LAVA -> { if (s.igniteLava) e.setCancelled(true); }
-            case LIGHTNING -> { if (s.igniteLightning) e.setCancelled(true); }
-            case EXPLOSION -> { if (s.igniteExplosion) e.setCancelled(true); }
-            case SPREAD -> { if (s.igniteSpread) e.setCancelled(true); }
-            default -> {}
+            case FLINT_AND_STEEL: if (igniteFlint) e.setCancelled(true); break;
+            case LAVA:            if (igniteLava) e.setCancelled(true); break;
+            case LIGHTNING:       if (igniteLightning) e.setCancelled(true); break;
+            case EXPLOSION:       if (igniteExplosion) e.setCancelled(true); break;
+            case SPREAD:          if (igniteSpread) e.setCancelled(true); break;
+            default: break;
         }
     }
 
-    @EventHandler
-    public void onBlockBurn(BlockBurnEvent e) {
-        WorldProtectionSettings s = settingsFor(e.getBlock().getWorld());
-        if (!s.fireBurn) return;
-        if (plotManager.isClaimed(e.getBlock().getLocation())) e.setCancelled(true);
-    }
+    /* ===== Explosions ===== */
+    @EventHandler(ignoreCancelled = true)
+    public void onExplode(EntityExplodeEvent e) {
+        if (!mobGrief) return;
+        EntityType type = e.getEntityType();
+        boolean blockInsideClaims =
+                (type == EntityType.CREEPER && creeper) ||
+                (type == EntityType.PRIMED_TNT && tnt) ||
+                (type == EntityType.WITHER && wither) ||
+                (type == EntityType.WITHER_SKULL && witherSkull) ||
+                (type == EntityType.ENDER_CRYSTAL && enderCrystal) ||
+                (type == EntityType.ENDER_DRAGON && enderDragon);
 
-    // Buckets
-    @EventHandler
-    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
-        WorldProtectionSettings s = settingsFor(e.getBlockClicked() != null ? e.getBlockClicked().getWorld() : null);
-        if (!s.bucketEmpty) return;
-        Block clicked = e.getBlockClicked(); if (clicked == null) return;
-        Block target = clicked.getRelative(e.getBlockFace()); if (target == null) return;
-        if (denyIfNeeded(e.getPlayer(), target.getLocation(), "You cannot pour here!")) e.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onBucketFill(PlayerBucketFillEvent e) {
-        WorldProtectionSettings s = settingsFor(e.getBlockClicked() != null ? e.getBlockClicked().getWorld() : null);
-        if (!s.bucketFill) return;
-        Block clicked = e.getBlockClicked(); if (clicked == null) return;
-        if (denyIfNeeded(e.getPlayer(), clicked.getLocation(), "You cannot take from here!")) e.setCancelled(true);
-    }
-
-    // settings holder
-    private static class WorldProtectionSettings {
-        boolean containers = true;
-        boolean pvpInClaims = false;
-
-        boolean mobGrief = true;
-        boolean blockCreeper = true;
-        boolean blockTnt = true;
-        boolean blockWither = true;
-        boolean blockWitherSkull = true;
-        boolean blockEnderCrystal = true;
-        boolean blockEnderDragon = true;
-
-        boolean fireSpread = true;
-        boolean fireBurn   = true;
-        boolean igniteFlint = true;
-        boolean igniteLava = true;
-        boolean igniteLightning = true;
-        boolean igniteExplosion = true;
-        boolean igniteSpread = true;
-
-        boolean bucketEmpty = true;
-        boolean bucketFill  = true;
-
-        enum Mode { WHITELIST, BLACKLIST }
-        boolean interactionsEnabled = true;
-        Mode interactionsMode = Mode.BLACKLIST;
-        Set<String> interactionCategories = new HashSet<>(Arrays.asList(
-                "doors","trapdoors","fence_gates","buttons","levers","pressure_plates"
-        ));
-        Set<Material> interactionList = new HashSet<>();
-
-        boolean griefEnderman = true;
-        boolean griefRavager = true;
-        boolean griefSilverfish = true;
-        boolean griefEnderDragon = true;
-        boolean griefWither = true;
-
-        boolean teleportEnderman = true;
-
-        static WorldProtectionSettings fromConfig(ConfigurationSection sec) {
-            WorldProtectionSettings s = new WorldProtectionSettings();
-            if (sec == null) return s;
-
-            s.containers   = sec.getBoolean("containers", s.containers);
-            s.pvpInClaims  = sec.getBoolean("pvp-in-claims", s.pvpInClaims);
-
-            s.mobGrief          = sec.getBoolean("mob-grief", s.mobGrief);
-            s.blockCreeper      = sec.getBoolean("creeper-explosions", s.blockCreeper);
-            s.blockTnt          = sec.getBoolean("tnt-explosions", s.blockTnt);
-            s.blockWither       = sec.getBoolean("wither-explosions", s.blockWither);
-            s.blockWitherSkull  = sec.getBoolean("wither-skull-explosions", s.blockWitherSkull);
-            s.blockEnderCrystal = sec.getBoolean("ender-crystal-explosions", s.blockEnderCrystal);
-            s.blockEnderDragon  = sec.getBoolean("ender-dragon-explosions", s.blockEnderDragon);
-
-            ConfigurationSection fire = sec.getConfigurationSection("fire");
-            if (fire != null) {
-                s.fireSpread = fire.getBoolean("spread", s.fireSpread);
-                s.fireBurn   = fire.getBoolean("burn", s.fireBurn);
-                ConfigurationSection ign = fire.getConfigurationSection("ignite");
-                if (ign != null) {
-                    s.igniteFlint     = ign.getBoolean("flint_and_steel", s.igniteFlint);
-                    s.igniteLava      = ign.getBoolean("lava", s.igniteLava);
-                    s.igniteLightning = ign.getBoolean("lightning", s.igniteLightning);
-                    s.igniteExplosion = ign.getBoolean("explosion", s.igniteExplosion);
-                    s.igniteSpread    = ign.getBoolean("spread", s.igniteSpread);
-                }
-            }
-
-            ConfigurationSection buckets = sec.getConfigurationSection("buckets");
-            if (buckets != null) {
-                s.bucketEmpty = buckets.getBoolean("block-empty", s.bucketEmpty);
-                s.bucketFill  = buckets.getBoolean("block-fill",  s.bucketFill);
-            }
-
-            ConfigurationSection inter = sec.getConfigurationSection("interactions");
-            if (inter != null) {
-                s.interactionsEnabled = inter.getBoolean("enabled", s.interactionsEnabled);
-                String mode = inter.getString("mode", "blacklist").trim().toUpperCase(Locale.ROOT);
-                s.interactionsMode = "WHITELIST".equals(mode) ? Mode.WHITELIST : Mode.BLACKLIST;
-
-                s.interactionCategories = new HashSet<>();
-                List<String> cats = inter.getStringList("categories");
-                if (cats != null) for (String c : cats)
-                    if (c != null) s.interactionCategories.add(c.trim().toLowerCase(Locale.ROOT));
-
-                s.interactionList = new HashSet<>();
-                List<String> list = inter.getStringList("list");
-                if (list != null) for (String n : list) {
-                    if (n == null) continue;
-                    try { s.interactionList.add(Material.valueOf(n.trim().toUpperCase(Locale.ROOT))); }
-                    catch (IllegalArgumentException ignored) { }
-                }
-            }
-
-            ConfigurationSection eg = sec.getConfigurationSection("entity-grief");
-            if (eg != null) {
-                s.griefEnderman   = eg.getBoolean("enderman", s.griefEnderman);
-                s.griefRavager    = eg.getBoolean("ravager", s.griefRavager);
-                s.griefSilverfish = eg.getBoolean("silverfish", s.griefSilverfish);
-                s.griefEnderDragon= eg.getBoolean("ender-dragon", s.griefEnderDragon);
-                s.griefWither     = eg.getBoolean("wither", s.griefWither);
-            }
-
-            ConfigurationSection tp = sec.getConfigurationSection("entity-teleport");
-            if (tp != null) {
-                s.teleportEnderman = tp.getBoolean("enderman", s.teleportEnderman);
-            }
-
-            return s;
+        if (blockInsideClaims) {
+            e.blockList().removeIf(block -> plotManager.isClaimed(block.getLocation()));
         }
+    }
 
-        static WorldProtectionSettings merge(WorldProtectionSettings base, WorldProtectionSettings over) {
-            WorldProtectionSettings r = new WorldProtectionSettings();
-            r.containers = over.containers;
-            r.pvpInClaims = over.pvpInClaims;
-            r.mobGrief = over.mobGrief;
-            r.blockCreeper = over.blockCreeper;
-            r.blockTnt = over.blockTnt;
-            r.blockWither = over.blockWither;
-            r.blockWitherSkull = over.blockWitherSkull;
-            r.blockEnderCrystal = over.blockEnderCrystal;
-            r.blockEnderDragon = over.blockEnderDragon;
+    /* ===== Entity grief (e.g., Enderman picking blocks) ===== */
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityChangeBlock(EntityChangeBlockEvent e) {
+        EntityType type = e.getEntityType();
+        if (!plotManager.isClaimed(e.getBlock().getLocation())) return;
 
-            r.fireSpread = over.fireSpread;
-            r.fireBurn = over.fireBurn;
-            r.igniteFlint = over.igniteFlint;
-            r.igniteLava = over.igniteLava;
-            r.igniteLightning = over.igniteLightning;
-            r.igniteExplosion = over.igniteExplosion;
-            r.igniteSpread = over.igniteSpread;
-
-            r.bucketEmpty = over.bucketEmpty;
-            r.bucketFill  = over.bucketFill;
-
-            r.interactionsEnabled = over.interactionsEnabled;
-            r.interactionsMode = over.interactionsMode;
-            r.interactionCategories = new HashSet<>(over.interactionCategories);
-            r.interactionList = new HashSet<>(over.interactionList);
-
-            r.griefEnderman = over.griefEnderman;
-            r.griefRavager = over.griefRavager;
-            r.griefSilverfish = over.griefSilverfish;
-            r.griefEnderDragon = over.griefEnderDragon;
-            r.griefWither = over.griefWither;
-
-            r.teleportEnderman = over.teleportEnderman;
-            return r;
+        if ((type == EntityType.ENDERMAN && endermanGrief) ||
+            (type == EntityType.RAVAGER && ravagerGrief) ||
+            (type == EntityType.SILVERFISH && silverfishGrief) ||
+            (type == EntityType.ENDER_DRAGON && dragonGrief) ||
+            (type == EntityType.WITHER && witherGrief)) {
+            e.setCancelled(true);
         }
+    }
 
-        boolean matchesInteraction(Material m) {
-            if (interactionList.contains(m)) return true;
-            String n = m.name();
-            if (interactionCategories.contains("doors") && n.endsWith("_DOOR")) return true;
-            if (interactionCategories.contains("trapdoors") && n.endsWith("_TRAPDOOR")) return true;
-            if (interactionCategories.contains("fence_gates") && n.endsWith("_FENCE_GATE")) return true;
-            if (interactionCategories.contains("buttons") && n.endsWith("_BUTTON")) return true;
-            if (interactionCategories.contains("pressure_plates") && n.endsWith("_PRESSURE_PLATE")) return true;
-            if (interactionCategories.contains("levers") && n.equals("LEVER")) return true;
-            return false;
+    /* ===== Enderman teleport denial ===== */
+    @EventHandler(ignoreCancelled = true)
+    public void onEndermanTeleport(EntityTeleportEvent e) {
+        if (!endermanTeleportDenied) return;
+        if (!(e.getEntity() instanceof Enderman)) return;
+
+        Location to = e.getTo();
+        if (to != null && plotManager.isClaimed(to)) {
+            e.setCancelled(true);
+        }
+    }
+
+    /* ===== helpers to build interaction sets ===== */
+    private void addDoorMaterials() {
+        for (Material m : Material.values()) {
+            if (m.name().endsWith("_DOOR")) interactionSet.add(m);
+        }
+    }
+    private void addTrapdoorMaterials() {
+        for (Material m : Material.values()) {
+            if (m.name().endsWith("_TRAPDOOR")) interactionSet.add(m);
+        }
+    }
+    private void addFenceGateMaterials() {
+        for (Material m : Material.values()) {
+            if (m.name().endsWith("_FENCE_GATE")) interactionSet.add(m);
+        }
+    }
+    private void addButtonMaterials() {
+        for (Material m : Material.values()) {
+            if (m.name().endsWith("_BUTTON")) interactionSet.add(m);
+        }
+    }
+    private void addPressurePlateMaterials() {
+        for (Material m : Material.values()) {
+            if (m.name().endsWith("_PRESSURE_PLATE")) interactionSet.add(m);
         }
     }
 }

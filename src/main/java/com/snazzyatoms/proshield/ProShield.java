@@ -23,6 +23,7 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
+    // keep references for reload
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
@@ -35,17 +36,18 @@ public final class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        // ensure config & sections
         saveDefaultConfig();
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
             saveConfig();
         }
 
-        // Managers
+        // managers
         plotManager = new PlotManager(this);
         guiManager  = new GUIManager(this);
 
-        // Listeners — IMPORTANT: pass plotManager, not `this`
+        // listeners — PASS plotManager, not `this`
         protectionListener = new BlockProtectionListener(plotManager);
         pvpListener        = new PvpProtectionListener(plotManager);
         guiListener        = new GUIListener(plotManager, guiManager);
@@ -55,13 +57,13 @@ public final class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(guiListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        // Commands
+        // command
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
-        // Custom recipe
+        // recipe
         registerCompassRecipe();
 
-        // Expiry maintenance
+        // expiry maintenance
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
@@ -75,7 +77,7 @@ public final class ProShield extends JavaPlugin {
         getLogger().info("ProShield disabled.");
     }
 
-    /** Called by /proshield reload */
+    /** /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
         if (protectionListener != null) protectionListener.reloadProtectionConfig();
@@ -91,7 +93,7 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
-        Bukkit.removeRecipe(key);
+        Bukkit.removeRecipe(key); // avoid duplicates on reload
         Bukkit.addRecipe(recipe);
     }
 

@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/PvpProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -30,7 +31,6 @@ public class PvpProtectionListener implements Listener {
         Location loc = victim.getLocation();
         if (!plotManager.isClaimed(loc)) return;
 
-        // if PvP is disabled in claims and attacker doesn’t bypass -> cancel
         if (!pvpAllowed && !attacker.hasPermission("proshield.bypass")) {
             e.setCancelled(true);
             attacker.sendMessage(ChatColor.RED + "PvP is disabled in claimed areas!");

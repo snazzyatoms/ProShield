@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/PlayerJoinListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;

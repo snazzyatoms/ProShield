@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/BlockProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -27,11 +26,12 @@ import java.util.Set;
 
 public class BlockProtectionListener implements Listener {
 
-    private final ProShield plugin;
+    private final ProShield plugin = ProShield.getInstance();
     private final PlotManager plotManager;
 
     // cached toggles
     private boolean containers;
+    private boolean pvpInClaims; // (pvp handled in PvpProtectionListener)
     private boolean mobGrief;
     private boolean creeper;
     private boolean tnt;
@@ -63,46 +63,46 @@ public class BlockProtectionListener implements Listener {
 
     private boolean endermanTeleportDenied;
 
+    // >>> IMPORTANT: constructor takes PlotManager (not ProShield)
     public BlockProtectionListener(PlotManager plotManager) {
-        this.plugin = ProShield.getInstance();
         this.plotManager = plotManager;
         reloadProtectionConfig();
     }
 
     /** Re-read config (called from /proshield reload) */
     public final void reloadProtectionConfig() {
-        containers = plugin.getConfig().getBoolean("protection.containers", true);
-        mobGrief = plugin.getConfig().getBoolean("protection.mob-grief", true);
+        containers   = plugin.getConfig().getBoolean("protection.containers", true);
+        pvpInClaims  = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
+        mobGrief     = plugin.getConfig().getBoolean("protection.mob-grief", true);
 
-        creeper = plugin.getConfig().getBoolean("protection.creeper-explosions", true);
-        tnt = plugin.getConfig().getBoolean("protection.tnt-explosions", true);
-        wither = plugin.getConfig().getBoolean("protection.wither-explosions", true);
-        witherSkull = plugin.getConfig().getBoolean("protection.wither-skull-explosions", true);
+        creeper      = plugin.getConfig().getBoolean("protection.creeper-explosions", true);
+        tnt          = plugin.getConfig().getBoolean("protection.tnt-explosions", true);
+        wither       = plugin.getConfig().getBoolean("protection.wither-explosions", true);
+        witherSkull  = plugin.getConfig().getBoolean("protection.wither-skull-explosions", true);
         enderCrystal = plugin.getConfig().getBoolean("protection.ender-crystal-explosions", true);
-        enderDragon = plugin.getConfig().getBoolean("protection.ender-dragon-explosions", true);
+        enderDragon  = plugin.getConfig().getBoolean("protection.ender-dragon-explosions", true);
 
-        fireSpread = plugin.getConfig().getBoolean("protection.fire.spread", true);
-        fireBurn = plugin.getConfig().getBoolean("protection.fire.burn", true);
-        igniteFlint = plugin.getConfig().getBoolean("protection.fire.ignite.flint_and_steel", true);
-        igniteLava = plugin.getConfig().getBoolean("protection.fire.ignite.lava", true);
+        fireSpread   = plugin.getConfig().getBoolean("protection.fire.spread", true);
+        fireBurn     = plugin.getConfig().getBoolean("protection.fire.burn", true);
+        igniteFlint  = plugin.getConfig().getBoolean("protection.fire.ignite.flint_and_steel", true);
+        igniteLava   = plugin.getConfig().getBoolean("protection.fire.ignite.lava", true);
         igniteLightning = plugin.getConfig().getBoolean("protection.fire.ignite.lightning", true);
         igniteExplosion = plugin.getConfig().getBoolean("protection.fire.ignite.explosion", true);
-        igniteSpread = plugin.getConfig().getBoolean("protection.fire.ignite.spread", true);
+        igniteSpread    = plugin.getConfig().getBoolean("protection.fire.ignite.spread", true);
 
         interactionsEnabled = plugin.getConfig().getBoolean("protection.interactions.enabled", true);
-        interactionsMode = plugin.getConfig().getString("protection.interactions.mode", "blacklist").toLowerCase();
+        interactionsMode    = plugin.getConfig().getString("protection.interactions.mode", "blacklist").toLowerCase();
 
         // Build interaction material set from categories + explicit list
         interactionSet.clear();
-        var cats = plugin.getConfig().getStringList("protection.interactions.categories");
-        for (String c : cats) {
+        for (String c : plugin.getConfig().getStringList("protection.interactions.categories")) {
             switch (c.toLowerCase()) {
-                case "doors" -> addBySuffix("_DOOR");
-                case "trapdoors" -> addBySuffix("_TRAPDOOR");
-                case "fence_gates" -> addBySuffix("_FENCE_GATE");
-                case "buttons" -> addBySuffix("_BUTTON");
-                case "levers" -> interactionSet.add(Material.LEVER);
-                case "pressure_plates" -> addBySuffix("_PRESSURE_PLATE");
+                case "doors"          -> addEndsWith("_DOOR");
+                case "trapdoors"      -> addEndsWith("_TRAPDOOR");
+                case "fence_gates"    -> addEndsWith("_FENCE_GATE");
+                case "buttons"        -> addEndsWith("_BUTTON");
+                case "levers"         -> interactionSet.add(Material.LEVER);
+                case "pressure_plates"-> addEndsWith("_PRESSURE_PLATE");
                 default -> {}
             }
         }
@@ -120,12 +120,6 @@ public class BlockProtectionListener implements Listener {
         witherGrief   = plugin.getConfig().getBoolean("protection.entity-grief.wither", true);
 
         endermanTeleportDenied = plugin.getConfig().getBoolean("protection.entity-teleport.enderman", true);
-    }
-
-    private void addBySuffix(String suffix) {
-        for (Material m : Material.values()) {
-            if (m.name().endsWith(suffix)) interactionSet.add(m);
-        }
     }
 
     private boolean denyIfNeeded(Player p, Location loc, String msg) {
@@ -169,24 +163,14 @@ public class BlockProtectionListener implements Listener {
             }
         }
 
-        // Non-containers
+        // Non-container interactions (doors, buttons, levers, etc.)
         if (interactionsEnabled && interactionSet.contains(b.getType())) {
             boolean claimed = plotManager.isClaimed(b.getLocation());
             boolean trusted = plotManager.isTrustedOrOwner(e.getPlayer().getUniqueId(), b.getLocation());
-            boolean bypass  = e.getPlayer().hasPermission("proshield.bypass");
-
-            if (claimed) {
-                if ("blacklist".equals(interactionsMode)) {
-                    if (!trusted && !bypass) {
-                        e.setCancelled(true);
-                        e.getPlayer().sendMessage(ChatColor.RED + "You cannot use that here!");
-                    }
-                } else { // whitelist mode (only trusted/bypass can interact)
-                    if (!trusted && !bypass) {
-                        e.setCancelled(true);
-                        e.getPlayer().sendMessage(ChatColor.RED + "You cannot use that here!");
-                    }
-                }
+            if (claimed && !trusted && !e.getPlayer().hasPermission("proshield.bypass")) {
+                // For now, blacklist and whitelist behave the same (we can expand later).
+                e.setCancelled(true);
+                e.getPlayer().sendMessage(ChatColor.RED + "You cannot use that here!");
             }
         }
     }
@@ -237,15 +221,16 @@ public class BlockProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onIgnite(BlockIgniteEvent e) {
+        if (e.isCancelled()) return;
         Location loc = e.getBlock().getLocation();
         if (!plotManager.isClaimed(loc)) return;
 
         switch (e.getCause()) {
             case FLINT_AND_STEEL -> { if (igniteFlint) e.setCancelled(true); }
-            case LAVA -> { if (igniteLava) e.setCancelled(true); }
-            case LIGHTNING -> { if (igniteLightning) e.setCancelled(true); }
-            case EXPLOSION -> { if (igniteExplosion) e.setCancelled(true); }
-            case SPREAD -> { if (igniteSpread) e.setCancelled(true); }
+            case LAVA            -> { if (igniteLava) e.setCancelled(true); }
+            case LIGHTNING       -> { if (igniteLightning) e.setCancelled(true); }
+            case EXPLOSION       -> { if (igniteExplosion) e.setCancelled(true); }
+            case SPREAD          -> { if (igniteSpread) e.setCancelled(true); }
             default -> {}
         }
     }
@@ -256,12 +241,12 @@ public class BlockProtectionListener implements Listener {
         if (!mobGrief) return;
         EntityType type = e.getEntityType();
         boolean blockInsideClaims =
-                (type == EntityType.CREEPER && creeper) ||
-                (type == EntityType.PRIMED_TNT && tnt) ||
-                (type == EntityType.WITHER && wither) ||
-                (type == EntityType.WITHER_SKULL && witherSkull) ||
+                (type == EntityType.CREEPER       && creeper)      ||
+                (type == EntityType.PRIMED_TNT    && tnt)          ||
+                (type == EntityType.WITHER        && wither)       ||
+                (type == EntityType.WITHER_SKULL  && witherSkull)  ||
                 (type == EntityType.ENDER_CRYSTAL && enderCrystal) ||
-                (type == EntityType.ENDER_DRAGON && enderDragon);
+                (type == EntityType.ENDER_DRAGON  && enderDragon);
 
         if (blockInsideClaims) {
             e.blockList().removeIf(block -> plotManager.isClaimed(block.getLocation()));
@@ -274,11 +259,11 @@ public class BlockProtectionListener implements Listener {
         EntityType type = e.getEntityType();
         if (!plotManager.isClaimed(e.getBlock().getLocation())) return;
 
-        if ((type == EntityType.ENDERMAN && endermanGrief) ||
-            (type == EntityType.RAVAGER && ravagerGrief) ||
-            (type == EntityType.SILVERFISH && silverfishGrief) ||
-            (type == EntityType.ENDER_DRAGON && dragonGrief) ||
-            (type == EntityType.WITHER && witherGrief)) {
+        if ((type == EntityType.ENDERMAN     && endermanGrief) ||
+            (type == EntityType.RAVAGER      && ravagerGrief)  ||
+            (type == EntityType.SILVERFISH   && silverfishGrief) ||
+            (type == EntityType.ENDER_DRAGON && dragonGrief)   ||
+            (type == EntityType.WITHER       && witherGrief)) {
             e.setCancelled(true);
         }
     }
@@ -292,6 +277,13 @@ public class BlockProtectionListener implements Listener {
         Location to = e.getTo();
         if (to != null && plotManager.isClaimed(to)) {
             e.setCancelled(true);
+        }
+    }
+
+    /* ===== helpers to build interaction sets ===== */
+    private void addEndsWith(String suffix) {
+        for (Material m : Material.values()) {
+            if (m.name().endsWith(suffix)) interactionSet.add(m);
         }
     }
 }

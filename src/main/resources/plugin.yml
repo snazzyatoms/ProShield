@@ -5,6 +5,15 @@ api-version: 1.18
 author: snazzyatoms
 description: Land and plot protection plugin with GUI management and admin tools.
 
+# Prepare for future integrations (2.0 roadmap):
+# - Vault: economy hooks
+# - LuckPerms: permission/rank-aware features
+# - PlaceholderAPI: placeholders for messages/scoreboards (optional)
+softdepend:
+  - Vault
+  - LuckPerms
+  - PlaceholderAPI
+
 commands:
   proshield:
     description: Main ProShield command
@@ -47,7 +56,7 @@ permissions:
     default: op
 
   proshield.admin.reload:
-    description: Allows /proshield reload (config + admin.yml)
+    description: Allows /proshield reload (reloads config and admin.yml)
     default: op
 
   proshield.admin.expired.purge:

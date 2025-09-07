@@ -1,7 +1,6 @@
 // path: src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -16,12 +15,12 @@ import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
 
-    private final PlotManager plotManager;
-    private final GUIManager guiManager;
+    private final PlotManager plots;
+    private final GUIManager gui;
 
     public GUIListener(PlotManager plotManager, GUIManager guiManager) {
-        this.plotManager = plotManager;
-        this.guiManager  = guiManager;
+        this.plots = plotManager;
+        this.gui   = guiManager;
     }
 
     @EventHandler
@@ -30,18 +29,18 @@ public class GUIListener implements Listener {
         ItemStack it = e.getItem();
         if (it == null || it.getType() != Material.COMPASS) return;
         if (!it.hasItemMeta() || !it.getItemMeta().hasDisplayName()) return;
-
         String name = ChatColor.stripColor(it.getItemMeta().getDisplayName());
         if (!"ProShield Compass".equalsIgnoreCase(name)) return;
 
         e.setCancelled(true);
-        guiManager.openMain(e.getPlayer());
+        gui.openMain(e.getPlayer());
     }
 
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if (e.getView() == null) return;
-        if (!GUIManager.TITLE.equals(e.getView().getTitle())) return;
+        String title = e.getView().getTitle();
+        if (!GUIManager.TITLE.equals(title)) return;
 
         e.setCancelled(true);
         if (!(e.getWhoClicked() instanceof Player p)) return;
@@ -51,18 +50,18 @@ public class GUIListener implements Listener {
         Location loc = p.getLocation();
 
         if (slot == 11) { // Create
-            boolean ok = plotManager.createClaim(p.getUniqueId(), loc);
+            boolean ok = plots.createClaim(p.getUniqueId(), loc);
             p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim created for this chunk."
-                                         : ChatColor.RED + "This chunk is already claimed or you reached your limit."));
+                                         : ChatColor.RED + "Already claimed or you reached your limit."));
         } else if (slot == 13) { // Info
-            plotManager.getClaim(loc).ifPresentOrElse(c -> {
-                String owner = plotManager.ownerName(c.getOwner());
-                var trusted = plotManager.listTrusted(loc);
+            plots.getClaim(loc).ifPresentOrElse(c -> {
+                String owner = plots.ownerName(c.getOwner());
+                var trusted = plots.listTrusted(loc);
                 p.sendMessage(prefix() + ChatColor.AQUA + "Owner: " + owner);
                 p.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " + (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
             }, () -> p.sendMessage(prefix() + ChatColor.GRAY + "No claim in this chunk."));
         } else if (slot == 15) { // Remove
-            boolean ok = plotManager.removeClaim(p.getUniqueId(), loc, false);
+            boolean ok = plots.removeClaim(p.getUniqueId(), loc, false);
             p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim removed."
                                          : ChatColor.RED + "No claim here or you are not the owner."));
         }
@@ -70,6 +69,6 @@ public class GUIListener implements Listener {
 
     private String prefix() {
         return ChatColor.translateAlternateColorCodes('&',
-                ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
+                com.snazzyatoms.proshield.ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

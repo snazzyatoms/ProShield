@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -5,69 +6,55 @@ import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.command.*;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
+import java.util.List;
 import java.util.UUID;
 
 public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
+    private final PlotManager plots;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plotManager) {
+    public ProShieldCommand(ProShield plugin, PlotManager plots) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
+        this.plots  = plots;
     }
 
     private String prefix() {
         return ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r ")) + ChatColor.RESET;
-    }
-
-    private void sendUsage(CommandSender s) {
-        s.sendMessage(prefix() + ChatColor.AQUA + "Usage:");
-        s.sendMessage(ChatColor.GRAY + " /proshield");
-        s.sendMessage(ChatColor.GRAY + " /proshield claim");
-        s.sendMessage(ChatColor.GRAY + " /proshield unclaim");
-        s.sendMessage(ChatColor.GRAY + " /proshield info");
-        s.sendMessage(ChatColor.GRAY + " /proshield compass");
-        s.sendMessage(ChatColor.GRAY + " /proshield trust <player>");
-        s.sendMessage(ChatColor.GRAY + " /proshield untrust <player>");
-        s.sendMessage(ChatColor.GRAY + " /proshield trusted");
-        s.sendMessage(ChatColor.GRAY + " /proshield bypass <on|off|toggle>");
-        s.sendMessage(ChatColor.GRAY + " /proshield expired review [days]");
-        s.sendMessage(ChatColor.GRAY + " /proshield expired purge [days]");
-        s.sendMessage(ChatColor.GRAY + " /proshield reload");
+                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
+        // /proshield
         if (args.length == 0) {
-            sender.sendMessage(prefix() + ChatColor.AQUA + "ProShield is running. Claims: " + plotManager.getClaimCount());
-            sendUsage(sender);
+            sender.sendMessage(prefix() + ChatColor.AQUA + "ProShield v" + plugin.getDescription().getVersion());
+            sender.sendMessage(ChatColor.GRAY + "Usage: /" + label + " <claim|unclaim|info|compass|trust|untrust|trusted|reload|expire>");
             return true;
         }
 
         String sub = args[0].toLowerCase();
 
         switch (sub) {
-
             case "claim": {
                 if (!(sender instanceof Player p)) {
                     sender.sendMessage(prefix() + ChatColor.RED + "Players only.");
                     return true;
                 }
-                if (!p.hasPermission("proshield.use")) {
-                    p.sendMessage(prefix() + ChatColor.RED + "No permission.");
-                    return true;
+                boolean ok = plots.createClaim(p.getUniqueId(), p.getLocation());
+                if (ok) {
+                    sender.sendMessage(prefix() + ChatColor.GREEN + "Claim created for this chunk.");
+                } else {
+                    sender.sendMessage(prefix() + ChatColor.RED + "This chunk is already claimed or you reached your limit.");
                 }
-                Location loc = p.getLocation();
-                boolean ok = plotManager.createClaim(p.getUniqueId(), loc);
-                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim created for this chunk."
-                        : ChatColor.RED + "Already claimed here or you reached your claim limit."));
                 return true;
             }
 
@@ -76,14 +63,12 @@ public class ProShieldCommand implements CommandExecutor {
                     sender.sendMessage(prefix() + ChatColor.RED + "Players only.");
                     return true;
                 }
-                if (!p.hasPermission("proshield.use")) {
-                    p.sendMessage(prefix() + ChatColor.RED + "No permission.");
-                    return true;
+                boolean ok = plots.removeClaim(p.getUniqueId(), p.getLocation(), false);
+                if (ok) {
+                    sender.sendMessage(prefix() + ChatColor.GREEN + "Claim removed.");
+                } else {
+                    sender.sendMessage(prefix() + ChatColor.RED + "No claim here or you are not the owner.");
                 }
-                boolean admin = p.hasPermission("proshield.admin");
-                boolean ok = plotManager.removeClaim(p.getUniqueId(), p.getLocation(), admin);
-                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim removed."
-                        : ChatColor.RED + "No claim here or you are not the owner."));
                 return true;
             }
 
@@ -92,13 +77,13 @@ public class ProShieldCommand implements CommandExecutor {
                     sender.sendMessage(prefix() + ChatColor.RED + "Players only.");
                     return true;
                 }
-                plotManager.getClaim(p.getLocation()).ifPresentOrElse(c -> {
-                    String owner = plotManager.ownerName(c.getOwner());
-                    var trusted = plotManager.listTrusted(p.getLocation());
-                    p.sendMessage(prefix() + ChatColor.AQUA + "Owner: " + owner);
-                    p.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " +
-                            (trusted.isEmpty() ? ChatColor.GRAY + "(none)" : String.join(", ", trusted)));
-                }, () -> p.sendMessage(prefix() + ChatColor.GRAY + "This chunk is unclaimed."));
+                plots.getClaim(p.getLocation()).ifPresentOrElse(c -> {
+                    String owner = plots.ownerName(c.getOwner());
+                    List<String> trusted = plots.listTrusted(p.getLocation());
+                    sender.sendMessage(prefix() + ChatColor.AQUA + "Owner: " + owner);
+                    sender.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " +
+                            (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
+                }, () -> sender.sendMessage(prefix() + ChatColor.GRAY + "No claim in this chunk."));
                 return true;
             }
 
@@ -107,107 +92,70 @@ public class ProShieldCommand implements CommandExecutor {
                     sender.sendMessage(prefix() + ChatColor.RED + "Players only.");
                     return true;
                 }
-                if (!(p.isOp() || p.hasPermission("proshield.compass") || p.hasPermission("proshield.admin"))) {
-                    p.sendMessage(prefix() + ChatColor.RED + "No permission.");
+                if (!p.hasPermission("proshield.compass") && !p.hasPermission("proshield.admin")) {
+                    sender.sendMessage(prefix() + ChatColor.RED + "No permission.");
                     return true;
                 }
-                p.getInventory().addItem(GUIManager.createAdminCompass());
-                p.sendMessage(prefix() + ChatColor.GREEN + "ProShield compass added to your inventory.");
+                ItemStack compass = GUIManager.createAdminCompass();
+                p.getInventory().addItem(compass);
+                sender.sendMessage(prefix() + ChatColor.GREEN + "Admin compass added to your inventory.");
                 return true;
             }
 
             case "trust": {
-                if (!(sender instanceof Player p)) { sender.sendMessage(prefix() + ChatColor.RED + "Players only."); return true; }
-                if (args.length < 2) { p.sendMessage(prefix() + ChatColor.RED + "Usage: /proshield trust <player>"); return true; }
-
-                Player target = Bukkit.getPlayerExact(args[1]);
-                if (target == null) { p.sendMessage(prefix() + ChatColor.RED + "Player not found."); return true; }
-
-                boolean ok = plotManager.trust(p.getUniqueId(), p.getLocation(), target.getUniqueId());
-                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Trusted " + target.getName() + "."
-                        : ChatColor.RED + "No claim here or you are not the owner."));
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(prefix() + ChatColor.RED + "Players only.");
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(prefix() + ChatColor.YELLOW + "Usage: /" + label + " trust <player>");
+                    return true;
+                }
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                UUID targetId = target.getUniqueId();
+                boolean ok = plots.trust(p.getUniqueId(), p.getLocation(), targetId);
+                if (ok) {
+                    sender.sendMessage(prefix() + ChatColor.GREEN + "Trusted " +
+                            (target.getName() != null ? target.getName() : targetId.toString()) + ".");
+                } else {
+                    sender.sendMessage(prefix() + ChatColor.RED + "You must own this claim to trust players.");
+                }
                 return true;
             }
 
             case "untrust": {
-                if (!(sender instanceof Player p)) { sender.sendMessage(prefix() + ChatColor.RED + "Players only."); return true; }
-                if (args.length < 2) { p.sendMessage(prefix() + ChatColor.RED + "Usage: /proshield untrust <player>"); return true; }
-
-                Player target = Bukkit.getPlayerExact(args[1]);
-                UUID tuid = (target != null) ? target.getUniqueId() : null;
-                if (tuid == null) { p.sendMessage(prefix() + ChatColor.RED + "Player not found (must be online)."); return true; }
-
-                boolean ok = plotManager.untrust(p.getUniqueId(), p.getLocation(), tuid);
-                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Untrusted " + target.getName() + "."
-                        : ChatColor.RED + "No claim here or you are not the owner."));
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(prefix() + ChatColor.RED + "Players only.");
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(prefix() + ChatColor.YELLOW + "Usage: /" + label + " untrust <player>");
+                    return true;
+                }
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                UUID targetId = target.getUniqueId();
+                boolean ok = plots.untrust(p.getUniqueId(), p.getLocation(), targetId);
+                if (ok) {
+                    sender.sendMessage(prefix() + ChatColor.GREEN + "Removed trust for " +
+                            (target.getName() != null ? target.getName() : targetId.toString()) + ".");
+                } else {
+                    sender.sendMessage(prefix() + ChatColor.RED + "You must own this claim to untrust players.");
+                }
                 return true;
             }
 
             case "trusted": {
-                if (!(sender instanceof Player p)) { sender.sendMessage(prefix() + ChatColor.RED + "Players only."); return true; }
-                var list = plotManager.listTrusted(p.getLocation());
-                p.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " +
-                        (list.isEmpty() ? ChatColor.GRAY + "(none)" : String.join(", ", list)));
-                return true;
-            }
-
-            case "bypass": {
-                if (!(sender instanceof Player p)) { sender.sendMessage(prefix() + ChatColor.RED + "Players only."); return true; }
-                if (!p.hasPermission("proshield.bypass")) { p.sendMessage(prefix() + ChatColor.RED + "No permission."); return true; }
-
-                if (args.length < 2 || args[1].equalsIgnoreCase("toggle")) {
-                    boolean now = !p.hasMetadata("proshield_bypass");
-                    setBypass(p, now);
-                    p.sendMessage(prefix() + ChatColor.YELLOW + "Bypass " + (now ? "enabled" : "disabled") + ".");
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(prefix() + ChatColor.RED + "Players only.");
                     return true;
                 }
-                if (args[1].equalsIgnoreCase("on"))  { setBypass(p, true);  p.sendMessage(prefix() + ChatColor.YELLOW + "Bypass enabled.");  return true; }
-                if (args[1].equalsIgnoreCase("off")) { setBypass(p, false); p.sendMessage(prefix() + ChatColor.YELLOW + "Bypass disabled."); return true; }
-                p.sendMessage(prefix() + ChatColor.RED + "Usage: /proshield bypass <on|off|toggle>");
-                return true;
-            }
-
-            case "expired": {
-                // /proshield expired review [days]
-                // /proshield expired purge  [days]
-                if (!sender.hasPermission("proshield.admin")) {
-                    sender.sendMessage(prefix() + ChatColor.RED + "No permission.");
-                    return true;
-                }
-                if (args.length < 2) {
-                    sender.sendMessage(prefix() + ChatColor.RED + "Usage: /proshield expired <review|purge> [days]");
-                    return true;
-                }
-                String mode = args[1].toLowerCase();
-                int days = plugin.getConfig().getInt("expiry.days", 30);
-                if (args.length >= 3) {
-                    try { days = Math.max(1, Integer.parseInt(args[2])); } catch (NumberFormatException ignored) {}
-                }
-
-                if (mode.equals("review")) {
-                    if (!sender.hasPermission("proshield.admin.expired.review")) {
-                        sender.sendMessage(prefix() + ChatColor.RED + "Missing: proshield.admin.expired.review");
-                        return true;
-                    }
-                    // reviewOnly = true (counts, does not delete)
-                    int removed = plotManager.cleanupExpiredClaims(days, true);
-                    sender.sendMessage(prefix() + ChatColor.AQUA +
-                            "Review done for " + days + " day(s). No claims were deleted. (See console for any logs.)");
-                    return true;
-                } else if (mode.equals("purge")) {
-                    if (!sender.hasPermission("proshield.admin.expired.purge")) {
-                        sender.sendMessage(prefix() + ChatColor.RED + "Missing: proshield.admin.expired.purge");
-                        return true;
-                    }
-                    // reviewOnly = false (actually delete)
-                    int removed = plotManager.cleanupExpiredClaims(days, false);
-                    sender.sendMessage(prefix() + ChatColor.YELLOW +
-                            "Purged " + removed + " expired claim(s) older than " + days + " day(s).");
-                    return true;
+                List<String> list = plots.listTrusted(p.getLocation());
+                if (list.isEmpty()) {
+                    sender.sendMessage(prefix() + ChatColor.GRAY + "No trusted players here.");
                 } else {
-                    sender.sendMessage(prefix() + ChatColor.RED + "Usage: /proshield expired <review|purge> [days]");
-                    return true;
+                    sender.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " + String.join(", ", list));
                 }
+                return true;
             }
 
             case "reload": {
@@ -220,19 +168,36 @@ public class ProShieldCommand implements CommandExecutor {
                 return true;
             }
 
-            default:
-                sendUsage(sender);
-                return true;
-        }
-    }
+            case "expire":
+            case "cleanup":
+            case "purgeexpired": {
+                // /proshield expire <days> [force]
+                if (!sender.hasPermission("proshield.admin.expired.purge")) {
+                    sender.sendMessage(prefix() + ChatColor.RED + "No permission.");
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(prefix() + ChatColor.YELLOW + "Usage: /" + label + " " + sub + " <days> [force]");
+                    return true;
+                }
+                int days;
+                try {
+                    days = Integer.parseInt(args[1]);
+                    if (days < 0) throw new NumberFormatException();
+                } catch (NumberFormatException ex) {
+                    sender.sendMessage(prefix() + ChatColor.RED + "Days must be a non-negative number.");
+                    return true;
+                }
+                boolean force = args.length >= 3 && args[2].equalsIgnoreCase("force");
 
-    private void setBypass(Player p, boolean on) {
-        if (on) {
-            if (!p.hasMetadata("proshield_bypass")) {
-                p.setMetadata("proshield_bypass", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+                int removed = plots.cleanupExpiredClaims(days, force);
+                sender.sendMessage(prefix() + ChatColor.GREEN + "Expired cleanup removed " + removed + " claim(s).");
+                return true;
             }
-        } else {
-            p.removeMetadata("proshield_bypass", plugin);
+
+            default:
+                sender.sendMessage(prefix() + ChatColor.GRAY + "Unknown subcommand. Use /" + label + " for help.");
+                return true;
         }
     }
 }

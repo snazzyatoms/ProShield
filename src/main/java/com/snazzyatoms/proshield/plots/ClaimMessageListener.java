@@ -1,64 +1,52 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/ClaimMessageListener.java
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 
+import java.util.UUID;
+
 /**
- * Shows enter/leave messages when crossing claim boundaries.
- * Modes: chat/title/actionbar (config: messages.show-as)
+ * Handles showing claim enter/leave messages to players.
  */
 public class ClaimMessageListener implements Listener {
 
     private final PlotManager plotManager;
-    private String mode;
+    private final ClaimRoleManager roleManager;
 
-    public ClaimMessageListener(PlotManager plotManager) {
+    public ClaimMessageListener(PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plotManager = plotManager;
-        reload();
-    }
-
-    public void reload() {
-        mode = ProShield.getInstance().getConfig().getString("messages.show-as", "actionbar").toLowerCase();
+        this.roleManager = roleManager;
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent e) {
-        if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return;
+        if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return; // only when chunk changes
+
         Player p = e.getPlayer();
+        UUID uuid = p.getUniqueId();
 
-        var fromClaim = plotManager.getClaim(e.getFrom()).orElse(null);
-        var toClaim   = plotManager.getClaim(e.getTo()).orElse(null);
-        if (fromClaim == toClaim) return;
-
-        if (fromClaim != null && toClaim == null) {
-            String owner = plotManager.ownerName(fromClaim.getOwner());
-            String msg = format("&7Leaving &f" + owner + "&7's claim.");
-            send(p, msg);
-        } else if (toClaim != null && fromClaim == null) {
-            String owner = plotManager.ownerName(toClaim.getOwner());
-            String msg = format("&bEntering &f" + owner + "&b's claim.");
-            send(p, msg);
-        } else if (toClaim != null && fromClaim != null && !fromClaim.key().equals(toClaim.key())) {
-            String owner = plotManager.ownerName(toClaim.getOwner());
-            String msg = format("&bEntering &f" + owner + "&b's claim.");
-            send(p, msg);
-        }
+        // Enter new claim
+        plotManager.getClaim(e.getTo()).ifPresentOrElse(claim -> {
+            String owner = plotManager.ownerName(claim.getOwner());
+            String role = roleManager.getRoleName(uuid, claim.getOwner());
+            p.sendMessage(prefix() + ChatColor.AQUA + "Now entering " + owner + "'s claim" +
+                    (role != null ? " as " + role : "") + ".");
+        }, () -> {
+            // Left claims
+            plotManager.getClaim(e.getFrom()).ifPresent(prev -> {
+                p.sendMessage(prefix() + ChatColor.GRAY + "Now leaving " +
+                        plotManager.ownerName(prev.getOwner()) + "'s claim.");
+            });
+        });
     }
 
-    private String format(String s) {
+    private String prefix() {
         return ChatColor.translateAlternateColorCodes('&',
-                ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r ") + s);
-    }
-
-    private void send(Player p, String msg) {
-        switch (mode) {
-            case "chat" -> p.sendMessage(msg);
-            case "title" -> p.sendTitle(ChatColor.stripColor(msg), "", 5, 40, 10);
-            default -> p.sendActionBar(ChatColor.translateAlternateColorCodes('&', msg));
-        }
+                com.snazzyatoms.proshield.ProShield.getInstance().getConfig()
+                        .getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

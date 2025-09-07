@@ -1,3 +1,4 @@
+<!-- path: pom.xml -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -5,7 +6,7 @@
 
   <groupId>com.snazzyatoms</groupId>
   <artifactId>proshield</artifactId>
-  <version>1.2.0</version>
+  <version>1.2.1</version>
   <name>ProShield</name>
   <description>Land and plot protection plugin with GUI management and admin tools.</description>
   <url>https://github.com/snazzyatoms/ProShield</url>
@@ -35,6 +36,7 @@
 
   <build>
     <plugins>
+      <!-- Java 17 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -57,43 +59,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.3.0</version>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Built-By>ProShield</Built-By>
-            </manifestEntries>
-          </archive>
-        </configuration>
       </plugin>
     </plugins>
   </build>
-
-  <profiles>
-    <profile>
-      <id>sign</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>3.2.4</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals><goal>sign</goal></goals>
-                <configuration>
-                  <gpgArguments>
-                    <arg>--batch</arg>
-                    <arg>--pinentry-mode</arg>
-                    <arg>loopback</arg>
-                  </gpgArguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>

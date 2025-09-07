@@ -2,8 +2,6 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,7 +10,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 public class PvpProtectionListener implements Listener {
 
     private final PlotManager plotManager;
-    private boolean pvpAllowed;
+    private boolean pvpInClaims;
 
     public PvpProtectionListener(PlotManager plotManager) {
         this.plotManager = plotManager;
@@ -20,7 +18,8 @@ public class PvpProtectionListener implements Listener {
     }
 
     public void reloadPvpFlag() {
-        pvpAllowed = ProShield.getInstance().getConfig().getBoolean("protection.pvp-in-claims", false);
+        this.pvpInClaims = ProShield.getInstance()
+                .getConfig().getBoolean("protection.pvp-in-claims", false);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -28,12 +27,11 @@ public class PvpProtectionListener implements Listener {
         if (!(e.getEntity() instanceof Player victim)) return;
         if (!(e.getDamager() instanceof Player attacker)) return;
 
-        Location loc = victim.getLocation();
-        if (!plotManager.isClaimed(loc)) return;
+        if (pvpInClaims) return; // allowed inside claims
+        if (attacker.hasPermission("proshield.bypass")) return;
 
-        if (!pvpAllowed && !attacker.hasPermission("proshield.bypass")) {
+        if (plotManager.isClaimed(victim.getLocation())) {
             e.setCancelled(true);
-            attacker.sendMessage(ChatColor.RED + "PvP is disabled in claimed areas!");
         }
     }
 }

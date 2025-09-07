@@ -6,18 +6,20 @@
 messages:
   prefix: "&3[ProShield]&r "
 
-  permissions:
+permissions:
   # If true, anyone with proshield.admin is treated as having unlimited claims.
-  # Default is false for safety. Can be toggled at runtime via:
-  # /proshield settings adminUnlimited <on|off|toggle>
+  # Default false; toggle via /proshield settings adminUnlimited <on|off|toggle>
   admin-includes-unlimited: false
 
 limits:
   max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
 
 expiry:
-  enabled: false         # If true, remove claims whose owners have been inactive for N days
+  enabled: false         # If true, remove/archival for claims whose owners inactive for N days
   days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
+
+api:
+  enable-command-hooks: true   # allow /proshield api ... commands for shops (perm-guarded)
 
 protection:
   containers: true
@@ -37,7 +39,7 @@ protection:
     spread: true   # cancel FIRE spread in claimed chunks
     burn: true     # cancel BlockBurn inside claims
     ignite:
-      flint_and_steel: true   # block players igniting inside others' claims
+      flint_and_steel: true
       lava: true
       lightning: true
       explosion: true
@@ -86,8 +88,9 @@ protection:
 #         enderman: true
 #       ender-dragon-explosions: true
 
-# Claims store (auto-managed by the plugin)
+# Active claims (auto-managed by plugin)
 claims: {}
+# Archived claims live under claims_expired: {} (auto-managed)
 
 autogive:
   compass-on-join: true

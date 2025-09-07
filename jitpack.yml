@@ -2,4 +2,4 @@ jdk:
   - openjdk17
 
 install:
-  - mvn -B -DskipTests package
+  - mvn -B -q install -DskipTests

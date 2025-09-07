@@ -1,108 +1,85 @@
 # 🛡️ ProShield
 
-**ProShield** is a lightweight land & plot protection plugin for **Paper/Spigot** (Java 17+).  
-It focuses on **simple chunk claims**, a **clean GUI**, and **admin tools** without heavy dependencies.
+ProShield is a lightweight land and plot protection plugin for Spigot & Paper servers.  
+Perfect for survival or SMP communities, it provides simple claiming, intuitive GUIs, and powerful admin tools without the bloat.
 
 ---
 
 ## ✨ Features
 
-- **Chunk Claims**: claim/unclaim the chunk you stand in (1-chunk = 16×16).
-- **GUI Menu** (compass): Create Claim • Claim Info • Remove Claim.
-- **Protection**:
-  - Block break/place denied to non-owners in claimed chunks.
-  - Container access control (chests/shulkers, etc.).
-  - Interaction control (doors, buttons, plates, levers) with blacklist/whitelist modes.
-  - PvP toggle in claims.
-  - Explosion control (creeper/TNT/wither/ender crystal/dragon) inside claims.
-  - Fire control (spread/burn/ignite sources).
-  - Bucket control (place/fill).
-  - Entity grief control (enderman/ravager/silverfish/dragon/wither).
-  - Enderman teleport denial in claims.
-  - **Per-world overrides** for all toggles.
-- **Trust System**: trust/untrust players per claim and list trusted.
-- **Admin Compass**: craftable & auto-given to OPs on join (if missing).
-- **Admin Tools**: bypass mode, reload, expired-claim archival + restore + purge.
-- **Expiry**: archive claims for players inactive N days; restore if they return.
-- **Owner Toggle**: optionally make `proshield.admin` imply unlimited claims (OFF by default).
-- **Shop/API Hooks** (no Vault dep): console/automation commands for shops to integrate.
-- **Config-backed**: all settings in `plugins/ProShield/config.yml`. Claims persisted there.
+- ✅ **Land Claiming** – Players can protect chunks with one command or the ProShield menu.  
+- ✅ **Unclaiming** – Release land instantly when no longer needed.  
+- ✅ **Protection System** – Prevents griefing (block break/place, containers, interactions, fire spread, TNT/creeper explosions, entity grief).  
+- ✅ **Trust System** – Owners can `/proshield trust <player>` to allow friends access.  
+- ✅ **Claim Roles** – Define granular access levels (Builder, Container, Visitor).  
+- ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, and unclaiming.  
+- ✅ **Admin Compass** – Special compass item that opens the ProShield GUI. Auto-given to ops (configurable).  
+- ✅ **Claim Expiry** – Automatically removes claims of inactive players (optional, fully configurable).  
+- ✅ **Configurable Protections** – Containers, doors, buttons, buckets, fire, mobs, explosions, Enderman teleport, and more.  
+- ✅ **Lightweight** – Built for performance and ease of use.  
 
 ---
 
-## ✅ Requirements
+## 🏡 Getting Started: How to Claim Land
 
-- **Server**: Paper 1.18+ (works on modern Spigot; Paper recommended)
-- **Java**: 17+
+Players can claim land in two ways:
 
----
+### 🔹 Option 1: The ProShield Compass (GUI)
+- Operators/admins automatically receive it on join.  
+- Players with permissions can get one via `/proshield compass`.  
+- Right-click to open the menu:  
+  - Slot 11 → Claim current chunk  
+  - Slot 13 → View claim info  
+  - Slot 15 → Unclaim chunk  
 
-## 📥 Installation
+### 🔹 Option 2: Commands
+- `/proshield claim` – Claim your current chunk  
+- `/proshield unclaim` – Remove your claim  
+- `/proshield info` – View claim info (owner, trusted players)  
+- `/proshield trust <player>` – Grant access  
+- `/proshield untrust <player>` – Remove access  
+- `/proshield trusted` – List trusted players  
 
-1. Download the latest `proshield-<version>.jar` from Releases.
-2. Drop it into `plugins/` and **restart**.
-3. `plugins/ProShield/config.yml` will be generated automatically.
-
----
-
-## 🧭 Admin Compass
-
-**Crafting**
-I=Iron Ingot, R=Redstone, C=Compass
-- OPs (or players with `proshield.compass`) receive one on join if missing.
-- Right-click to open the ProShield GUI.
+⚡ Tip: Use the **Compass GUI** for ease, or commands for precision.
 
 ---
 
 ## ⌨️ Commands
 
-`/proshield`  
-`/proshield claim` – claim current chunk  
-`/proshield unclaim` – unclaim current chunk (owner only)  
-`/proshield info` – show owner & trusted of current chunk  
-`/proshield compass` – give yourself the compass (perm required)  
-`/proshield trust <player>` – trust a player in your current claim  
-`/proshield untrust <player>` – remove trust  
-`/proshield trusted` – list trusted players in current claim  
-`/proshield bypass <on|off|toggle>` – admin build bypass  
-`/proshield reload` – reload config + per-world protection  
-`/proshield expired list` – list archived claims  
-`/proshield expired restore <world:cx:cz>` – restore archived claim  
-`/proshield expired purge [days]` – purge archived claims (all or older than N days)  
-`/proshield settings adminUnlimited <on|off|toggle>` – owner-only switch  
-`/proshield api givecompass <player>` – shop hook: give compass  
-`/proshield api expand <player> <amount>` – shop hook: queue expansion (placeholder)  
-`/proshield api grant <player> <permission>` – shop hook: forward to perms plugin (LuckPerms)
+- `/proshield` – Main command + help  
+- `/proshield claim` – Claim your current chunk  
+- `/proshield unclaim` – Remove your claim  
+- `/proshield info` – Show claim info (owner, trusted players)  
+- `/proshield trust <player>` – Grant access to a player  
+- `/proshield untrust <player>` – Remove trust  
+- `/proshield trusted` – List trusted players  
+- `/proshield compass` – Give yourself the ProShield compass  
+- `/proshield bypass <on|off|toggle>` – Toggle admin bypass  
+- `/proshield reload` – Reload configuration  
+- `/proshield purgeexpired` – Force claim expiry cleanup (admins)  
 
 ---
 
-## 🔐 Permissions
+## 🔑 Permissions
 
-- `proshield.use` – use player commands & GUI (**default: true**)
-- `proshield.compass` – give/use compass (**default: op**)
-- `proshield.bypass` – toggle bypass (**default: op**)
-- `proshield.unlimited` – ignore max-claims (**default: false**)
-- `proshield.admin.tp` – admin teleport in future GUI (**default: op**)
-- `proshield.admin.reload` – `/proshield reload` (**default: op**)
-- `proshield.admin.expired.list` – list expired (**default: op**)  
-- `proshield.admin.expired.restore` – restore expired (**default: op**)  
-- `proshield.admin.expired.purge` – purge expired (**default: op**)
-- `proshield.admin` – umbrella admin (**default: op**) *(does **not** include unlimited)*
-- `proshield.owner` – owner-only switches (e.g., adminIncludesUnlimited) (**default: false**)
-- API hooks (for shops/automation; **default: false**):
-  - `proshield.api.givecompass`
-  - `proshield.api.expand`
-  - `proshield.api.grant`
-
-
+| Node                         | Description                                                | Default |
+|------------------------------|------------------------------------------------------------|---------|
+| `proshield.use`              | Use ProShield commands and GUI                             | ✅ true |
+| `proshield.admin`            | Access admin tools (compass, bypass, force unclaim, purge) | ❌ op   |
+| `proshield.compass`          | Receive/use ProShield compass                              | ❌ op   |
+| `proshield.bypass`           | Toggle bypass protection                                   | ❌ op   |
+| `proshield.unlimited`        | Ignore max-claims limit                                    | ❌ op   |
+| `proshield.admin.tp`         | Teleport to claims from admin menu                         | ❌ op   |
+| `proshield.admin.reload`     | Use `/proshield reload`                                    | ❌ op   |
+| `proshield.admin.expired.purge` | Manage expired claims                                    | ❌ op   |
 
 ---
 
-🧱 Data
+## 📖 Documentation
 
-Claims are saved to config.yml under claims:.
+- [Changelog](CHANGELOG.md) – Full history of changes  
+- [FAQ](FAQ.md) – Common questions & troubleshooting  
 
-Expired/archived claims are saved under claims_expired: with metadata for restore/purge.
+---
 
-
-
+💡 ProShield is ideal for small to medium survival servers that want protection, simplicity, and admin control without requiring heavy region plugins.

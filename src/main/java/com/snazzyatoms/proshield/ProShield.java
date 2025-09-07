@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -33,26 +34,35 @@ public final class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        // Ensure config exists and claims section present
         saveDefaultConfig();
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
             saveConfig();
         }
 
+        // Managers
         plotManager = new PlotManager(this);
         guiManager = new GUIManager(this);
 
-        // listeners
+        // Listeners
         protectionListener = new BlockProtectionListener(plotManager);
         guiListener = new GUIListener(plotManager, guiManager);
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        // commands
-        getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
+        // Commands
+        if (getCommand("proshield") != null) {
+            getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
+        } else {
+            getLogger().warning("Command 'proshield' not found in plugin.yml!");
+        }
 
+        // Items / recipes
         registerCompassRecipe();
+
+        // Expiry pass + schedule
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
@@ -66,12 +76,14 @@ public final class ProShield extends JavaPlugin {
         getLogger().info("ProShield disabled.");
     }
 
+    /** Called by /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
-        // Re-cache interaction settings in protection listener
-        protectionListener.reloadInteractionConfig();
+        // Re-cache protection settings (per-world + global)
+        protectionListener.reloadProtectionConfig();
         // Reload internal plot cache from config
         plotManager.reloadFromConfig();
+        getLogger().info("ProShield configuration reloaded.");
     }
 
     private void registerCompassRecipe() {
@@ -82,6 +94,7 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
+        // Avoid duplicate on reload
         Bukkit.removeRecipe(key);
         Bukkit.addRecipe(recipe);
     }

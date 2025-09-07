@@ -1,43 +1,43 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/ClaimRoleManager.java
 package com.snazzyatoms.proshield.plots;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Minimal roles facade for 1.1.9.
- * Backed by PlotManager's owner + trusted list.
- * (We keep it tiny & safe; real role tiers can arrive in 1.2/2.0.)
+ * Minimal roles manager for claims.
+ * Maps: ownerUUID -> (memberUUID -> roleName)
  */
 public class ClaimRoleManager {
 
-    public enum Role {
-        OWNER,   // claim owner
-        TRUSTED, // on trusted list
-        GUEST    // everyone else
+    private final Map<UUID, Map<UUID, String>> roles = new ConcurrentHashMap<>();
+
+    /**
+     * Returns the role name for 'member' within 'owner' claims, or "trusted" if none set.
+     */
+    public String getRoleName(UUID owner, UUID member) {
+        Map<UUID, String> m = roles.get(owner);
+        if (m == null) return "trusted";
+        return m.getOrDefault(member, "trusted");
     }
 
-    private final PlotManager plotManager;
-
-    public ClaimRoleManager(PlotManager plotManager) {
-        this.plotManager = plotManager;
+    /** Assign/overwrite a role for a member within an owner's claims. */
+    public void setRole(UUID owner, UUID member, String roleName) {
+        roles.computeIfAbsent(owner, k -> new ConcurrentHashMap<>()).put(member, roleName);
     }
 
-    /** Resolve role for a player at a location's claim. */
-    public Role getRole(java.util.UUID player, org.bukkit.Location loc) {
-        var opt = plotManager.getClaim(loc);
-        if (opt.isEmpty()) return Role.GUEST;
-        var c = opt.get();
-        if (c.getOwner().equals(player)) return Role.OWNER;
-        if (c.getTrusted().contains(player)) return Role.TRUSTED;
-        return Role.GUEST;
+    /** Remove a role entry. */
+    public void clearRole(UUID owner, UUID member) {
+        Map<UUID, String> m = roles.get(owner);
+        if (m != null) {
+            m.remove(member);
+            if (m.isEmpty()) roles.remove(owner);
+        }
     }
 
-    /** Convenience checks */
-    public boolean isOwner(java.util.UUID player, org.bukkit.Location loc) {
-        return getRole(player, loc) == Role.OWNER;
-    }
-
-    public boolean isTrusted(java.util.UUID player, org.bukkit.Location loc) {
-        var r = getRole(player, loc);
-        return r == Role.OWNER || r == Role.TRUSTED;
+    /** Read-only snapshot of a member->role map for an owner. */
+    public Map<UUID, String> getRolesForOwner(UUID owner) {
+        Map<UUID, String> m = roles.get(owner);
+        return (m == null) ? Collections.emptyMap() : Collections.unmodifiableMap(m);
     }
 }

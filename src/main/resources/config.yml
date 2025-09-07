@@ -1,32 +1,31 @@
-# ===========================
-# ProShield — Configuration
-# Version: 1.1.9
-# ===========================
+# ============================
+# ProShield 1.2.0 - Config
+# ============================
 
 messages:
   prefix: "&3[ProShield]&r "
-
-permissions:
-  # If true, anyone with proshield.admin is treated as having unlimited claims.
-  # Default false; toggle via /proshield settings adminUnlimited <on|off|toggle>
-  admin-includes-unlimited: false
+  enter-claim-format: "&bEntering &f{owner}&b's claim."
+  leave-claim-format: "&7Leaving &f{owner}&7's claim."
+  show-as: "actionbar"     # "chat" | "title" | "actionbar"
 
 limits:
-  max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
+  max-claims: 5            # -1 = unlimited (players w/ proshield.unlimited bypass)
+  max-claim-chunks: 16     # maximum total chunks in a single expanded claim region (future use)
 
 expiry:
-  enabled: false         # If true, remove/archival for claims whose owners inactive for N days
-  days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
+  enabled: false
+  days: 30                 # inactive days before expiration
+  review-only: true        # if true, expiry only marks for review (no auto delete)
 
-api:
-  enable-command-hooks: true   # allow /proshield api ... commands for shops (perm-guarded)
+raid-protection:
+  enabled: true
+  seconds: 86400           # 24h shield after creation; blocks PvP + explosions in the claim
 
 protection:
   containers: true
-  pvp-in-claims: false
-
-  # Explosion block-breaking in claims
+  pvp-in-claims: false     # if false, cancel PvP inside claimed chunks
   mob-grief: true
+
   creeper-explosions: true
   tnt-explosions: true
   wither-explosions: true
@@ -34,10 +33,9 @@ protection:
   ender-crystal-explosions: true
   ender-dragon-explosions: true
 
-  # Fire behavior inside claims
   fire:
-    spread: true   # cancel FIRE spread in claimed chunks
-    burn: true     # cancel BlockBurn inside claims
+    spread: true
+    burn: true
     ignite:
       flint_and_steel: true
       lava: true
@@ -45,10 +43,9 @@ protection:
       explosion: true
       spread: true
 
-  # Non-container interaction controls
   interactions:
     enabled: true
-    mode: blacklist          # "blacklist" or "whitelist"
+    mode: blacklist          # "blacklist" | "whitelist"
     categories:
       - doors
       - trapdoors
@@ -56,14 +53,12 @@ protection:
       - buttons
       - levers
       - pressure_plates
-    list: []                 # explicit materials e.g. [NOTE_BLOCK, BELL]
+    list: []                 # explicit materials e.g. [BELL, NOTE_BLOCK]
 
-  # Bucket usage
   buckets:
     block-empty: true
     block-fill: true
 
-  # Entity grief that changes blocks (non-explosion)
   entity-grief:
     enderman: true
     ravager: true
@@ -71,26 +66,21 @@ protection:
     ender-dragon: true
     wither: true
 
-  # Entity teleport denial in claims
   entity-teleport:
     enderman: true
 
-# Per-world overrides (optional). Copy the structure under "protection" here.
-# worlds:
-#   world_nether:
-#     protection:
-#       pvp-in-claims: true
-#       interactions:
-#         enabled: false
-#   world_the_end:
-#     protection:
-#       entity-teleport:
-#         enderman: true
-#       ender-dragon-explosions: true
-
-# Active claims (auto-managed by plugin)
-claims: {}
-# Archived claims live under claims_expired: {} (auto-managed)
+worlds:
+  # Per-world toggles (unset = inherit global)
+  # world_nether:
+  #   claims-enabled: true
+  #   protections-enabled: true
+  #   pvp-in-claims: false
 
 autogive:
   compass-on-join: true
+
+# Data sections (managed by plugin)
+claims: {}
+roles: {}
+homes: {}
+messages-per-claim: {}    # claimKey -> { enter: "...", leave: "..." }

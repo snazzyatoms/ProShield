@@ -5,27 +5,18 @@ import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Handles all claim storage and lookup logic for ProShield.
- * - Stores claims in-memory (map) and persists them in config.yml under "claims".
- * - Supports trusted players per claim.
- * - Provides small helpers used by listeners/GUI (owner names, claim center, etc).
- * - 1.2 additions: getByKey(), isWithinRaidShield(), cleanupExpiredClaims(), reloadFromConfig().
- */
+/** Claim storage + logic */
 public class PlotManager {
 
     private final ProShield plugin;
+    private ClaimRoleManager roleManager;
 
-    /** Key = "world:chunkX:chunkZ" -> Claim */
     private final Map<String, Claim> claims = new HashMap<>();
-
-    /** Owner UUID -> number of owned chunks (for max-claims checks) */
     private final Map<UUID, Integer> ownerCounts = new HashMap<>();
 
     public PlotManager(ProShield plugin) {
@@ -33,23 +24,14 @@ public class PlotManager {
         loadAll();
     }
 
-    /* ------------- Keys & Basics ------------- */
+    public void setRoleManager(ClaimRoleManager roleManager) {
+        this.roleManager = roleManager;
+    }
 
     private String key(Location loc) {
         return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
     }
 
-    /** Expose by key (used by roles manager / admin panels) */
-    public Optional<Claim> getByKey(String key) {
-        return Optional.ofNullable(claims.get(key));
-    }
-
-    /* ------------- Create / Remove ------------- */
-
-    /**
-     * Create a claim for the given player at the given location (chunk-based).
-     * Respects limits.max-claims unless player has "proshield.unlimited".
-     */
     public boolean createClaim(UUID owner, Location loc) {
         String k = key(loc);
         if (claims.containsKey(k)) return false;
@@ -64,11 +46,8 @@ public class PlotManager {
             }
         }
 
-        Claim c = new Claim(owner,
-                loc.getWorld().getName(),
-                loc.getChunk().getX(),
-                loc.getChunk().getZ(),
-                System.currentTimeMillis());
+        Claim c = new Claim(owner, loc.getWorld().getName(),
+                loc.getChunk().getX(), loc.getChunk().getZ(), System.currentTimeMillis());
 
         claims.put(k, c);
         ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
@@ -76,12 +55,6 @@ public class PlotManager {
         return true;
     }
 
-    /**
-     * Remove a claim in the current chunk.
-     * @param requester who is attempting removal
-     * @param loc chunk location
-     * @param adminForce if true, bypasses owner check
-     */
     public boolean removeClaim(UUID requester, Location loc, boolean adminForce) {
         String k = key(loc);
         Claim c = claims.get(k);
@@ -93,8 +66,6 @@ public class PlotManager {
         removeClaimFromConfig(k);
         return true;
     }
-
-    /* ------------- Queries ------------- */
 
     public boolean isClaimed(Location loc) { return claims.containsKey(key(loc)); }
 
@@ -109,29 +80,33 @@ public class PlotManager {
         return c.getOwner().equals(uuid) || c.getTrusted().contains(uuid);
     }
 
+    // ===== NEW: roles helpers =====
+    public ClaimRole getRoleAt(Location loc, UUID player) {
+        if (isOwner(player, loc)) return ClaimRole.CO_OWNER; // treat owner as highest equivalent
+        if (roleManager == null) return ClaimRole.VISITOR;
+        return roleManager.getRole(loc, player);
+    }
+
+    public boolean hasRoleAtLeast(Location loc, UUID player, ClaimRole required) {
+        if (isOwner(player, loc)) return true;
+        return getRoleAt(loc, player).atLeast(required);
+    }
+
     public Optional<Claim> getClaim(Location loc) {
         return Optional.ofNullable(claims.get(key(loc)));
     }
 
-    /* ------------- Trust List ------------- */
-
     public boolean trust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().add(target)) {
-            saveClaim(c);
-            return true;
-        }
+        if (c.getTrusted().add(target)) { saveClaim(c); return true; }
         return false;
     }
 
     public boolean untrust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().remove(target)) {
-            saveClaim(c);
-            return true;
-        }
+        if (c.getTrusted().remove(target)) { saveClaim(c); return true; }
         return false;
     }
 
@@ -147,11 +122,9 @@ public class PlotManager {
     }
 
     public String ownerName(UUID uuid) {
-        OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
+        var op = Bukkit.getOfflinePlayer(uuid);
         return op.getName() != null ? op.getName() : uuid.toString();
     }
-
-    /* ------------- Load / Save ------------- */
 
     private void loadAll() {
         claims.clear();
@@ -173,9 +146,7 @@ public class PlotManager {
                 Claim c = new Claim(owner, world, cx, cz, created);
 
                 List<String> t = sec.getStringList("trusted");
-                if (t != null) for (String s : t) {
-                    try { c.getTrusted().add(UUID.fromString(s)); } catch (Exception ignored) {}
-                }
+                if (t != null) for (String s : t) c.getTrusted().add(UUID.fromString(s));
 
                 claims.put(k, c);
                 ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
@@ -187,9 +158,7 @@ public class PlotManager {
 
     public void saveAll() {
         plugin.getConfig().set("claims", null);
-        for (Claim c : claims.values()) {
-            saveClaim(c);
-        }
+        for (Claim c : claims.values()) saveClaim(c);
         plugin.saveConfig();
     }
 
@@ -212,83 +181,52 @@ public class PlotManager {
         plugin.saveConfig();
     }
 
-    /* ------------- Stats / Helpers ------------- */
-
     public int getClaimCount() { return claims.size(); }
-
     public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }
 
-    /** Unmodifiable set of claim keys (e.g., "world:chunkX:chunkZ"). */
-    public Set<String> getAllClaimKeys() {
-        return Collections.unmodifiableSet(claims.keySet());
-    }
+    public Set<String> getAllClaimKeys() { return Collections.unmodifiableSet(claims.keySet()); }
 
-    /** Convert a claim key into the *center* of that chunk, at a safe Y. */
     public Location keyToCenter(String key) {
         try {
             String[] parts = key.split(":");
-            String worldName = parts[0];
+            String world = parts[0];
             int cx = Integer.parseInt(parts[1]);
             int cz = Integer.parseInt(parts[2]);
-            World w = Bukkit.getWorld(worldName);
+            var w = Bukkit.getWorld(world);
             if (w == null) return null;
             int x = (cx << 4) + 8;
             int z = (cz << 4) + 8;
             int y = Math.max(w.getHighestBlockYAt(x, z), 64);
-            return new Location(w, x + 0.5, y, z + 0.5);
+            return new Location(w, x, y, z);
         } catch (Exception ignored) { return null; }
     }
 
-    /** Reload in-memory cache from config (used by /proshield reload). */
+    // Reload from config
     public void reloadFromConfig() {
         loadAll();
     }
 
-    /* ------------- 1.2 QoL: Raid Shield & Expiry ------------- */
-
-    /**
-     * @return true if the claim at 'loc' is younger than 'shieldSeconds' (under raid-protection).
-     */
-    public boolean isWithinRaidShield(Location loc, int shieldSeconds) {
-        Claim c = getClaim(loc).orElse(null);
-        if (c == null) return false;
-        long ageSec = (System.currentTimeMillis() - c.getCreatedAt()) / 1000L;
-        return ageSec < Math.max(0, shieldSeconds);
-    }
-
-    /**
-     * Expiry maintenance. If reviewOnly is true, we only *count* candidates
-     * (you can log/mark for admin review). If false, we remove them.
-     * Currently uses creation time as a heuristic—feel free to replace with real last-seen.
-     *
-     * @return number of claims removed when reviewOnly=false, otherwise 0.
-     */
-    public int cleanupExpiredClaims(int days, boolean reviewOnly) {
-        long cutoff = System.currentTimeMillis() - days * 86_400_000L;
+    // Expiry: removes claims whose owners haven't joined in N days
+    public int cleanupExpiredClaims(int days, boolean dryRun) {
+        long cutoff = System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L;
         List<String> toRemove = new ArrayList<>();
-        int candidates = 0;
+        for (Map.Entry<String, Claim> e : claims.entrySet()) {
+            UUID owner = e.getValue().getOwner();
+            OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
+            long last = (op.getLastPlayed() > 0 ? op.getLastPlayed() : op.getFirstPlayed());
+            if (last == 0L) continue; // no data, skip
+            if (last < cutoff) toRemove.add(e.getKey());
+        }
+        if (dryRun) return toRemove.size();
 
-        for (var e : claims.entrySet()) {
-            Claim c = e.getValue();
-            if (c.getCreatedAt() < cutoff) {
-                candidates++;
-                if (!reviewOnly) toRemove.add(e.getKey());
+        for (String k : toRemove) {
+            Claim c = claims.remove(k);
+            if (c != null) {
+                ownerCounts.put(c.getOwner(), Math.max(0, ownerCounts.getOrDefault(c.getOwner(), 1) - 1));
+                removeClaimFromConfig(k);
             }
         }
-
-        if (!reviewOnly) {
-            for (String k : toRemove) {
-                Claim c = claims.remove(k);
-                if (c != null) {
-                    ownerCounts.put(c.getOwner(), Math.max(0, ownerCounts.getOrDefault(c.getOwner(), 1) - 1));
-                    removeClaimFromConfig(k);
-                }
-            }
-            if (!toRemove.isEmpty()) plugin.saveConfig();
-            return toRemove.size();
-        }
-
-        // If review-only, we didn't delete; return 0 removed (but you could log 'candidates')
-        return 0;
+        plugin.saveConfig();
+        return toRemove.size();
     }
 }

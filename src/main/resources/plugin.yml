@@ -19,18 +19,15 @@ commands:
       /proshield trusted
       /proshield bypass <on|off|toggle>
       /proshield reload
-      /proshield expired list
-      /proshield expired restore <world:chunkX:chunkZ>
-      /proshield expired purge [days]
-      /proshield settings adminUnlimited <on|off|toggle>
-      /proshield api givecompass <player>
-      /proshield api expand <player> <amount>
-      /proshield api grant <player> <permission>
 
 permissions:
   proshield.use:
     description: Allows players to use ProShield commands and GUI
     default: true
+
+  proshield.admin:
+    description: Grants access to admin features (admin compass, force unclaim, teleport, bypass toggle)
+    default: op
 
   proshield.compass:
     description: Allows a player to receive and use the ProShield compass
@@ -41,7 +38,7 @@ permissions:
     default: op
 
   proshield.unlimited:
-    description: Ignore max-claims limit
+    description: Ignore max-claims limit (only for server owner / configurable)
     default: false
 
   proshield.admin.tp:
@@ -49,41 +46,9 @@ permissions:
     default: op
 
   proshield.admin.reload:
-    description: Allows /proshield reload (config + per-world protection)
+    description: Allows /proshield reload (reloads config and admin.yml)
     default: op
 
-  proshield.admin.expired.list:
-    description: Allows /proshield expired list
-    default: op
-  proshield.admin.expired.restore:
-    description: Allows /proshield expired restore <key>
-    default: op
   proshield.admin.expired.purge:
-    description: Allows /proshield expired purge [days]
+    description: Allows purging expired claims manually
     default: op
-
-  proshield.api.givecompass:
-    description: Allows shop/automation to give compass via /proshield api givecompass
-    default: false
-  proshield.api.expand:
-    description: Allows shop/automation to call /proshield api expand
-    default: false
-  proshield.api.grant:
-    description: Allows shop/automation to call /proshield api grant
-    default: false
-
-  proshield.admin:
-    description: Grants access to admin features (admin compass, force unclaim, teleport, reload, expired claims)
-    default: op
-    children:
-      proshield.compass: true
-      proshield.bypass: true
-      proshield.admin.tp: true
-      proshield.admin.reload: true
-      proshield.admin.expired.list: true
-      proshield.admin.expired.restore: true
-      proshield.admin.expired.purge: true
-
-  proshield.owner:
-    description: Allows changing owner-only settings (e.g., adminIncludesUnlimited)
-    default: false

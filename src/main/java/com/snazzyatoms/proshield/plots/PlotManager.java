@@ -98,27 +98,34 @@ public class PlotManager {
     // ------------------------------------------------------------------------
 
     public boolean createClaim(UUID owner, Location loc) {
-        String k = key(loc);
-        if (claims.containsKey(k)) return false;
+    String k = key(loc);
+    if (claims.containsKey(k)) return false;
 
-        int max = plugin.getConfig().getInt("limits.max-claims", -1);
-        if (max >= 0) {
-            boolean bypass = Optional.ofNullable(plugin.getServer().getPlayer(owner))
-                    .map(p -> p.hasPermission("proshield.unlimited"))
-                    .orElse(false);
-            if (!bypass) {
-                int used = ownerCounts.getOrDefault(owner, 0);
-                if (used >= max) return false;
-            }
-        }
+    int max = plugin.getConfig().getInt("limits.max-claims", -1);
 
-        Claim c = new Claim(owner, loc.getWorld().getName(),
-                loc.getChunk().getX(), loc.getChunk().getZ(), System.currentTimeMillis());
+    boolean bypass = false;
+    var player = plugin.getServer().getPlayer(owner);
+    if (player != null) {
+        boolean hasUnlimitedPerm = player.hasPermission("proshield.unlimited");
+        boolean adminIncludesUnlimited = plugin.getConfig().getBoolean("permissions.admin-includes-unlimited", false);
+        boolean isAdmin = player.hasPermission("proshield.admin");
 
-        claims.put(k, c);
-        ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
-        saveClaim(c);
-        return true;
+        bypass = hasUnlimitedPerm || (adminIncludesUnlimited && isAdmin);
+    }
+
+    if (max >= 0 && !bypass) {
+        int used = ownerCounts.getOrDefault(owner, 0);
+        if (used >= max) return false;
+    }
+
+    Claim c = new Claim(owner, loc.getWorld().getName(),
+            loc.getChunk().getX(), loc.getChunk().getZ(), System.currentTimeMillis());
+
+    claims.put(k, c);
+    ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
+    saveClaim(c);
+    return true;
+}
     }
 
     /** Removes a claim at loc. If adminForce is true, requester doesn't need to be owner. */

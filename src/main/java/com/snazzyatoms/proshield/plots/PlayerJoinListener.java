@@ -15,14 +15,11 @@ public class PlayerJoinListener implements Listener {
 
     private final ProShield plugin;
 
-    public PlayerJoinListener(ProShield plugin) {
-        this.plugin = plugin;
-    }
+    public PlayerJoinListener(ProShield plugin) { this.plugin = plugin; }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
-
         boolean autoGive = plugin.getConfig().getBoolean("autogive.compass-on-join", true);
         if (!autoGive) return;
 

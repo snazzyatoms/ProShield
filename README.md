@@ -62,16 +62,16 @@ Players can claim land in two ways:
 
 ## 🔑 Permissions
 
-| Node                         | Description                                                | Default |
-|------------------------------|------------------------------------------------------------|---------|
-| `proshield.use`              | Use ProShield commands and GUI                             | ✅ true |
-| `proshield.admin`            | Access admin tools (compass, bypass, force unclaim, purge) | ❌ op   |
-| `proshield.compass`          | Receive/use ProShield compass                              | ❌ op   |
-| `proshield.bypass`           | Toggle bypass protection                                   | ❌ op   |
-| `proshield.unlimited`        | Ignore max-claims limit                                    | ❌ op   |
-| `proshield.admin.tp`         | Teleport to claims from admin menu                         | ❌ op   |
-| `proshield.admin.reload`     | Use `/proshield reload`                                    | ❌ op   |
-| `proshield.admin.expired.purge` | Manage expired claims                                    | ❌ op   |
+| Node                           | Description                                                | Default |
+|--------------------------------|------------------------------------------------------------|---------|
+| `proshield.use`                | Use ProShield commands and GUI                             | ✅ true |
+| `proshield.admin`              | Access admin tools (compass, bypass, force unclaim, purge) | ❌ op   |
+| `proshield.compass`            | Receive/use ProShield compass                              | ❌ op   |
+| `proshield.bypass`             | Toggle bypass protection                                   | ❌ op   |
+| `proshield.unlimited`          | Ignore max-claims limit                                    | ❌ op   |
+| `proshield.admin.tp`           | Teleport to claims from admin menu                         | ❌ op   |
+| `proshield.admin.reload`       | Use `/proshield reload`                                    | ❌ op   |
+| `proshield.admin.expired.purge`| Manage expired claims                                      | ❌ op   |
 
 ---
 
@@ -79,6 +79,15 @@ Players can claim land in two ways:
 
 - [Changelog](CHANGELOG.md) – Full history of changes  
 - [FAQ](FAQ.md) – Common questions & troubleshooting  
+
+---
+
+## 🚀 Roadmap
+
+ProShield **2.0** is in the works!  
+It will introduce **Towns, Shops, Economy Integration, Claim Flags, Entry/Exit Messages, Map Overlays, and more**.  
+
+👉 [See the 2.0 Roadmap](ROADMAP-2.0.md)  
 
 ---
 

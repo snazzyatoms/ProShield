@@ -11,7 +11,7 @@ Perfect for survival or SMP communities, it provides simple claiming, intuitive 
 - ✅ **Unclaiming** – Release land instantly when no longer needed.  
 - ✅ **Protection System** – Prevents griefing (block break/place, containers, interactions, fire spread, TNT/creeper explosions, entity grief).  
 - ✅ **Trust System** – Owners can `/proshield trust <player>` to allow friends access.  
-- ✅ **Claim Roles** – Define granular access levels (Builder, Container, Visitor).  
+- ✅ **Claim Roles (NEW in 1.2.1)** – Define granular access levels: Visitor, Member, Container, Builder, Co-Owner.  
 - ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, and unclaiming.  
 - ✅ **Admin Compass** – Special compass item that opens the ProShield GUI. Auto-given to ops (configurable).  
 - ✅ **Claim Expiry** – Automatically removes claims of inactive players (optional, fully configurable).  
@@ -36,7 +36,7 @@ Players can claim land in two ways:
 - `/proshield claim` – Claim your current chunk  
 - `/proshield unclaim` – Remove your claim  
 - `/proshield info` – View claim info (owner, trusted players)  
-- `/proshield trust <player>` – Grant access  
+- `/proshield trust <player> [role]` – Grant access with a role (Visitor/Member/Builder/etc.)  
 - `/proshield untrust <player>` – Remove access  
 - `/proshield trusted` – List trusted players  
 
@@ -50,28 +50,28 @@ Players can claim land in two ways:
 - `/proshield claim` – Claim your current chunk  
 - `/proshield unclaim` – Remove your claim  
 - `/proshield info` – Show claim info (owner, trusted players)  
-- `/proshield trust <player>` – Grant access to a player  
+- `/proshield trust <player> [role]` – Grant access to a player with optional role  
 - `/proshield untrust <player>` – Remove trust  
 - `/proshield trusted` – List trusted players  
 - `/proshield compass` – Give yourself the ProShield compass  
 - `/proshield bypass <on|off|toggle>` – Toggle admin bypass  
 - `/proshield reload` – Reload configuration  
-- `/proshield purgeexpired` – Force claim expiry cleanup (admins)  
+- `/proshield purgeexpired <days> [dryrun]` – Force claim expiry cleanup (admins)  
 
 ---
 
 ## 🔑 Permissions
 
-| Node                           | Description                                                | Default |
-|--------------------------------|------------------------------------------------------------|---------|
-| `proshield.use`                | Use ProShield commands and GUI                             | ✅ true |
-| `proshield.admin`              | Access admin tools (compass, bypass, force unclaim, purge) | ❌ op   |
-| `proshield.compass`            | Receive/use ProShield compass                              | ❌ op   |
-| `proshield.bypass`             | Toggle bypass protection                                   | ❌ op   |
-| `proshield.unlimited`          | Ignore max-claims limit                                    | ❌ op   |
-| `proshield.admin.tp`           | Teleport to claims from admin menu                         | ❌ op   |
-| `proshield.admin.reload`       | Use `/proshield reload`                                    | ❌ op   |
-| `proshield.admin.expired.purge`| Manage expired claims                                      | ❌ op   |
+| Node                             | Description                                                | Default |
+|----------------------------------|------------------------------------------------------------|---------|
+| `proshield.use`                  | Use ProShield commands and GUI                             | ✅ true |
+| `proshield.admin`                | Access admin tools (compass, bypass, force unclaim, purge) | ❌ op   |
+| `proshield.compass`              | Receive/use ProShield compass                              | ❌ op   |
+| `proshield.bypass`               | Toggle bypass protection                                   | ❌ op   |
+| `proshield.unlimited`            | Ignore max-claims limit                                    | ❌ op   |
+| `proshield.admin.tp`             | Teleport to claims from admin menu                         | ❌ op   |
+| `proshield.admin.reload`         | Use `/proshield reload`                                    | ❌ op   |
+| `proshield.admin.expired.purge`  | Manage expired claims                                      | ❌ op   |
 
 ---
 

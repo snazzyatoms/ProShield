@@ -1,6 +1,6 @@
+// path: src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -38,12 +38,12 @@ public class GUIListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        // Only act on our GUI title
+        if (e.getView() == null) return;
         String title = e.getView().getTitle();
-        if (title == null || !GUIManager.TITLE.equals(title)) return;
+        if (!GUIManager.TITLE.equals(title)) return;
 
         e.setCancelled(true);
+        if (!(e.getWhoClicked() instanceof Player p)) return;
         if (e.getCurrentItem() == null) return;
 
         int slot = e.getRawSlot();
@@ -51,27 +51,24 @@ public class GUIListener implements Listener {
 
         if (slot == 11) { // Create
             boolean ok = plotManager.createClaim(p.getUniqueId(), loc);
-            p.sendMessage(prefix() + (ok
-                    ? ChatColor.GREEN + "Claim created for this chunk."
-                    : ChatColor.RED + "This chunk is already claimed or you reached your limit."));
+            p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim created for this chunk."
+                                         : ChatColor.RED + "This chunk is already claimed or you reached your limit."));
         } else if (slot == 13) { // Info
             plotManager.getClaim(loc).ifPresentOrElse(c -> {
                 String owner = plotManager.ownerName(c.getOwner());
                 var trusted = plotManager.listTrusted(loc);
                 p.sendMessage(prefix() + ChatColor.AQUA + "Owner: " + owner);
-                p.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " +
-                        (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
+                p.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " + (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
             }, () -> p.sendMessage(prefix() + ChatColor.GRAY + "No claim in this chunk."));
         } else if (slot == 15) { // Remove
             boolean ok = plotManager.removeClaim(p.getUniqueId(), loc, false);
-            p.sendMessage(prefix() + (ok
-                    ? ChatColor.GREEN + "Claim removed."
-                    : ChatColor.RED + "No claim here or you are not the owner."));
+            p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim removed."
+                                         : ChatColor.RED + "No claim here or you are not the owner."));
         }
     }
 
     private String prefix() {
         return ChatColor.translateAlternateColorCodes('&',
-                ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
+                com.snazzyatoms.proshield.ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

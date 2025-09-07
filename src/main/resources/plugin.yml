@@ -23,6 +23,9 @@ commands:
       /proshield expired restore <world:chunkX:chunkZ>
       /proshield expired purge [days]
       /proshield settings adminUnlimited <on|off|toggle>
+      /proshield api givecompass <player>
+      /proshield api expand <player> <amount>
+      /proshield api grant <player> <permission>
 
 permissions:
   proshield.use:
@@ -39,7 +42,7 @@ permissions:
 
   proshield.unlimited:
     description: Ignore max-claims limit
-    default: false   # keep manual and rare
+    default: false
 
   proshield.admin.tp:
     description: Allows teleporting to other players’ claims from the admin menu
@@ -59,7 +62,16 @@ permissions:
     description: Allows /proshield expired purge [days]
     default: op
 
-  # Umbrella admin permission (does NOT include unlimited by default)
+  proshield.api.givecompass:
+    description: Allows shop/automation to give compass via /proshield api givecompass
+    default: false
+  proshield.api.expand:
+    description: Allows shop/automation to call /proshield api expand
+    default: false
+  proshield.api.grant:
+    description: Allows shop/automation to call /proshield api grant
+    default: false
+
   proshield.admin:
     description: Grants access to admin features (admin compass, force unclaim, teleport, reload, expired claims)
     default: op
@@ -72,7 +84,6 @@ permissions:
       proshield.admin.expired.restore: true
       proshield.admin.expired.purge: true
 
-  # Server owner permission for sensitive, global switches
   proshield.owner:
     description: Allows changing owner-only settings (e.g., adminIncludesUnlimited)
     default: false

@@ -133,14 +133,6 @@ protection:
   entity-teleport:
     enderman: true
 
-# Per-world overrides (copy the "protection" subtree here)
-# worlds:
-#   world_nether:
-#     protection:
-#       pvp-in-claims: true
-#       interactions:
-#         enabled: false
-
 autogive:
   compass-on-join: true
 

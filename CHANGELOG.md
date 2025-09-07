@@ -4,6 +4,35 @@ This file documents all notable changes to **ProShield**, starting from the firs
 
 ---
 
+## **1.2.1 — Roles & Quality of Life**
+Released: 2025-09-08
+
+### 🔑 New Features
+- **Claim Roles (NEW)**  
+  - Players can now assign roles when trusting others:  
+    - `Visitor` → Can enter claims but cannot interact.  
+    - `Member` → Can interact with doors, buttons, containers.  
+    - `Builder` → Can build and break blocks.  
+    - `Co-Owner` → Nearly full permissions, but not the original owner.  
+  - `/proshield trust <player> [role]` supports role assignment.  
+  - GUI updated to allow role selection for trusted players.  
+
+- **GUI Enhancements**
+  - Radius-based trust: Easily add nearby players to your claim from the GUI.  
+  - Cleaner role/permissions interface for managing trusted players.  
+
+- **Admin Tools**
+  - Expanded `/proshield purgeexpired <days> [dryrun]` to support preview mode.  
+  - Admins can now view and manage roles inside claims.  
+
+### 🛠 Fixes & Improvements
+- Fixed **compass duplication issue** on join.  
+- Improved claim protection logic for bucket usage and entity grief events.  
+- Config reload (`/proshield reload`) now fully refreshes protection, roles, and claim rules.  
+- Minor performance optimizations for claim lookups and expiry cleanup.  
+
+---
+
 ## **1.1.9 — Quality of Life & Expanded Controls**
 Released: 2025-09-07
 
@@ -67,4 +96,4 @@ Released: 2025-09-05
 - **Claims**
   - Players can claim chunks using `/proshield claim`.  
   - Unclaim land with `/proshield unclaim`.  
-  - View claim info with `/
+  - View claim info with `/proshield info`.

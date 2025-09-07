@@ -147,24 +147,3 @@ Expired/archived claims are saved under claims_expired: with metadata for restor
 
 
 
----
-
-🧪 Build (local)
-
-mvn -q clean install -DskipTests
-# target/proshield-1.1.9.jar
-
-
----
-
-🗺️ Roadmap (short)
-
-Height/depth & radius expansions
-
-Visual claim previews (particles)
-
-Rich Admin GUI (teleport, search, edit)
-
-Optional Vault economy integration
-
-WorldGuard/GriefPrevention import

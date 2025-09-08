@@ -1,4 +1,4 @@
-# ❓ ProShield FAQ (v1.2.1)
+# ❓ ProShield FAQ (v1.2.2)
 
 This FAQ covers the most common questions, problems, and solutions for running ProShield.  
 If your issue isn’t listed here, please [open a GitHub issue](https://github.com/snazzyatoms/ProShield/issues).
@@ -61,8 +61,9 @@ A: Expiry **automatically removes claims** from inactive players:
 **Q: What are Claim Roles?**  
 A: Claim Roles let owners assign **different access levels** to trusted players:  
 - **Visitor** → Walk only, no interaction.  
+- **Member** → Basic interaction (doors, buttons, levers).  
+- **Container** → Can use chests, barrels, furnaces.  
 - **Builder** → Build and break blocks.  
-- **Container** → Open chests, barrels, furnaces.  
 - **Co-Owner** → Full access, almost like the owner.  
 
 Configured in `config.yml` and manageable via **commands & GUI**.  
@@ -95,7 +96,7 @@ A: Use the [GitHub Issues page](https://github.com/snazzyatoms/ProShield/issues)
 **Problem:** Players can’t build/interact in claims (but should)  
 ✅ Fix:  
 - Confirm they are **trusted** with `/proshield trust <player>`.  
-- Check their **role** (Builder/Container/Visitor).  
+- Check their **role** (Visitor/Member/Container/Builder/Co-Owner).  
 - Review `protection.interactions` in `config.yml`.
 
 ---

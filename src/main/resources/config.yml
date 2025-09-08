@@ -1,27 +1,20 @@
 # path: src/main/resources/config.yml
+# ProShield Configuration (v1.2.2)
+config-version: 1.2.2
+
 messages:
   prefix: "&3[ProShield]&r "
 
 limits:
-  max-claims: 5              # -1 = unlimited (players with proshield.unlimited bypass)
+  max-claims: 5          # -1 = unlimited (players with proshield.unlimited bypass)
 
 expiry:
-  enabled: false             # If true, remove claims whose owners inactive for N days
-  days: 30                   # Days of inactivity before claim is expired (checked on startup + daily)
-
-autogive:
-  compass-on-join: true      # Give ops (or players with permission) the admin compass on join
+  enabled: false         # Remove claims whose owners have been inactive for N days
+  days: 30               # Days of inactivity before claim is expired
 
 protection:
-  # Minimum role required for actions inside a claim
-  roles:
-    build: BUILDER           # break/place blocks
-    interact: MEMBER         # doors, buttons, levers, pressure plates...
-    open_containers: CONTAINER
-    use_buckets: BUILDER
-
   containers: true
-  pvp-in-claims: false       # If false, cancel PvP inside claims
+  pvp-in-claims: false
   mob-grief: true
   creeper-explosions: true
   tnt-explosions: true
@@ -42,7 +35,7 @@ protection:
 
   interactions:
     enabled: true
-    mode: blacklist          # "blacklist" or "whitelist"
+    mode: blacklist         # "blacklist" or "whitelist"
     categories:
       - doors
       - trapdoors
@@ -50,11 +43,11 @@ protection:
       - buttons
       - levers
       - pressure_plates
-    list: []                 # explicit materials e.g. [NOTE_BLOCK, BELL]
+    list: []                # Explicit materials (e.g. [NOTE_BLOCK, BELL])
 
   buckets:
-    block-empty: true        # prevent placing water/lava by under-role players
-    block-fill: true         # prevent taking source blocks
+    block-empty: true
+    block-fill: true
 
   entity-grief:
     enderman: true
@@ -66,4 +59,25 @@ protection:
   entity-teleport:
     enderman: true
 
+# 🔄 Global "Keep Items in Claims"
+# If enabled, items that drop inside claimed chunks won't despawn until 'retention-seconds' elapse.
+# Default is OFF so server owners opt-in.
+claims:
+  keep-items:
+    enabled: false
+    retention-seconds: 600   # Allowed range: 300..900
+
+# GUI slots (you can change these safely)
+gui:
+  slots:
+    claim: 11
+    info: 13
+    unclaim: 15
+    help: 31
+    admin: 33
+
+# Stored claims (do not edit by hand unless you know what you're doing)
 claims: {}
+
+autogive:
+  compass-on-join: true

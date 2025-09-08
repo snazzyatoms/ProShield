@@ -1,13 +1,15 @@
 # path: src/main/resources/plugin.yml
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.2.1
+version: 1.2.2
 api-version: 1.18
 author: snazzyatoms
 description: Land and plot protection plugin with GUI management and admin tools.
+
 softdepend:
   - Vault
   - LuckPerms
+  - EssentialsX
 
 commands:
   proshield:
@@ -17,29 +19,29 @@ commands:
       /proshield claim
       /proshield unclaim
       /proshield info
-      /proshield compass
-      /proshield trust <player> [role]
+      /proshield trust <player>
       /proshield untrust <player>
       /proshield trusted
+      /proshield compass
       /proshield bypass <on|off|toggle>
-      /proshield purgeexpired <days> [dryrun]
       /proshield reload
+      /proshield purgeexpired
 
 permissions:
   proshield.use:
-    description: Allows players to use ProShield commands and GUI
+    description: Use ProShield commands and GUI
     default: true
 
   proshield.admin:
-    description: Grants access to admin features (admin compass, force unclaim, teleport, purge, bypass)
+    description: Access admin tools (compass, bypass, force unclaim, teleport, purge)
     default: op
 
   proshield.compass:
-    description: Allows a player to receive and use the ProShield compass
+    description: Receive/use the ProShield compass
     default: op
 
   proshield.bypass:
-    description: Allows toggling protection bypass
+    description: Toggle protection bypass
     default: op
 
   proshield.unlimited:
@@ -47,13 +49,17 @@ permissions:
     default: op
 
   proshield.admin.tp:
-    description: Allows teleporting to claims from admin menu
+    description: Teleport to claims from admin menu
     default: op
 
   proshield.admin.reload:
-    description: Allows /proshield reload (config refresh)
+    description: Use /proshield reload
     default: op
 
   proshield.admin.expired.purge:
-    description: Allows running /proshield purgeexpired
+    description: Manage expired claims
+    default: op
+
+  proshield.admin.keepdrops:
+    description: Toggle global 'keep items in claims' (admin GUI)
     default: op

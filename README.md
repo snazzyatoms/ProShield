@@ -11,8 +11,9 @@ Perfect for survival or SMP communities, it provides simple claiming, intuitive 
 - ✅ **Unclaiming** – Release land instantly when no longer needed.  
 - ✅ **Protection System** – Prevents griefing (block break/place, containers, interactions, fire spread, TNT/creeper explosions, entity grief).  
 - ✅ **Trust System** – Owners can `/proshield trust <player>` to allow friends access.  
-- ✅ **Claim Roles (NEW in 1.2.1)** – Define granular access levels: Visitor, Member, Container, Builder, Co-Owner.  
-- ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, and unclaiming.  
+- ✅ **Claim Roles (since 1.2.1)** – Define granular access levels: Visitor, Member, Container, Builder, Co-Owner.  
+- ✅ **Keep Items in Claims (NEW in 1.2.2)** – Optional toggle to prevent items dropped in claims from despawning (configurable, off by default).  
+- ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, unclaiming, and help.  
 - ✅ **Admin Compass** – Special compass item that opens the ProShield GUI. Auto-given to ops (configurable).  
 - ✅ **Claim Expiry** – Automatically removes claims of inactive players (optional, fully configurable).  
 - ✅ **Configurable Protections** – Containers, doors, buttons, buckets, fire, mobs, explosions, Enderman teleport, and more.  
@@ -31,6 +32,8 @@ Players can claim land in two ways:
   - Slot 11 → Claim current chunk  
   - Slot 13 → View claim info  
   - Slot 15 → Unclaim chunk  
+  - Slot 31 → Help (shows commands relevant to your role/permissions)  
+  - Slot 33 → Admin menu (for players with admin perms)  
 
 ### 🔹 Option 2: Commands
 - `/proshield claim` – Claim your current chunk  
@@ -72,6 +75,7 @@ Players can claim land in two ways:
 | `proshield.admin.tp`             | Teleport to claims from admin menu                         | ❌ op   |
 | `proshield.admin.reload`         | Use `/proshield reload`                                    | ❌ op   |
 | `proshield.admin.expired.purge`  | Manage expired claims                                      | ❌ op   |
+| `proshield.admin.keepdrops`      | Toggle item-keep inside claims (1.2.2+)                    | ❌ op   |
 
 ---
 

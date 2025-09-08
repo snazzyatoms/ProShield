@@ -4,6 +4,35 @@ This file documents all notable changes to **ProShield**, starting from the firs
 
 ---
 
+## **1.2.2 — Item Keep & GUI Enhancements**
+Released: 2025-09-08
+
+### 🔑 New Features
+- **Keep Items in Claims (NEW)**  
+  - Items dropped inside claims can optionally be protected from despawning.  
+  - Configurable in `config.yml` under `claims.keep-items`.  
+  - Default: **off** (server owners must enable it).  
+  - Adjustable despawn delay: default `900s` (15 min), configurable between `300–900s`.  
+  - Admin GUI toggle available (requires `proshield.admin.keepdrops`).  
+
+- **GUI Enhancements**
+  - Added a **Help slot (31)** → Shows only commands available to the player’s permissions/roles.  
+  - Wired **Admin slot (33)** → Opens the admin GUI instead of placeholder text.  
+  - More polished layout for clarity.  
+
+- **Config Improvements**
+  - Added version header: now shows **1.2.2** on fresh installs.  
+  - Clearer comments and grouping for protection toggles and claim options.  
+  - Automatic migration snippet ensures `claims.keep-items` is added if missing.  
+
+### 🛠 Fixes & Improvements
+- Fixed constructor mismatch between `ProShield.java` and `GUIManager.java`.  
+- General cleanup of listeners and event checks.  
+- Minor performance improvements when handling trusted players and role lookups.  
+- Compass distribution logic further hardened to prevent edge-case duplication.  
+
+---
+
 ## **1.2.1 — Roles & Quality of Life**
 Released: 2025-09-08
 

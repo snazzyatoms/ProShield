@@ -1,4 +1,3 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/BlockProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -8,13 +7,12 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
-import org.bukkit.entity.Enderman;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityTeleportEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
@@ -28,138 +26,142 @@ import java.util.Set;
 public class BlockProtectionListener implements Listener {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
 
+    // toggles (true = PROTECT)
+    private boolean containers;
+    private boolean pvpInClaims;
     private boolean mobGrief;
-    private boolean endermanTeleportDenied;
-    private boolean fireSpread, fireBurn;
-    private boolean igniteFlint, igniteLava, igniteLightning, igniteExplosion, igniteSpread;
+    private boolean creeper;
+    private boolean tnt;
+    private boolean wither;
+    private boolean witherSkull;
+    private boolean enderCrystal;
+    private boolean enderDragon;
 
-    private boolean creeper, tnt, wither, witherSkull, enderCrystal, enderDragon;
+    private boolean fireSpread;
+    private boolean fireBurn;
+    private boolean igniteFlint;
+    private boolean igniteLava;
+    private boolean igniteLightning;
+    private boolean igniteExplosion;
+    private boolean igniteSpread;
 
-    private boolean containersEnabled;
     private boolean interactionsEnabled;
     private String interactionsMode;
-    private final Set<Material> interactionSet = new HashSet<>();
+    private Set<Material> interactionSet = new HashSet<>();
 
-    private boolean bucketEmptyBlock, bucketFillBlock;
+    private boolean bucketEmptyBlock;
+    private boolean bucketFillBlock;
 
-    private boolean endermanGrief, ravagerGrief, silverfishGrief, dragonGrief, witherGrief;
+    private boolean endermanGrief;
+    private boolean ravagerGrief;
+    private boolean silverfishGrief;
+    private boolean dragonGrief;
+    private boolean witherGrief;
 
-    private ClaimRole roleBuild;
-    private ClaimRole roleInteract;
-    private ClaimRole roleContainers;
-    private ClaimRole roleBuckets;
+    private boolean endermanTeleportDenied;
+
+    // NEW: entity protection for frames/stands/animals
+    private boolean protectItemFrames;
+    private boolean protectArmorStands;
+    private boolean protectPassiveAnimals;
+    private boolean protectTamedPets;
 
     public BlockProtectionListener(PlotManager plotManager) {
         this.plugin = ProShield.getInstance();
-        this.plots  = plotManager;
+        this.plotManager = plotManager;
         reloadProtectionConfig();
     }
 
     public final void reloadProtectionConfig() {
-        var cfg = plugin.getConfig();
+        containers = plugin.getConfig().getBoolean("protection.containers", true);
+        pvpInClaims = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
+        mobGrief = plugin.getConfig().getBoolean("protection.mob-grief", true);
 
-        roleBuild      = ClaimRole.from(cfg.getString("protection.roles.build", "BUILDER"), ClaimRole.BUILDER);
-        roleInteract   = ClaimRole.from(cfg.getString("protection.roles.interact", "MEMBER"), ClaimRole.MEMBER);
-        roleContainers = ClaimRole.from(cfg.getString("protection.roles.open_containers", "CONTAINER"), ClaimRole.CONTAINER);
-        roleBuckets    = ClaimRole.from(cfg.getString("protection.roles.use_buckets", "BUILDER"), ClaimRole.BUILDER);
+        creeper = plugin.getConfig().getBoolean("protection.creeper-explosions", true);
+        tnt = plugin.getConfig().getBoolean("protection.tnt-explosions", true);
+        wither = plugin.getConfig().getBoolean("protection.wither-explosions", true);
+        witherSkull = plugin.getConfig().getBoolean("protection.wither-skull-explosions", true);
+        enderCrystal = plugin.getConfig().getBoolean("protection.ender-crystal-explosions", true);
+        enderDragon = plugin.getConfig().getBoolean("protection.ender-dragon-explosions", true);
 
-        mobGrief = cfg.getBoolean("protection.mob-grief", true);
+        fireSpread = plugin.getConfig().getBoolean("protection.fire.spread", true);
+        fireBurn = plugin.getConfig().getBoolean("protection.fire.burn", true);
+        igniteFlint = plugin.getConfig().getBoolean("protection.fire.ignite.flint_and_steel", true);
+        igniteLava = plugin.getConfig().getBoolean("protection.fire.ignite.lava", true);
+        igniteLightning = plugin.getConfig().getBoolean("protection.fire.ignite.lightning", true);
+        igniteExplosion = plugin.getConfig().getBoolean("protection.fire.ignite.explosion", true);
+        igniteSpread = plugin.getConfig().getBoolean("protection.fire.ignite.spread", true);
 
-        creeper = cfg.getBoolean("protection.creeper-explosions", true);
-        tnt = cfg.getBoolean("protection.tnt-explosions", true);
-        wither = cfg.getBoolean("protection.wither-explosions", true);
-        witherSkull = cfg.getBoolean("protection.wither-skull-explosions", true);
-        enderCrystal = cfg.getBoolean("protection.ender-crystal-explosions", true);
-        enderDragon = cfg.getBoolean("protection.ender-dragon-explosions", true);
-
-        fireSpread = cfg.getBoolean("protection.fire.spread", true);
-        fireBurn   = cfg.getBoolean("protection.fire.burn", true);
-        igniteFlint      = cfg.getBoolean("protection.fire.ignite.flint_and_steel", true);
-        igniteLava       = cfg.getBoolean("protection.fire.ignite.lava", true);
-        igniteLightning  = cfg.getBoolean("protection.fire.ignite.lightning", true);
-        igniteExplosion  = cfg.getBoolean("protection.fire.ignite.explosion", true);
-        igniteSpread     = cfg.getBoolean("protection.fire.ignite.spread", true);
-
-        containersEnabled   = cfg.getBoolean("protection.containers", true);
-        interactionsEnabled = cfg.getBoolean("protection.interactions.enabled", true);
-        interactionsMode    = cfg.getString("protection.interactions.mode", "blacklist").toLowerCase();
+        interactionsEnabled = plugin.getConfig().getBoolean("protection.interactions.enabled", true);
+        interactionsMode = plugin.getConfig().getString("protection.interactions.mode", "blacklist").toLowerCase();
 
         interactionSet.clear();
-        for (String c : cfg.getStringList("protection.interactions.categories")) {
+        var cats = plugin.getConfig().getStringList("protection.interactions.categories");
+        for (String c : cats) {
             switch (c.toLowerCase()) {
-                case "doors" -> addEndsWith("_DOOR");
-                case "trapdoors" -> addEndsWith("_TRAPDOOR");
-                case "fence_gates" -> addEndsWith("_FENCE_GATE");
-                case "buttons" -> addEndsWith("_BUTTON");
-                case "levers" -> interactionSet.add(Material.LEVER);
-                case "pressure_plates" -> addEndsWith("_PRESSURE_PLATE");
+                case "doors": addDoorMaterials(); break;
+                case "trapdoors": addTrapdoorMaterials(); break;
+                case "fence_gates": addFenceGateMaterials(); break;
+                case "buttons": addButtonMaterials(); break;
+                case "levers": interactionSet.add(Material.LEVER); break;
+                case "pressure_plates": addPressurePlateMaterials(); break;
+                default: break;
             }
         }
-        for (String s : cfg.getStringList("protection.interactions.list")) {
-            try { interactionSet.add(Material.valueOf(s.toUpperCase())); } catch (IllegalArgumentException ignored) {}
+        for (String m : plugin.getConfig().getStringList("protection.interactions.list")) {
+            try { interactionSet.add(Material.valueOf(m.toUpperCase())); } catch (IllegalArgumentException ignored) {}
         }
 
-        bucketEmptyBlock = cfg.getBoolean("protection.buckets.block-empty", true);
-        bucketFillBlock  = cfg.getBoolean("protection.buckets.block-fill", true);
+        bucketEmptyBlock = plugin.getConfig().getBoolean("protection.buckets.block-empty", true);
+        bucketFillBlock = plugin.getConfig().getBoolean("protection.buckets.block-fill", true);
 
-        endermanGrief  = cfg.getBoolean("protection.entity-grief.enderman", true);
-        ravagerGrief   = cfg.getBoolean("protection.entity-grief.ravager", true);
-        silverfishGrief= cfg.getBoolean("protection.entity-grief.silverfish", true);
-        dragonGrief    = cfg.getBoolean("protection.entity-grief.ender-dragon", true);
-        witherGrief    = cfg.getBoolean("protection.entity-grief.wither", true);
+        endermanGrief = plugin.getConfig().getBoolean("protection.entity-grief.enderman", true);
+        ravagerGrief = plugin.getConfig().getBoolean("protection.entity-grief.ravager", true);
+        silverfishGrief = plugin.getConfig().getBoolean("protection.entity-grief.silverfish", true);
+        dragonGrief = plugin.getConfig().getBoolean("protection.entity-grief.ender-dragon", true);
+        witherGrief = plugin.getConfig().getBoolean("protection.entity-grief.wither", true);
 
-        endermanTeleportDenied = cfg.getBoolean("protection.entity-teleport.enderman", true);
+        endermanTeleportDenied = plugin.getConfig().getBoolean("protection.entity-teleport.enderman", true);
+
+        // NEW entity protections
+        protectItemFrames    = plugin.getConfig().getBoolean("protection.entities.item-frames", true);
+        protectArmorStands   = plugin.getConfig().getBoolean("protection.entities.armor-stands", true);
+        protectPassiveAnimals= plugin.getConfig().getBoolean("protection.entities.passive-animals", true);
+        protectTamedPets     = plugin.getConfig().getBoolean("protection.entities.tamed-pets", true);
     }
 
-    private boolean bypass(Player p) { return p.hasPermission("proshield.bypass"); }
-
-    private boolean lackingRole(Player p, Location loc, ClaimRole need, String msg) {
-        if (bypass(p)) return false;
-        if (!plots.isClaimed(loc)) return false;
-        if (plots.hasRoleAtLeast(loc, p.getUniqueId(), need)) return false;
-        p.sendMessage(prefix() + ChatColor.RED + msg);
+    private boolean denyIfNeeded(Player p, Location loc, String msg) {
+        if (p.hasPermission("proshield.bypass")) return false;
+        if (!plotManager.isClaimed(loc)) return false;
+        if (plotManager.isTrustedOrOwner(p.getUniqueId(), loc)) return false;
+        p.sendMessage(ChatColor.RED + msg);
         return true;
     }
 
-    private String prefix() {
-        return ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r "));
-    }
-
-    private void addEndsWith(String suffix) {
-        for (Material m : Material.values()) {
-            if (m.name().endsWith(suffix)) interactionSet.add(m);
-        }
-    }
-
+    /* ===== Blocks ===== */
     @EventHandler(ignoreCancelled = true)
     public void onBreak(BlockBreakEvent e) {
-        if (lackingRole(e.getPlayer(), e.getBlock().getLocation(), roleBuild, "You cannot break blocks here!")) {
-            e.setCancelled(true);
-        }
+        if (denyIfNeeded(e.getPlayer(), e.getBlock().getLocation(), "You cannot break blocks here!")) e.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent e) {
-        if (lackingRole(e.getPlayer(), e.getBlock().getLocation(), roleBuild, "You cannot place blocks here!")) {
-            e.setCancelled(true);
-        }
+        if (denyIfNeeded(e.getPlayer(), e.getBlock().getLocation(), "You cannot place blocks here!")) e.setCancelled(true);
     }
 
+    /* ===== Containers & Interactions ===== */
     @EventHandler(ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent e) {
         if (e.getHand() == EquipmentSlot.OFF_HAND) return;
         Block b = e.getClickedBlock();
         if (b == null) return;
 
-        Location loc = b.getLocation();
-
-        if (containersEnabled) {
+        if (containers) {
             BlockState st = b.getState();
             if (st instanceof Container) {
-                if (lackingRole(e.getPlayer(), loc, roleContainers, "You cannot open containers here!")) {
+                if (denyIfNeeded(e.getPlayer(), b.getLocation(), "You cannot open containers here!")) {
                     e.setCancelled(true);
                     return;
                 }
@@ -167,19 +169,26 @@ public class BlockProtectionListener implements Listener {
         }
 
         if (interactionsEnabled && interactionSet.contains(b.getType())) {
-            if (lackingRole(e.getPlayer(), loc, roleInteract, "You cannot use that here!")) {
+            boolean claimed = plotManager.isClaimed(b.getLocation());
+            boolean trusted = plotManager.isTrustedOrOwner(e.getPlayer().getUniqueId(), b.getLocation());
+            if (claimed && !trusted && !e.getPlayer().hasPermission("proshield.bypass")) {
                 e.setCancelled(true);
+                e.getPlayer().sendMessage(ChatColor.RED + "You cannot use that here!");
             }
         }
     }
 
+    /* ===== Buckets ===== */
     @EventHandler(ignoreCancelled = true)
     public void onBucketEmpty(PlayerBucketEmptyEvent e) {
         if (!bucketEmptyBlock) return;
         Block b = e.getBlockClicked();
         if (b == null) return;
-        if (lackingRole(e.getPlayer(), b.getLocation(), roleBuckets, "You cannot pour here!")) {
+        if (plotManager.isClaimed(b.getLocation()) &&
+                !plotManager.isTrustedOrOwner(e.getPlayer().getUniqueId(), b.getLocation()) &&
+                !e.getPlayer().hasPermission("proshield.bypass")) {
             e.setCancelled(true);
+            e.getPlayer().sendMessage(ChatColor.RED + "You cannot pour here!");
         }
     }
 
@@ -188,15 +197,19 @@ public class BlockProtectionListener implements Listener {
         if (!bucketFillBlock) return;
         Block b = e.getBlockClicked();
         if (b == null) return;
-        if (lackingRole(e.getPlayer(), b.getLocation(), roleBuckets, "You cannot take this source!")) {
+        if (plotManager.isClaimed(b.getLocation()) &&
+                !plotManager.isTrustedOrOwner(e.getPlayer().getUniqueId(), b.getLocation()) &&
+                !e.getPlayer().hasPermission("proshield.bypass")) {
             e.setCancelled(true);
+            e.getPlayer().sendMessage(ChatColor.RED + "You cannot take this source!");
         }
     }
 
+    /* ===== Fire ===== */
     @EventHandler(ignoreCancelled = true)
     public void onSpread(BlockSpreadEvent e) {
         if (!fireSpread) return;
-        if (e.getNewState().getType() == Material.FIRE && plots.isClaimed(e.getBlock().getLocation())) {
+        if (e.getNewState().getType() == Material.FIRE && plotManager.isClaimed(e.getBlock().getLocation())) {
             e.setCancelled(true);
         }
     }
@@ -204,56 +217,101 @@ public class BlockProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBurn(BlockBurnEvent e) {
         if (!fireBurn) return;
-        if (plots.isClaimed(e.getBlock().getLocation())) e.setCancelled(true);
+        if (plotManager.isClaimed(e.getBlock().getLocation())) e.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onIgnite(BlockIgniteEvent e) {
-        if (!plots.isClaimed(e.getBlock().getLocation())) return;
+        if (!plotManager.isClaimed(e.getBlock().getLocation())) return;
         switch (e.getCause()) {
-            case FLINT_AND_STEEL -> { if (igniteFlint) e.setCancelled(true); }
-            case LAVA -> { if (igniteLava) e.setCancelled(true); }
-            case LIGHTNING -> { if (igniteLightning) e.setCancelled(true); }
-            case EXPLOSION -> { if (igniteExplosion) e.setCancelled(true); }
-            case SPREAD -> { if (igniteSpread) e.setCancelled(true); }
-            default -> {}
+            case FLINT_AND_STEEL: if (igniteFlint) e.setCancelled(true); break;
+            case LAVA:            if (igniteLava) e.setCancelled(true); break;
+            case LIGHTNING:       if (igniteLightning) e.setCancelled(true); break;
+            case EXPLOSION:       if (igniteExplosion) e.setCancelled(true); break;
+            case SPREAD:          if (igniteSpread) e.setCancelled(true); break;
+            default: break;
         }
     }
 
+    /* ===== Explosions ===== */
     @EventHandler(ignoreCancelled = true)
     public void onExplode(EntityExplodeEvent e) {
         if (!mobGrief) return;
-        EntityType t = e.getEntityType();
+        EntityType type = e.getEntityType();
         boolean blockInsideClaims =
-                (t == EntityType.CREEPER && creeper) ||
-                (t == EntityType.PRIMED_TNT && tnt) ||
-                (t == EntityType.WITHER && wither) ||
-                (t == EntityType.WITHER_SKULL && witherSkull) ||
-                (t == EntityType.ENDER_CRYSTAL && enderCrystal) ||
-                (t == EntityType.ENDER_DRAGON && enderDragon);
+                (type == EntityType.CREEPER && creeper) ||
+                (type == EntityType.PRIMED_TNT && tnt) ||
+                (type == EntityType.WITHER && wither) ||
+                (type == EntityType.WITHER_SKULL && witherSkull) ||
+                (type == EntityType.ENDER_CRYSTAL && enderCrystal) ||
+                (type == EntityType.ENDER_DRAGON && enderDragon);
+
         if (blockInsideClaims) {
-            e.blockList().removeIf(b -> plots.isClaimed(b.getLocation()));
+            e.blockList().removeIf(block -> plotManager.isClaimed(block.getLocation()));
         }
     }
 
+    /* ===== Entity grief (e.g., Enderman pick, etc.) ===== */
     @EventHandler(ignoreCancelled = true)
     public void onEntityChangeBlock(EntityChangeBlockEvent e) {
-        if (!plots.isClaimed(e.getBlock().getLocation())) return;
-        EntityType t = e.getEntityType();
-        if ((t == EntityType.ENDERMAN && endermanGrief) ||
-            (t == EntityType.RAVAGER && ravagerGrief) ||
-            (t == EntityType.SILVERFISH && silverfishGrief) ||
-            (t == EntityType.ENDER_DRAGON && dragonGrief) ||
-            (t == EntityType.WITHER && witherGrief)) {
+        if (!plotManager.isClaimed(e.getBlock().getLocation())) return;
+        EntityType type = e.getEntityType();
+        if ((type == EntityType.ENDERMAN && endermanGrief) ||
+            (type == EntityType.RAVAGER && ravagerGrief) ||
+            (type == EntityType.SILVERFISH && silverfishGrief) ||
+            (type == EntityType.ENDER_DRAGON && dragonGrief) ||
+            (type == EntityType.WITHER && witherGrief)) {
             e.setCancelled(true);
         }
     }
 
+    /* ===== Enderman teleport denial ===== */
     @EventHandler(ignoreCancelled = true)
     public void onEndermanTeleport(EntityTeleportEvent e) {
         if (!endermanTeleportDenied) return;
         if (!(e.getEntity() instanceof Enderman)) return;
         Location to = e.getTo();
-        if (to != null && plots.isClaimed(to)) e.setCancelled(true);
+        if (to != null && plotManager.isClaimed(to)) e.setCancelled(true);
     }
+
+    /* ===== NEW: Protect frames/stands/animals in claims ===== */
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent e) {
+        if (!(e.getDamager() instanceof Player)) return;
+        Player p = (Player) e.getDamager();
+        Entity target = e.getEntity();
+
+        Location loc = target.getLocation();
+        if (!plotManager.isClaimed(loc)) return;
+
+        // Item Frames
+        if (protectItemFrames && target instanceof ItemFrame) {
+            if (denyIfNeeded(p, loc, "You cannot modify item frames here!")) e.setCancelled(true);
+            return;
+        }
+        // Armor Stands
+        if (protectArmorStands && target instanceof ArmorStand) {
+            if (denyIfNeeded(p, loc, "You cannot modify armor stands here!")) e.setCancelled(true);
+            return;
+        }
+        // Passive Animals
+        if (protectPassiveAnimals && target instanceof Animals) {
+            if (denyIfNeeded(p, loc, "You cannot harm animals here!")) e.setCancelled(true);
+            return;
+        }
+        // Tamed Pets
+        if (protectTamedPets && target instanceof Tameable) {
+            Tameable pet = (Tameable) target;
+            if (pet.isTamed()) {
+                if (denyIfNeeded(p, loc, "You cannot harm tamed pets here!")) e.setCancelled(true);
+            }
+        }
+    }
+
+    /* ===== helpers to build interaction sets ===== */
+    private void addDoorMaterials()        { for (Material m : Material.values()) if (m.name().endsWith("_DOOR")) interactionSet.add(m); }
+    private void addTrapdoorMaterials()    { for (Material m : Material.values()) if (m.name().endsWith("_TRAPDOOR")) interactionSet.add(m); }
+    private void addFenceGateMaterials()   { for (Material m : Material.values()) if (m.name().endsWith("_FENCE_GATE")) interactionSet.add(m); }
+    private void addButtonMaterials()      { for (Material m : Material.values()) if (m.name().endsWith("_BUTTON")) interactionSet.add(m); }
+    private void addPressurePlateMaterials(){ for (Material m : Material.values()) if (m.name().endsWith("_PRESSURE_PLATE")) interactionSet.add(m); }
 }

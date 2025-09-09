@@ -1,6 +1,5 @@
 package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -13,29 +12,17 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class GUIListener implements Listener {
 
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final GUIManager gui;
-    private final Map<UUID, Long> cooldown = new ConcurrentHashMap<>();
 
-    public GUIListener(PlotManager plots, GUIManager gui) {
-        this.plots = plots;
-        this.gui = gui;
+    public GUIListener(PlotManager plotManager, GUIManager guiManager) {
+        this.plotManager = plotManager;
+        this.gui = guiManager;
     }
 
-    private boolean antiSpam(Player p) {
-        long now = System.currentTimeMillis();
-        long last = cooldown.getOrDefault(p.getUniqueId(), 0L);
-        if (now - last < 250) return true; // 250ms GUI click cooldown
-        cooldown.put(p.getUniqueId(), now);
-        return false;
-    }
-
+    /* -------- Open main with the special compass -------- */
     @EventHandler
     public void onCompassUse(PlayerInteractEvent e) {
         if (e.getHand() == EquipmentSlot.OFF_HAND) return;
@@ -46,87 +33,74 @@ public class GUIListener implements Listener {
         if (!"ProShield Compass".equalsIgnoreCase(name)) return;
 
         e.setCancelled(true);
-        if (antiSpam(e.getPlayer())) return;
         gui.openMain(e.getPlayer());
     }
 
+    /* -------- Handle inventory clicks -------- */
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (e.getView() == null || e.getCurrentItem() == null) return;
+        if (e.getView() == null) return;
+
         String title = e.getView().getTitle();
-        ItemStack it = e.getCurrentItem();
+        ItemStack clicked = e.getCurrentItem();
+        e.setCancelled(true); // keep GUIs non-takeable
 
-        // Main
-        if (ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(GUIManager.TITLE))) {
-            e.setCancelled(true);
-            if (antiSpam(p)) return;
+        if (clicked == null) return;
+        Location loc = p.getLocation();
 
+        if (GUIManager.TITLE_MAIN.equals(title)) {
             int slot = e.getRawSlot();
-            Location loc = p.getLocation();
-
-            if (slot == 11) { // create
-                boolean ok = plots.createClaim(p.getUniqueId(), loc);
-                p.sendMessage(px() + (ok ?
-                        ChatColor.GREEN + ProShield.getInstance().getConfig().getString("messages.claim-created") :
-                        ChatColor.RED + ProShield.getInstance().getConfig().getString("messages.claim-exists")));
-            } else if (slot == 13) { // info
-                plots.getClaim(loc).ifPresentOrElse(c -> {
-                    String owner = plots.ownerName(c.getOwner());
-                    var trusted = plots.listTrusted(loc);
-                    p.sendMessage(px() + ChatColor.AQUA + "Owner: " + owner);
-                    p.sendMessage(px() + ChatColor.AQUA + "Trusted: " + (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
-                }, () -> p.sendMessage(px() + ChatColor.GRAY + ProShield.getInstance().getConfig().getString("messages.no-claim-here")));
-            } else if (slot == 15) { // remove
-                boolean ok = plots.removeClaim(p.getUniqueId(), loc, false);
-                p.sendMessage(px() + (ok ?
-                        ChatColor.GREEN + ProShield.getInstance().getConfig().getString("messages.claim-removed") :
-                        ChatColor.RED + ProShield.getInstance().getConfig().getString("messages.no-claim-here")));
-            } else if (slot == 22) { // help
-                gui.openHelp(p);
-            } else if (slot == 26) { // admin
-                if (p.hasPermission("proshield.admin")) gui.openAdmin(p);
-                else p.sendMessage(px() + ChatColor.RED + ProShield.getInstance().getConfig().getString("messages.no-permission"));
+            if (slot == gui.SLOT_MAIN_CREATE()) {
+                boolean ok = plotManager.createClaim(p.getUniqueId(), loc);
+                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim created for this chunk."
+                                             : ChatColor.RED + "Already claimed or you reached your limit."));
+            } else if (slot == gui.SLOT_MAIN_INFO()) {
+                plotManager.getClaim(loc).ifPresentOrElse(c -> {
+                    String owner = plotManager.ownerName(c.getOwner());
+                    var trusted = plotManager.listTrusted(loc);
+                    p.sendMessage(prefix() + ChatColor.AQUA + "Owner: " + owner);
+                    p.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " + (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
+                }, () -> p.sendMessage(prefix() + ChatColor.GRAY + "No claim in this chunk."));
+            } else if (slot == gui.SLOT_MAIN_REMOVE()) {
+                boolean ok = plotManager.removeClaim(p.getUniqueId(), loc, false);
+                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim removed."
+                                             : ChatColor.RED + "No claim here or you are not the owner."));
+            } else if (slot == gui.SLOT_MAIN_ADMIN()) {
+                if (p.hasPermission("proshield.admin")) {
+                    gui.openAdmin(p);
+                } else {
+                    p.sendMessage(prefix() + ChatColor.RED + "You do not have permission to open the admin menu.");
+                }
+            } else if (slot == gui.SLOT_MAIN_BACK()) {
+                p.closeInventory();
             }
+            // Help item (SLOT_MAIN_HELP) is tooltip-only; no action
             return;
         }
 
-        // Help
-        if (ChatColor.stripColor(title).equalsIgnoreCase("ProShield Help")) {
-            e.setCancelled(true);
-            if (antiSpam(p)) return;
-
+        if (GUIManager.TITLE_ADMIN.equals(title)) {
             int slot = e.getRawSlot();
-            if (slot == 26) { // Back
+            if (slot == gui.SLOT_ADMIN_TOGGLE_DROP()) {
+                boolean current = p.getServer().getPluginManager().getPlugin("ProShield")
+                        .getConfig().getBoolean("compass.drop-if-full", true);
+                boolean next = !current;
+                p.getServer().getPluginManager().getPlugin("ProShield")
+                        .getConfig().set("compass.drop-if-full", next);
+                p.getServer().getPluginManager().getPlugin("ProShield").saveConfig();
+                p.sendMessage(prefix() + ChatColor.GOLD + "Compass drop-if-full set to "
+                        + (next ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF") + ChatColor.GOLD + ".");
+                gui.openAdmin(p); // refresh
+            } else if (slot == gui.SLOT_ADMIN_BACK()) {
                 gui.openMain(p);
             }
-            return;
-        }
-
-        // Admin
-        if (ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(GUIManager.TITLE_ADMIN))) {
-            e.setCancelled(true);
-            if (antiSpam(p)) return;
-
-            int slot = e.getRawSlot();
-            if (slot == 10) {
-                // Preview via command to reuse logic
-                p.performCommand("proshield preview 6");
-            } else if (slot == 12) {
-                p.sendMessage(px() + ChatColor.YELLOW + "Use /proshield transfer <player>");
-            } else if (slot == 14) {
-                p.sendMessage(px() + ChatColor.YELLOW + "Use /proshield purgeexpired <days> [dryrun]");
-            } else if (slot == 16) {
-                p.performCommand("proshield debug toggle");
-            } else if (slot == 33) { // Back
-                gui.openMain(p);
-            }
-            return;
+            // Help item is tooltip-only; no action
         }
     }
 
-    private String px() {
+    private String prefix() {
         return ChatColor.translateAlternateColorCodes('&',
-                ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
+                com.snazzyatoms.proshield.ProShield.getInstance()
+                        .getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

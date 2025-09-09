@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -5,205 +6,192 @@ import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.*;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.ChatColor;
+import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.TabCompleter;
-import org.bukkit.event.Listener;
 
 public class ProShield extends JavaPlugin {
 
-    // -------- Static instance for convenience (used by various listeners)
-    private static ProShield instance;
-    public static ProShield getInstance() { return instance; }
+    // Singleton (kept for compatibility with any leftover calls)
+    private static ProShield INSTANCE;
 
-    // -------- Core managers
-    private PlotManager plotManager;
+    // Managers
+    private PlotManager plots;
     private ClaimRoleManager roleManager;
     private GUIManager guiManager;
 
-    // -------- Runtime flags
-    private boolean debug = false;
+    // Flags
+    private boolean debug;
 
-    // Expose managers for other classes if needed
-    public PlotManager getPlotManager() { return plotManager; }
+    public static ProShield getInstance() { return INSTANCE; }
+
+    public PlotManager getPlots() { return plots; }
     public ClaimRoleManager getRoleManager() { return roleManager; }
-    public GUIManager getGuiManager() { return guiManager; }
+    public GUIManager getGui() { return guiManager; }
 
     public boolean isDebug() { return debug; }
-    public void setDebug(boolean value) {
-        this.debug = value;
-        getLogger().info("[Debug] set to " + value);
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+        getConfig().set("proshield.debug", debug);
+        saveConfig();
+        getLogger().info("[ProShield] Debug " + (debug ? "enabled" : "disabled"));
     }
 
     @Override
     public void onEnable() {
-        instance = this;
+        INSTANCE = this;
 
-        // Load & migrate config once
+        // Load config (create defaults if missing)
         saveDefaultConfig();
-        tinyMigrationsTo124();
+        migrateAndNormalizeConfigVersion();
+
+        // Load flags
         this.debug = getConfig().getBoolean("proshield.debug", false);
 
-        // Managers
-        this.plotManager = new PlotManager(this);
-        this.roleManager = new ClaimRoleManager(this); // current signature requires (ProShield)
-        this.guiManager  = new GUIManager(this, plotManager);
+        // Init managers
+        this.plots = new PlotManager(this);
+        this.roleManager = new ClaimRoleManager(this);
+        this.plots.setRoleManager(roleManager);
 
-        // Listeners (all features wired)
-        registerListener(new GUIListener(plotManager, guiManager));
-        registerListener(new BlockProtectionListener(plotManager));
-        registerListener(new PvpProtectionListener(plotManager));
-        registerListener(new ItemProtectionListener(plotManager));
-        registerListener(new KeepDropsListener(plotManager));
-        registerListener(new EntityDamageProtectionListener(plotManager));
-        registerListener(new PlayerJoinListener(this, plotManager, guiManager));
-        registerListener(new PlayerDamageProtectionListener(this, plotManager));
-        registerListener(new ClaimMessageListener(plotManager, roleManager));
+        // GUI manager
+        this.guiManager = new GUIManager(this, plots);
 
-        // Commands
-        var cmd = getCommand("proshield");
-        if (cmd != null) {
-            ProShieldCommand executor = new ProShieldCommand(this, plotManager, guiManager);
-            cmd.setExecutor(executor);
-            if (executor instanceof TabCompleter) {
-                cmd.setTabCompleter((TabCompleter) executor);
-            }
+        // Listeners (ensure constructor signatures match your current classes)
+        Bukkit.getPluginManager().registerEvents(new GUIListener(plots, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, plots, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plots), this);
+        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plots), this);
+        Bukkit.getPluginManager().registerEvents(new EntityDamageProtectionListener(plots), this);
+        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plots), this);
+        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plots), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plots, roleManager), this);
+        // If you still keep a separate PlayerDamageProtectionListener, register it here similarly.
+
+        // Command (3-arg: plugin, plots, gui)
+        var exec = new ProShieldCommand(this, plots, guiManager);
+        if (getCommand("proshield") != null) {
+            getCommand("proshield").setExecutor(exec);
+            getCommand("proshield").setTabCompleter(exec);
         } else {
-            getLogger().warning("Command 'proshield' not found in plugin.yml!");
+            getLogger().warning("[ProShield] Could not find command 'proshield' in plugin.yml!");
         }
 
-        getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
+        // Optional: craft recipe for getting a compass (player-side convenience)
+        registerCompassRecipe();
+
+        getLogger().info(color("&b[ProShield] Enabled v" + getDescription().getVersion() + " &7(with config " +
+                getConfig().getString("version", "unknown") + ")"));
     }
 
     @Override
     public void onDisable() {
         try {
-            if (plotManager != null) plotManager.saveAll();
-        } catch (Exception ignored) {}
-        getLogger().info("ProShield disabled.");
+            if (plots != null) plots.saveAll();
+        } catch (Exception e) {
+            getLogger().warning("[ProShield] Failed saving claims on shutdown: " + e.getMessage());
+        }
+        getLogger().info("[ProShield] Disabled.");
     }
 
-    /** Public entry used by /proshield reload */
+    /** Exposed for /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
-        tinyMigrationsTo124();
+        migrateAndNormalizeConfigVersion();
+        // Re-apply runtime flags
         this.debug = getConfig().getBoolean("proshield.debug", false);
-
-        if (plotManager != null) plotManager.reloadFromConfig();
-        if (guiManager  != null) guiManager.onConfigReload();
-
-        getLogger().info("Configuration reloaded.");
+        // If you cache any toggles elsewhere, refresh them here.
+        registerCompassRecipe(); // harmless to re-register (overwrites by key)
+        if (debug) getLogger().info("[ProShield] Config reloaded.");
     }
 
-    private void registerListener(Listener l) {
-        Bukkit.getPluginManager().registerEvents(l, this);
-    }
+    /* -----------------------------------------------------------
+     * Internal helpers
+     * ----------------------------------------------------------- */
 
-    /**
-     * Minimal & safe migrations for 1.2.4:
-     * - Force version: "1.2.4"
-     * - Ensure claims.keep-items block exists and despawn range is sane
-     * - Ensure protection.damage block (owner/trusted protection)
-     * - Ensure spawn deny settings exist
-     * - Ensure GUI slot blocks exist (so GUIManager finds them)
-     */
-    private void tinyMigrationsTo124() {
-        // version bump
-        getConfig().set("version", "1.2.4");
+    private void migrateAndNormalizeConfigVersion() {
+        // Ensure config has correct, current version string
+        String current = getConfig().getString("version", "1.2.4");
+        if (!"1.2.4".equals(current)) {
+            getConfig().set("version", "1.2.4");
+        }
+
+        // Ensure a readable prefix exists
         if (!getConfig().isSet("messages.prefix")) {
             getConfig().set("messages.prefix", "&3[ProShield]&r ");
         }
 
-        // keep-items (added in 1.2.2)
-        if (!getConfig().isConfigurationSection("claims.keep-items")) {
-            getConfig().set("claims.keep-items.enabled", false);
-            getConfig().set("claims.keep-items.despawn-seconds", 900);
-        } else {
-            int sec = Math.max(300, Math.min(900, getConfig().getInt("claims.keep-items.despawn-seconds", 900)));
-            getConfig().set("claims.keep-items.despawn-seconds", sec);
-        }
+        // Ensure baseline defaults for protections exist; they are safe to set if absent.
+        // (Do not override admin’s choices if already present.)
+        setDefaultIfMissing("protection.damage.enabled", true);
+        setDefaultIfMissing("protection.damage.protect-owner-and-trusted", true);
+        setDefaultIfMissing("protection.damage.cancel-all", true);
 
-        // Damage protection inside claims (1.2.4)
-        if (!getConfig().isConfigurationSection("protection.damage")) {
-            getConfig().set("protection.damage.enabled", true);
-            getConfig().set("protection.damage.protect-owner-and-trusted", true);
-            getConfig().set("protection.damage.cancel-all", true);
-            // granular (used if cancel-all=false)
-            getConfig().set("protection.damage.pve", true);
-            getConfig().set("protection.damage.projectiles", true);
-            getConfig().set("protection.damage.environment", true);
-            getConfig().set("protection.damage.fire-lava", true);
-            getConfig().set("protection.damage.fall", true);
-            getConfig().set("protection.damage.explosions", true);
-            getConfig().set("protection.damage.drown-void-suffocate", true);
-            getConfig().set("protection.damage.poison-wither", true);
-        }
+        setDefaultIfMissing("protection.pvp-in-claims", false);
+        setDefaultIfMissing("protection.mob-grief", true);
+        setDefaultIfMissing("protection.creeper-explosions", true);
+        setDefaultIfMissing("protection.tnt-explosions", true);
+        setDefaultIfMissing("protection.wither-explosions", true);
 
-        // Spawn / hub no-claim zones (1.2.4)
-        if (!getConfig().isConfigurationSection("spawn-protection")) {
-            getConfig().set("spawn-protection.enabled", true);
-            getConfig().set("spawn-protection.radius", 24); // blocks around world spawn
-            getConfig().set("spawn-protection.allow-ops", true); // ops may still claim if true
-        }
+        // Entities & interactions
+        setDefaultIfMissing("proshield.entities.item-frames", true);
+        setDefaultIfMissing("proshield.entities.armor-stands", true);
+        setDefaultIfMissing("proshield.entities.passive-animals", true);
+        setDefaultIfMissing("proshield.entities.tamed-pets", true);
 
-        // Compass fallback
-        if (!getConfig().isSet("compass.drop-if-full")) {
-            getConfig().set("compass.drop-if-full", true);
-        }
+        // Keep items in claims
+        setDefaultIfMissing("claims.keep-items.enabled", false);
+        setDefaultIfMissing("claims.keep-items.despawn-seconds", 900);
 
-        // GUI slots
-        ensureGuiSlots();
+        // Compass autogive/fallback
+        setDefaultIfMissing("autogive.compass-on-join", true);
+        setDefaultIfMissing("compass.drop-if-full", true);
 
-        // Protection master switches (read by admin GUI)
-        if (!getConfig().isConfigurationSection("protection.fire")) {
-            getConfig().set("protection.fire.enabled", true);
-        }
-        if (!getConfig().isConfigurationSection("protection.explosions")) {
-            getConfig().set("protection.explosions.enabled", true);
-        }
-        if (!getConfig().isConfigurationSection("protection.entity-grief")) {
-            getConfig().set("protection.entity-grief.enabled", true);
-        }
-        if (!getConfig().isSet("protection.pvp-in-claims")) {
-            // false = PvP blocked in claims by default
-            getConfig().set("protection.pvp-in-claims", false);
-        }
+        // Prevent claiming spawn (server-defined radius)
+        setDefaultIfMissing("spawn-claim-protect.enabled", true);
+        setDefaultIfMissing("spawn-claim-protect.world", "world");
+        setDefaultIfMissing("spawn-claim-protect.radius-blocks", 32);
 
         saveConfig();
     }
 
-    private void ensureGuiSlots() {
-        // main
-        ensurePath("gui.slots.main.create", 11);
-        ensurePath("gui.slots.main.info", 13);
-        ensurePath("gui.slots.main.remove", 15);
-        ensurePath("gui.slots.main.admin", 33);
-        ensurePath("gui.slots.main.help", 49);
-        ensurePath("gui.slots.main.back", 48);
-
-        // extended player actions
-        ensurePath("gui.slots.main.trust", 20);
-        ensurePath("gui.slots.main.roles", 21);
-        ensurePath("gui.slots.main.transfer", 22);
-        ensurePath("gui.slots.main.preview", 23);
-        ensurePath("gui.slots.main.settings", 24);
-
-        // admin
-        ensurePath("gui.slots.admin.explosions", 10);
-        ensurePath("gui.slots.admin.fire", 12);
-        ensurePath("gui.slots.admin.entity-grief", 14);
-        ensurePath("gui.slots.admin.pvp", 16);
-        ensurePath("gui.slots.admin.keep-items", 28);
-        ensurePath("gui.slots.admin.toggle-drop-if-full", 20);
-        ensurePath("gui.slots.admin.help", 22);
-        ensurePath("gui.slots.admin.back", 31);
+    private void setDefaultIfMissing(String path, Object value) {
+        if (!getConfig().isSet(path)) {
+            getConfig().set(path, value);
+        }
     }
 
-    private void ensurePath(String path, Object defVal) {
-        if (!getConfig().isSet(path)) {
-            getConfig().set(path, defVal);
+    private void registerCompassRecipe() {
+        try {
+            // Simple shaped recipe: compass in center + iron + redstone
+            NamespacedKey key = new NamespacedKey(this, "proshield_compass");
+            ShapedRecipe recipe = new ShapedRecipe(key, makeRecipeCompass());
+            recipe.shape("IRI", "RCR", "IRI");
+            recipe.setIngredient('I', Material.IRON_INGOT);
+            recipe.setIngredient('R', Material.REDSTONE);
+            recipe.setIngredient('C', Material.COMPASS); // allows upgrading a normal compass
+            // Register (replace if exists)
+            Bukkit.removeRecipe(key);
+            Bukkit.addRecipe(recipe);
+            if (debug) getLogger().info("[ProShield] Registered compass recipe.");
+        } catch (Throwable t) {
+            // Some servers restrict recipe registration; ignore gracefully
+            if (debug) getLogger().warning("[ProShield] Could not register compass recipe: " + t.getMessage());
         }
+    }
+
+    private ItemStack makeRecipeCompass() {
+        ItemStack it = new ItemStack(Material.COMPASS, 1);
+        ItemMeta meta = it.getItemMeta();
+        meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
+        it.setItemMeta(meta);
+        return it;
+    }
+
+    private String color(String s) {
+        return ChatColor.translateAlternateColorCodes('&', s);
     }
 }

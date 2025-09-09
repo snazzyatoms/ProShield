@@ -4,6 +4,58 @@ This file documents all notable changes to **ProShield**, starting from the firs
 
 ---
 
+## **1.2.4 — Stability, Admin Reload & Mob Repel**
+Released: 2025-09-09
+
+### 🔑 New Features
+- **Spawn Guard Protection (NEW)**  
+  - Prevents claims within a configurable radius around world spawn.  
+  - Configurable via `spawn.radius` in `config.yml`.  
+  - Admins can bypass with permission: `proshield.admin.bypass`.  
+
+- **Mob Border Repel (NEW)**  
+  - Hostile mobs are pushed back when trying to cross into a claim.  
+  - Configurable in `config.yml` under `protection.mobs.border-repel`.  
+  - Radius, push force, and tick interval are fully adjustable.  
+
+- **Admin GUI Reload Option (NEW)**  
+  - Added **Reload button** directly in the Admin GUI.  
+  - Allows safe `/proshield reload` from the GUI (permission: `proshield.admin.reload`).  
+
+- **Admin GUI Fixes & Polish**  
+  - Fixed broken **Back button** (both in Player and Admin menus).  
+  - Added missing **Help slot** and reorganized admin tools for clarity.  
+
+- **Better Operator Handling**  
+  - Operators (`op`) automatically receive the **Admin Compass**.  
+  - Differentiation between **Player Compass** and **Admin Compass** is now consistent.  
+
+### 🛠 Fixes & Improvements
+- **Wilderness Spam Fix**  
+  - Prevented the constant “Entering Wilderness” spam when walking between unclaimed chunks.  
+
+- **Entity Protection Expansion**  
+  - Prevented mobs from entering claims (alongside repel).  
+  - Entities inside claims are now better protected (armor stands, pets, passive mobs).  
+
+- **Config Improvements**  
+  - Added new structured sections for spawn guard and mob repel.  
+  - Clearer defaults and safer reload handling.  
+  - Ensures version shows correctly as **1.2.4** on new installs.  
+
+- **Migration Note**  
+  ⚠️ On first upgrade to **1.2.4**, you **must regenerate your ProShield config folder**:  
+  1. Stop your server.  
+  2. Delete `/plugins/ProShield/`.  
+  3. Restart → new configs are generated.  
+  4. Reapply your custom edits.  
+
+- **Performance Tweaks**  
+  - Reduced redundant event checks.  
+  - Improved handling of GUI clicks and compass distribution.  
+
+---
+
 ## **1.2.3 — Polish, Flexibility & Ownership Tools**
 Released: 2025-09-09
 

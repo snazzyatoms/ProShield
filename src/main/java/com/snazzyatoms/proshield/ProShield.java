@@ -1,78 +1,89 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.*;
+import com.snazzyatoms.proshield.util.ClaimPreviewTask;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class ProShield extends JavaPlugin {
+public final class ProShield extends JavaPlugin {
 
-    private PlotManager plots;
+    // ---- Singleton (kept small to satisfy older refs like ProShield.getInstance()) ----
+    private static ProShield INSTANCE;
+    public static ProShield getInstance() { return INSTANCE; }
+
+    // ---- Core services ----
+    private PlotManager plotManager;
     private GUIManager guiManager;
 
-    // simple debug flag stored in memory + config
+    // Debug toggle (referenced by GUI/commands)
     private boolean debug;
+
+    public PlotManager plots() { return plotManager; }
+    public GUIManager gui() { return guiManager; }
+    public boolean isDebug() { return debug; }
+    public void setDebug(boolean v) { debug = v; }
 
     @Override
     public void onEnable() {
-        // Config boot
+        INSTANCE = this;
+
+        // Ensure defaults exist (and write version into config)
+        getConfig().options().copyDefaults(true);
+        getConfig().set("version", getDescription().getVersion());
         saveDefaultConfig();
-        ensureConfigVersion("1.2.4");
+        saveConfig();
 
-        FileConfiguration cfg = getConfig();
-        this.debug = cfg.getBoolean("proshield.debug", false);
+        // Managers
+        plotManager = new PlotManager(this);
+        guiManager  = new GUIManager(this, plotManager); // NOTE: constructor requires (ProShield, PlotManager)
 
-        // Core managers
-        this.plots = new PlotManager(this);
-        this.guiManager = new GUIManager(plots); // GUIManager takes ONLY PlotManager
+        // --- Listeners (match each class’ constructor signature) ---
+        // GUI
+        Bukkit.getPluginManager().registerEvents(new GUIListener(plotManager, guiManager), this);
 
-        // Listeners
-        Bukkit.getPluginManager().registerEvents(new GUIListener(this, plots, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, plots, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerDamageProtectionListener(this, plots), this);
-        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plots), this);
-        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(this, plots), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plots), this);
-        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plots), this);
+        // Protections
+        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerDamageProtectionListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new EntityDamageProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, plotManager, guiManager), this);
 
-        // Commands
-        getCommand("proshield").setExecutor(new ProShieldCommand(this, plots, guiManager));
+        // Claim border preview scheduler support (safe to have available)
+        ClaimPreviewTask.init(this);
 
-        getLogger().info("ProShield enabled. v" + getDescription().getVersion());
+        // Register command executor
+        getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
+
+        // Crafting (if you provide it from GUIManager)
+        guiManager.registerCompassRecipe();
+
+        // Log
+        getLogger().info(() -> "ProShield " + getDescription().getVersion() + " enabled.");
     }
 
     @Override
     public void onDisable() {
-        if (plots != null) plots.saveAll();
+        try {
+            if (plotManager != null) plotManager.saveAll();
+        } catch (Exception ignored) {}
+        getLogger().info("ProShield disabled.");
     }
 
-    /** Ensure config version header and add any missing defaults for 1.2.4 */
-    private void ensureConfigVersion(String want) {
-        String have = getConfig().getString("version", "0.0.0");
-        if (!want.equals(have)) {
-            getConfig().set("version", want);
-            // make sure the new damage protection & spawn protection keys exist
-            getConfig().addDefault("protection.damage.enabled", true);
-            getConfig().addDefault("protection.damage.protect-owner-and-trusted", true);
-            getConfig().addDefault("protection.damage.cancel-all", true);
-            getConfig().addDefault("spawn.no-claim.enabled", false);
-            getConfig().addDefault("spawn.no-claim.radius", 32);
-            getConfig().options().copyDefaults(true);
-            saveConfig();
-        }
-    }
-
-    // Debug convenience used by GUI & command
-    public boolean isDebug() { return debug; }
-    public void setDebug(boolean v) {
-        this.debug = v;
-        getConfig().set("proshield.debug", v);
+    // Called from /proshield reload and by GUI admin toggles
+    public void reloadAllConfigs() {
+        reloadConfig();
+        getConfig().set("version", getDescription().getVersion()); // keep version in file
         saveConfig();
-    }
 
-    public PlotManager getPlots() { return plots; }
-    public GUIManager getGuiManager() { return guiManager; }
+        // Push new state everywhere
+        if (plotManager != null) plotManager.reloadFromConfig();
+        if (guiManager != null)   guiManager.onConfigReload();
+    }
 }

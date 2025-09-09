@@ -1,16 +1,16 @@
 # 🛡️ ProShield 2.0 Roadmap
 
-> **Note:** Some roadmap features have been **partially introduced in 1.2.x**, including:  
-> - Claim Roles (Visitor, Member, Container, Builder, Co-Owner)  
-> - GUI trust management  
-> - Radius-based trust tools  
-> - Claim Item Protection (toggle for keeping dropped items inside claims)  
-> - Claim Preview & Ownership Transfer tools  
+> **Note:** Several roadmap features have already been **introduced in 1.2.x**:  
+> - ✅ Claim Roles (Visitor, Member, Container, Builder, Co-Owner)  
+> - ✅ GUI trust management (slots, back button, role assignment polish)  
+> - ✅ Claim Item Protection (toggle for keeping dropped items inside claims)  
+> - ✅ Claim Preview & Ownership Transfer tools  
+> - ✅ Admin Compass (auto-given to OPs)  
+> - ✅ Spawn Guard radius (configurable)  
+> - ✅ Mob Border Repel (hostiles bounce off claim edges)  
+> - ✅ Config reload via command **and GUI button**  
 >
-> ProShield 2.0 will **expand and refine** these systems and introduce **Towns, Shops, Economy, Claim Flags, and more**.
-
-ProShield 2.0 is the next major milestone of the project.  
-While the 1.x series focuses on **core land protection** and **ease of use**, the 2.0 release will expand ProShield into a **community-driven, economy-aware protection system** — without the heavy overhead of plugins like WorldGuard or GriefPrevention.
+> ProShield 2.0 will **expand and refine** these systems and introduce **Towns, Shops, Claim Flags, Entry/Exit Messages, and Economy integration**.
 
 ---
 
@@ -26,6 +26,7 @@ While the 1.x series focuses on **core land protection** and **ease of use**, th
 - Per-world configuration files (different rules per world).
 - Server-wide global claim defaults.
 - Protected "no-claim" zones (e.g., spawn or hub).
+- **Next:** Dynamic per-world overrides through GUI (not only YAML).
 
 ---
 
@@ -40,6 +41,7 @@ While the 1.x series focuses on **core land protection** and **ease of use**, th
   - `/proshield town create <name>`
   - `/proshield town invite <player>`
   - `/proshield town promote <player>`
+- **Next:** Town GUI dashboard for managing claims, members, and flags.
 
 ---
 
@@ -49,6 +51,7 @@ While the 1.x series focuses on **core land protection** and **ease of use**, th
 - Integration with shop plugins:
   - Auto-protect shops inside claims.
   - Role-based shop management.
+- **Next:** Town bank & upkeep system tied into Vault.
 
 ---
 
@@ -61,6 +64,7 @@ While the 1.x series focuses on **core land protection** and **ease of use**, th
   - Redstone mechanics
 - GUI-based flag editor.
 - Configurable server-wide defaults.
+- **Next:** Editable defaults per world.
 
 ---
 
@@ -69,17 +73,21 @@ While the 1.x series focuses on **core land protection** and **ease of use**, th
 - `/proshield map` → show nearby claims (text-grid or minimap-style).
 - Visualization mode:
   - Temporary glowing borders
-  - Particle outlines when claiming land.
+  - Particle outlines when claiming land
+- **Next:** Compass integration with teleport shortcuts.
 
 ---
 
 ## 🔐 Advanced Roles & Access
 - Expand roles from 1.2:
   - Visitor (no interaction)
-  - Member (build/interact)
+  - Member (basic interaction/build)
+  - Container (chests/furnaces only)
   - Manager (invite/trust others, toggle flags)
+  - Co-Owner (full control)
 - Editable roles per claim or town.
 - GUI role manager for ease of use.
+- **Next:** Per-claim **custom role editor** for advanced servers.
 
 ---
 
@@ -89,6 +97,7 @@ While the 1.x series focuses on **core land protection** and **ease of use**, th
 - `/proshield stats` → claim statistics and summaries.
 - Force-merge or force-claim abandoned areas.
 - Optional "read-only mode" for maintenance.
+- **Next:** In-game **admin audit log** for claim actions.
 
 ---
 
@@ -100,13 +109,14 @@ While the 1.x series focuses on **core land protection** and **ease of use**, th
 - Modular architecture:
   - Towns, economy, claims → toggleable in config.
 - Exploration of **web dashboard** integration (long-term).
+- Potential cache-based optimizations for **large-scale SMPs**.
 
 ---
 
 ## ✅ Goals for 2.0
 - Make ProShield the **go-to lightweight protection plugin** for survival servers.
 - Offer **community and economy integration** without sacrificing performance.
-- Deliver a polished, stable release that sets the foundation for future expansion.
+- Deliver a polished, stable release that sets the foundation for long-term growth.
 
 ---
 

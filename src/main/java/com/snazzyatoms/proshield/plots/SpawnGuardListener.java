@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -8,29 +9,44 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
-public class SpawnGuardListener implements Listener {
+public class SpawnClaimGuardListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
 
-    public SpawnGuardListener(ProShield plugin, PlotManager plots) {
-        this.plugin = plugin;
+    public SpawnClaimGuardListener(PlotManager plots) {
         this.plots = plots;
     }
 
+    private boolean isWithinSpawnGuard(Player p) {
+        var plugin = plots.getPlugin();
+        boolean block = plugin.getConfig().getBoolean("spawn.block-claiming", true);
+        if (!block) return false;
+
+        int radius = plugin.getConfig().getInt("spawn.radius", 32);
+        if (radius <= 0) return false;
+
+        World w = p.getWorld();
+        Location spawn = w.getSpawnLocation();
+        return p.getLocation().distanceSquared(spawn) <= (radius * radius);
+    }
+
     @EventHandler(ignoreCancelled = true)
-    public void onCommand(PlayerCommandPreprocessEvent e) {
+    public void onPreprocess(PlayerCommandPreprocessEvent e) {
+        // Block claims near spawn (works for both chat commands and GUI performCommand)
         String msg = e.getMessage().toLowerCase();
-        if (!msg.startsWith("/proshield claim")) return;
-        if (!plugin.getConfig().getBoolean("spawn.block-claiming", true)) return;
+        if (!(msg.startsWith("/proshield claim") || msg.equals("/proshield") || msg.startsWith("/ps claim"))) {
+            return;
+        }
 
         Player p = e.getPlayer();
-        Location l = p.getLocation();
-        World w = l.getWorld();
-        Location spawn = w.getSpawnLocation();
-        int r = plugin.getConfig().getInt("spawn.radius", 32);
-        if (l.distanceSquared(spawn) <= (r * r)) {
-            p.sendMessage("§cClaiming is disabled within " + r + " blocks of spawn.");
+        // allow admins/bypass
+        if (p.hasPermission("proshield.admin") || p.hasPermission("proshield.bypass")) return;
+
+        if (isWithinSpawnGuard(p)) {
+            ProShield plugin = plots.getPlugin();
+            int r = plugin.getConfig().getInt("spawn.radius", 32);
+            String prefix = plugin.getConfig().getString("messages.prefix", ChatColor.DARK_AQUA + "[ProShield] ");
+            p.sendMessage(prefix + ChatColor.RED + "Claiming is disabled within " + r + " blocks of spawn.");
             e.setCancelled(true);
         }
     }

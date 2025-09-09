@@ -88,10 +88,16 @@ gui:
       create: 11
       info: 13
       remove: 15
-      admin: 33
       help: 49
       back: 48
-      admin-shortcut: 50   # NEW: shows “Admin Access ▶” to ops/admins in the *player* GUI
+      admin: 33
+      admin-shortcut: 50
+
+      # NEW: player actions shown only when the player can manage the current claim
+      trust-nearby: 21
+      manage-roles: 23
+      transfer: 25
+      preview-borders: 29
 
 # ---------------------------------------------------------------------------
 # NO-CLAIM ZONES

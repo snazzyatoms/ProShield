@@ -2,7 +2,6 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,35 +23,50 @@ public class PlayerJoinListener implements Listener {
     }
 
     @EventHandler
-    public void onJoin(PlayerJoinEvent e) {
-        Player p = e.getPlayer();
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        final Player p = event.getPlayer();
 
-        // Config gates
-        boolean giveOnJoin = plugin.getConfig().getBoolean("autogive.compass-on-join", true);
-        if (!giveOnJoin) return;
-
-        // Permission gate (OP or specific perms)
-        if (!(p.isOp() || p.hasPermission("proshield.compass") || p.hasPermission("proshield.admin.gui"))) {
+        if (!plugin.getConfig().getBoolean("autogive.compass-on-join", true)) {
             return;
         }
 
-        // Already has a ProShield compass?
-        if (hasProShieldCompass(p)) return;
+        final boolean isAdmin = p.isOp()
+                || p.hasPermission("proshield.admin")
+                || p.hasPermission("proshield.admin.gui");
 
-        boolean dropIfFull = plugin.getConfig().getBoolean("compass.drop-if-full", true);
-        gui.giveCompass(p, dropIfFull);
+        // Admins get Admin Compass; others need proshield.compass to get Player Compass
+        if (isAdmin) {
+            if (!hasCompass(p, gui.getAdminCompassName())) {
+                giveCompassRespectingConfig(p, gui.createAdminCompass());
+            }
+        } else if (p.hasPermission("proshield.compass")) {
+            if (!hasCompass(p, gui.getPlayerCompassName())) {
+                giveCompassRespectingConfig(p, gui.createPlayerCompass());
+            }
+        }
     }
 
-    private boolean hasProShieldCompass(Player p) {
-        String wanted = ChatColor.AQUA + "ProShield Compass";
+    private boolean hasCompass(Player p, String displayName) {
         for (ItemStack it : p.getInventory().getContents()) {
-            if (it == null || it.getType() == Material.AIR) continue;
-            if (it.getType() != Material.COMPASS) continue;
+            if (it == null || it.getType() != Material.COMPASS) continue;
             ItemMeta meta = it.getItemMeta();
-            if (meta != null && wanted.equals(meta.getDisplayName())) {
+            if (meta != null && meta.hasDisplayName() && displayName.equals(meta.getDisplayName())) {
                 return true;
             }
         }
         return false;
+    }
+
+    private void giveCompassRespectingConfig(Player p, ItemStack compass) {
+        boolean dropIfFull = plugin.getConfig().getBoolean("compass.drop-if-full", true);
+        if (p.getInventory().firstEmpty() == -1) {
+            if (dropIfFull) {
+                p.getWorld().dropItemNaturally(p.getLocation(), compass);
+            } else {
+                p.sendMessage(plugin.msg("&eYour inventory is full. Use &b/proshield compass &eto get it later."));
+            }
+        } else {
+            p.getInventory().addItem(compass);
+        }
     }
 }

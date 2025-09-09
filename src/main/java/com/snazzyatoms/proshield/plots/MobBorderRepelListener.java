@@ -11,7 +11,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.util.List;
+import java.util.Collection;
 
 public class MobBorderRepelListener implements Listener {
 
@@ -28,7 +28,6 @@ public class MobBorderRepelListener implements Listener {
         this.plots = plots;
         this.plugin = plots.getPlugin();
         readConfig();
-        // schedule tick if enabled
         if (enabled) {
             new BukkitRunnable() {
                 @Override
@@ -54,20 +53,18 @@ public class MobBorderRepelListener implements Listener {
     private void tickRepel() {
         if (!enabled) return;
 
-        // Iterate players (cheap) and consider nearby mobs (also cheap) rather than scanning all entities.
         for (Player p : plugin.getServer().getOnlinePlayers()) {
             World w = p.getWorld();
-            // Quick AABB around player; 12 block cube is usually enough to feel responsive
             double rScan = Math.max(8.0, radius + 4.0);
-            List<LivingEntity> nearby = p.getLocation().getNearbyLivingEntities(rScan);
+            Collection<? extends LivingEntity> nearby = p.getLocation().getNearbyLivingEntities(rScan);
             for (LivingEntity le : nearby) {
                 if (!(le instanceof Monster)) continue;
                 Location el = le.getLocation();
 
-                // Only care when the mob is *inside* a claimed chunk
+                // Only when the mob is inside a claimed chunk
                 if (!plots.isClaimed(el)) continue;
 
-                // Compute distance to nearest chunk edge (0..16 local coords)
+                // Distance to nearest chunk edge using local chunk coords (0..16)
                 Chunk ch = el.getChunk();
                 int baseX = ch.getX() << 4;
                 int baseZ = ch.getZ() << 4;
@@ -82,22 +79,19 @@ public class MobBorderRepelListener implements Listener {
 
                 double minEdge = Math.min(Math.min(distLeft, distRight), Math.min(distTop, distBottom));
 
-                // Only repel if mob is within "radius" of the border (trying to cross)
                 if (minEdge <= radius) {
                     Vector push = new Vector(0, pushV, 0);
 
-                    // Push outward toward the nearest edge direction
                     if (minEdge == distLeft) {
                         push.setX(-pushH);
                     } else if (minEdge == distRight) {
                         push.setX(pushH);
                     } else if (minEdge == distTop) {
                         push.setZ(-pushH);
-                    } else { // bottom
+                    } else {
                         push.setZ(pushH);
                     }
 
-                    // Apply velocity gently (don’t teleport)
                     Vector v = le.getVelocity();
                     le.setVelocity(new Vector(
                             clamp(v.getX() + push.getX(), -1.2, 1.2),

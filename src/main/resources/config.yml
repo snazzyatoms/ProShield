@@ -5,24 +5,23 @@ messages:
 version: "1.2.4"
 
 limits:
-  max-claims: 5            # -1 = unlimited (players with proshield.unlimited bypass)
+  max-claims: 5  # -1 = unlimited (players with proshield.unlimited bypass)
 
 expiry:
-  enabled: false           # If true, remove claims whose owners have been inactive for N days
-  days: 30                 # Days of inactivity before claim is expired (checked on startup + daily)
+  enabled: false
+  days: 30
 
-# ---------------------------------------------------------------------------
-# GLOBAL PROTECTIONS
-# By default, everything is PROTECTED inside claims.
-# "true" generally means "block/protect" that behavior inside claims.
-# ---------------------------------------------------------------------------
+spawn:
+  block-claiming: true
+  radius: 32    # blocks within radius of world spawn cannot be claimed (unless admin bypass)
+
+# === PROTECTION (ON by default inside claims) ===
 protection:
-  # Damage protection for players inside claims they own or are trusted in
+  # Damage guard for owner + trusted inside their own claim
   damage:
     enabled: true
-    protect-owner-and-trusted: true   # only protect owner + trusted players
-    cancel-all: true                  # if true, cancels ALL damage to protected players inside their claim
-    # The options below are used only if cancel-all: false
+    protect-owner-and-trusted: true
+    cancel-all: true
     pve: true
     projectiles: true
     environment: true
@@ -32,17 +31,29 @@ protection:
     drown-void-suffocate: true
     poison-wither: true
 
-  containers: true
-  pvp-in-claims: false                # false = PvP is blocked in claims
-  mob-grief: true                     # true = block mob-based grief
-  creeper-explosions: true
-  tnt-explosions: true
-  wither-explosions: true
-  wither-skull-explosions: true
-  ender-crystal-explosions: true
-  ender-dragon-explosions: true
+  # PvP - false means PvP is blocked in claims
+  pvp-in-claims: false
 
+  # Blocks & redstone interactions by non-trusted
+  interactions:
+    enabled: true
+    mode: blacklist
+    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
+    list: []
+
+  # Explosions
+  explosions:
+    enabled: true
+    creeper: true
+    tnt: true
+    wither: true
+    wither_skull: true
+    end_crystal: true
+    ender_dragon: true
+
+  # Fire
   fire:
+    enabled: true
     spread: true
     burn: true
     ignite:
@@ -52,128 +63,84 @@ protection:
       explosion: true
       spread: true
 
-  interactions:
-    enabled: true
-    mode: blacklist                 # "blacklist" blocks common door/lever/etc. for non-trusted
-    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
-    list: []                        # e.g. [NOTE_BLOCK, BELL]
-
+  # Buckets
   buckets:
     block-empty: true
     block-fill: true
 
+  # Entity grief
   entity-grief:
+    enabled: true
     enderman: true
     ravager: true
     silverfish: true
     ender-dragon: true
     wither: true
 
+  # Enderman teleport
   entity-teleport:
     enderman: true
 
-  # Admin GUI master toggles (read by Admin GUI)
-  fire:
-    enabled: true
-  explosions:
-    enabled: true
-  interactions:
-    enabled: true
-  entity-grief:
-    enabled: true
-
-gui:
-  slots:
-    main:
-      create: 11
-      info: 13
-      remove: 15
-      help: 49
-      back: 48
-      admin: 33
-      admin-shortcut: 50
-
-      # NEW: player actions shown only when the player can manage the current claim
-      trust-nearby: 21
-      manage-roles: 23
-      transfer: 25
-      preview-borders: 29
-
-# ---------------------------------------------------------------------------
-# NO-CLAIM ZONES
-# Prevent claiming near the world spawn (players cannot claim within this radius)
-# Admins with 'proshield.admin.spawnoverride' can bypass.
-# ---------------------------------------------------------------------------
-no-claim:
-  spawn:
-    enabled: true
-    radius-blocks: 96
-
-# ---------------------------------------------------------------------------
-# CLAIM OPTIONS
-# ---------------------------------------------------------------------------
-claims:
-  keep-items:
-    enabled: false
-    despawn-seconds: 900            # allowed range: 300–900
-
-# Entities protection inside claims (blocked unless owner/trusted/bypass)
-proshield:
-  debug: false
+  # Entities inside claims
   entities:
     item-frames: true
     armor-stands: true
     passive-animals: true
     tamed-pets: true
 
-    # Claims are stored automatically below
-claims: {}
-gui:
-  slots:
-    main:
-      create: 11
-      info: 13
-      remove: 15
-      trust: 21
-      untrust: 22
-      trusted: 23
-      roles: 24
-      transfer: 25
-      preview: 29
-      keep: 30
-      admin: 33
-      back: 48
-      help: 49
+  # Mob control inside claims
+  mobs:
+    block-spawn: true            # cancel spawns inside claims (natural)
+    allow-spawner-spawn: true    # allow if origin is SPAWNER
+    border-repel:
+      enabled: true
+      radius: 1.5
+      horizontal-push: 0.6
+      vertical-push: 0.15
+      interval-ticks: 20
 
+claims:
+  keep-items:
+    enabled: false
+    despawn-seconds: 900   # 300–900 allowed
 
-# ---------------------------------------------------------------------------
-# COMPASS & AUTOGIVE
-# ---------------------------------------------------------------------------
+proshield:
+  debug: false
+
 autogive:
   compass-on-join: true
 
 compass:
-  drop-if-full: true                # if inventory is full, drop at feet (true) or skip (false)
+  drop-if-full: true
 
-# ---------------------------------------------------------------------------
-# PER-WORLD OVERRIDES (leave empty to use global)
-# ---------------------------------------------------------------------------
+# Per-world overrides (optional)
 per-world: {}
 
-# ---------------------------------------------------------------------------
-# GUI slot mapping (sanity checks applied in code)
-# ---------------------------------------------------------------------------
+# GUI slots
 gui:
   slots:
     main:
       create: 11
       info: 13
       remove: 15
+      help: 31
       admin: 33
-      help: 49
       back: 48
     admin:
-      toggle-drop-if-full: 20
-      help: 22
+      fire: 10
+      explosions: 11
+      entity-grief: 12
+      interactions: 13
+      pvp: 14
+      keep-items: 20
+      purge-expired: 21
+      reload: 22
+      debug: 23
+      compass-drop-if-full: 24
+      spawn-guard: 25
+      tp-tools: 30
       back: 31
+      help: 22
 
+# Claims storage (runtime)
+claims: {}

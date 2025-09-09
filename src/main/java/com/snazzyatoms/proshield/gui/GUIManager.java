@@ -237,3 +237,73 @@ public class GUIManager {
         return isOwnerHere ? "" : ChatColor.DARK_GRAY + "(Owner-only here)";
     }
 }
+// inside GUIManager.java
+public void openMain(Player p) {
+    Inventory inv = Bukkit.createInventory(p, 54, ChatColor.AQUA + "ProShield");
+    // Fill background etc. (keep your current filler if you have one)
+    paintBorders(inv);
+
+    // Read slots with sane fallbacks
+    int slotCreate = cfgSlot("gui.slots.main.create", 11);
+    int slotInfo   = cfgSlot("gui.slots.main.info",   13);
+    int slotRemove = cfgSlot("gui.slots.main.remove", 15);
+    int slotHelp   = cfgSlot("gui.slots.main.help",   49);
+    int slotBack   = cfgSlot("gui.slots.main.back",   48);
+    int slotAdminShortcut = cfgSlot("gui.slots.main.admin-shortcut", 50); // NEW
+
+    // --- Core player actions ---
+    inv.setItem(slotCreate, item(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk",
+            Arrays.asList(ChatColor.GRAY + "Protect the current chunk.")));
+
+    inv.setItem(slotInfo, item(Material.PAPER, ChatColor.AQUA + "Claim Info",
+            Arrays.asList(ChatColor.GRAY + "Owner, roles, trusted players.")));
+
+    inv.setItem(slotRemove, item(Material.BARRIER, ChatColor.RED + "Unclaim Chunk",
+            Arrays.asList(ChatColor.GRAY + "Release this chunk.")));
+
+    // Help (context-aware)
+    inv.setItem(slotHelp, item(Material.BOOK, ChatColor.GOLD + "Help",
+            Arrays.asList(ChatColor.GRAY + "Shows commands you can use.")));
+
+    // Back (closes to be tidy)
+    inv.setItem(slotBack, backButton());
+
+    // --- NEW: Admin Access shortcut (only for admins) ---
+    if (hasAdmin(p)) {
+        inv.setItem(slotAdminShortcut, item(Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "Admin Access " + ChatColor.WHITE + "▶",
+                Arrays.asList(ChatColor.GRAY + "Open the Admin Tools menu.")));
+    }
+
+    p.openInventory(inv);
+}
+
+// tiny helpers (keep or adjust to your style)
+private boolean hasAdmin(Player p) {
+    return p.isOp()
+            || p.hasPermission("proshield.admin")
+            || p.hasPermission("proshield.admin.gui");
+}
+
+private int cfgSlot(String path, int def) {
+    return plugin.getConfig().getInt(path, def);
+}
+
+private void paintBorders(Inventory inv) {
+    // optional: keep your existing filler; safe to no-op if you don’t use borders
+}
+
+private ItemStack item(Material mat, String name, List<String> lore) {
+    ItemStack is = new ItemStack(mat);
+    ItemMeta im = is.getItemMeta();
+    if (im != null) {
+        im.setDisplayName(name);
+        if (lore != null && !lore.isEmpty()) im.setLore(lore);
+        is.setItemMeta(im);
+    }
+    return is;
+}
+
+private ItemStack backButton() {
+    return item(Material.ARROW, ChatColor.YELLOW + "Back",
+            Collections.singletonList(ChatColor.GRAY + "Return or close."));
+}

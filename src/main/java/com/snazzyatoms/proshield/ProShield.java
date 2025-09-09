@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -22,13 +23,21 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
+    // listeners
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
 
+    // debug toggle
+    private volatile boolean debug = false;
+
     public static ProShield getInstance() { return instance; }
     public PlotManager getPlotManager() { return plotManager; }
     public GUIManager getGuiManager() { return guiManager; }
+
+    // Debug accessors used by command
+    public boolean isDebug() { return debug; }
+    public void setDebug(boolean debug) { this.debug = debug; }
 
     @Override
     public void onEnable() {
@@ -41,7 +50,7 @@ public final class ProShield extends JavaPlugin {
         }
 
         plotManager = new PlotManager(this);
-        guiManager  = new GUIManager(this, plotManager); // IMPORTANT
+        guiManager  = new GUIManager(this, plotManager);
 
         protectionListener = new BlockProtectionListener(plotManager);
         pvpListener        = new PvpProtectionListener(plotManager);
@@ -55,11 +64,10 @@ public final class ProShield extends JavaPlugin {
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
         registerCompassRecipe();
-
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
-        getLogger().info("ProShield 1.2.3 enabled. Claims loaded: " + plotManager.getClaimCount());
+        getLogger().info("ProShield " + getDescription().getVersion() + " enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override

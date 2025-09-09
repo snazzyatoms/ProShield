@@ -154,3 +154,17 @@ public class GUIListener implements Listener {
         }
     }
 }
+// inside GUIListener.java, in your onInventoryClick handler for MAIN GUI:
+int slotAdminShortcut = plugin.getConfig().getInt("gui.slots.main.admin-shortcut", 50);
+
+if (e.getRawSlot() == slotAdminShortcut) {
+    e.setCancelled(true);
+    if (!player.isOp()
+            && !player.hasPermission("proshield.admin")
+            && !player.hasPermission("proshield.admin.gui")) {
+        player.sendMessage(prefix + ChatColor.RED + "You don’t have permission to open Admin Tools.");
+        return;
+    }
+    gui.openAdmin(player); // Reuse your existing admin GUI open method
+    return;
+}

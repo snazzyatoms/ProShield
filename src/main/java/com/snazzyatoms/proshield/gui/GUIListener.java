@@ -77,9 +77,52 @@ public class GUIListener implements Listener {
             switch (display) {
                 case "Claim Chunk" -> player.performCommand("proshield claim");
                 case "Claim Info" -> player.performCommand("proshield info");
-                case "Unclaim" -> player.performCommand("proshield unclaim");
-                case "Admin Tools" -> gui.openAdminGUI(player);
+                case "Unclaim" -> {
+                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
+                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
+                        return;
+                    }
+                    player.performCommand("proshield unclaim");
+                }
+                case "Trust Nearby" -> {
+                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
+                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
+                        return;
+                    }
+                    player.performCommand("proshield trustnear"); // your radius-based trust command
+                }
+                case "Untrust Player" -> {
+                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
+                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
+                        return;
+                    }
+                    player.performCommand("proshield untrust"); // expect follow-up by chat/anvil input
+                }
+                case "View Trusted" -> player.performCommand("proshield trusted");
+                case "Manage Roles" -> {
+                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
+                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
+                        return;
+                    }
+                    player.performCommand("proshield roles"); // hook to your role GUI/flow if present
+                }
+                case "Transfer Ownership" -> {
+                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
+                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
+                        return;
+                    }
+                    player.performCommand("proshield transfer"); // expect target via next step
+                }
+                case "Borders Preview" -> player.performCommand("proshield preview 15");
+                case "Keep Items" -> {
+                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
+                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
+                        return;
+                    }
+                    player.performCommand("proshield keepitems toggle");
+                }
                 case "Help" -> gui.openHelp(player);
+                case "Admin Tools" -> gui.openAdminGUI(player);
                 case "Back" -> player.closeInventory(); // from main, back just closes
             }
             return;
@@ -89,7 +132,7 @@ public class GUIListener implements Listener {
         if (ChatColor.stripColor(GUIManager.TITLE_ADMIN).equals(title)) {
             e.setCancelled(true);
             switch (display) {
-                case "Global Toggles" -> player.performCommand("proshield settings"); // stub
+                case "Global Toggles" -> player.performCommand("proshield settings");
                 case "Claim Expiry" -> player.performCommand("proshield purgeexpired 30 dryrun");
                 case "Teleport Tools" -> player.performCommand("proshield admintp");
                 case "Item Keep / Drops" -> player.performCommand("proshield keepitems toggle");
@@ -106,7 +149,6 @@ public class GUIListener implements Listener {
         if (ChatColor.stripColor(GUIManager.TITLE_HELP).equals(title)) {
             e.setCancelled(true);
             if ("Back".equals(display)) {
-                // naive: return to main for now
                 gui.openMainGUI(player);
             }
         }

@@ -1,51 +1,54 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!-- path: pom.xml -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.snazzyatoms</groupId>
   <artifactId>proshield</artifactId>
   <version>1.2.4</version>
   <packaging>jar</packaging>
-
   <name>ProShield</name>
-  <description>Lightweight land and plot protection plugin for Spigot/Paper servers</description>
+  <description>Lightweight land and plot protection plugin with GUI and admin tools.</description>
   <url>https://github.com/snazzyatoms/ProShield</url>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>17</java.version>
     <maven.compiler.release>17</maven.compiler.release>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
-
-    <!-- Use a modern Paper API; keep scope 'provided' so the server provides it -->
-    <paper.api.version>1.20.6-R0.1-SNAPSHOT</paper.api.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <paper.api.version>1.20.1-R0.1-SNAPSHOT</paper.api.version>
   </properties>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>snazzyatoms</id>
+      <name>snazzyatoms</name>
+    </developer>
+  </developers>
+
+  <!-- Repositories for Paper API -->
   <repositories>
-    <!-- PaperMC public repo for paper-api -->
     <repository>
       <id>papermc-repo</id>
       <url>https://repo.papermc.io/repository/maven-public/</url>
     </repository>
-
-    <!-- Spigot snapshots if you ever toggle to spigot-api (not required now) -->
+    <!-- Spigot snapshot repo (fallback if ever needed) -->
     <repository>
       <id>spigotmc-repo</id>
       <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
     </repository>
-
-    <!-- Central is implicit, adding explicitly for clarity -->
-    <repository>
-      <id>central</id>
-      <url>https://repo1.maven.org/maven2/</url>
-    </repository>
   </repositories>
 
   <dependencies>
-    <!-- Paper API (provided by the server at runtime) -->
+    <!-- Paper API (provided at runtime by the server) -->
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
@@ -53,61 +56,59 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- (Optional) Adventure text API is already bundled with Paper;
-         add provided deps here only if you compile against them directly -->
-
+    <!-- (Optional) Vault API - mark provided if you use it at compile-time -->
+    <!--
+    <dependency>
+      <groupId>com.github.MilkBowl</groupId>
+      <artifactId>VaultAPI</artifactId>
+      <version>1.7</version>
+      <scope>provided</scope>
+    </dependency>
+    -->
   </dependencies>
 
   <build>
     <plugins>
-      <!-- Java 17 compiler setup -->
+      <!-- Ensure Java 17 bytecode -->
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
           <release>${maven.compiler.release}</release>
-          <compilerArgs>
-            <arg>-Xlint:deprecation</arg>
-          </compilerArgs>
         </configuration>
       </plugin>
 
-      <!-- Make sure resources (like plugin.yml) are included -->
+      <!-- Filter and copy resources -->
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.3.1</version>
         <configuration>
-          <encoding>UTF-8</encoding>
+          <encoding>${project.build.sourceEncoding}</encoding>
         </configuration>
       </plugin>
 
-      <!-- Optional: Shade only if you ever add libs to relocate. Currently not needed.
+      <!-- Build a slim jar (no shading needed for a Bukkit/Paper plugin) -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.5.1</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>shade</goal></goals>
-            <configuration>
-              <relocations>
-                -- add relocations here if you add embedded libs later --
-              </relocations>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
-            </configuration>
-          </execution>
-        </executions>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Built-By>ProShield</Built-By>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
-      -->
     </plugins>
-
-    <!-- Put plugin.yml under src/main/resources so it lands in the jar -->
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>false</filtering>
-      </resource>
-    </resources>
   </build>
+
+  <distributionManagement>
+    <repository>
+      <id>internal</id>
+      <url>file://${project.basedir}/target</url>
+    </repository>
+  </distributionManagement>
 </project>

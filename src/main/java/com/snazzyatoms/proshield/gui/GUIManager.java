@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -10,101 +11,114 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.List;
+import java.util.Arrays;
 
 public class GUIManager {
 
-    public static final String TITLE = ChatColor.DARK_AQUA + "ProShield";
-    public static final String TITLE_ADMIN = ChatColor.DARK_AQUA + "ProShield Admin";
+    public static final String TITLE = ChatColor.AQUA + "ProShield";
+    public static final String ADMIN_TITLE = ChatColor.DARK_AQUA + "ProShield Admin";
+
+    // Main menu slots (keep your existing layout)
+    public static final int SLOT_CREATE = 11;
+    public static final int SLOT_INFO   = 13;
+    public static final int SLOT_REMOVE = 15;
+    public static final int SLOT_ADMIN  = 33; // open Admin GUI from main
+
+    // Admin menu slots
+    public static final int SLOT_ADMIN_BACK           = 31;
+    public static final int SLOT_TOGGLE_DROP_IF_FULL  = 20;
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
 
-    public GUIManager(ProShield plugin, PlotManager plots) {
+    public GUIManager(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
-        this.plots = plots;
+        this.plotManager = plotManager;
     }
 
-    public void reloadIconsFromConfig() {
-        // reserved for dynamic skins; safe no-op for now
-    }
-
-    public static ItemStack createAdminCompass() {
-        ItemStack it = new ItemStack(Material.COMPASS);
-        ItemMeta m = it.getItemMeta();
-        m.setDisplayName(ChatColor.AQUA + "ProShield Compass");
-        m.setLore(List.of(
-                ChatColor.GRAY + "Right-click to open the ProShield menu.",
-                ChatColor.DARK_GRAY + "Use the Admin tab for tools."
-        ));
-        m.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        it.setItemMeta(m);
-        return it;
-    }
-
+    /* -------------------------
+     * Public openers
+     * ------------------------- */
     public void openMain(org.bukkit.entity.Player p) {
-        Inventory inv = Bukkit.createInventory(p, 27, TITLE);
+        Inventory inv = Bukkit.createInventory(null, 45, TITLE);
 
-        inv.setItem(11, named(Material.EMERALD_BLOCK, "&aCreate/Claim"));
-        inv.setItem(13, named(Material.PAPER, "&bClaim Info"));
-        inv.setItem(15, named(Material.BARRIER, "&cUnclaim"));
+        inv.setItem(SLOT_CREATE, simpleItem(Material.LIME_BED, ChatColor.GREEN + "Create Claim",
+                "Claim the chunk you are standing in."));
+        inv.setItem(SLOT_INFO, simpleItem(Material.BOOK, ChatColor.AQUA + "Claim Info",
+                "View owner and trusted players for this chunk."));
+        inv.setItem(SLOT_REMOVE, simpleItem(Material.BARRIER, ChatColor.RED + "Remove Claim",
+                "Unclaim this chunk (owner only)."));
 
-        inv.setItem(22, named(Material.BOOK, "&eHelp"));
-        inv.setItem(26, named(Material.REDSTONE_TORCH, "&6Admin")); // open admin GUI (if perm)
-
-        p.openInventory(inv);
-    }
-
-    public void openHelp(org.bukkit.entity.Player p) {
-        Inventory inv = Bukkit.createInventory(p, 27, ChatColor.DARK_AQUA + "ProShield Help");
-
-        inv.setItem(10, named(Material.MAP, "&f/proshield claim"));
-        inv.setItem(11, named(Material.MAP, "&f/proshield unclaim"));
-        inv.setItem(12, named(Material.MAP, "&f/proshield info"));
-        inv.setItem(13, named(Material.MAP, "&f/proshield trust <player> [role]"));
-        inv.setItem(14, named(Material.MAP, "&f/proshield untrust <player>"));
-        inv.setItem(15, named(Material.MAP, "&f/proshield trusted"));
-
-        // show admin ones only if they have perm
-        if (p.hasPermission("proshield.admin")) {
-            inv.setItem(16, named(Material.COMPASS, "&f/proshield preview [s]"));
-            inv.setItem(19, named(Material.COMPASS, "&f/proshield transfer <player>"));
-            inv.setItem(20, named(Material.REPEATER, "&f/proshield purgeexpired <days> [dryrun]"));
-            inv.setItem(21, named(Material.LEVER, "&f/proshield debug <on|off|toggle>"));
-            inv.setItem(22, named(Material.LEVER, "&f/proshield reload"));
-        }
-
-        // Back button
-        inv.setItem(26, named(Material.ARROW, "&7Back"));
+        // Admin button (only visible/useful for admins)
+        inv.setItem(SLOT_ADMIN, simpleItem(Material.COMPARATOR, ChatColor.GOLD + "Admin Menu",
+                "Admin tools & settings."));
 
         p.openInventory(inv);
     }
 
     public void openAdmin(org.bukkit.entity.Player p) {
-        Inventory inv = Bukkit.createInventory(p, 36, TITLE_ADMIN);
+        Inventory inv = Bukkit.createInventory(null, 45, ADMIN_TITLE);
 
-        inv.setItem(10, named(Material.COMPASS, "&fPreview Borders"));
-        inv.setItem(12, named(Material.NAME_TAG, "&fTransfer Ownership"));
-        inv.setItem(14, named(Material.HOPPER, "&fExpired Claims (Purge)"));
-        inv.setItem(16, named(Material.REDSTONE_TORCH, "&fToggle Debug"));
-
-        // Item-keep quick view (status)
-        boolean keep = plugin.getConfig().getBoolean("item-keep.enabled", false);
-        inv.setItem(22, named(keep ? Material.CLOCK : Material.GRAY_DYE,
-                keep ? "&aItem-keep: Enabled" : "&7Item-keep: Disabled"));
+        // Toggle: compass.drop-if-full
+        boolean dropIfFull = plugin.getConfig().getBoolean("compass.drop-if-full", true);
+        ItemStack toggle = simpleItem(
+                dropIfFull ? Material.LIME_DYE : Material.GRAY_DYE,
+                (dropIfFull ? ChatColor.GREEN : ChatColor.GRAY) + "Compass: Drop if inventory full",
+                "Current: " + (dropIfFull ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF"),
+                ChatColor.GRAY + "Click to toggle."
+        );
+        inv.setItem(SLOT_TOGGLE_DROP_IF_FULL, toggle);
 
         // Back button
-        inv.setItem(33, named(Material.ARROW, "&7Back"));
+        inv.setItem(SLOT_ADMIN_BACK, simpleItem(Material.ARROW, ChatColor.YELLOW + "Back",
+                "Return to the main ProShield menu."));
 
         p.openInventory(inv);
     }
 
-    private ItemStack named(Material m, String name) {
-        ItemStack it = new ItemStack(m);
+    /* -------------------------
+     * Actions used by GUIListener
+     * ------------------------- */
+    public void toggleDropIfFull(org.bukkit.entity.Player p) {
+        boolean current = plugin.getConfig().getBoolean("compass.drop-if-full", true);
+        plugin.getConfig().set("compass.drop-if-full", !current);
+        plugin.saveConfig();
+        p.sendMessage(prefix() + ChatColor.GREEN + "Compass drop-if-full is now " +
+                (!current ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF") + ChatColor.RESET + ".");
+        // Refresh the admin screen to reflect the new state
+        openAdmin(p);
+    }
+
+    /* -------------------------
+     * Utilities
+     * ------------------------- */
+    public static ItemStack createAdminCompass() {
+        ItemStack it = new ItemStack(Material.COMPASS, 1);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+        meta.setDisplayName(ChatColor.GOLD + "ProShield Compass");
+        meta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Right-click to open the ProShield menu."
+        ));
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         it.setItemMeta(meta);
         return it;
+    }
+
+    private ItemStack simpleItem(Material mat, String name, String... lore) {
+        ItemStack it = new ItemStack(mat);
+        ItemMeta meta = it.getItemMeta();
+        meta.setDisplayName(name);
+        if (lore != null && lore.length > 0) {
+            java.util.List<String> lines = new java.util.ArrayList<>();
+            for (String s : lore) lines.add(ChatColor.translateAlternateColorCodes('&', s));
+            meta.setLore(lines);
+        }
+        it.setItemMeta(meta);
+        return it;
+    }
+
+    private String prefix() {
+        return ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

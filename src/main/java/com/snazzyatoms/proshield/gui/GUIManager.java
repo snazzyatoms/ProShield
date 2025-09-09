@@ -21,20 +21,28 @@ public class GUIManager {
     private final PlotManager plots;
 
     // Titles
-    public static final String TITLE_MAIN = ChatColor.AQUA + "ProShield";
+    public static final String TITLE_MAIN  = ChatColor.AQUA + "ProShield";
     public static final String TITLE_ADMIN = ChatColor.RED + "ProShield Admin";
-    public static final String TITLE_HELP = ChatColor.GOLD + "ProShield Help";
+    public static final String TITLE_HELP  = ChatColor.GOLD + "ProShield Help";
 
-    // Default slots (can be overridden by config)
-    private int slotMainCreate = 11;
-    private int slotMainInfo   = 13;
-    private int slotMainRemove = 15;
-    private int slotMainAdmin  = 33;
-    private int slotMainHelp   = 49;
-    private int slotMainBack   = 48;
+    // Main slots (configurable)
+    private int slotMainCreate   = 11;
+    private int slotMainInfo     = 13;
+    private int slotMainRemove   = 15;
+    private int slotMainTrust    = 21;
+    private int slotMainUntrust  = 22;
+    private int slotMainTrusted  = 23;
+    private int slotMainRoles    = 24;
+    private int slotMainTransfer = 25;
+    private int slotMainPreview  = 29;
+    private int slotMainKeep     = 30;
+    private int slotMainHelp     = 49;
+    private int slotMainBack     = 48;
+    private int slotMainAdmin    = 33;
 
-    private int slotAdminHelp  = 22;
-    private int slotAdminBack  = 31;
+    // Admin slots (configurable)
+    private int slotAdminHelp    = 22;
+    private int slotAdminBack    = 31;
 
     // Compass display names
     private final String playerCompassName = ChatColor.AQUA + "ProShield Compass";
@@ -47,7 +55,6 @@ public class GUIManager {
     }
 
     /* -------------------- Public accessors -------------------- */
-
     public String getPlayerCompassName() { return playerCompassName; }
     public String getAdminCompassName()  { return adminCompassName; }
 
@@ -59,7 +66,7 @@ public class GUIManager {
         meta.setDisplayName(playerCompassName);
         meta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Right-click to manage claims",
-                ChatColor.DARK_GRAY + "(Claim / Info / Unclaim / Help)"
+                ChatColor.DARK_GRAY + "(Claim / Trust / Roles / Help)"
         ));
         it.setItemMeta(meta);
         return it;
@@ -77,7 +84,7 @@ public class GUIManager {
         return it;
     }
 
-    /** Optional: call from onEnable once to expose a crafting recipe for the player compass. */
+    /** Optional crafting recipe for the player compass. Call once in onEnable(). */
     public void registerCompassRecipe() {
         try {
             NamespacedKey key = new NamespacedKey(plugin, "proshield_compass");
@@ -89,14 +96,14 @@ public class GUIManager {
             recipe.setIngredient('R', Material.REDSTONE);
             recipe.setIngredient('C', Material.COMPASS);
             Bukkit.addRecipe(recipe);
-        } catch (Throwable ignored) {
-            // Server might not support NamespacedKey recipes — safe to ignore.
-        }
+        } catch (Throwable ignored) { }
     }
 
     /* -------------------- GUIs -------------------- */
 
     public void openMainGUI(Player p) {
+        final boolean isOwnerHere = plots.isOwner(p.getUniqueId(), p.getLocation());
+
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_MAIN);
 
         inv.setItem(slotMainCreate, named(Material.OAK_DOOR, ChatColor.GREEN + "Claim Chunk",
@@ -104,7 +111,32 @@ public class GUIManager {
         inv.setItem(slotMainInfo, named(Material.PAPER, ChatColor.AQUA + "Claim Info",
                 ChatColor.GRAY + "Owner, trusted, roles."));
         inv.setItem(slotMainRemove, named(Material.BARRIER, ChatColor.RED + "Unclaim",
-                ChatColor.GRAY + "Remove your claim."));
+                ChatColor.GRAY + "Remove your claim. " + ownerOnly(isOwnerHere)));
+
+        inv.setItem(slotMainTrust, named(Material.PLAYER_HEAD, ChatColor.GREEN + "Trust Nearby",
+                ChatColor.GRAY + "Quickly trust players within radius.",
+                ownerOnly(isOwnerHere)));
+        inv.setItem(slotMainUntrust, named(Material.SHEARS, ChatColor.RED + "Untrust Player",
+                ChatColor.GRAY + "Revoke a player's access.",
+                ownerOnly(isOwnerHere)));
+        inv.setItem(slotMainTrusted, named(Material.BOOK, ChatColor.GOLD + "View Trusted",
+                ChatColor.GRAY + "List trusted players on this claim."));
+
+        inv.setItem(slotMainRoles, named(Material.IRON_HOE, ChatColor.AQUA + "Manage Roles",
+                ChatColor.GRAY + "Assign Visitor/Member/Container/Builder/Co-Owner.",
+                ownerOnly(isOwnerHere)));
+
+        inv.setItem(slotMainTransfer, named(Material.NAME_TAG, ChatColor.YELLOW + "Transfer Ownership",
+                ChatColor.GRAY + "Give this claim to another player.",
+                ownerOnly(isOwnerHere)));
+
+        inv.setItem(slotMainPreview, named(Material.MAP, ChatColor.AQUA + "Borders Preview",
+                ChatColor.GRAY + "Show a temporary outline of the claim."));
+
+        inv.setItem(slotMainKeep, named(Material.CHEST, ChatColor.GOLD + "Keep Items",
+                ChatColor.GRAY + "Toggle dropped-item protection for this claim.",
+                ownerOnly(isOwnerHere)));
+
         inv.setItem(slotMainHelp, named(Material.BOOK, ChatColor.GOLD + "Help",
                 ChatColor.GRAY + "Shows commands available to you."));
         inv.setItem(slotMainAdmin, named(Material.REDSTONE_TORCH, ChatColor.RED + "Admin Tools",
@@ -166,15 +198,22 @@ public class GUIManager {
 
     private void readSlotsFromConfig() {
         // main
-        slotMainCreate = getInt("gui.slots.main.create", 11);
-        slotMainInfo   = getInt("gui.slots.main.info", 13);
-        slotMainRemove = getInt("gui.slots.main.remove", 15);
-        slotMainAdmin  = getInt("gui.slots.main.admin", 33);
-        slotMainHelp   = getInt("gui.slots.main.help", 49);
-        slotMainBack   = getInt("gui.slots.main.back", 48);
+        slotMainCreate   = getInt("gui.slots.main.create", 11);
+        slotMainInfo     = getInt("gui.slots.main.info", 13);
+        slotMainRemove   = getInt("gui.slots.main.remove", 15);
+        slotMainTrust    = getInt("gui.slots.main.trust", 21);
+        slotMainUntrust  = getInt("gui.slots.main.untrust", 22);
+        slotMainTrusted  = getInt("gui.slots.main.trusted", 23);
+        slotMainRoles    = getInt("gui.slots.main.roles", 24);
+        slotMainTransfer = getInt("gui.slots.main.transfer", 25);
+        slotMainPreview  = getInt("gui.slots.main.preview", 29);
+        slotMainKeep     = getInt("gui.slots.main.keep", 30);
+        slotMainHelp     = getInt("gui.slots.main.help", 49);
+        slotMainBack     = getInt("gui.slots.main.back", 48);
+        slotMainAdmin    = getInt("gui.slots.main.admin", 33);
         // admin
-        slotAdminHelp  = getInt("gui.slots.admin.help", 22);
-        slotAdminBack  = getInt("gui.slots.admin.back", 31);
+        slotAdminHelp    = getInt("gui.slots.admin.help", 22);
+        slotAdminBack    = getInt("gui.slots.admin.back", 31);
     }
 
     private int getInt(String path, int def) {
@@ -187,9 +226,14 @@ public class GUIManager {
         ItemStack it = new ItemStack(mat);
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName(name);
-        meta.setLore(loreLines == null || loreLines.length == 0 ?
-                Collections.emptyList() : Arrays.asList(loreLines));
+        meta.setLore(loreLines == null || loreLines.length == 0
+                ? Collections.emptyList()
+                : Arrays.asList(loreLines));
         it.setItemMeta(meta);
         return it;
+    }
+
+    private String ownerOnly(boolean isOwnerHere) {
+        return isOwnerHere ? "" : ChatColor.DARK_GRAY + "(Owner-only here)";
     }
 }

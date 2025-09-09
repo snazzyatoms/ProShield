@@ -83,7 +83,17 @@ public class PlotManager {
     // ===== roles helpers =====
     public ClaimRole getRoleAt(Location loc, UUID player) {
         if (isOwner(player, loc)) return ClaimRole.CO_OWNER;
-        if (roleManager == null) return ClaimRole.VISITOR;
+        if (roleManager == null) {
+            // fallback to stored string role if any; else VISITOR
+            Claim c = claims.get(key(loc));
+            if (c != null) {
+                String r = c.getRoles().get(player);
+                if (r != null) {
+                    try { return ClaimRole.valueOf(r.toUpperCase()); } catch (IllegalArgumentException ignored) {}
+                }
+            }
+            return ClaimRole.VISITOR;
+        }
         return roleManager.getRole(loc, player);
     }
 
@@ -103,11 +113,26 @@ public class PlotManager {
         return false;
     }
 
+    /** Trust + assign role name (string). Role names are stored and used by ClaimRole lookup fallback. */
+    public boolean trustWithRole(UUID owner, Location loc, UUID target, String roleName) {
+        Claim c = claims.get(key(loc));
+        if (c == null || !c.getOwner().equals(owner)) return false;
+        c.getTrusted().add(target);
+        if (roleName != null && !roleName.isBlank()) {
+            c.getRoles().put(target, roleName.trim().toUpperCase());
+        }
+        saveClaim(c);
+        return true;
+    }
+
     public boolean untrust(UUID owner, Location loc, UUID target) {
         Claim c = claims.get(key(loc));
         if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().remove(target)) { saveClaim(c); return true; }
-        return false;
+        boolean changed = false;
+        if (c.getTrusted().remove(target)) changed = true;
+        if (c.getRoles().remove(target) != null) changed = true;
+        if (changed) saveClaim(c);
+        return changed;
     }
 
     public List<String> listTrusted(Location loc) {
@@ -145,8 +170,22 @@ public class PlotManager {
 
                 Claim c = new Claim(owner, world, cx, cz, created);
 
-                List<String> t = sec.getStringList("trusted");
-                if (t != null) for (String s : t) c.getTrusted().add(UUID.fromString(s));
+                // trusted (legacy)
+                for (String s : sec.getStringList("trusted")) {
+                    try { c.getTrusted().add(UUID.fromString(s)); } catch (Exception ignored) {}
+                }
+
+                // roles (new)
+                ConfigurationSection rolesSec = sec.getConfigurationSection("roles");
+                if (rolesSec != null) {
+                    for (String id : rolesSec.getKeys(false)) {
+                        try {
+                            UUID u = UUID.fromString(id);
+                            String role = rolesSec.getString(id, "VISITOR");
+                            if (role != null) c.getRoles().put(u, role.toUpperCase());
+                        } catch (Exception ignored) {}
+                    }
+                }
 
                 claims.put(k, c);
                 ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
@@ -171,8 +210,17 @@ public class PlotManager {
         plugin.getConfig().set(path + "chunkZ", c.getChunkZ());
         plugin.getConfig().set(path + "createdAt", c.getCreatedAt());
 
+        // trusted (legacy)
         List<String> t = c.getTrusted().stream().map(UUID::toString).collect(Collectors.toList());
         plugin.getConfig().set(path + "trusted", t);
+
+        // roles (new)
+        Map<String, Object> rolesOut = new HashMap<>();
+        for (Map.Entry<UUID, String> e : c.getRoles().entrySet()) {
+            rolesOut.put(e.getKey().toString(), e.getValue());
+        }
+        plugin.getConfig().createSection(path + "roles", rolesOut);
+
         plugin.saveConfig();
     }
 
@@ -234,12 +282,8 @@ public class PlotManager {
             Claim c = e.getValue();
             UUID owner = c.getOwner();
             OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
-            long last = Math.max(
-                    // handle API differences gracefully
-                    safe(op.getLastPlayed()),
-                    safe(op.getFirstPlayed())
-            );
-            if (last == 0L) continue; // no data, skip
+            long last = Math.max(safe(op.getLastPlayed()), safe(op.getFirstPlayed()));
+            if (last == 0L) continue;
             if (last < cutoff) toRemove.add(k);
         }
 

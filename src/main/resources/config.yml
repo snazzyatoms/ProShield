@@ -142,3 +142,19 @@ gui:
 
 # Claims are stored automatically below
 claims: {}
+gui:
+  slots:
+    main:
+      create: 11
+      info: 13
+      remove: 15
+      trust: 21
+      untrust: 22
+      trusted: 23
+      roles: 24
+      transfer: 25
+      preview: 29
+      keep: 30
+      admin: 33
+      back: 48
+      help: 49

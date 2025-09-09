@@ -1,25 +1,20 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-/** Claim storage + logic */
+/**
+ * Claim storage + logic.
+ * Loads/saves claims from config and exposes helpers used by listeners, GUI, and commands.
+ */
 public class PlotManager {
-
-    public enum ClaimResult {
-        SUCCESS,
-        ALREADY_CLAIMED,
-        LIMIT_REACHED,
-        SPAWN_PROTECTED,
-        WORLD_OR_DATA_INVALID
-    }
 
     private final ProShield plugin;
     private ClaimRoleManager roleManager;
@@ -32,6 +27,11 @@ public class PlotManager {
         loadAll();
     }
 
+    /** Allow other components to reach the plugin through PlotManager (used by listeners). */
+    public ProShield getPlugin() {
+        return this.plugin;
+    }
+
     public void setRoleManager(ClaimRoleManager roleManager) {
         this.roleManager = roleManager;
     }
@@ -40,66 +40,10 @@ public class PlotManager {
         return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
     }
 
-    /* ===== Spawn-protection helpers ===== */
-
-    public boolean isSpawnProtectionEnabled(World world) {
-        if (world == null) return false;
-        return plugin.getConfig().getBoolean("no-claim.spawn.enabled", true);
-    }
-
-    public int spawnRadiusBlocks(World world) {
-        if (world == null) return 0;
-        return Math.max(0, plugin.getConfig().getInt("no-claim.spawn.radius-blocks", 96));
-    }
-
-    /** Returns true if the given location is inside the protected radius around the world spawn. */
-    public boolean isInsideSpawnProtected(Location loc) {
-        if (loc == null || loc.getWorld() == null) return false;
-        if (!isSpawnProtectionEnabled(loc.getWorld())) return false;
-
-        Location spawn = loc.getWorld().getSpawnLocation();
-        if (!Objects.equals(spawn.getWorld(), loc.getWorld())) return false;
-
-        int radius = spawnRadiusBlocks(loc.getWorld());
-        if (radius <= 0) return false;
-
-        // Horizontal distance check
-        double dx = loc.getX() - spawn.getX();
-        double dz = loc.getZ() - spawn.getZ();
-        double dist2 = dx * dx + dz * dz;
-        return dist2 <= (double) radius * radius;
-    }
-
-    /** Used by commands/GUI to know if a player is allowed to claim at a location. */
-    public boolean canClaimHere(UUID player, Location loc) {
-        if (loc == null || loc.getWorld() == null) return false;
-        if (!isInsideSpawnProtected(loc)) return true;
-
-        // Allow explicit bypass via permission
-        if (player != null) {
-            var p = plugin.getServer().getPlayer(player);
-            if (p != null && p.hasPermission("proshield.admin.spawnoverride")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /* ===== Claim core ===== */
-
+    /** Create a claim in the player's current chunk, respecting max-claims unless bypassed. */
     public boolean createClaim(UUID owner, Location loc) {
-        return createClaimDetailed(owner, loc) == ClaimResult.SUCCESS;
-    }
-
-    /** New: detailed result for better UX messaging. */
-    public ClaimResult createClaimDetailed(UUID owner, Location loc) {
-        if (owner == null || loc == null || loc.getWorld() == null) return ClaimResult.WORLD_OR_DATA_INVALID;
-
-        // Spawn protection
-        if (!canClaimHere(owner, loc)) return ClaimResult.SPAWN_PROTECTED;
-
         String k = key(loc);
-        if (claims.containsKey(k)) return ClaimResult.ALREADY_CLAIMED;
+        if (claims.containsKey(k)) return false;
 
         int max = plugin.getConfig().getInt("limits.max-claims", -1);
         if (max >= 0) {
@@ -107,19 +51,25 @@ public class PlotManager {
             boolean bypass = player != null && player.hasPermission("proshield.unlimited");
             if (!bypass) {
                 int used = ownerCounts.getOrDefault(owner, 0);
-                if (used >= max) return ClaimResult.LIMIT_REACHED;
+                if (used >= max) return false;
             }
         }
 
-        Claim c = new Claim(owner, loc.getWorld().getName(),
-                loc.getChunk().getX(), loc.getChunk().getZ(), System.currentTimeMillis());
+        Claim c = new Claim(
+                owner,
+                loc.getWorld().getName(),
+                loc.getChunk().getX(),
+                loc.getChunk().getZ(),
+                System.currentTimeMillis()
+        );
 
         claims.put(k, c);
         ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
         saveClaim(c);
-        return ClaimResult.SUCCESS;
+        return true;
     }
 
+    /** Remove a claim; only owner can remove unless adminForce=true. */
     public boolean removeClaim(UUID requester, Location loc, boolean adminForce) {
         String k = key(loc);
         Claim c = claims.get(k);
@@ -145,7 +95,8 @@ public class PlotManager {
         return c.getOwner().equals(uuid) || c.getTrusted().contains(uuid);
     }
 
-    // ===== roles helpers =====
+    // ===== Roles helpers =====
+
     public ClaimRole getRoleAt(Location loc, UUID player) {
         if (isOwner(player, loc)) return ClaimRole.CO_OWNER; // treat owner as highest equivalent
         if (roleManager == null) return ClaimRole.VISITOR;
@@ -156,6 +107,8 @@ public class PlotManager {
         if (isOwner(player, loc)) return true;
         return getRoleAt(loc, player).atLeast(required);
     }
+
+    // ===== Basic accessors =====
 
     public Optional<Claim> getClaim(Location loc) {
         return Optional.ofNullable(claims.get(key(loc)));
@@ -190,6 +143,8 @@ public class PlotManager {
         var op = Bukkit.getOfflinePlayer(uuid);
         return op.getName() != null ? op.getName() : uuid.toString();
     }
+
+    // ===== Persistence =====
 
     private void loadAll() {
         claims.clear();
@@ -246,7 +201,10 @@ public class PlotManager {
         plugin.saveConfig();
     }
 
+    // ===== Stats & helpers =====
+
     public int getClaimCount() { return claims.size(); }
+
     public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }
 
     public Set<String> getAllClaimKeys() { return Collections.unmodifiableSet(claims.keySet()); }
@@ -263,15 +221,25 @@ public class PlotManager {
             int z = (cz << 4) + 8;
             int y = Math.max(w.getHighestBlockYAt(x, z), 64);
             return new Location(w, x, y, z);
-        } catch (Exception ignored) { return null; }
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
-    // Reload from config
+    // ===== Lifecycle =====
+
+    /** Reload claims from config. */
     public void reloadFromConfig() {
         loadAll();
     }
 
-    // Expiry: removes claims whose owners haven't joined in N days
+    /**
+     * Expiry: removes claims whose owners haven't joined in N days.
+     *
+     * @param days   inactivity days
+     * @param dryRun if true, only counts, doesn't remove
+     * @return number of claims matched (or removed if dryRun=false)
+     */
     public int cleanupExpiredClaims(int days, boolean dryRun) {
         long cutoff = System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L;
         List<String> toRemove = new ArrayList<>();

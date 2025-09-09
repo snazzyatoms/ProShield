@@ -1,54 +1,104 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/PlayerJoinListener.java
-package com.snazzyatoms.proshield.plots;
+// path: src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
+package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
+public class GUIListener implements Listener {
 
-public class PlayerJoinListener implements Listener {
+    private final PlotManager plotManager;
+    private final GUIManager guiManager;
 
-    private final ProShield plugin;
-
-    public PlayerJoinListener(ProShield plugin) {
-        this.plugin = plugin;
+    public GUIListener(PlotManager plotManager, GUIManager guiManager) {
+        this.plotManager = plotManager;
+        this.guiManager = guiManager;
     }
 
+    /* Compass open */
     @EventHandler
-    public void onJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
+    public void onCompassUse(PlayerInteractEvent e) {
+        if (e.getHand() == EquipmentSlot.OFF_HAND) return;
+        ItemStack it = e.getItem();
+        if (it == null || it.getType() != Material.COMPASS) return;
+        if (!it.hasItemMeta() || !it.getItemMeta().hasDisplayName()) return;
+        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName());
+        if (!"ProShield Compass".equalsIgnoreCase(name)) return;
 
-        // Only give compass if enabled in config
-        if (!plugin.getConfig().getBoolean("autogive.compass-on-join", true)) return;
+        e.setCancelled(true);
+        guiManager.openMain(e.getPlayer());
+    }
 
-        // Only if they have correct perms
-        if (!(player.hasPermission("proshield.compass") || player.hasPermission("proshield.admin"))) {
+    /* Inventory clicks */
+    @EventHandler
+    public void onClick(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player p)) return;
+        if (e.getView() == null) return;
+
+        String title = e.getView().getTitle();
+        int slot = e.getRawSlot();
+
+        // MAIN MENU
+        if (GUIManager.TITLE.equals(title)) {
+            e.setCancelled(true);
+            Location loc = p.getLocation();
+
+            if (slot == GUIManager.SLOT_CREATE) {
+                boolean ok = plotManager.createClaim(p.getUniqueId(), loc);
+                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim created for this chunk."
+                        : ChatColor.RED + "This chunk is already claimed or you reached your limit."));
+            } else if (slot == GUIManager.SLOT_INFO) {
+                plotManager.getClaim(loc).ifPresentOrElse(c -> {
+                    String owner = plotManager.ownerName(c.getOwner());
+                    var trusted = plotManager.listTrusted(loc);
+                    p.sendMessage(prefix() + ChatColor.AQUA + "Owner: " + owner);
+                    p.sendMessage(prefix() + ChatColor.AQUA + "Trusted: " + (trusted.isEmpty() ? "(none)" : String.join(", ", trusted)));
+                }, () -> p.sendMessage(prefix() + ChatColor.GRAY + "No claim in this chunk."));
+            } else if (slot == GUIManager.SLOT_REMOVE) {
+                boolean ok = plotManager.removeClaim(p.getUniqueId(), loc, false);
+                p.sendMessage(prefix() + (ok ? ChatColor.GREEN + "Claim removed."
+                        : ChatColor.RED + "No claim here or you are not the owner."));
+            } else if (slot == GUIManager.SLOT_ADMIN) {
+                if (p.hasPermission("proshield.admin")) {
+                    guiManager.openAdmin(p);
+                } else {
+                    p.sendMessage(prefix() + ChatColor.RED + "You don't have permission to open Admin Menu.");
+                }
+            }
             return;
         }
 
-        // Avoid duplicates: check if they already have one
-        boolean alreadyHas = player.getInventory().containsAtLeast(GUIManager.createAdminCompass(), 1);
-        if (alreadyHas) return;
+        // ADMIN MENU
+        if (GUIManager.ADMIN_TITLE.equals(title)) {
+            e.setCancelled(true);
 
-        ItemStack compass = GUIManager.createAdminCompass();
+            if (!p.hasPermission("proshield.admin")) {
+                p.closeInventory();
+                p.sendMessage(prefix() + ChatColor.RED + "You don't have permission to use Admin Menu.");
+                return;
+            }
 
-        // Try adding to inventory
-        HashMap<Integer, ItemStack> leftovers = player.getInventory().addItem(compass);
-
-        if (!leftovers.isEmpty()) {
-            boolean dropIfFull = plugin.getConfig().getBoolean("compass.drop-if-full", true);
-
-            if (dropIfFull) {
-                player.getWorld().dropItemNaturally(player.getLocation(), compass);
-                plugin.getLogger().info("Dropped ProShield compass at " + player.getName() + "'s feet (inventory full).");
-            } else {
-                plugin.getLogger().info("Skipped giving ProShield compass to " + player.getName() + " (inventory full).");
+            if (slot == GUIManager.SLOT_ADMIN_BACK) {
+                guiManager.openMain(p);
+                return;
+            }
+            if (slot == GUIManager.SLOT_TOGGLE_DROP_IF_FULL) {
+                guiManager.toggleDropIfFull(p);
+                return;
             }
         }
+    }
+
+    private String prefix() {
+        return ChatColor.translateAlternateColorCodes('&',
+                com.snazzyatoms.proshield.ProShield.getInstance().getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

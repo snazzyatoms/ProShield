@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.plots.PlotManager;
@@ -6,10 +7,12 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.InventoryView;
 
 public class GUIListener implements Listener {
 
@@ -22,23 +25,33 @@ public class GUIListener implements Listener {
     }
 
     @EventHandler
-    public void onCompassUse(PlayerInteractEvent e) {
-        if (e.getHand() == EquipmentSlot.OFF_HAND) return;
-        ItemStack it = e.getItem();
-        if (!gui.isProShieldCompass(it)) return;
-        e.setCancelled(true);
-        Player p = e.getPlayer();
-        boolean admin = p.hasPermission("proshield.admin.gui");
-        gui.openMain(p, admin);
+    public void onInventoryClick(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player p)) return;
+        InventoryView view = p.getOpenInventory();
+        if (!gui.isOurInventory(view)) return;
+
+        e.setCancelled(true); // always cancel to prevent taking items
+        if (e.getClickedInventory() == null) return;
+
+        int slot = e.getSlot();
+        ItemStack clicked = e.getCurrentItem();
+        gui.handleInventoryClick(p, slot, clicked, view);
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (e.getClickedInventory() == null) return;
-        if (!gui.isOurInventory(e.getView())) return;
+    public void onCompassUse(PlayerInteractEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND) return; // main hand only
+        ItemStack it = e.getItem();
+        if (!gui.isProShieldCompass(it)) return;
 
         e.setCancelled(true);
-        gui.handleInventoryClick(p, e.getRawSlot(), e.getCurrentItem(), e.getView());
+        Player p = e.getPlayer();
+        // Admin compass opens admin; player compass opens main
+        String title = it.getItemMeta() != null ? ChatColor.stripColor(it.getItemMeta().getDisplayName()) : "";
+        if (title.toLowerCase().contains("admin")) {
+            gui.openAdmin(p);
+        } else {
+            gui.openMain(p);
+        }
     }
 }

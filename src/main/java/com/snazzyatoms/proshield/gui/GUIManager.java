@@ -33,8 +33,7 @@ public class GUIManager {
     private static final NamespacedKey COMPASS_RECIPE_KEY;
 
     static {
-        // NamespacedKey requires plugin at runtime; we create a placeholder and rebind in registerCompassRecipe.
-        // We’ll still need a non-null key object here; the actual registration happens in ProShield.
+        // Static key namespace; actual recipe uses plugin instance at runtime
         COMPASS_RECIPE_KEY = new NamespacedKey("proshield", "proshield_compass");
     }
 
@@ -52,7 +51,7 @@ public class GUIManager {
         if (view == null) return false;
         String t = ChatColor.stripColor(view.getTitle());
         return t != null && (
-                t.equals(ChatColor.stripColor(TITLE_MAIN)) ||
+                t.equals(ChatColor.stripColor(TITLE_MAIN))  ||
                 t.equals(ChatColor.stripColor(TITLE_ADMIN)) ||
                 t.equals(ChatColor.stripColor(TITLE_HELP))
         );
@@ -75,17 +74,15 @@ public class GUIManager {
 
     /** Build & give a ProShield compass. */
     public void giveCompass(Player p, boolean adminFlavor) {
-        ItemStack it = createAdminCompass(); // single flavor (title differentiates admin via perms)
-        // try add
+        ItemStack it = adminFlavor ? createAdminCompass() : createPlayerCompass();
         var inv = p.getInventory();
         var rest = inv.addItem(it);
         if (!rest.isEmpty()) {
-            // fallback: drop or ignore based on config
             boolean drop = plugin.getConfig().getBoolean("compass.drop-if-full", true);
             if (drop) {
                 p.getWorld().dropItemNaturally(p.getLocation(), it);
             } else {
-                p.sendMessage(prefix() + ChatColor.YELLOW + "Inventory full. Use /proshield compass again after freeing a slot.");
+                p.sendMessage(prefix() + ChatColor.YELLOW + "Inventory full. Free a slot or use /proshield compass again.");
             }
         }
         p.playSound(p.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.8f, 1.1f);
@@ -107,11 +104,9 @@ public class GUIManager {
 
     public void openMain(Player p) {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_MAIN);
-
-        // Fill glass background
         fill(inv, glass(Material.CYAN_STAINED_GLASS_PANE, " "));
 
-        // Slots (readable defaults; if you want, load from config.gui.slots)
+        // Configurable slots
         int slotCreate = plugin.getConfig().getInt("gui.slots.main.create", 11);
         int slotInfo   = plugin.getConfig().getInt("gui.slots.main.info",   13);
         int slotRemove = plugin.getConfig().getInt("gui.slots.main.remove", 15);
@@ -126,21 +121,19 @@ public class GUIManager {
         inv.setItem(slotRemove, button(Material.RED_WOOL, "&cUnclaim Chunk",
                 "&7Remove your claim from this chunk."));
 
-        // Player tools (quality-of-life)
+        // Player QoL tools
         inv.setItem(20, button(Material.PLAYER_HEAD, "&eTrust Nearby Player",
                 "&7Quickly trust a nearby player."));
         inv.setItem(22, button(Material.BOOK, "&eManage Roles",
                 "&7Adjust roles for trusted players."));
         inv.setItem(24, button(Material.ENDER_EYE, "&ePreview Borders",
-                "&7Show temporary particle border preview."));
+                "&7Show a temporary particle border."));
 
-        // Help + Back
         inv.setItem(slotHelp, button(Material.KNOWLEDGE_BOOK, "&bHelp",
                 "&7Shows commands you can use based on your permissions."));
-
         inv.setItem(slotBack, backButton());
 
-        // Admin entry (only if has permission)
+        // Admin entry
         if (p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui")) {
             inv.setItem(slotAdmin, button(Material.NETHER_STAR, "&cAdmin Menu",
                     "&7Open ProShield Admin Tools."));
@@ -161,24 +154,23 @@ public class GUIManager {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_ADMIN);
         fill(inv, glass(Material.RED_STAINED_GLASS_PANE, " "));
 
-        // Default admin slots
+        // Protection master toggles
         int toggleFire        = 10;
         int toggleExplosions  = 11;
         int toggleEntityGrief = 12;
         int toggleInteractions= 13;
         int togglePvp         = 14;
 
-        int toggleKeepDrops   = 20; // keep-items
+        int toggleKeepDrops   = 20;
         int toggleDebug       = 21;
 
-        int claimTools        = 29; // transfer, purge expired, etc.
+        int claimTools        = 29;
         int teleportTools     = 30;
         int statsTools        = 31;
 
         int helpSlot          = plugin.getConfig().getInt("gui.slots.admin.help", 22);
         int backSlot          = plugin.getConfig().getInt("gui.slots.admin.back", 31);
 
-        // Protection master switches (booleans)
         boolean pvpInClaims   = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
         boolean fireEnabled   = plugin.getConfig().getBoolean("protection.fire.enabled", true);
         boolean expEnabled    = plugin.getConfig().getBoolean("protection.explosions.enabled", true);
@@ -186,8 +178,7 @@ public class GUIManager {
         boolean interEnabled  = plugin.getConfig().getBoolean("protection.interactions.enabled", true);
 
         inv.setItem(toggleFire, toggleButton(fireEnabled, "&6Fire Protection",
-                "&7Currently: " + onOff(fireEnabled),
-                "&8Blocks spread/ignite in claims"));
+                "&7Currently: " + onOff(fireEnabled)));
         inv.setItem(toggleExplosions, toggleButton(expEnabled, "&6Explosion Protection",
                 "&7Currently: " + onOff(expEnabled)));
         inv.setItem(toggleEntityGrief, toggleButton(egEnabled, "&6Entity Grief",
@@ -197,17 +188,15 @@ public class GUIManager {
         inv.setItem(togglePvp, toggleButton(!pvpInClaims, "&6PvP Block in Claims",
                 "&7Currently: " + onOff(!pvpInClaims)));
 
-        // Keep drops + debug
         boolean keepItemsEnabled = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
         inv.setItem(toggleKeepDrops, toggleButton(keepItemsEnabled, "&6Keep Items in Claims",
-                "&7Prevent item despawn inside claims.",
+                "&7Prevent item despawn in claims.",
                 "&7Currently: " + onOff(keepItemsEnabled)));
 
         boolean debug = plugin.isDebug();
         inv.setItem(toggleDebug, toggleButton(debug, "&dDebug Logging",
                 "&7Currently: " + onOff(debug)));
 
-        // Utility groups
         inv.setItem(claimTools, button(Material.AMETHYST_SHARD, "&bClaim Utilities",
                 "&7Transfer ownership, preview expiry, purge expired."));
         inv.setItem(teleportTools, button(Material.ENDER_PEARL, "&bTeleport Tools",
@@ -215,9 +204,8 @@ public class GUIManager {
         inv.setItem(statsTools, button(Material.PAPER, "&bStatistics",
                 "&7Global claim stats overview."));
 
-        // Help tip + back
         inv.setItem(helpSlot, button(Material.OAK_SIGN, "&eAdmin Help",
-                "&7Left-click toggles; Right-click opens detail.",
+                "&7Left-click toggles; Right-click shows details.",
                 "&8More admin modules arriving in ProShield 2.0."));
         inv.setItem(backSlot, backButton());
 
@@ -228,11 +216,9 @@ public class GUIManager {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_HELP);
         fill(inv, glass(Material.LIGHT_BLUE_STAINED_GLASS_PANE, " "));
 
-        // Build role/permission-aware command list
         List<String> lines = new ArrayList<>();
         lines.add("&bAvailable Commands:");
         lines.add(" ");
-        // base
         lines.add("&7/&fproshield &8- open menu");
         lines.add("&7/&fproshield claim &8- claim current chunk");
         lines.add("&7/&fproshield unclaim &8- unclaim current chunk");
@@ -251,10 +237,8 @@ public class GUIManager {
             lines.add("&7/&fproshield reload &8- reload configuration");
         }
 
-        // Place book with lore
         inv.setItem(22, loreBook("&bYour Commands", lines));
 
-        // Back
         int backSlot = plugin.getConfig().getInt("gui.slots.main.back", 48);
         inv.setItem(backSlot, backButton());
 
@@ -305,7 +289,6 @@ public class GUIManager {
     }
 
     private void handleAdminClick(Player p, int slot) {
-        // Mirror the layout in openAdmin()
         if (slot == 10) { // fire
             toggleConfig("protection.fire.enabled");
             reopened(p, true);
@@ -426,11 +409,21 @@ public class GUIManager {
         return it;
     }
 
+    /** NEW: fill helper used in openMain/openAdmin/openHelp */
+    private void fill(Inventory inv, ItemStack filler) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            if (inv.getItem(i) == null || inv.getItem(i).getType() == Material.AIR) {
+                inv.setItem(i, filler);
+            }
+        }
+    }
+
     /* =========================================================
      * Compass helpers
      * ========================================================= */
 
-    public ItemStack createAdminCompass() {
+    /** Player-flavor compass (same name; lore omits admin hint) */
+    public ItemStack createPlayerCompass() {
         ItemStack it = new ItemStack(Material.COMPASS);
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName(COMPASS_NAME);
@@ -441,10 +434,23 @@ public class GUIManager {
         return it;
     }
 
+    /** Admin-flavor compass (same detection name; we rely on permission checks for admin menu) */
+    public ItemStack createAdminCompass() {
+        ItemStack it = new ItemStack(Material.COMPASS);
+        ItemMeta meta = it.getItemMeta();
+        meta.setDisplayName(COMPASS_NAME);
+        List<String> lore = new ArrayList<>();
+        lore.add(color("&7Right-click to open ProShield."));
+        lore.add(color("&8(Admin features require permission)"));
+        meta.setLore(lore);
+        it.setItemMeta(meta);
+        return it;
+    }
+
     /** Optional in case you call it from elsewhere; actual registration is in ProShield. */
     public void registerCompassRecipe() {
         try {
-            ShapedRecipe recipe = new ShapedRecipe(new NamespacedKey(plugin, "proshield_compass"), createAdminCompass());
+            ShapedRecipe recipe = new ShapedRecipe(new NamespacedKey(plugin, "proshield_compass"), createPlayerCompass());
             recipe.shape("IRI", "RCR", "IRI");
             recipe.setIngredient('I', Material.IRON_INGOT);
             recipe.setIngredient('R', Material.REDSTONE);

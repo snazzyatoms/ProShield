@@ -1,10 +1,10 @@
+# path: jitpack.yml
 jdk:
   - openjdk17
 
-# Keep it simple: standard Maven build, skip tests by default
 install:
-  - mvn -B -DskipTests=true clean install
+  - mvn -q -DskipTests=true -B clean install
 
-# (Optional) You can add env hints for memory if your project grows
-# env:
-#   MAVEN_OPTS: "-Xmx1g -XX:+UseG1GC"
+# (optional) faster rebuilds:
+# cache:
+#   - $HOME/.m2

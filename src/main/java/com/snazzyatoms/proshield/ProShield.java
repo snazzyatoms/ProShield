@@ -1,21 +1,23 @@
-// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.BlockProtectionListener;
-import com.snazzyatoms.proshield.plots.KeepDropsListener;
-import com.snazzyatoms.proshield.plots.PlayerJoinListener;
+import com.snazzyatoms.proshield.plots.ItemProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.PlayerJoinListener;
 import com.snazzyatoms.proshield.plots.PvpProtectionListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public final class ProShield extends JavaPlugin {
@@ -24,51 +26,57 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
-    // listeners we keep around for reloads
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
-    private KeepDropsListener keepDropsListener;
+    private ItemProtectionListener itemListener;
+
+    private boolean debug;
 
     public static ProShield getInstance() { return instance; }
     public PlotManager getPlotManager() { return plotManager; }
     public GUIManager getGuiManager() { return guiManager; }
+    public boolean isDebug() { return debug; }
+    public void setDebug(boolean on) { this.debug = on; }
 
     @Override
     public void onEnable() {
         instance = this;
 
-        // Create config & ensure required sections + perform tiny migrations
+        // Ensure config exists
         saveDefaultConfig();
-        migrateConfig();
+        guardedConfigLoad();      // safer YAML load
+        migrateIfNeeded();        // ensure config.config.version is 1.2.3
 
         // Managers
         plotManager = new PlotManager(this);
-        guiManager  = new GUIManager(this, plotManager); // ✅ pass plugin + plotManager
+        guiManager  = new GUIManager(this, plotManager);
 
         // Listeners
         protectionListener = new BlockProtectionListener(plotManager);
         pvpListener        = new PvpProtectionListener(plotManager);
         guiListener        = new GUIListener(plotManager, guiManager);
-        keepDropsListener  = new KeepDropsListener(plotManager);
+        itemListener       = new ItemProtectionListener(plotManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
+        Bukkit.getPluginManager().registerEvents(itemListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
-        Bukkit.getPluginManager().registerEvents(keepDropsListener, this);
 
-        // Command
+        // Commands
         getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
-        // Recipe
+        // Custom recipe
         registerCompassRecipe();
 
-        // Expiry maintenance
+        // Expiry tasks
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
-        getLogger().info("ProShield 1.2.2 enabled. Claims loaded: " + plotManager.getClaimCount());
+        debug = getConfig().getBoolean("debug.enabled", false);
+
+        getLogger().info("ProShield 1.2.3 enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
@@ -78,40 +86,14 @@ public final class ProShield extends JavaPlugin {
         getLogger().info("ProShield disabled.");
     }
 
-    /** /proshield reload */
     public void reloadAllConfigs() {
-        reloadConfig();
+        if (!guardedConfigLoad()) return;
         if (protectionListener != null) protectionListener.reloadProtectionConfig();
         if (pvpListener != null)         pvpListener.reloadPvpFlag();
         if (plotManager != null)         plotManager.reloadFromConfig();
-        if (guiManager != null)          guiManager.reloadSlotsFromConfig();
-        if (keepDropsListener != null)   keepDropsListener.reloadConfigWindow();
-    }
-
-    private void migrateConfig() {
-        // Ensure claims section
-        if (!getConfig().isConfigurationSection("claims")) {
-            getConfig().createSection("claims");
-        }
-        // Ensure keep-items structure
-        String base = "claims.keep-items";
-        if (!getConfig().isSet(base + ".enabled")) {
-            getConfig().set(base + ".enabled", false);
-        }
-        if (!getConfig().isSet(base + ".retention-seconds")) {
-            getConfig().set(base + ".retention-seconds", 600); // default 10min, allowed 300..900
-        }
-        // Ensure GUI slot keys
-        if (!getConfig().isConfigurationSection("gui.slots")) {
-            getConfig().set("gui.slots.claim", 11);
-            getConfig().set("gui.slots.info", 13);
-            getConfig().set("gui.slots.unclaim", 15);
-            getConfig().set("gui.slots.help", 31);
-            getConfig().set("gui.slots.admin", 33);
-        }
-        // Tag config version
-        getConfig().set("config-version", "1.2.2");
-        saveConfig();
+        if (guiManager != null)          guiManager.reloadIconsFromConfig();
+        if (itemListener != null)        itemListener.reloadFromConfig();
+        debug = getConfig().getBoolean("debug.enabled", false);
     }
 
     private void registerCompassRecipe() {
@@ -122,16 +104,16 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
-        Bukkit.removeRecipe(key); // avoid duplicates on reload
+        Bukkit.removeRecipe(key);
         Bukkit.addRecipe(recipe);
     }
 
     private void maybeRunExpiryNow() {
         if (getConfig().getBoolean("expiry.enabled", false)) {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, false);
+            int removed = plotManager.cleanupExpiredClaims(days, true);
             if (removed > 0) {
-                getLogger().info("Expiry: removed " + removed + " expired claim(s).");
+                getLogger().info("Expiry (startup): removed " + removed + " expired claim(s).");
                 plotManager.saveAll();
             }
         }
@@ -142,11 +124,45 @@ public final class ProShield extends JavaPlugin {
         long oneDayTicks = TimeUnit.DAYS.toSeconds(1) * 20L;
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, false);
+            int removed = plotManager.cleanupExpiredClaims(days, true);
             if (removed > 0) {
                 getLogger().info("Daily expiry: removed " + removed + " expired claim(s).");
                 plotManager.saveAll();
             }
         }, oneDayTicks, oneDayTicks);
+    }
+
+    private boolean guardedConfigLoad() {
+        try {
+            // reloadConfig() will read from disk; ensure file exists
+            File f = new File(getDataFolder(), "config.yml");
+            if (!f.exists()) saveDefaultConfig();
+            reloadConfig();
+            return true;
+        } catch (Exception ex) {
+            getLogger().severe("Failed to reload config.yml: " + ex.getMessage());
+            if (ex instanceof InvalidConfigurationException || ex instanceof IOException) {
+                getLogger().severe("Please validate YAML syntax.");
+            }
+            return false;
+        }
+    }
+
+    /** Ensure config.config.version is set to 1.2.3, seed new nodes if missing. */
+    private void migrateIfNeeded() {
+        String ver = getConfig().getString("config.version", "0");
+        if (!"1.2.3".equals(ver)) {
+            getConfig().set("config.version", "1.2.3");
+            // seed new nodes if not present
+            if (!getConfig().isConfigurationSection("item-keep")) {
+                getConfig().set("item-keep.enabled", false);
+                getConfig().set("item-keep.despawn-seconds", 600);
+                getConfig().set("item-keep.anti-theft", true);
+            }
+            if (!getConfig().isConfigurationSection("debug")) {
+                getConfig().set("debug.enabled", false);
+            }
+            saveConfig();
+        }
     }
 }

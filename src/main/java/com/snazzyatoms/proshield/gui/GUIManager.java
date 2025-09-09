@@ -6,14 +6,17 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GUIManager {
 
@@ -22,288 +25,306 @@ public class GUIManager {
 
     // Titles
     public static final String TITLE_MAIN  = ChatColor.AQUA + "ProShield";
-    public static final String TITLE_ADMIN = ChatColor.RED + "ProShield Admin";
-    public static final String TITLE_HELP  = ChatColor.GOLD + "ProShield Help";
+    public static final String TITLE_ADMIN = ChatColor.DARK_AQUA + "ProShield • Admin";
+    public static final String TITLE_HELP  = ChatColor.GREEN + "ProShield • Help";
+    public static final String TITLE_TRUST = ChatColor.GOLD + "ProShield • Trust";
+    public static final String TITLE_TRANSFER = ChatColor.GOLD + "ProShield • Transfer";
+    public static final String TITLE_ROLES = ChatColor.GOLD + "ProShield • Roles";
+    public static final String TITLE_PREVIEW = ChatColor.LIGHT_PURPLE + "ProShield • Preview";
 
-    // Main slots (configurable)
-    private int slotMainCreate   = 11;
-    private int slotMainInfo     = 13;
-    private int slotMainRemove   = 15;
-    private int slotMainTrust    = 21;
-    private int slotMainUntrust  = 22;
-    private int slotMainTrusted  = 23;
-    private int slotMainRoles    = 24;
-    private int slotMainTransfer = 25;
-    private int slotMainPreview  = 29;
-    private int slotMainKeep     = 30;
-    private int slotMainHelp     = 49;
-    private int slotMainBack     = 48;
-    private int slotMainAdmin    = 33;
+    // Slots (read from config, but keep defaults)
+    private int slotMainCreate    = 11;
+    private int slotMainInfo      = 13;
+    private int slotMainRemove    = 15;
+    private int slotMainAdmin     = 33;
+    private int slotMainHelp      = 49;
+    private int slotMainBack      = 48;
 
-    // Admin slots (configurable)
-    private int slotAdminHelp    = 22;
-    private int slotAdminBack    = 31;
+    private int slotMainTrust     = 20;
+    private int slotMainRoles     = 21;
+    private int slotMainTransfer  = 22;
+    private int slotMainPreview   = 23;
+    private int slotMainSettings  = 24;
 
-    // Compass display names
-    private final String playerCompassName = ChatColor.AQUA + "ProShield Compass";
-    private final String adminCompassName  = ChatColor.RED + "ProShield Admin Compass";
+    // Admin slots
+    private int slotAdminExplosions  = 10;
+    private int slotAdminFire        = 12;
+    private int slotAdminEntityGrief = 14;
+    private int slotAdminPvp         = 16;
+    private int slotAdminKeepItems   = 28;
+    private int slotAdminDropIfFull  = 20;
+    private int slotAdminHelp        = 22;
+    private int slotAdminBack        = 31;
 
     public GUIManager(ProShield plugin, PlotManager plots) {
         this.plugin = plugin;
         this.plots = plots;
-        readSlotsFromConfig();
+        loadSlots();
+        registerCompassRecipe(); // keep recipe handy
     }
 
-    /* -------------------- Public accessors -------------------- */
-    public String getPlayerCompassName() { return playerCompassName; }
-    public String getAdminCompassName()  { return adminCompassName; }
+    public void onConfigReload() {
+        loadSlots();
+    }
 
-    /* -------------------- Compass creation -------------------- */
+    private void loadSlots() {
+        var cfg = plugin.getConfig();
 
+        // main
+        slotMainCreate   = cfg.getInt("gui.slots.main.create", slotMainCreate);
+        slotMainInfo     = cfg.getInt("gui.slots.main.info", slotMainInfo);
+        slotMainRemove   = cfg.getInt("gui.slots.main.remove", slotMainRemove);
+        slotMainAdmin    = cfg.getInt("gui.slots.main.admin", slotMainAdmin);
+        slotMainHelp     = cfg.getInt("gui.slots.main.help", slotMainHelp);
+        slotMainBack     = cfg.getInt("gui.slots.main.back", slotMainBack);
+
+        slotMainTrust    = cfg.getInt("gui.slots.main.trust", slotMainTrust);
+        slotMainRoles    = cfg.getInt("gui.slots.main.roles", slotMainRoles);
+        slotMainTransfer = cfg.getInt("gui.slots.main.transfer", slotMainTransfer);
+        slotMainPreview  = cfg.getInt("gui.slots.main.preview", slotMainPreview);
+        slotMainSettings = cfg.getInt("gui.slots.main.settings", slotMainSettings);
+
+        // admin
+        slotAdminExplosions  = cfg.getInt("gui.slots.admin.explosions", slotAdminExplosions);
+        slotAdminFire        = cfg.getInt("gui.slots.admin.fire", slotAdminFire);
+        slotAdminEntityGrief = cfg.getInt("gui.slots.admin.entity-grief", slotAdminEntityGrief);
+        slotAdminPvp         = cfg.getInt("gui.slots.admin.pvp", slotAdminPvp);
+        slotAdminKeepItems   = cfg.getInt("gui.slots.admin.keep-items", slotAdminKeepItems);
+        slotAdminDropIfFull  = cfg.getInt("gui.slots.admin.toggle-drop-if-full", slotAdminDropIfFull);
+        slotAdminHelp        = cfg.getInt("gui.slots.admin.help", slotAdminHelp);
+        slotAdminBack        = cfg.getInt("gui.slots.admin.back", slotAdminBack);
+
+        // sanity boundaries (avoid OOB)
+        slotMainCreate = clampSlot(slotMainCreate);
+        slotMainInfo = clampSlot(slotMainInfo);
+        slotMainRemove = clampSlot(slotMainRemove);
+        slotMainAdmin = clampSlot(slotMainAdmin);
+        slotMainHelp = clampSlot(slotMainHelp);
+        slotMainBack = clampSlot(slotMainBack);
+        slotMainTrust = clampSlot(slotMainTrust);
+        slotMainRoles = clampSlot(slotMainRoles);
+        slotMainTransfer = clampSlot(slotMainTransfer);
+        slotMainPreview = clampSlot(slotMainPreview);
+        slotMainSettings = clampSlot(slotMainSettings);
+
+        slotAdminExplosions = clampSlot(slotAdminExplosions);
+        slotAdminFire = clampSlot(slotAdminFire);
+        slotAdminEntityGrief = clampSlot(slotAdminEntityGrief);
+        slotAdminPvp = clampSlot(slotAdminPvp);
+        slotAdminKeepItems = clampSlot(slotAdminKeepItems);
+        slotAdminDropIfFull = clampSlot(slotAdminDropIfFull);
+        slotAdminHelp = clampSlot(slotAdminHelp);
+        slotAdminBack = clampSlot(slotAdminBack);
+    }
+
+    private int clampSlot(int s) {
+        return Math.max(0, Math.min(53, s));
+    }
+
+    /* -----------------------------
+     *  Compasses
+     * ----------------------------- */
     public ItemStack createPlayerCompass() {
         ItemStack it = new ItemStack(Material.COMPASS);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName(playerCompassName);
-        meta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Right-click to manage claims",
-                ChatColor.DARK_GRAY + "(Claim / Trust / Roles / Help)"
-        ));
+        meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "Right-click to manage your claim.");
+        meta.setLore(lore);
         it.setItemMeta(meta);
         return it;
     }
 
     public ItemStack createAdminCompass() {
-        ItemStack it = new ItemStack(Material.COMPASS);
+        ItemStack it = new ItemStack(Material.RECOVERY_COMPASS);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName(adminCompassName);
-        meta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Right-click for admin tools",
-                ChatColor.DARK_GRAY + "(Toggles / Expiry / Teleport / Stats)"
-        ));
+        meta.setDisplayName(ChatColor.DARK_AQUA + "ProShield Admin Compass");
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "Right-click for Admin Tools");
+        meta.setLore(lore);
+        meta.addEnchant(Enchantment.LUCK, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         it.setItemMeta(meta);
         return it;
     }
 
-    /** Optional crafting recipe for the player compass. Call once in onEnable(). */
-    public void registerCompassRecipe() {
+    private void registerCompassRecipe() {
         try {
             NamespacedKey key = new NamespacedKey(plugin, "proshield_compass");
-            if (Bukkit.getRecipe(key) != null) return;
-
+            // Player compass craft (optional; harmless if already exists)
             ShapedRecipe recipe = new ShapedRecipe(key, createPlayerCompass());
             recipe.shape("IRI", "RCR", "IRI");
             recipe.setIngredient('I', Material.IRON_INGOT);
             recipe.setIngredient('R', Material.REDSTONE);
             recipe.setIngredient('C', Material.COMPASS);
             Bukkit.addRecipe(recipe);
-        } catch (Throwable ignored) { }
+        } catch (Throwable ignored) {}
     }
 
-    /* -------------------- GUIs -------------------- */
-
-    public void openMainGUI(Player p) {
-        final boolean isOwnerHere = plots.isOwner(p.getUniqueId(), p.getLocation());
-
+    /* -----------------------------
+     *  Inventories
+     * ----------------------------- */
+    public void openMain(Player p) {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_MAIN);
 
-        inv.setItem(slotMainCreate, named(Material.OAK_DOOR, ChatColor.GREEN + "Claim Chunk",
-                ChatColor.GRAY + "Claim the current chunk."));
-        inv.setItem(slotMainInfo, named(Material.PAPER, ChatColor.AQUA + "Claim Info",
-                ChatColor.GRAY + "Owner, trusted, roles."));
-        inv.setItem(slotMainRemove, named(Material.BARRIER, ChatColor.RED + "Unclaim",
-                ChatColor.GRAY + "Remove your claim. " + ownerOnly(isOwnerHere)));
+        // Base actions
+        inv.setItem(slotMainCreate,  icon(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk", "Claim the chunk you stand in."));
+        inv.setItem(slotMainInfo,    icon(Material.PAPER, ChatColor.AQUA + "Claim Info", "Owner, trusted players, roles."));
+        inv.setItem(slotMainRemove,  icon(Material.BARRIER, ChatColor.RED + "Unclaim", "Remove your claim here."));
 
-        inv.setItem(slotMainTrust, named(Material.PLAYER_HEAD, ChatColor.GREEN + "Trust Nearby",
-                ChatColor.GRAY + "Quickly trust players within radius.",
-                ownerOnly(isOwnerHere)));
-        inv.setItem(slotMainUntrust, named(Material.SHEARS, ChatColor.RED + "Untrust Player",
-                ChatColor.GRAY + "Revoke a player's access.",
-                ownerOnly(isOwnerHere)));
-        inv.setItem(slotMainTrusted, named(Material.BOOK, ChatColor.GOLD + "View Trusted",
-                ChatColor.GRAY + "List trusted players on this claim."));
+        // Player QoL
+        inv.setItem(slotMainTrust,    icon(Material.PLAYER_HEAD, ChatColor.GOLD + "Trust Player", "Add a nearby player or by name."));
+        inv.setItem(slotMainRoles,    icon(Material.BOOK, ChatColor.GOLD + "Roles", "Adjust roles for trusted players."));
+        inv.setItem(slotMainTransfer, icon(Material.NAME_TAG, ChatColor.YELLOW + "Transfer Claim", "Transfer ownership to someone."));
+        inv.setItem(slotMainPreview,  icon(Material.GLOWSTONE_DUST, ChatColor.LIGHT_PURPLE + "Claim Border Preview", "Toggle a short border preview."));
+        inv.setItem(slotMainSettings, icon(Material.COMPARATOR, ChatColor.BLUE + "Settings", "Open quick settings."));
 
-        inv.setItem(slotMainRoles, named(Material.IRON_HOE, ChatColor.AQUA + "Manage Roles",
-                ChatColor.GRAY + "Assign Visitor/Member/Container/Builder/Co-Owner.",
-                ownerOnly(isOwnerHere)));
-
-        inv.setItem(slotMainTransfer, named(Material.NAME_TAG, ChatColor.YELLOW + "Transfer Ownership",
-                ChatColor.GRAY + "Give this claim to another player.",
-                ownerOnly(isOwnerHere)));
-
-        inv.setItem(slotMainPreview, named(Material.MAP, ChatColor.AQUA + "Borders Preview",
-                ChatColor.GRAY + "Show a temporary outline of the claim."));
-
-        inv.setItem(slotMainKeep, named(Material.CHEST, ChatColor.GOLD + "Keep Items",
-                ChatColor.GRAY + "Toggle dropped-item protection for this claim.",
-                ownerOnly(isOwnerHere)));
-
-        inv.setItem(slotMainHelp, named(Material.BOOK, ChatColor.GOLD + "Help",
-                ChatColor.GRAY + "Shows commands available to you."));
-        inv.setItem(slotMainAdmin, named(Material.REDSTONE_TORCH, ChatColor.RED + "Admin Tools",
-                ChatColor.GRAY + "Open the admin menu (permission required)."));
-        inv.setItem(slotMainBack, named(Material.ARROW, ChatColor.YELLOW + "Back",
-                ChatColor.GRAY + "Go back to previous menu."));
-
-        p.openInventory(inv);
-    }
-
-    public void openAdminGUI(Player p) {
-        if (!(p.isOp() || p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui"))) {
-            p.sendMessage(plugin.msg("&cYou don't have permission to open Admin Tools."));
-            return;
+        // Admin entry (visible to admins only)
+        if (p.isOp() || p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui")) {
+            inv.setItem(slotMainAdmin, icon(Material.RECOVERY_COMPASS, ChatColor.DARK_AQUA + "Admin Tools", "Open the Admin panel."));
         }
 
-        Inventory inv = Bukkit.createInventory(p, 45, TITLE_ADMIN);
-
-        inv.setItem(10, named(Material.BEACON, ChatColor.AQUA + "Global Toggles",
-                ChatColor.GRAY + "Fire / Explosions / Interactions / Mob grief / PvP"));
-        inv.setItem(11, named(Material.CLOCK, ChatColor.YELLOW + "Claim Expiry",
-                ChatColor.GRAY + "Run purge preview or commit"));
-        inv.setItem(12, named(Material.ENDER_PEARL, ChatColor.GREEN + "Teleport Tools",
-                ChatColor.GRAY + "Jump to claims (admin.tp)"));
-        inv.setItem(13, named(Material.CHEST, ChatColor.GOLD + "Item Keep / Drops",
-                ChatColor.GRAY + "Toggle keep-items & pickup rules"));
-        inv.setItem(14, named(Material.MAP, ChatColor.AQUA + "Borders Preview",
-                ChatColor.GRAY + "Show temporary claim borders"));
-        inv.setItem(19, named(Material.PAPER, ChatColor.BLUE + "Messages",
-                ChatColor.GRAY + "Entry / Exit messages"));
-        inv.setItem(20, named(Material.BOOK, ChatColor.GOLD + "Admin Help",
-                ChatColor.GRAY + "Short guide & tips"));
-        inv.setItem(slotAdminHelp, named(Material.WRITABLE_BOOK, ChatColor.GOLD + "Help",
-                ChatColor.GRAY + "View admin command reference"));
-        inv.setItem(slotAdminBack, named(Material.ARROW, ChatColor.YELLOW + "Back",
-                ChatColor.GRAY + "Return to main menu"));
-
-        // teaser for 2.0
-        inv.setItem(24, named(Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "Towns (2.0 Teaser)",
-                ChatColor.GRAY + "Stay tuned…"));
+        // Help + Back
+        inv.setItem(slotMainHelp, icon(Material.OAK_SIGN, ChatColor.GREEN + "Help", "Shows commands you can use."));
+        inv.setItem(slotMainBack, icon(Material.ARROW, ChatColor.GRAY + "Back", "Return to previous menu"));
 
         p.openInventory(inv);
     }
 
-    public void openHelp(Player p) {
+    public void openAdmin(Player p) {
+        Inventory inv = Bukkit.createInventory(p, 54, TITLE_ADMIN);
+
+        // Toggles read from config
+        boolean explosions = plugin.getConfig().getBoolean("protection.explosions.enabled", true);
+        boolean fire       = plugin.getConfig().getBoolean("protection.fire.enabled", true);
+        boolean entityGrief= plugin.getConfig().getBoolean("protection.entity-grief.enabled", true);
+        boolean pvp        = plugin.getConfig().getBoolean("protection.pvp-in-claims", false); // false = pvp blocked
+        boolean keepItems  = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
+        boolean dropIfFull = plugin.getConfig().getBoolean("compass.drop-if-full", true);
+
+        inv.setItem(slotAdminExplosions, toggle(explosions, Material.TNT, "Explosions Protection", "Protect claims from TNT/creeper/etc."));
+        inv.setItem(slotAdminFire,       toggle(fire, Material.FLINT_AND_STEEL, "Fire Protection", "Block spread, burn & ignition."));
+        inv.setItem(slotAdminEntityGrief,toggle(entityGrief, Material.ENDER_PEARL, "Entity Griefing", "Block Endermen, Ravagers, etc."));
+        inv.setItem(slotAdminPvp,        toggle(!pvp, Material.IRON_SWORD, "Block PvP in Claims", "ON = Players safe from PvP in claims"));
+
+        inv.setItem(slotAdminKeepItems,  toggle(keepItems, Material.ITEM_FRAME, "Keep Dropped Items", "Stop dropped items despawning in claims."));
+        inv.setItem(slotAdminDropIfFull, toggle(dropIfFull, Material.CHEST, "Drop Compass If Full", "Give/join fallback when inv is full."));
+
+        // Admin help tile
+        List<String> helpLore = new ArrayList<>();
+        helpLore.add(ChatColor.GRAY + "• Left-click to toggle.");
+        helpLore.add(ChatColor.GRAY + "• Values save instantly.");
+        helpLore.add(ChatColor.DARK_GRAY + "More admin tools coming in 2.0");
+        inv.setItem(slotAdminHelp, iconWithLore(Material.WRITABLE_BOOK, ChatColor.AQUA + "Admin Help", helpLore));
+
+        // Back
+        inv.setItem(slotAdminBack, icon(Material.ARROW, ChatColor.GRAY + "Back", "Return to main menu"));
+
+        p.openInventory(inv);
+    }
+
+    public void openHelp(Player p, boolean isAdmin) {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_HELP);
-        inv.setItem(22, named(Material.BOOK, ChatColor.GOLD + "Your Commands",
-                ChatColor.GRAY + "This page shows commands you can actually use."));
-        inv.setItem(49, named(Material.ARROW, ChatColor.YELLOW + "Back",
-                ChatColor.GRAY + "Return to previous menu"));
+
+        // Build context-aware help
+        List<String> items = new ArrayList<>();
+        if (p.hasPermission("proshield.use")) {
+            items.add("&f/proshield &7- open menu/help");
+            items.add("&f/proshield claim &7- claim current chunk");
+            items.add("&f/proshield unclaim &7- unclaim current chunk");
+            items.add("&f/proshield info &7- show claim info");
+            items.add("&f/proshield trust <player> [role] &7- trust with optional role");
+            items.add("&f/proshield untrust <player> &7- remove trust");
+            items.add("&f/proshield trusted &7- list trusted players");
+            items.add("&f/proshield transfer <player> &7- transfer your claim");
+            items.add("&f/proshield preview [seconds] &7- show border preview");
+        }
+        if (isAdmin) {
+            items.add("&f/proshield bypass <on|off|toggle> &7- admin bypass");
+            items.add("&f/proshield purgeexpired <days> [dryrun] &7- cleanup claims");
+            items.add("&f/proshield reload &7- reload config");
+            items.add("&f/proshield debug <on|off|toggle> &7- toggle debug logs");
+        }
+
+        // Render condensed help into book/paper stacks for readability
+        inv.setItem(22, icon(Material.BOOK, ChatColor.GOLD + "Your Commands", ChatColor.GRAY + "Visible based on your permissions."));
+        int rowStart = 28;
+        for (int i = 0; i < items.size() && i < 14; i++) {
+            String line = ChatColor.translateAlternateColorCodes('&', items.get(i));
+            inv.setItem(rowStart + i, lineItem(line));
+        }
+
+        // Back
+        inv.setItem(49, icon(Material.ARROW, ChatColor.GRAY + "Back", "Return to main menu"));
         p.openInventory(inv);
     }
 
-    /* -------------------- Config reload support -------------------- */
-
-    public void onConfigReload() {
-        readSlotsFromConfig();
+    public void openTrustMenu(Player p) {
+        Inventory inv = Bukkit.createInventory(p, 54, TITLE_TRUST);
+        inv.setItem(20, icon(Material.PLAYER_HEAD, ChatColor.GOLD + "Trust Nearby", "Trust someone within 15 blocks."));
+        inv.setItem(22, icon(Material.NAME_TAG, ChatColor.YELLOW + "Trust by Name", "Click to enter player name in chat."));
+        inv.setItem(24, icon(Material.BOOK, ChatColor.AQUA + "Set Role for Trusted", "Pick role for an already trusted player."));
+        inv.setItem(49, icon(Material.ARROW, ChatColor.GRAY + "Back", "Return to main menu"));
+        p.openInventory(inv);
     }
 
-    private void readSlotsFromConfig() {
-        // main
-        slotMainCreate   = getInt("gui.slots.main.create", 11);
-        slotMainInfo     = getInt("gui.slots.main.info", 13);
-        slotMainRemove   = getInt("gui.slots.main.remove", 15);
-        slotMainTrust    = getInt("gui.slots.main.trust", 21);
-        slotMainUntrust  = getInt("gui.slots.main.untrust", 22);
-        slotMainTrusted  = getInt("gui.slots.main.trusted", 23);
-        slotMainRoles    = getInt("gui.slots.main.roles", 24);
-        slotMainTransfer = getInt("gui.slots.main.transfer", 25);
-        slotMainPreview  = getInt("gui.slots.main.preview", 29);
-        slotMainKeep     = getInt("gui.slots.main.keep", 30);
-        slotMainHelp     = getInt("gui.slots.main.help", 49);
-        slotMainBack     = getInt("gui.slots.main.back", 48);
-        slotMainAdmin    = getInt("gui.slots.main.admin", 33);
-        // admin
-        slotAdminHelp    = getInt("gui.slots.admin.help", 22);
-        slotAdminBack    = getInt("gui.slots.admin.back", 31);
+    public void openTransferMenu(Player p) {
+        Inventory inv = Bukkit.createInventory(p, 27, TITLE_TRANSFER);
+        inv.setItem(11, icon(Material.NAME_TAG, ChatColor.YELLOW + "Transfer by Name", "Click and type the player name in chat."));
+        inv.setItem(15, icon(Material.PLAYER_HEAD, ChatColor.GOLD + "Transfer to Nearby", "Transfer to a nearby player."));
+        inv.setItem(22, icon(Material.ARROW, ChatColor.GRAY + "Back", "Return to main menu"));
+        p.openInventory(inv);
     }
 
-    private int getInt(String path, int def) {
-        return plugin.getConfig().getInt(path, def);
-    }
-
-    /* -------------------- Items -------------------- */
-
-    private ItemStack named(Material mat, String name, String... loreLines) {
-        ItemStack it = new ItemStack(mat);
+    /* -----------------------------
+     *  Helpers
+     * ----------------------------- */
+    private ItemStack icon(Material m, String name, String loreLine) {
+        ItemStack it = new ItemStack(m);
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName(name);
-        meta.setLore(loreLines == null || loreLines.length == 0
-                ? Collections.emptyList()
-                : Arrays.asList(loreLines));
+        if (loreLine != null && !loreLine.isEmpty()) {
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + loreLine);
+            meta.setLore(lore);
+        }
         it.setItemMeta(meta);
         return it;
     }
 
-    private String ownerOnly(boolean isOwnerHere) {
-        return isOwnerHere ? "" : ChatColor.DARK_GRAY + "(Owner-only here)";
-    }
-}
-// inside GUIManager.java
-public void openMain(Player p) {
-    Inventory inv = Bukkit.createInventory(p, 54, ChatColor.AQUA + "ProShield");
-    // Fill background etc. (keep your current filler if you have one)
-    paintBorders(inv);
-
-    // Read slots with sane fallbacks
-    int slotCreate = cfgSlot("gui.slots.main.create", 11);
-    int slotInfo   = cfgSlot("gui.slots.main.info",   13);
-    int slotRemove = cfgSlot("gui.slots.main.remove", 15);
-    int slotHelp   = cfgSlot("gui.slots.main.help",   49);
-    int slotBack   = cfgSlot("gui.slots.main.back",   48);
-    int slotAdminShortcut = cfgSlot("gui.slots.main.admin-shortcut", 50); // NEW
-
-    // --- Core player actions ---
-    inv.setItem(slotCreate, item(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk",
-            Arrays.asList(ChatColor.GRAY + "Protect the current chunk.")));
-
-    inv.setItem(slotInfo, item(Material.PAPER, ChatColor.AQUA + "Claim Info",
-            Arrays.asList(ChatColor.GRAY + "Owner, roles, trusted players.")));
-
-    inv.setItem(slotRemove, item(Material.BARRIER, ChatColor.RED + "Unclaim Chunk",
-            Arrays.asList(ChatColor.GRAY + "Release this chunk.")));
-
-    // Help (context-aware)
-    inv.setItem(slotHelp, item(Material.BOOK, ChatColor.GOLD + "Help",
-            Arrays.asList(ChatColor.GRAY + "Shows commands you can use.")));
-
-    // Back (closes to be tidy)
-    inv.setItem(slotBack, backButton());
-
-    // --- NEW: Admin Access shortcut (only for admins) ---
-    if (hasAdmin(p)) {
-        inv.setItem(slotAdminShortcut, item(Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "Admin Access " + ChatColor.WHITE + "▶",
-                Arrays.asList(ChatColor.GRAY + "Open the Admin Tools menu.")));
+    private ItemStack iconWithLore(Material m, String name, List<String> lore) {
+        ItemStack it = new ItemStack(m);
+        ItemMeta meta = it.getItemMeta();
+        meta.setDisplayName(name);
+        List<String> color = new ArrayList<>();
+        for (String s : lore) color.add(s);
+        meta.setLore(color);
+        it.setItemMeta(meta);
+        return it;
     }
 
-    p.openInventory(inv);
-}
-
-// tiny helpers (keep or adjust to your style)
-private boolean hasAdmin(Player p) {
-    return p.isOp()
-            || p.hasPermission("proshield.admin")
-            || p.hasPermission("proshield.admin.gui");
-}
-
-private int cfgSlot(String path, int def) {
-    return plugin.getConfig().getInt(path, def);
-}
-
-private void paintBorders(Inventory inv) {
-    // optional: keep your existing filler; safe to no-op if you don’t use borders
-}
-
-private ItemStack item(Material mat, String name, List<String> lore) {
-    ItemStack is = new ItemStack(mat);
-    ItemMeta im = is.getItemMeta();
-    if (im != null) {
-        im.setDisplayName(name);
-        if (lore != null && !lore.isEmpty()) im.setLore(lore);
-        is.setItemMeta(im);
+    private ItemStack toggle(boolean on, Material base, String name, String description) {
+        ItemStack it = new ItemStack(base);
+        ItemMeta meta = it.getItemMeta();
+        meta.setDisplayName((on ? ChatColor.GREEN : ChatColor.RED) + name + ChatColor.GRAY + " [" + (on ? "ON" : "OFF") + "]");
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + description);
+        lore.add("");
+        lore.add(ChatColor.DARK_GRAY + "Click to toggle");
+        meta.setLore(lore);
+        if (on) {
+            meta.addEnchant(Enchantment.DURABILITY, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        it.setItemMeta(meta);
+        return it;
     }
-    return is;
-}
 
-private ItemStack backButton() {
-    return item(Material.ARROW, ChatColor.YELLOW + "Back",
-            Collections.singletonList(ChatColor.GRAY + "Return or close."));
+    private ItemStack lineItem(String text) {
+        ItemStack it = new ItemStack(Material.PAPER);
+        ItemMeta meta = it.getItemMeta();
+        meta.setDisplayName(text);
+        it.setItemMeta(meta);
+        return it;
+    }
 }

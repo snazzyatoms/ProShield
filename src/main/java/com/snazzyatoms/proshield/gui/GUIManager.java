@@ -28,9 +28,13 @@ public class GUIManager {
         this.plotManager = plotManager;
     }
 
-    /* ---------- Config-driven slots (with sensible defaults) ---------- */
+    /* ---------- Slot helpers with sanity check (0..53) ---------- */
+    private int safeSlotValue(int raw, int def) {
+        return (raw >= 0 && raw < 54) ? raw : def;
+    }
     private int slot(String path, int def) {
-        return plugin.getConfig().getInt("gui.slots." + path, def);
+        int raw = plugin.getConfig().getInt("gui.slots." + path, def);
+        return safeSlotValue(raw, def);
     }
 
     // MAIN menu default layout
@@ -38,12 +42,12 @@ public class GUIManager {
     public int SLOT_MAIN_INFO()   { return slot("main.info",   13); }
     public int SLOT_MAIN_REMOVE() { return slot("main.remove", 15); }
     public int SLOT_MAIN_ADMIN()  { return slot("main.admin",  33); }
-    public int SLOT_MAIN_HELP()   { return slot("main.help",   49); } // reusable help icon
-    public int SLOT_MAIN_BACK()   { return slot("main.back",   48); } // closes
+    public int SLOT_MAIN_HELP()   { return slot("main.help",   49); } // tooltip
+    public int SLOT_MAIN_BACK()   { return slot("main.back",   48); }
 
     // ADMIN menu layout
     public int SLOT_ADMIN_TOGGLE_DROP() { return slot("admin.toggle-drop-if-full", 20); }
-    public int SLOT_ADMIN_HELP()        { return slot("admin.help",                 22); }
+    public int SLOT_ADMIN_HELP()        { return slot("admin.help",                 22); } // tooltip
     public int SLOT_ADMIN_BACK()        { return slot("admin.back",                 31); }
 
     /* ---------- Factory helpers ---------- */
@@ -88,35 +92,30 @@ public class GUIManager {
     public void openMain(Player p) {
         Inventory inv = Bukkit.createInventory(null, 54, TITLE_MAIN);
 
-        // Create
         inv.setItem(SLOT_MAIN_CREATE(), simpleItem(
                 Material.OAK_SAPLING,
                 ChatColor.GREEN + "Create Claim",
                 ChatColor.GRAY + "Claim the chunk you are standing in."
         ));
 
-        // Info
         inv.setItem(SLOT_MAIN_INFO(), simpleItem(
                 Material.PAPER,
                 ChatColor.AQUA + "Claim Info",
                 ChatColor.GRAY + "Show owner and trusted players here."
         ));
 
-        // Remove
         inv.setItem(SLOT_MAIN_REMOVE(), simpleItem(
                 Material.BARRIER,
                 ChatColor.RED + "Remove Claim",
                 ChatColor.GRAY + "Unclaim the current chunk if you own it."
         ));
 
-        // Admin
         inv.setItem(SLOT_MAIN_ADMIN(), simpleItem(
                 Material.COMPASS,
                 ChatColor.GOLD + "Admin Menu",
                 ChatColor.GRAY + "Open ProShield admin controls."
         ));
 
-        // Help (reusable tooltip)
         inv.setItem(SLOT_MAIN_HELP(), helpItem(
                 ChatColor.YELLOW + "Help",
                 Arrays.asList(
@@ -128,7 +127,6 @@ public class GUIManager {
                 )
         ));
 
-        // Back (closes)
         inv.setItem(SLOT_MAIN_BACK(), backItem());
 
         p.openInventory(inv);
@@ -146,7 +144,6 @@ public class GUIManager {
                 ChatColor.DARK_GRAY + "Config path: compass.drop-if-full"
         ));
 
-        // Help tooltip in admin
         inv.setItem(SLOT_ADMIN_HELP(), helpItem(
                 ChatColor.YELLOW + "Admin Help",
                 Arrays.asList(
@@ -159,7 +156,6 @@ public class GUIManager {
                 )
         ));
 
-        // Back to main
         inv.setItem(SLOT_ADMIN_BACK(), backItem());
 
         p.openInventory(inv);
@@ -183,7 +179,6 @@ public class GUIManager {
 
     @SuppressWarnings("unused")
     private boolean worldAllowed(World w) {
-        // placeholder if you later want world restrictions
         return true;
     }
 }

@@ -3,8 +3,13 @@ jdk:
   - openjdk17
 
 install:
-  - mvn -q -DskipTests=true -B clean install
+  - mvn -B -V -DskipTests -e de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
 
-# (optional) faster rebuilds:
-# cache:
-#   - $HOME/.m2
+build:
+  commands:
+    - mvn -B -DskipTests clean package
+
+# (Optional) expose built jar(s)
+artifacts:
+  - path: target/*.jar
+    name: ProShield

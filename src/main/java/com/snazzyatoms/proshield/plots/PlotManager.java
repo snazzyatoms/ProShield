@@ -80,7 +80,7 @@ public class PlotManager {
         return c.getOwner().equals(uuid) || c.getTrusted().contains(uuid);
     }
 
-    // ===== NEW: roles helpers =====
+    // ===== Roles helpers (safe if roleManager is null) =====
     public ClaimRole getRoleAt(Location loc, UUID player) {
         if (isOwner(player, loc)) return ClaimRole.CO_OWNER; // treat owner as highest equivalent
         if (roleManager == null) return ClaimRole.VISITOR;
@@ -206,18 +206,23 @@ public class PlotManager {
         loadAll();
     }
 
-    // Expiry: removes claims whose owners haven't joined in N days
-    public int cleanupExpiredClaims(int days, boolean dryRun) {
+    // ===== Expiry: removes claims whose owners haven't joined in N days =====
+    /** Compatibility overload (assumes commit=true). */
+    public int cleanupExpiredClaims(int days) {
+        return cleanupExpiredClaims(days, true);
+    }
+
+    /** New form: if commit=false, only counts (preview). */
+    public int cleanupExpiredClaims(int days, boolean commit) {
         long cutoff = System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L;
         List<String> toRemove = new ArrayList<>();
         for (Map.Entry<String, Claim> e : claims.entrySet()) {
             UUID owner = e.getValue().getOwner();
-            OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
-            long last = (op.getLastPlayed() > 0 ? op.getLastPlayed() : op.getFirstPlayed());
-            if (last == 0L) continue; // no data, skip
+            long last = lastSeenMillis(owner);
+            if (last == 0L) continue; // no data: skip
             if (last < cutoff) toRemove.add(e.getKey());
         }
-        if (dryRun) return toRemove.size();
+        if (!commit) return toRemove.size();
 
         for (String k : toRemove) {
             Claim c = claims.remove(k);
@@ -228,5 +233,41 @@ public class PlotManager {
         }
         plugin.saveConfig();
         return toRemove.size();
+    }
+
+    private long lastSeenMillis(UUID u) {
+        OfflinePlayer op = Bukkit.getOfflinePlayer(u);
+        long lastPlayed = op.getLastPlayed();   // may be 0 on some implementations
+        long firstPlayed = op.getFirstPlayed(); // fallback
+        long best = Math.max(lastPlayed, firstPlayed);
+        return best <= 0 ? 0 : best;
+    }
+
+    // ===== New helpers used by 1.2.3 features =====
+
+    /** Trust + assign role via ClaimRoleManager (if present). */
+    public boolean trustWithRole(UUID owner, Location loc, UUID target, String roleName) {
+        boolean ok = trust(owner, loc, target);
+        if (ok && roleManager != null) {
+            roleManager.setRole(loc, target, roleName == null ? "member" : roleName.toLowerCase());
+        }
+        if (ok) saveAll();
+        return ok;
+    }
+
+    /** Transfer claim ownership to another player (only current owner can run). */
+    public boolean transferOwnership(UUID fromOwner, Location loc, UUID toOwner) {
+        var opt = getClaim(loc);
+        if (opt.isEmpty()) return false;
+        var c = opt.get();
+        if (!c.getOwner().equals(fromOwner)) return false;
+
+        // adjust ownerCounts
+        ownerCounts.put(fromOwner, Math.max(0, ownerCounts.getOrDefault(fromOwner, 1) - 1));
+        ownerCounts.put(toOwner, ownerCounts.getOrDefault(toOwner, 0) + 1);
+
+        c.setOwner(toOwner);
+        saveClaim(c);
+        return true;
     }
 }

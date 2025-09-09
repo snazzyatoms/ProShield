@@ -1,16 +1,36 @@
-# path: src/main/resources/config.yml
-# ProShield Configuration (v1.2.2)
-config-version: 1.2.2
+# =========================================
+# ProShield Configuration
+# Version stamp (do not edit): used by migrator
+config:
+  version: "1.2.3"
+# =========================================
 
 messages:
   prefix: "&3[ProShield]&r "
+  no-permission: "&cYou don't have permission."
+  not-player: "&cPlayers only."
+  reloaded: "&aProShield reloaded."
+  claim-created: "&aClaim created for this chunk."
+  claim-exists: "&cThis chunk is already claimed or you reached your limit."
+  claim-removed: "&aClaim removed."
+  not-owner: "&cYou are not the owner of this claim."
+  no-claim-here: "&7No claim in this chunk."
+  trusted-added: "&a%player% is now trusted."
+  trusted-removed: "&a%player% is no longer trusted."
+  transfer-success: "&aOwnership transferred to &b%player%&a."
+  transfer-fail: "&cTransfer failed."
+  preview-start: "&aShowing claim borders for &b%seconds%s&a..."
+  preview-end: "&7Preview ended."
+  debug-on: "&aDebug logging: ON"
+  debug-off: "&aDebug logging: OFF"
 
 limits:
   max-claims: 5          # -1 = unlimited (players with proshield.unlimited bypass)
 
 expiry:
-  enabled: false         # Remove claims whose owners have been inactive for N days
-  days: 30               # Days of inactivity before claim is expired
+  enabled: true
+  days: 30               # inactivity days before eligible for expiry
+  preview-on-purge: true # console shows which claims would be purged when dry-run
 
 protection:
   containers: true
@@ -35,15 +55,9 @@ protection:
 
   interactions:
     enabled: true
-    mode: blacklist         # "blacklist" or "whitelist"
-    categories:
-      - doors
-      - trapdoors
-      - fence_gates
-      - buttons
-      - levers
-      - pressure_plates
-    list: []                # Explicit materials (e.g. [NOTE_BLOCK, BELL])
+    mode: blacklist
+    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
+    list: []
 
   buckets:
     block-empty: true
@@ -59,25 +73,19 @@ protection:
   entity-teleport:
     enderman: true
 
-# 🔄 Global "Keep Items in Claims"
-# If enabled, items that drop inside claimed chunks won't despawn until 'retention-seconds' elapse.
-# Default is OFF so server owners opt-in.
-claims:
-  keep-items:
-    enabled: false
-    retention-seconds: 600   # Allowed range: 300..900
-
-# GUI slots (you can change these safely)
-gui:
-  slots:
-    claim: 11
-    info: 13
-    unclaim: 15
-    help: 31
-    admin: 33
-
-# Stored claims (do not edit by hand unless you know what you're doing)
-claims: {}
+item-keep:
+  enabled: false          # NEW: default off as requested
+  despawn-seconds: 600    # NEW: default 600s; allowed range 300..900 for hygiene
+  anti-theft: true        # cancel pickup by non-owners inside the claim
 
 autogive:
   compass-on-join: true
+
+debug:
+  enabled: false
+
+# per-world overrides can go here (optional)
+# worlds:
+#   world_nether:
+#     protection:
+#       pvp-in-claims: true

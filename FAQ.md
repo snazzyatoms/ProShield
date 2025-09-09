@@ -1,4 +1,4 @@
-# ❓ ProShield FAQ (v1.2.2)
+# ❓ ProShield FAQ (v1.2.3)
 
 This FAQ covers the most common questions, problems, and solutions for running ProShield.  
 If your issue isn’t listed here, please [open a GitHub issue](https://github.com/snazzyatoms/ProShield/issues).
@@ -27,6 +27,8 @@ A: Players can claim in **two ways**:
 - Slot 11 → Claim current chunk  
 - Slot 13 → Claim info (owner + trusted players)  
 - Slot 15 → Unclaim  
+- Slot 31 → Help (shows commands based on your permissions)  
+- Slot 33 → Admin menu (if you have admin perms)  
 
 🔹 **Commands**  
 - `/proshield claim` → Claim your current chunk  
@@ -39,7 +41,7 @@ A: Players can claim in **two ways**:
 A: Check these points:  
 - You are **OP** or have `proshield.compass` or `proshield.admin`.  
 - In `config.yml`, `autogive.compass-on-join: true`.  
-- Use `/proshield compass` to get one manually if missing.
+- Use `/proshield compass` to get one manually if missing.  
 
 ---
 
@@ -68,6 +70,17 @@ A: Claim Roles let owners assign **different access levels** to trusted players:
 
 Configured in `config.yml` and manageable via **commands & GUI**.  
 More role customization coming in **v2.0**.
+
+---
+
+**Q: What is Claim Transfer?**  
+A: Owners can transfer their claim to another player with:  
+- `/proshield transfer <player>`  
+
+---
+
+**Q: What is Claim Preview?**  
+A: Use `/proshield preview` to see a **particle outline** of your claim before confirming.  
 
 ---
 
@@ -130,6 +143,20 @@ A: Use the [GitHub Issues page](https://github.com/snazzyatoms/ProShield/issues)
 - Review `protection.*` flags in `config.yml`.  
 - Confirm **per-world overrides** aren’t disabling protection.  
 - Reload after changes.
+
+---
+
+**Problem:** GUI feels tedious (need to exit to return)  
+✅ Fix:  
+- v1.2.3 added a **Back button** in all menus.  
+- Use this to return to the main menu without pressing `Esc`.
+
+---
+
+**Problem:** Need more details for debugging  
+✅ Fix:  
+- Use `/proshield debug on` to enable detailed logging.  
+- Requires `proshield.admin.debug`.  
 
 ---
 

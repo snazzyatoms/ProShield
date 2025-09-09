@@ -23,21 +23,23 @@ public final class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private GUIManager guiManager;
 
-    // listeners
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
     private GUIListener guiListener;
 
-    // debug toggle
-    private volatile boolean debug = false;
+    // --- NEW: simple debug toggle exposed in Admin GUI
+    private boolean debug = false;
+    public boolean isDebug() { return debug; }
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+        getConfig().set("proshield.debug", debug);
+        saveConfig();
+        getLogger().info("[ProShield] Debug " + (debug ? "ENABLED" : "DISABLED"));
+    }
 
     public static ProShield getInstance() { return instance; }
     public PlotManager getPlotManager() { return plotManager; }
     public GUIManager getGuiManager() { return guiManager; }
-
-    // Debug accessors used by command
-    public boolean isDebug() { return debug; }
-    public void setDebug(boolean debug) { this.debug = debug; }
 
     @Override
     public void onEnable() {
@@ -48,6 +50,8 @@ public final class ProShield extends JavaPlugin {
             getConfig().createSection("claims");
             saveConfig();
         }
+        // initialize debug from config if present
+        this.debug = getConfig().getBoolean("proshield.debug", false);
 
         plotManager = new PlotManager(this);
         guiManager  = new GUIManager(this, plotManager);
@@ -67,7 +71,7 @@ public final class ProShield extends JavaPlugin {
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
-        getLogger().info("ProShield " + getDescription().getVersion() + " enabled. Claims loaded: " + plotManager.getClaimCount());
+        getLogger().info("ProShield 1.2.4 enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
@@ -82,6 +86,8 @@ public final class ProShield extends JavaPlugin {
         if (protectionListener != null) protectionListener.reloadProtectionConfig();
         if (pvpListener != null)         pvpListener.reloadPvpFlag();
         if (plotManager != null)         plotManager.reloadFromConfig();
+        // also re-pull debug
+        this.debug = getConfig().getBoolean("proshield.debug", false);
     }
 
     private void registerCompassRecipe() {
@@ -99,11 +105,8 @@ public final class ProShield extends JavaPlugin {
     private void maybeRunExpiryNow() {
         if (getConfig().getBoolean("expiry.enabled", false)) {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, true);
-            if (removed > 0) {
-                getLogger().info("Expiry: removed " + removed + " expired claim(s).");
-                plotManager.saveAll();
-            }
+            int removed = plotManager.cleanupExpiredClaims(days, true); // preview on enable
+            if (debug) getLogger().info("Expiry preview: would remove " + removed + " expired claim(s).");
         }
     }
 
@@ -112,10 +115,9 @@ public final class ProShield extends JavaPlugin {
         long oneDayTicks = TimeUnit.DAYS.toSeconds(1) * 20L;
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             int days = getConfig().getInt("expiry.days", 30);
-            int removed = plotManager.cleanupExpiredClaims(days, true);
-            if (removed > 0) {
-                getLogger().info("Daily expiry: removed " + removed + " expired claim(s).");
-                plotManager.saveAll();
+            int removed = plotManager.cleanupExpiredClaims(days, true); // preview daily
+            if (removed > 0 && debug) {
+                getLogger().info("Daily expiry preview: would remove " + removed + " expired claim(s).");
             }
         }, oneDayTicks, oneDayTicks);
     }

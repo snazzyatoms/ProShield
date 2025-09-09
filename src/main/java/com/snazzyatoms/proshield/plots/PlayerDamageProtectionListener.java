@@ -12,10 +12,9 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import java.util.UUID;
 
 /**
- * Cancels damage to claim owners/trusted players inside the boundaries of their claim.
- * Notes:
- * - Honors config: protection.damage.enabled, cancel-all, protect-owner-and-trusted
- * - Ignores OP/bypass for VICTIM protection (bypass only affects building/interaction)
+ * Cancels damage to claim owners/trusted players inside their claim.
+ * - Respects config at protection.damage.*
+ * - Ignores bypass/OP for VICTIM protection (bypass is for build/interaction).
  */
 public class PlayerDamageProtectionListener implements Listener {
 
@@ -28,8 +27,7 @@ public class PlayerDamageProtectionListener implements Listener {
     }
 
     private boolean damageProtectionEnabled() {
-        return plugin.getConfig().getConfigurationSection("protection") != null
-                && plugin.getConfig().getBoolean("protection.damage.enabled", true);
+        return plugin.getConfig().getBoolean("protection.damage.enabled", true);
     }
 
     private boolean cancelAll() {
@@ -46,19 +44,17 @@ public class PlayerDamageProtectionListener implements Listener {
         if (!protectOwnerAndTrusted()) return false;
 
         UUID u = victim.getUniqueId();
-        // Owner or trusted (via roles-aware helper)
         if (plots.isOwner(u, loc)) return true;
-        // roles: treat any role >= VISITOR with explicit rule; default to roles helper when available
+
+        // Prefer roles if available; fall back to legacy trusted.
         try {
-            return plots.hasRoleAtLeast(loc, u, ClaimRole.VISITOR); // VISITOR+ are protected from damage by default
+            return plots.hasRoleAtLeast(loc, u, ClaimRole.VISITOR);
         } catch (Throwable t) {
-            // Fallback to legacy trusted check if roles not present
             return plots.isTrustedOrOwner(u, loc);
         }
     }
 
     private boolean shouldCancelSelective(EntityDamageEvent.DamageCause cause) {
-        // Only used if cancel-all = false
         switch (cause) {
             case ENTITY_ATTACK:
             case ENTITY_SWEEP_ATTACK:
@@ -82,41 +78,34 @@ public class PlayerDamageProtectionListener implements Listener {
             case POISON:
             case WITHER:
                 return plugin.getConfig().getBoolean("protection.damage.poison-wither", true);
-            case CONTACT: // cactus, sweet berry
+            case CONTACT:   // cactus, sweet berries
             case HOT_FLOOR: // magma block
-                return plugin.getConfig().getBoolean("protection.damage.environment", true);
             default:
-                // Unknown/rare causes → be safe and block if environment toggled on
                 return plugin.getConfig().getBoolean("protection.damage.environment", true);
         }
     }
 
-    /** Catch-all (environment, fall, lava, etc). */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
         if (!damageProtectionEnabled()) return;
         if (!(event.getEntity() instanceof Player)) return;
 
         Player victim = (Player) event.getEntity();
-
-        // Do not treat bypass/admin as unprotected. Owners/trusted should still be safe.
         if (!isProtectedVictim(victim)) return;
         if (plots.getClaim(victim.getLocation()).isEmpty()) return;
 
         if (cancelAll()) {
             event.setCancelled(true);
-            if (plugin.isDebug()) plugin.getLogger().info("[Damage] Cancelled ALL damage to " + victim.getName());
+            if (plugin.isDebug()) plugin.getLogger().info("[Damage] Cancelled ALL to " + victim.getName());
             return;
         }
 
-        // Selective mode:
         if (shouldCancelSelective(event.getCause())) {
             event.setCancelled(true);
             if (plugin.isDebug()) plugin.getLogger().info("[Damage] Cancelled " + event.getCause() + " to " + victim.getName());
         }
     }
 
-    /** PvP / Projectile / Mob-attacks (still route through generic handler above, but we keep this for clarity/logs). */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDamageByEntity(EntityDamageByEntityEvent event) {
         if (!damageProtectionEnabled()) return;

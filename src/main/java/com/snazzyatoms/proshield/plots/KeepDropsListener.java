@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/KeepDropsListener.java
 package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.entity.Item;
@@ -7,18 +8,26 @@ import org.bukkit.event.entity.ItemDespawnEvent;
 
 public class KeepDropsListener implements Listener {
     private final PlotManager plots;
-    public KeepDropsListener(PlotManager plots) { this.plots = plots; }
+
+    public KeepDropsListener(PlotManager plots) {
+        this.plots = plots;
+    }
 
     @EventHandler(ignoreCancelled = true)
     public void onItemDespawn(ItemDespawnEvent e) {
-        if (!(e.getEntity() instanceof Item it)) return;
-        var loc = it.getLocation();
-        if (plots.getClaim(loc).isEmpty()) return;
+        // Only act if feature is enabled
         if (!plots.getPlugin().getConfig().getBoolean("claims.keep-items.enabled", false)) return;
 
-        int sec = plots.getPlugin().getConfig().getInt("claims.keep-items.despawn-seconds", 900);
+        // Only inside claims
+        Item item = e.getEntity();
+        if (item == null) return;
+        if (plots.getClaim(item.getLocation()).isEmpty()) return;
+
+        // Cancel despawn while feature is ON
         e.setCancelled(true);
-        // re-schedule natural despawn if needed; here we simply cancel while feature is ON
-        // (lightweight approach, consistent with "keep items" semantics)
+
+        // Note: We keep items indefinitely while the toggle is ON.
+        // The configured "despawn-seconds" remains for display/UX; if you ever want timed re-despawn,
+        // you can schedule a future remove when the toggle flips OFF.
     }
 }

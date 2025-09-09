@@ -20,7 +20,26 @@ Perfect for survival or SMP communities, it provides simple claiming, intuitive 
 - ✅ **Admin Compass** – Special compass item that opens the ProShield GUI. Auto-given to ops (configurable).  
 - ✅ **Claim Expiry** – Automatically removes claims of inactive players (optional, fully configurable).  
 - ✅ **Configurable Protections** – Containers, doors, buttons, buckets, fire, mobs, explosions, Enderman teleport, and more.  
+- ✅ **Spawn Guard (NEW in 1.2.4)** – Block claiming within a configurable radius around world spawn.  
+- ✅ **Mob Border Repel (NEW in 1.2.4)** – Push hostile mobs back when they approach a claim border.  
+- ✅ **Admin Reload & Purge Tools (NEW in 1.2.4)** – Reload configs and purge expired claims directly from the Admin GUI.  
 - ✅ **Lightweight** – Built for performance and ease of use.  
+
+---
+
+## ⚠️ Migration Note (v1.2.4)
+
+If you are upgrading from **v1.2.3 or earlier**, you **must regenerate your ProShield config folder**.  
+This is required to load the new settings for:
+- Spawn guard radius  
+- Mob border repel system  
+- Admin GUI reload button  
+
+### Steps:
+1. Stop your server.  
+2. Delete the `/plugins/ProShield/` folder.  
+3. Restart the server → new configs will be generated.  
+4. Reapply any custom changes you had made.
 
 ---
 
@@ -65,7 +84,7 @@ Players can claim land in two ways:
 - `/proshield purgeexpired <days> [dryrun]` – Force claim expiry cleanup (admins)  
 - `/proshield transfer <player>` – Transfer claim ownership (1.2.3+)  
 - `/proshield preview` – Show claim borders before confirming (1.2.3+)  
-- `/proshield debug <on|off>` – Toggle debug logging (1.2.3+)  
+- `/proshield debug <on|off>` – Toggle debug logging  
 
 ---
 

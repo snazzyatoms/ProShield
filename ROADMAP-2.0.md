@@ -5,6 +5,7 @@
 > - GUI trust management  
 > - Radius-based trust tools  
 > - Claim Item Protection (toggle for keeping dropped items inside claims)  
+> - Claim Preview & Ownership Transfer tools  
 >
 > ProShield 2.0 will **expand and refine** these systems and introduce **Towns, Shops, Economy, Claim Flags, and more**.
 

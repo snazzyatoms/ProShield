@@ -105,3 +105,19 @@ gui:
 
 # Claims are stored automatically
 claims: {}
+# --- NEW: Damage protection inside claims (ON by default) ---
+protection:
+  damage:
+    enabled: true
+    protect-owner-and-trusted: true   # only protect claim owner + trusted/roles
+    cancel-all: true                  # if true, cancels ALL damage to protected players inside their claim
+
+    # The options below are only used if cancel-all = false
+    pve: true                         # block mob/creature melee damage
+    projectiles: true                 # arrows, tridents, ghast fireballs etc.
+    environment: true                 # cactus, magma blocks, sweet berries, etc.
+    fire-lava: true                   # fire/fire_tick/lava
+    fall: true                        # fall damage
+    explosions: true                  # TNT/creeper/etc.
+    drown-void-suffocate: true        # drowning, void, suffocation
+    poison-wither: true               # DoT/potion effects

@@ -38,6 +38,10 @@ permissions:
     description: Admin tools (bypass, transfer, purge, preview)
     default: op
 
+  proshield.admin.gui:
+    description: Open the ProShield Admin GUI
+    default: op
+
   proshield.bypass:
     description: Toggle protection bypass
     default: op
@@ -62,14 +66,6 @@ permissions:
     description: Toggle debug logging
     default: op
 
-  proshield.admin.keydrops:
+  proshield.admin.keepdrops:
     description: Allow toggling claim item-keep/pickup rules
-    default: op
-
-  proshield.admin.gui:
-    description: Open the ProShield Admin GUI
-    default: op
-
-  proshield.admin.spawnoverride:
-    description: Allows claiming inside the protected spawn radius
     default: op

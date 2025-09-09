@@ -3,12 +3,13 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.HashMap;
 
 public class PlayerJoinListener implements Listener {
 
@@ -39,10 +40,15 @@ public class PlayerJoinListener implements Listener {
         // Try adding to inventory
         HashMap<Integer, ItemStack> leftovers = player.getInventory().addItem(compass);
 
-        // If inventory full, drop at player’s feet
         if (!leftovers.isEmpty()) {
-            player.getWorld().dropItemNaturally(player.getLocation(), compass);
-            plugin.getLogger().info("Dropped ProShield compass at " + player.getName() + "'s feet (inventory full).");
+            boolean dropIfFull = plugin.getConfig().getBoolean("compass.drop-if-full", true);
+
+            if (dropIfFull) {
+                player.getWorld().dropItemNaturally(player.getLocation(), compass);
+                plugin.getLogger().info("Dropped ProShield compass at " + player.getName() + "'s feet (inventory full).");
+            } else {
+                plugin.getLogger().info("Skipped giving ProShield compass to " + player.getName() + " (inventory full).");
+            }
         }
     }
 }

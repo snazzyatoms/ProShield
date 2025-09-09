@@ -18,7 +18,7 @@ public class SpawnClaimGuardListener implements Listener {
     }
 
     private boolean isWithinSpawnGuard(Player p) {
-        var plugin = plots.getPlugin();
+        ProShield plugin = plots.getPlugin();
         boolean block = plugin.getConfig().getBoolean("spawn.block-claiming", true);
         if (!block) return false;
 
@@ -32,11 +32,9 @@ public class SpawnClaimGuardListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onPreprocess(PlayerCommandPreprocessEvent e) {
-        // Block claims near spawn (works for both chat commands and GUI performCommand)
+        // Blocks claim attempts near spawn for regular players (GUI calls /proshield claim under the hood)
         String msg = e.getMessage().toLowerCase();
-        if (!(msg.startsWith("/proshield claim") || msg.equals("/proshield") || msg.startsWith("/ps claim"))) {
-            return;
-        }
+        if (!(msg.startsWith("/proshield claim") || msg.startsWith("/ps claim"))) return;
 
         Player p = e.getPlayer();
         // allow admins/bypass

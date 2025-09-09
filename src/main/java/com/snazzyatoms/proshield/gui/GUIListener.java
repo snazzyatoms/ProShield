@@ -1,170 +1,245 @@
 package com.snazzyatoms.proshield.gui;
 
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 public class GUIListener implements Listener {
 
     private final PlotManager plots;
     private final GUIManager gui;
 
-    // anti-spam: 400ms between GUI opens from compass
-    private final Map<UUID, Long> lastOpen = new HashMap<>();
-
     public GUIListener(PlotManager plots, GUIManager gui) {
         this.plots = plots;
         this.gui = gui;
     }
 
-    /* -------------------- Compass right-click -> open GUIs -------------------- */
-
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
-    public void onInteract(PlayerInteractEvent e) {
-        if (e.getItem() == null) return;
-        ItemStack it = e.getItem();
-        if (it.getType() != Material.COMPASS) return;
-        ItemMeta meta = it.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) return;
-
-        Player p = e.getPlayer();
-        long now = System.currentTimeMillis();
-        Long last = lastOpen.get(p.getUniqueId());
-        if (last != null && (now - last) < 400) return; // tiny cooldown
-        lastOpen.put(p.getUniqueId(), now);
-
-        String name = meta.getDisplayName();
-        if (name.equals(gui.getAdminCompassName())) {
-            gui.openAdminGUI(p);
-            e.setCancelled(true);
-            return;
+    private boolean isTitle(InventoryClickEvent e, String title) {
+        if (e.getView() == null) return false;
+        String t;
+        try {
+            t = e.getView().getTitle();
+        } catch (Throwable ex) {
+            return false;
         }
-        if (name.equals(gui.getPlayerCompassName())) {
-            gui.openMainGUI(p);
-            e.setCancelled(true);
-        }
+        return t != null && ChatColor.stripColor(t).equals(ChatColor.stripColor(title));
     }
 
-    /* -------------------- Inventory buttons -------------------- */
-
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
-    public void onInventoryClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        if (e.getView() == null || e.getView().getTitle() == null) return;
-
-        String title = ChatColor.stripColor(e.getView().getTitle());
-        ItemStack current = e.getCurrentItem();
-        if (current == null || current.getType() == Material.AIR) return;
-
-        String display = (current.hasItemMeta() && current.getItemMeta().hasDisplayName())
-                ? ChatColor.stripColor(current.getItemMeta().getDisplayName()) : "";
+    @EventHandler(ignoreCancelled = true)
+    public void onClick(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player)) return;
+        Player p = (Player)e.getWhoClicked();
+        if (e.getClickedInventory() == null) return;
+        ItemStack clicked = e.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
 
         // MAIN
-        if (ChatColor.stripColor(GUIManager.TITLE_MAIN).equals(title)) {
+        if (isTitle(e, GUIManager.TITLE_MAIN)) {
             e.setCancelled(true);
-            switch (display) {
-                case "Claim Chunk" -> player.performCommand("proshield claim");
-                case "Claim Info" -> player.performCommand("proshield info");
-                case "Unclaim" -> {
-                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
-                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
-                        return;
-                    }
-                    player.performCommand("proshield unclaim");
-                }
-                case "Trust Nearby" -> {
-                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
-                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
-                        return;
-                    }
-                    player.performCommand("proshield trustnear"); // your radius-based trust command
-                }
-                case "Untrust Player" -> {
-                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
-                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
-                        return;
-                    }
-                    player.performCommand("proshield untrust"); // expect follow-up by chat/anvil input
-                }
-                case "View Trusted" -> player.performCommand("proshield trusted");
-                case "Manage Roles" -> {
-                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
-                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
-                        return;
-                    }
-                    player.performCommand("proshield roles"); // hook to your role GUI/flow if present
-                }
-                case "Transfer Ownership" -> {
-                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
-                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
-                        return;
-                    }
-                    player.performCommand("proshield transfer"); // expect target via next step
-                }
-                case "Borders Preview" -> player.performCommand("proshield preview 15");
-                case "Keep Items" -> {
-                    if (!plots.isOwner(player.getUniqueId(), player.getLocation())) {
-                        player.sendMessage(ChatColor.RED + "Owner-only: you don't own this claim.");
-                        return;
-                    }
-                    player.performCommand("proshield keepitems toggle");
-                }
-                case "Help" -> gui.openHelp(player);
-                case "Admin Tools" -> gui.openAdminGUI(player);
-                case "Back" -> player.closeInventory(); // from main, back just closes
-            }
+            handleMainClick(p, clicked);
             return;
         }
 
         // ADMIN
-        if (ChatColor.stripColor(GUIManager.TITLE_ADMIN).equals(title)) {
+        if (isTitle(e, GUIManager.TITLE_ADMIN)) {
             e.setCancelled(true);
-            switch (display) {
-                case "Global Toggles" -> player.performCommand("proshield settings");
-                case "Claim Expiry" -> player.performCommand("proshield purgeexpired 30 dryrun");
-                case "Teleport Tools" -> player.performCommand("proshield admintp");
-                case "Item Keep / Drops" -> player.performCommand("proshield keepitems toggle");
-                case "Borders Preview" -> player.performCommand("proshield preview 15");
-                case "Messages" -> player.performCommand("proshield messages");
-                case "Admin Help" -> player.sendMessage(ChatColor.GOLD + "Admin: /proshield reload, purgeexpired, settings, admintp");
-                case "Help" -> gui.openHelp(player);
-                case "Back" -> gui.openMainGUI(player);
-            }
+            handleAdminClick(p, clicked);
             return;
         }
 
         // HELP
-        if (ChatColor.stripColor(GUIManager.TITLE_HELP).equals(title)) {
+        if (isTitle(e, GUIManager.TITLE_HELP)) {
             e.setCancelled(true);
-            if ("Back".equals(display)) {
-                gui.openMainGUI(player);
+            if (isArrow(clicked)) {
+                gui.openMain(p);
+            }
+            return;
+        }
+
+        // TRUST
+        if (isTitle(e, GUIManager.TITLE_TRUST)) {
+            e.setCancelled(true);
+            String name = name(clicked);
+            if (name.contains("Back")) {
+                gui.openMain(p);
+                return;
+            }
+            if (name.contains("Trust Nearby")) {
+                p.closeInventory();
+                p.performCommand("proshield trustnearby");
+                return;
+            }
+            if (name.contains("Trust by Name")) {
+                p.closeInventory();
+                p.sendMessage(color("&7Type &e/playername &7in chat…"));
+                p.performCommand("proshield trustprompt");
+                return;
+            }
+            if (name.contains("Set Role")) {
+                p.closeInventory();
+                p.performCommand("proshield roles");
+                return;
+            }
+            return;
+        }
+
+        // TRANSFER
+        if (isTitle(e, GUIManager.TITLE_TRANSFER)) {
+            e.setCancelled(true);
+            String name = name(clicked);
+            if (name.contains("Back")) {
+                gui.openMain(p);
+                return;
+            }
+            if (name.contains("Transfer by Name")) {
+                p.closeInventory();
+                p.sendMessage(color("&7Type &e/playername &7in chat…"));
+                p.performCommand("proshield transferprompt");
+                return;
+            }
+            if (name.contains("Transfer to Nearby")) {
+                p.closeInventory();
+                p.performCommand("proshield transfernearby");
+                return;
             }
         }
     }
-}
-// inside GUIListener.java, in your onInventoryClick handler for MAIN GUI:
-int slotAdminShortcut = plugin.getConfig().getInt("gui.slots.main.admin-shortcut", 50);
 
-if (e.getRawSlot() == slotAdminShortcut) {
-    e.setCancelled(true);
-    if (!player.isOp()
-            && !player.hasPermission("proshield.admin")
-            && !player.hasPermission("proshield.admin.gui")) {
-        player.sendMessage(prefix + ChatColor.RED + "You don’t have permission to open Admin Tools.");
-        return;
+    private void handleMainClick(Player p, ItemStack clicked) {
+        String d = name(clicked);
+
+        if (d.contains("Claim Chunk")) {
+            p.closeInventory();
+            p.performCommand("proshield claim");
+            return;
+        }
+        if (d.contains("Claim Info")) {
+            p.closeInventory();
+            p.performCommand("proshield info");
+            return;
+        }
+        if (d.contains("Unclaim")) {
+            p.closeInventory();
+            p.performCommand("proshield unclaim");
+            return;
+        }
+        if (d.contains("Trust Player")) {
+            gui.openTrustMenu(p);
+            return;
+        }
+        if (d.contains("Roles")) {
+            p.closeInventory();
+            p.performCommand("proshield roles");
+            return;
+        }
+        if (d.contains("Transfer Claim")) {
+            gui.openTransferMenu(p);
+            return;
+        }
+        if (d.contains("Claim Border Preview")) {
+            p.closeInventory();
+            p.performCommand("proshield preview 10");
+            return;
+        }
+        if (d.contains("Settings")) {
+            p.closeInventory();
+            p.performCommand("proshield settings");
+            return;
+        }
+        if (d.contains("Admin Tools")) {
+            if (isAdmin(p)) {
+                gui.openAdmin(p);
+            } else {
+                p.sendMessage(color("&cYou don’t have permission to open Admin Tools."));
+            }
+            return;
+        }
+        if (d.contains("Help")) {
+            gui.openHelp(p, isAdmin(p));
+            return;
+        }
+        if (d.equalsIgnoreCase("Back")) {
+            p.closeInventory();
+        }
     }
-    gui.openAdmin(player); // Reuse your existing admin GUI open method
-    return;
+
+    private void handleAdminClick(Player p, ItemStack clicked) {
+        if (!isAdmin(p)) {
+            p.sendMessage(color("&cYou don’t have permission to edit Admin settings."));
+            return;
+        }
+
+        String d = name(clicked);
+        var cfg = ProShield.getInstance().getConfig();
+        boolean changed = false;
+
+        // Toggles (left click)
+        if (d.contains("Explosions Protection")) {
+            boolean cur = cfg.getBoolean("protection.explosions.enabled", true);
+            cfg.set("protection.explosions.enabled", !cur);
+            changed = true;
+        } else if (d.contains("Fire Protection")) {
+            boolean cur = cfg.getBoolean("protection.fire.enabled", true);
+            cfg.set("protection.fire.enabled", !cur);
+            changed = true;
+        } else if (d.contains("Entity Griefing")) {
+            boolean cur = cfg.getBoolean("protection.entity-grief.enabled", true);
+            cfg.set("protection.entity-grief.enabled", !cur);
+            changed = true;
+        } else if (d.contains("Block PvP in Claims")) {
+            boolean pvpBlocked = !cfg.getBoolean("protection.pvp-in-claims", false); // tile shows "Block PvP"
+            cfg.set("protection.pvp-in-claims", !pvpBlocked ? false : true);
+            // Re-evaluate: we store pvp-in-claims meaning "true = allow pvp". We want tile to flip "block pvp".
+            // Simpler: if currently allow pvp (true), set false to block; else set true to allow.
+            boolean allowNow = cfg.getBoolean("protection.pvp-in-claims", false);
+            cfg.set("protection.pvp-in-claims", !allowNow);
+            changed = true;
+        } else if (d.contains("Keep Dropped Items")) {
+            boolean cur = cfg.getBoolean("claims.keep-items.enabled", false);
+            cfg.set("claims.keep-items.enabled", !cur);
+            changed = true;
+        } else if (d.contains("Drop Compass If Full")) {
+            boolean cur = cfg.getBoolean("compass.drop-if-full", true);
+            cfg.set("compass.drop-if-full", !cur);
+            changed = true;
+        } else if (d.contains("Admin Help")) {
+            p.sendMessage(color("&7Admin tips: Left-click tiles to toggle. Values save instantly."));
+            p.sendMessage(color("&7More bulk tools, town flags & audits are planned for &b2.0&7."));
+        } else if (d.contains("Back")) {
+            gui.openMain(p);
+            return;
+        }
+
+        if (changed) {
+            ProShield.getInstance().saveConfig();
+            // refresh screen to reflect ON/OFF glass
+            Bukkit.getScheduler().runTask(ProShield.getInstance(), () -> gui.openAdmin(p));
+        }
+    }
+
+    private boolean isAdmin(Player p) {
+        return p.isOp() || p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui");
+    }
+
+    private boolean isArrow(ItemStack it) {
+        return it.getType() == Material.ARROW;
+    }
+
+    private String name(ItemStack it) {
+        if (it == null || it.getType() == Material.AIR) return "";
+        if (!it.hasItemMeta() || it.getItemMeta().getDisplayName() == null) return it.getType().name();
+        return ChatColor.stripColor(it.getItemMeta().getDisplayName());
+    }
+
+    private String color(String s) {
+        return ChatColor.translateAlternateColorCodes('&', s);
+    }
 }

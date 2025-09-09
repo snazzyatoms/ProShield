@@ -1,15 +1,10 @@
-# path: src/main/resources/plugin.yml
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.2.2
+version: 1.2.3
 api-version: 1.18
 author: snazzyatoms
 description: Land and plot protection plugin with GUI management and admin tools.
-
-softdepend:
-  - Vault
-  - LuckPerms
-  - EssentialsX
+softdepend: [Vault, LuckPerms]
 
 commands:
   proshield:
@@ -19,25 +14,28 @@ commands:
       /proshield claim
       /proshield unclaim
       /proshield info
-      /proshield trust <player>
+      /proshield compass
+      /proshield trust <player> [role]
       /proshield untrust <player>
       /proshield trusted
-      /proshield compass
       /proshield bypass <on|off|toggle>
+      /proshield preview [seconds]
+      /proshield transfer <player>
+      /proshield purgeexpired <days> [dryrun]
+      /proshield debug <on|off|toggle>
       /proshield reload
-      /proshield purgeexpired
 
 permissions:
   proshield.use:
     description: Use ProShield commands and GUI
     default: true
 
-  proshield.admin:
-    description: Access admin tools (compass, bypass, force unclaim, teleport, purge)
-    default: op
-
   proshield.compass:
     description: Receive/use the ProShield compass
+    default: op
+
+  proshield.admin:
+    description: Admin tools (bypass, transfer, purge, preview)
     default: op
 
   proshield.bypass:
@@ -53,13 +51,17 @@ permissions:
     default: op
 
   proshield.admin.reload:
-    description: Use /proshield reload
+    description: /proshield reload
     default: op
 
   proshield.admin.expired.purge:
-    description: Manage expired claims
+    description: Purge expired claims
     default: op
 
-  proshield.admin.keepdrops:
-    description: Toggle global 'keep items in claims' (admin GUI)
+  proshield.admin.debug:
+    description: Toggle debug logging
+    default: op
+
+  proshield.admin.keydrops:
+    description: Allow toggling claim item-keep/pickup rules
     default: op

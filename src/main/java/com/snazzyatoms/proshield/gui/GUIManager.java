@@ -9,9 +9,9 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.ItemFlag;
 
 import java.util.Arrays;
 import java.util.List;
@@ -66,7 +66,7 @@ public class GUIManager {
         return it;
     }
 
-    /** Back-compat: older code calls this. */
+    /** Back-compat: older code calls this signature. */
     public void giveCompass(Player p, boolean dropIfFull) {
         boolean isAdmin = p.hasPermission("proshield.admin.gui") || p.hasPermission("proshield.admin") || p.isOp();
         ItemStack compass = isAdmin ? createAdminCompass() : createPlayerCompass();
@@ -100,9 +100,7 @@ public class GUIManager {
      * ------------------------------------------------------ */
 
     /** Back-compat overload (ignored flag). */
-    public void openMain(Player player, boolean ignored) {
-        openMain(player);
-    }
+    public void openMain(Player player, boolean ignored) { openMain(player); }
 
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, TITLE_MAIN);
@@ -351,6 +349,15 @@ public class GUIManager {
     private String prefix() {
         return ChatColor.translateAlternateColorCodes('&',
                 plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r "));
+    }
+
+    /* -------------------------------------------------------
+     * Config reload hook (called by ProShield#reloadAllConfigs)
+     * ------------------------------------------------------ */
+    public void onConfigReload() {
+        // Currently we read config values each time we open a GUI,
+        // so no cache to refresh. This hook exists to satisfy calls
+        // from ProShield and for future caching if needed.
     }
 
     /* -------------------------------------------------------

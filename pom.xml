@@ -8,6 +8,7 @@
   <artifactId>proshield</artifactId>
   <version>1.2.4</version>
   <packaging>jar</packaging>
+
   <name>ProShield</name>
   <description>Lightweight land and plot protection plugin with GUI and admin tools.</description>
   <url>https://github.com/snazzyatoms/ProShield</url>
@@ -27,20 +28,11 @@
     </license>
   </licenses>
 
-  <developers>
-    <developer>
-      <id>snazzyatoms</id>
-      <name>snazzyatoms</name>
-    </developer>
-  </developers>
-
-  <!-- Repositories for Paper API -->
   <repositories>
     <repository>
       <id>papermc-repo</id>
       <url>https://repo.papermc.io/repository/maven-public/</url>
     </repository>
-    <!-- Spigot snapshot repo (fallback if ever needed) -->
     <repository>
       <id>spigotmc-repo</id>
       <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
@@ -48,28 +40,16 @@
   </repositories>
 
   <dependencies>
-    <!-- Paper API (provided at runtime by the server) -->
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
       <version>${paper.api.version}</version>
       <scope>provided</scope>
     </dependency>
-
-    <!-- (Optional) Vault API - mark provided if you use it at compile-time -->
-    <!--
-    <dependency>
-      <groupId>com.github.MilkBowl</groupId>
-      <artifactId>VaultAPI</artifactId>
-      <version>1.7</version>
-      <scope>provided</scope>
-    </dependency>
-    -->
   </dependencies>
 
   <build>
     <plugins>
-      <!-- Ensure Java 17 bytecode -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -78,8 +58,6 @@
           <release>${maven.compiler.release}</release>
         </configuration>
       </plugin>
-
-      <!-- Filter and copy resources -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
@@ -88,8 +66,6 @@
           <encoding>${project.build.sourceEncoding}</encoding>
         </configuration>
       </plugin>
-
-      <!-- Build a slim jar (no shading needed for a Bukkit/Paper plugin) -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -104,11 +80,4 @@
       </plugin>
     </plugins>
   </build>
-
-  <distributionManagement>
-    <repository>
-      <id>internal</id>
-      <url>file://${project.basedir}/target</url>
-    </repository>
-  </distributionManagement>
 </project>

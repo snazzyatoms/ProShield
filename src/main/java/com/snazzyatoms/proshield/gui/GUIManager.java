@@ -8,7 +8,6 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemFlag;
@@ -18,14 +17,14 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.*;
 
 /**
- * Central GUI builder/manager (player + admin).
- * - Provides inventory builders
- * - Tracks a per-player "back stack"
- * - Exposes helpers used by GUIListener and PlayerJoinListener
+ * ProShield GUI Manager
+ * - Builds Player Main, Admin, and Help GUIs
+ * - Tracks per-player "back" history
+ * - Exposes helpers for GUIListener & PlayerJoinListener
  */
 public class GUIManager {
 
-    // ===== Titles =====
+    // Titles
     private static final String TITLE_MAIN  = ChatColor.DARK_AQUA + "ProShield";
     private static final String TITLE_ADMIN = ChatColor.DARK_RED + "ProShield Admin";
     private static final String TITLE_HELP  = ChatColor.GOLD + "ProShield Help";
@@ -33,10 +32,10 @@ public class GUIManager {
     private final ProShield plugin;
     private final PlotManager plots;
 
-    // Back navigation: previous inventories per player (stack-like)
+    // Back navigation: store a stack of titles per player
     private final Map<UUID, Deque<String>> backStackTitle = new HashMap<>();
 
-    // Slot map (reload safe)
+    // Slot mapping (read from config; reload-safe)
     private int MAIN_CREATE, MAIN_INFO, MAIN_REMOVE, MAIN_HELP, MAIN_ADMIN, MAIN_BACK;
     private int ADM_FIRE, ADM_EXPLOSIONS, ADM_ENTITY_GRIEF, ADM_INTERACTIONS, ADM_PVP;
     private int ADM_KEEP_ITEMS, ADM_PURGE_EXPIRED, ADM_DEBUG, ADM_COMPASS_DROP, ADM_SPAWN_GUARD, ADM_TP_TOOLS, ADM_BACK, ADM_HELP, ADM_RELOAD;
@@ -56,7 +55,7 @@ public class GUIManager {
         readSlotsFromConfig();
     }
 
-    /** Open Player Main GUI (and push back stack). */
+    /** Open Player Main GUI (push to history). */
     public void openMain(Player p) {
         Inventory inv = buildMain(p);
         pushHistory(p, TITLE_MAIN);
@@ -64,7 +63,7 @@ public class GUIManager {
         clickSfx(p);
     }
 
-    /** Open Admin GUI (and push back stack). */
+    /** Open Admin GUI (push to history). */
     public void openAdmin(Player p) {
         Inventory inv = buildAdmin(p);
         pushHistory(p, TITLE_ADMIN);
@@ -72,7 +71,7 @@ public class GUIManager {
         clickSfx(p);
     }
 
-    /** Open Help page (and push back stack). */
+    /** Open Help GUI (push to history). */
     public void openHelp(Player p) {
         Inventory inv = buildHelp(p);
         pushHistory(p, TITLE_HELP);
@@ -80,9 +79,9 @@ public class GUIManager {
         clickSfx(p);
     }
 
-    /** Back navigation. Returns true if we switched to a previous page. */
+    /** Back navigation; returns true if a previous page was opened. */
     public boolean goBack(Player p) {
-        // pop current
+        // Pop current
         popHistory(p);
         String prev = peekHistory(p);
         if (prev == null) {
@@ -91,23 +90,24 @@ public class GUIManager {
         }
         switch (prev) {
             case TITLE_ADMIN -> p.openInventory(buildAdmin(p));
-            case TITLE_HELP  -> p.openInventory(buildHelp(p));
-            default          -> p.openInventory(buildMain(p));
+            case TITLE_HELP -> p.openInventory(buildHelp(p));
+            default -> p.openInventory(buildMain(p));
         }
         clickSfx(p);
         return true;
     }
 
-    /** Give proper compass (admin vs player) with fallback drop. */
+    /** Give proper compass (admin vs player) with fallback drop when full. */
     public void giveCompass(Player p, boolean dropIfFull) {
-        ItemStack compass = p.hasPermission("proshield.admin") ? createAdminCompass() : createPlayerCompass();
-        HashMap<Integer, ItemStack> left = p.getInventory().addItem(compass);
-        if (!left.isEmpty() && dropIfFull) {
+        ItemStack compass = (p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui"))
+                ? createAdminCompass() : createPlayerCompass();
+        Map<Integer, ItemStack> leftover = p.getInventory().addItem(compass);
+        if (!leftover.isEmpty() && dropIfFull) {
             p.getWorld().dropItemNaturally(p.getLocation(), compass);
         }
     }
 
-    /** Identify ProShield compass by display name. */
+    /** Identify a ProShield compass. */
     public boolean isProShieldCompass(ItemStack item) {
         if (item == null || item.getType() != Material.COMPASS) return false;
         ItemMeta meta = item.getItemMeta();
@@ -116,7 +116,14 @@ public class GUIManager {
         return dn.contains("proshield");
     }
 
-    /** Main click router for GUIListener. */
+    /** Minimal “is ours?” check for GUIListener. */
+    public boolean isOurInventory(InventoryView view) {
+        if (view == null) return false;
+        String t = view.getTitle();
+        return TITLE_MAIN.equals(t) || TITLE_ADMIN.equals(t) || TITLE_HELP.equals(t);
+    }
+
+    /** Central click router for GUIListener. */
     public void handleInventoryClick(Player p, int slot, ItemStack clicked, InventoryView view) {
         String title = view.getTitle();
 
@@ -134,7 +141,7 @@ public class GUIManager {
             } else if (slot == MAIN_HELP) {
                 openHelp(p);
             } else if (slot == MAIN_ADMIN) {
-                if (p.hasPermission("proshield.admin.gui") || p.hasPermission("proshield.admin")) {
+                if (p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui")) {
                     openAdmin(p);
                 } else {
                     p.sendMessage(prefix() + ChatColor.RED + "You don't have permission to open the Admin menu.");
@@ -165,7 +172,7 @@ public class GUIManager {
             } else if (slot == ADM_INTERACTIONS) {
                 toggle(cfg, "protection.interactions.enabled"); changed = true;
             } else if (slot == ADM_PVP) {
-                // pvp-in-claims: true means PvP allowed, false means PvP blocked
+                // true = PvP allowed in claims; false = PvP blocked (safer default)
                 toggle(cfg, "protection.pvp-in-claims"); changed = true;
             } else if (slot == ADM_KEEP_ITEMS) {
                 toggle(cfg, "claims.keep-items.enabled"); changed = true;
@@ -179,12 +186,11 @@ public class GUIManager {
             } else if (slot == ADM_SPAWN_GUARD) {
                 toggle(cfg, "spawn.block-claiming"); changed = true;
             } else if (slot == ADM_RELOAD) {
-                // Save any potential pre-reload changes first
+                // Save any toggles before reloading
                 plugin.saveConfig();
                 plugin.onConfigReload();
                 p.sendMessage(prefix() + ChatColor.YELLOW + "Config reloaded.");
-                // Re-open admin to reflect fresh values and keep back-stack consistent
-                openAdmin(p);
+                openAdmin(p); // rebuild to reflect fresh state
                 return;
             } else if (slot == ADM_TP_TOOLS) {
                 p.sendMessage(prefix() + ChatColor.GRAY + "Teleport tools coming soon.");
@@ -200,7 +206,6 @@ public class GUIManager {
 
             if (changed) {
                 plugin.saveConfig();
-                // Rebuild admin to reflect new toggle state
                 openAdmin(p);
             }
             return;
@@ -208,18 +213,10 @@ public class GUIManager {
 
         // HELP
         if (TITLE_HELP.equals(title)) {
-            // Only one control: Back
             if (slot == MAIN_BACK || slot == ADM_BACK) {
                 goBack(p);
             }
         }
-    }
-
-    /** Minimal “is this one of our menus?” for GUIListener. */
-    public boolean isOurInventory(InventoryView view) {
-        if (view == null) return false;
-        String t = view.getTitle();
-        return TITLE_MAIN.equals(t) || TITLE_ADMIN.equals(t) || TITLE_HELP.equals(t);
     }
 
     // ==============================
@@ -259,16 +256,16 @@ public class GUIManager {
     private Inventory buildMain(Player p) {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_MAIN);
         fill(inv, pane(ChatColor.DARK_GRAY + "ProShield"));
-        inv.setItem(MAIN_CREATE, icon(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk",
-                List.of(ChatColor.GRAY + "Claim the chunk you are standing in"))));
-        inv.setItem(MAIN_INFO, icon(Material.BOOK, ChatColor.AQUA + "Claim Info",
-                List.of(ChatColor.GRAY + "See owner/trusted players"))));
-        inv.setItem(MAIN_REMOVE, icon(Material.BARRIER, ChatColor.RED + "Unclaim Chunk",
-                List.of(ChatColor.GRAY + "Release your claim"))));
-        inv.setItem(MAIN_HELP, icon(Material.PAPER, ChatColor.GOLD + "Help",
-                List.of(ChatColor.GRAY + "Commands & tips"))));
 
-        // Admin slot only if permitted
+        inv.setItem(MAIN_CREATE, icon(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk",
+                List.of(ChatColor.GRAY + "Claim the chunk you are standing in")));
+        inv.setItem(MAIN_INFO, icon(Material.BOOK, ChatColor.AQUA + "Claim Info",
+                List.of(ChatColor.GRAY + "See owner/trusted players")));
+        inv.setItem(MAIN_REMOVE, icon(Material.BARRIER, ChatColor.RED + "Unclaim Chunk",
+                List.of(ChatColor.GRAY + "Release your claim")));
+        inv.setItem(MAIN_HELP, icon(Material.PAPER, ChatColor.GOLD + "Help",
+                List.of(ChatColor.GRAY + "Commands & tips")));
+
         if (p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui")) {
             inv.setItem(MAIN_ADMIN, icon(Material.REDSTONE, ChatColor.DARK_RED + "Admin Menu",
                     List.of(ChatColor.GRAY + "Admin tools & toggles")));
@@ -284,29 +281,27 @@ public class GUIManager {
 
         FileConfiguration cfg = plugin.getConfig();
 
-        // Toggle helpers show ON/OFF in lore
-        inv.setItem(ADM_FIRE, toggleIcon(Material.FLINT_AND_STEEL, "protection.fire.enabled", ChatColor.GOLD + "Fire Protection", cfg));
-        inv.setItem(ADM_EXPLOSIONS, toggleIcon(Material.TNT, "protection.explosions.enabled", ChatColor.RED + "Explosion Protection", cfg));
+        inv.setItem(ADM_FIRE,         toggleIcon(Material.FLINT_AND_STEEL, "protection.fire.enabled", ChatColor.GOLD + "Fire Protection", cfg));
+        inv.setItem(ADM_EXPLOSIONS,   toggleIcon(Material.TNT, "protection.explosions.enabled", ChatColor.RED + "Explosion Protection", cfg));
         inv.setItem(ADM_ENTITY_GRIEF, toggleIcon(Material.ENDERMAN_SPAWN_EGG, "protection.entity-grief.enabled", ChatColor.LIGHT_PURPLE + "Entity Griefing", cfg));
         inv.setItem(ADM_INTERACTIONS, toggleIcon(Material.LEVER, "protection.interactions.enabled", ChatColor.YELLOW + "Interaction Guard", cfg));
-        inv.setItem(ADM_PVP, toggleIcon(Material.IRON_SWORD, "protection.pvp-in-claims", ChatColor.DARK_RED + "PvP Allowed in Claims", cfg));
+        inv.setItem(ADM_PVP,          toggleIcon(Material.IRON_SWORD, "protection.pvp-in-claims", ChatColor.DARK_RED + "PvP Allowed in Claims", cfg));
 
-        inv.setItem(ADM_KEEP_ITEMS, toggleIcon(Material.CHEST, "claims.keep-items.enabled", ChatColor.AQUA + "Keep Items in Claims", cfg));
-        inv.setItem(ADM_DEBUG, toggleIcon(Material.REPEATER, "proshield.debug", ChatColor.GRAY + "Debug Logging", cfg));
+        inv.setItem(ADM_KEEP_ITEMS,   toggleIcon(Material.CHEST, "claims.keep-items.enabled", ChatColor.AQUA + "Keep Items in Claims", cfg));
+        inv.setItem(ADM_DEBUG,        toggleIcon(Material.REPEATER, "proshield.debug", ChatColor.GRAY + "Debug Logging", cfg));
         inv.setItem(ADM_COMPASS_DROP, toggleIcon(Material.DROPPER, "compass.drop-if-full", ChatColor.BLUE + "Compass: Drop if Full", cfg));
-        inv.setItem(ADM_SPAWN_GUARD, toggleIcon(Material.SPAWNER, "spawn.block-claiming", ChatColor.DARK_GREEN + "Spawn Guard", cfg));
+        inv.setItem(ADM_SPAWN_GUARD,  toggleIcon(Material.SPAWNER, "spawn.block-claiming", ChatColor.DARK_GREEN + "Spawn Guard", cfg));
 
         inv.setItem(ADM_TP_TOOLS, icon(Material.ENDER_PEARL, ChatColor.DARK_AQUA + "Teleport Tools",
-                List.of(ChatColor.GRAY + "Coming soon"))));
+                List.of(ChatColor.GRAY + "Coming soon")));
 
         inv.setItem(ADM_HELP, icon(Material.PAPER, ChatColor.GOLD + "Admin Help",
-                List.of(ChatColor.GRAY + "Quick tips & references"))));
+                List.of(ChatColor.GRAY + "Quick tips & references")));
 
         inv.setItem(ADM_RELOAD, icon(Material.COMMAND_BLOCK, ChatColor.GREEN + "Reload Config",
-                List.of(ChatColor.GRAY + "Apply latest config changes"))));
+                List.of(ChatColor.GRAY + "Apply latest config changes")));
 
         inv.setItem(ADM_BACK, backButton());
-
         return inv;
     }
 
@@ -352,11 +347,11 @@ public class GUIManager {
         ADM_PURGE_EXPIRED = cfg.getInt("gui.slots.admin.purge-expired", 21);
         ADM_DEBUG         = cfg.getInt("gui.slots.admin.debug", 23);
         ADM_COMPASS_DROP  = cfg.getInt("gui.slots.admin.compass-drop-if-full", 24);
-        ADM_SPAWN_GUARD   = cfg.getInt("gui.slots.admin.spawn-guard", 25);
+        ADM_SPAWN_GUARD   = cfg.getInt("gui.slots.admin.spawn-guard", 26); // default 26 (Reload uses 25)
         ADM_TP_TOOLS      = cfg.getInt("gui.slots.admin.tp-tools", 30);
         ADM_BACK          = cfg.getInt("gui.slots.admin.back", 31);
         ADM_HELP          = cfg.getInt("gui.slots.admin.help", 22);
-        ADM_RELOAD        = cfg.getInt("gui.slots.admin.reload", 25); // if you change config, it will follow
+        ADM_RELOAD        = cfg.getInt("gui.slots.admin.reload", 25);
     }
 
     private void toggle(FileConfiguration cfg, String path) {
@@ -367,7 +362,6 @@ public class GUIManager {
     private void pushHistory(Player p, String title) {
         backStackTitle.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
         Deque<String> dq = backStackTitle.get(p.getUniqueId());
-        // Deduplicate adjacent duplicates to reduce weird loops
         if (dq.isEmpty() || !dq.peekLast().equals(title)) {
             dq.addLast(title);
         }
@@ -392,7 +386,8 @@ public class GUIManager {
     }
 
     private ItemStack backButton() {
-        return icon(Material.ARROW, ChatColor.YELLOW + "Back", List.of(ChatColor.GRAY + "Return to previous page"));
+        return icon(Material.ARROW, ChatColor.YELLOW + "Back",
+                List.of(ChatColor.GRAY + "Return to previous page"));
     }
 
     private ItemStack pane(String name) {
@@ -430,5 +425,9 @@ public class GUIManager {
                 inv.setItem(i, filler);
             }
         }
+    }
+
+    private String prefix() {
+        return plugin.getConfig().getString("messages.prefix", ChatColor.DARK_AQUA + "[ProShield] ") + ChatColor.RESET;
     }
 }

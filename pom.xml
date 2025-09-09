@@ -5,20 +5,27 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!-- ===== Project Coordinates ===== -->
   <groupId>com.snazzyatoms</groupId>
   <artifactId>proshield</artifactId>
-  <version>1.2.2</version>
+  <version>1.2.3</version>
+  <packaging>jar</packaging>
+
   <name>ProShield</name>
-  <description>Land and plot protection plugin with GUI management and admin tools.</description>
+  <description>Lightweight land & plot protection plugin with GUI, roles, and admin tools.</description>
   <url>https://github.com/snazzyatoms/ProShield</url>
 
+  <!-- ===== Properties ===== -->
   <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
+    <!-- Build / Java -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+
+    <!-- Paper API: keep at 1.18.2 for broad compatibility (supports 1.18–1.21 servers) -->
     <paper.api.version>1.18.2-R0.1-SNAPSHOT</paper.api.version>
   </properties>
 
+  <!-- ===== Repositories ===== -->
   <repositories>
     <repository>
       <id>papermc</id>
@@ -26,7 +33,9 @@
     </repository>
   </repositories>
 
+  <!-- ===== Dependencies ===== -->
   <dependencies>
+    <!-- Paper API is provided by the server at runtime -->
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
@@ -35,32 +44,87 @@
     </dependency>
   </dependencies>
 
+  <!-- ===== Build ===== -->
   <build>
+    <resources>
+      <!-- Ensure plugin.yml and other resources are copied with UTF-8 -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+
     <plugins>
-      <!-- Java 17 -->
+      <!-- Java 17 compiler config -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
-          <release>17</release>
+          <release>${maven.compiler.release}</release>
+          <encoding>${project.build.sourceEncoding}</encoding>
         </configuration>
       </plugin>
 
+      <!-- Copy resources with UTF-8 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.3.1</version>
         <configuration>
-          <encoding>UTF-8</encoding>
+          <encoding>${project.build.sourceEncoding}</encoding>
         </configuration>
       </plugin>
 
+      <!-- Jar metadata -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Implementation-Title>${project.name}</Implementation-Title>
+              <Implementation-Version>${project.version}</Implementation-Version>
+              <Implementation-Vendor>snazzyatoms</Implementation-Vendor>
+              <Build-Jdk-Spec>${maven.compiler.release}</Build-Jdk-Spec>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
     </plugins>
   </build>
+
+  <!-- ===== Optional: Sign artifacts when using -Psign ===== -->
+  <profiles>
+    <profile>
+      <id>sign</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.4</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <!-- Useful for CI (GitHub Actions, JitPack) -->
+                  <gpgArguments>
+                    <arg>--batch</arg>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

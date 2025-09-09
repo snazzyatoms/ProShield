@@ -48,7 +48,26 @@ protection:
     wither: true
   entity-teleport:
     enderman: true
+# --- Admin toggles master switches (read by Admin GUI) ---
+protection:
+  fire:
+    enabled: true
+  explosions:
+    enabled: true
+  entity-grief:
+    enabled: true
+  interactions:
+    enabled: true
+  # If true, PvP occurs inside claims; if false, PvP is blocked in claims.
+  pvp-in-claims: false
 
+claims:
+  keep-items:
+    enabled: false
+    despawn-seconds: 900   # 300–900 allowed
+
+proshield:
+  debug: false
   # NEW: Entities protection inside claims (blocked unless owner/trusted/bypass)
   entities:
     item-frames: true

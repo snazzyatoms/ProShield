@@ -65,3 +65,7 @@ permissions:
   proshield.admin.keydrops:
     description: Allow toggling claim item-keep/pickup rules
     default: op
+# path: src/main/resources/plugin.yml  (append inside `permissions:`)
+  proshield.admin.gui:
+    description: Open the ProShield Admin GUI
+    default: op

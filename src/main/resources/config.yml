@@ -1,33 +1,22 @@
-# ProShield main configuration
-config-version: "1.2.3"
-
+# ProShield configuration (v1.2.3)
 messages:
   prefix: "&3[ProShield]&r "
 
+version: "1.2.3"  # shown for reference; not used for gating
+
 limits:
-  max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
+  max-claims: 5          # -1 = unlimited (players with proshield.unlimited bypass)
 
 expiry:
   enabled: false         # If true, remove claims whose owners have been inactive for N days
   days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
 
-autogive:
-  compass-on-join: true  # Give eligible players the ProShield compass on join
-
-compass:
-  drop-if-full: true     # NEW: If inventory full, drop compass at feet (true) or skip giving (false)
-
 protection:
-  containers: true       # Block opening containers by non-owners in claims
-  pvp-in-claims: false   # If false, cancel PvP inside claims
-  mob-grief: true        # If true, explosions won't break blocks in claimed chunks
+  containers: true
+  pvp-in-claims: false
+  mob-grief: true
   creeper-explosions: true
   tnt-explosions: true
-  wither-explosions: true
-  wither-skull-explosions: true
-  ender-crystal-explosions: true
-  ender-dragon-explosions: true
-
   fire:
     spread: true
     burn: true
@@ -37,46 +26,51 @@ protection:
       lightning: true
       explosion: true
       spread: true
-
-  # Non-container interactions (doors, buttons, etc.)
+  # Non-container interactions
   interactions:
     enabled: true
-    mode: blacklist      # "blacklist" or "whitelist"
-    categories:
-      - doors
-      - trapdoors
-      - fence_gates
-      - buttons
-      - levers
-      - pressure_plates
-    list: []             # Explicit materials e.g. [NOTE_BLOCK, BELL]
-
-  # Bucket usage
+    mode: blacklist     # or "whitelist"
+    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
+    list: []            # explicit materials e.g. [NOTE_BLOCK, BELL]
   buckets:
-    block-empty: true    # Block placing water/lava in other players' claims
-    block-fill: true     # Block picking up source blocks from other players' claims
-
-  # Entity griefing toggles
+    block-empty: true
+    block-fill: true
   entity-grief:
     enderman: true
     ravager: true
     silverfish: true
     ender-dragon: true
     wither: true
-
-  # Entity teleport denial
   entity-teleport:
     enderman: true
 
-# Per-world overrides (optional). Copy keys from protection.* above.
-world-overrides: {}
+# Give compass on join?
+autogive:
+  compass-on-join: true
 
-# Keep items (dropped item) protection inside claims
-# (Feature default OFF — admin can enable per claim or globally later)
-items:
-  keep-in-claims:
-    enabled: false
-    seconds: 600          # default lifespan when enabled (will be clamped 300..900)
+# If inventory is full when giving the compass:
+# true  -> drop at player's feet
+# false -> do not give; player must free slot or use /proshield compass
+compass:
+  drop-if-full: true
 
-# ---- Data sections (do not edit manually unless you know what you're doing) ----
+# Optional per-world overrides (leave empty to use global)
+per-world: {}
+
+# GUI slot mapping (you can change positions without touching code)
+gui:
+  slots:
+    main:
+      create: 11
+      info: 13
+      remove: 15
+      admin: 33
+      help: 49
+      back: 48
+    admin:
+      toggle-drop-if-full: 20
+      help: 22
+      back: 31
+
+# Claims are stored automatically
 claims: {}

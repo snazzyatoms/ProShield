@@ -12,16 +12,14 @@
   <packaging>jar</packaging>
 
   <name>ProShield</name>
-  <description>Lightweight land & plot protection plugin with GUI, roles, and admin tools.</description>
+  <description>Lightweight land &amp; plot protection plugin with GUI, roles, and admin tools.</description>
   <url>https://github.com/snazzyatoms/ProShield</url>
 
   <!-- ===== Properties ===== -->
   <properties>
-    <!-- Build / Java -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
-
-    <!-- Paper API: keep at 1.18.2 for broad compatibility (supports 1.18–1.21 servers) -->
+    <!-- Broad compatibility (compile against 1.18.2 API; runs on 1.18–1.21) -->
     <paper.api.version>1.18.2-R0.1-SNAPSHOT</paper.api.version>
   </properties>
 
@@ -35,7 +33,7 @@
 
   <!-- ===== Dependencies ===== -->
   <dependencies>
-    <!-- Paper API is provided by the server at runtime -->
+    <!-- Provided by server at runtime -->
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
@@ -47,7 +45,6 @@
   <!-- ===== Build ===== -->
   <build>
     <resources>
-      <!-- Ensure plugin.yml and other resources are copied with UTF-8 -->
       <resource>
         <directory>src/main/resources</directory>
         <filtering>false</filtering>
@@ -55,7 +52,7 @@
     </resources>
 
     <plugins>
-      <!-- Java 17 compiler config -->
+      <!-- Java 17 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -66,7 +63,7 @@
         </configuration>
       </plugin>
 
-      <!-- Copy resources with UTF-8 -->
+      <!-- Resources UTF-8 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
@@ -76,7 +73,7 @@
         </configuration>
       </plugin>
 
-      <!-- Jar metadata -->
+      <!-- JAR metadata -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -95,7 +92,7 @@
     </plugins>
   </build>
 
-  <!-- ===== Optional: Sign artifacts when using -Psign ===== -->
+  <!-- ===== Optional: GPG signing with -Psign ===== -->
   <profiles>
     <profile>
       <id>sign</id>
@@ -113,7 +110,6 @@
                   <goal>sign</goal>
                 </goals>
                 <configuration>
-                  <!-- Useful for CI (GitHub Actions, JitPack) -->
                   <gpgArguments>
                     <arg>--batch</arg>
                     <arg>--pinentry-mode</arg>

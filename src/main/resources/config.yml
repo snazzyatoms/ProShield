@@ -2,7 +2,7 @@
 messages:
   prefix: "&3[ProShield]&r "
 
-version: "1.2.3"  # shown for reference; not used for gating
+version: "1.2.3"
 
 limits:
   max-claims: 5          # -1 = unlimited (players with proshield.unlimited bypass)
@@ -11,12 +11,18 @@ expiry:
   enabled: false         # If true, remove claims whose owners have been inactive for N days
   days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
 
+# By default, everything is PROTECTED inside claims.
+# Most toggles = true means "block / protect that behavior".
 protection:
   containers: true
-  pvp-in-claims: false
-  mob-grief: true
+  pvp-in-claims: false         # false = PVP is blocked in claims (safer default)
+  mob-grief: true              # true = block explosions from entities in claims
   creeper-explosions: true
   tnt-explosions: true
+  wither-explosions: true
+  wither-skull-explosions: true
+  ender-crystal-explosions: true
+  ender-dragon-explosions: true
   fire:
     spread: true
     burn: true
@@ -26,12 +32,11 @@ protection:
       lightning: true
       explosion: true
       spread: true
-  # Non-container interactions
   interactions:
     enabled: true
-    mode: blacklist     # or "whitelist"
+    mode: blacklist             # "blacklist" blocks common redstone/door stuff to non-trusted
     categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
-    list: []            # explicit materials e.g. [NOTE_BLOCK, BELL]
+    list: []                    # explicit materials e.g. [NOTE_BLOCK, BELL]
   buckets:
     block-empty: true
     block-fill: true
@@ -43,6 +48,13 @@ protection:
     wither: true
   entity-teleport:
     enderman: true
+
+  # NEW: Entities protection inside claims (blocked unless owner/trusted/bypass)
+  entities:
+    item-frames: true
+    armor-stands: true
+    passive-animals: true
+    tamed-pets: true
 
 # Give compass on join?
 autogive:
@@ -57,7 +69,7 @@ compass:
 # Optional per-world overrides (leave empty to use global)
 per-world: {}
 
-# GUI slot mapping (you can change positions without touching code)
+# GUI slot mapping (with sanity checks applied in code)
 gui:
   slots:
     main:

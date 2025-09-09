@@ -1,6 +1,7 @@
+# path: src/main/resources/plugin.yml
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.2.3
+version: 1.2.4
 api-version: 1.18
 author: snazzyatoms
 description: Land and plot protection plugin with GUI management and admin tools.
@@ -30,12 +31,12 @@ permissions:
     description: Use ProShield commands and GUI
     default: true
 
-  proshield.compass:
-    description: Receive/use the ProShield compass
+  proshield.admin:
+    description: Admin tools (bypass, transfer, purge, preview, admin GUI)
     default: op
 
-  proshield.admin:
-    description: Admin tools (bypass, transfer, purge, preview)
+  proshield.compass:
+    description: Receive/use the ProShield compass
     default: op
 
   proshield.bypass:
@@ -51,21 +52,26 @@ permissions:
     default: op
 
   proshield.admin.reload:
-    description: /proshield reload
+    description: Allows /proshield reload
     default: op
 
   proshield.admin.expired.purge:
-    description: Purge expired claims
+    description: Purge expired claims (command or GUI)
     default: op
 
   proshield.admin.debug:
     description: Toggle debug logging
     default: op
 
-  proshield.admin.keydrops:
-    description: Allow toggling claim item-keep/pickup rules
+  proshield.admin.keepdrops:
+    description: Toggle claim item-drop keep/anti-despawn in admin GUI
     default: op
-# path: src/main/resources/plugin.yml  (append inside `permissions:`)
+
+  # Back-compat alias for earlier typo ("keydrops"); keep both so existing perms still work
+  proshield.admin.keydrops:
+    description: (Alias) Toggle claim item-drop keep/anti-despawn in admin GUI
+    default: op
+
   proshield.admin.gui:
     description: Open the ProShield Admin GUI
     default: op

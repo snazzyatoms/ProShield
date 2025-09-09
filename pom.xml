@@ -1,68 +1,114 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!-- path: pom.xml -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.snazzyatoms</groupId>
   <artifactId>proshield</artifactId>
   <version>1.2.4</version>
   <name>ProShield</name>
-  <description>Lightweight land &amp; plot protection for Spigot/Paper</description>
+  <description>Lightweight land & plot protection plugin for Spigot/Paper servers.</description>
   <url>https://github.com/snazzyatoms/ProShield</url>
+  <licenses>
+    <license>
+      <name>MIT</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
 
+  <!-- Make sure we build on Java 17 -->
   <properties>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <paper.version>1.20.1-R0.1-SNAPSHOT</paper.version>
   </properties>
 
+  <!-- Repositories needed to resolve Paper/Spigot APIs -->
+  <repositories>
+    <!-- PaperMC public (REQUIRED for paper-api snapshots) -->
+    <repository>
+      <id>papermc-repo</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+
+    <!-- (Optional fallback) Spigot snapshots if you switch to spigot-api -->
+    <repository>
+      <id>spigotmc-repo</id>
+      <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+    </repository>
+
+    <!-- (Optional) Sonatype snapshots for other deps -->
+    <repository>
+      <id>sonatype-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+  </repositories>
+
   <dependencies>
-    <!-- Use the Paper API as provided so it's not bundled -->
+    <!-- Use Paper API; scope provided so it isn't included in your jar -->
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
-      <version>${paper.version}</version>
+      <version>1.20.1-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
+
+    <!-- (Optional) If you target Spigot instead, replace the above with:
+    <dependency>
+      <groupId>org.spigotmc</groupId>
+      <artifactId>spigot-api</artifactId>
+      <version>1.20.1-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+    -->
+
+    <!-- (Optional) Adventure text API if you use it
+    <dependency>
+      <groupId>net.kyori</groupId>
+      <artifactId>adventure-api</artifactId>
+      <version>4.14.0</version>
+      <scope>provided</scope>
+    </dependency>
+    -->
   </dependencies>
 
   <build>
     <plugins>
-      <!-- Make sure builds are deterministic and on Java 17 -->
+      <!-- Compiler pinned to Java 17 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
           <release>17</release>
+          <showWarnings>true</showWarnings>
+          <showDeprecation>true</showDeprecation>
         </configuration>
       </plugin>
 
-      <!-- Put Implementation-Version = 1.2.4 in the jar manifest -->
+      <!-- Resource copy (plugin.yml etc.) -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.3.1</version>
+      </plugin>
+
+      <!-- Jar packaging -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.3.0</version>
         <configuration>
           <archive>
-            <manifest>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-            </manifest>
             <manifestEntries>
-              <Implementation-Title>ProShield</Implementation-Title>
-              <Implementation-Version>${project.version}</Implementation-Version>
+              <Built-By>ProShield</Built-By>
             </manifestEntries>
           </archive>
         </configuration>
-      </plugin>
-
-      <!-- Ensure resources are copied (plugin.yml, config.yml) -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.3.1</version>
       </plugin>
     </plugins>
   </build>

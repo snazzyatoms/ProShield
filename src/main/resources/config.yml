@@ -1,41 +1,26 @@
-# =========================================
-# ProShield Configuration
-# Version stamp (do not edit): used by migrator
-config:
-  version: "1.2.3"
-# =========================================
+# ProShield main configuration
+config-version: "1.2.3"
 
 messages:
   prefix: "&3[ProShield]&r "
-  no-permission: "&cYou don't have permission."
-  not-player: "&cPlayers only."
-  reloaded: "&aProShield reloaded."
-  claim-created: "&aClaim created for this chunk."
-  claim-exists: "&cThis chunk is already claimed or you reached your limit."
-  claim-removed: "&aClaim removed."
-  not-owner: "&cYou are not the owner of this claim."
-  no-claim-here: "&7No claim in this chunk."
-  trusted-added: "&a%player% is now trusted."
-  trusted-removed: "&a%player% is no longer trusted."
-  transfer-success: "&aOwnership transferred to &b%player%&a."
-  transfer-fail: "&cTransfer failed."
-  preview-start: "&aShowing claim borders for &b%seconds%s&a..."
-  preview-end: "&7Preview ended."
-  debug-on: "&aDebug logging: ON"
-  debug-off: "&aDebug logging: OFF"
 
 limits:
-  max-claims: 5          # -1 = unlimited (players with proshield.unlimited bypass)
+  max-claims: 5          # -1 = unlimited (players with proshield.unlimited always bypass)
 
 expiry:
-  enabled: true
-  days: 30               # inactivity days before eligible for expiry
-  preview-on-purge: true # console shows which claims would be purged when dry-run
+  enabled: false         # If true, remove claims whose owners have been inactive for N days
+  days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
+
+autogive:
+  compass-on-join: true  # Give eligible players the ProShield compass on join
+
+compass:
+  drop-if-full: true     # NEW: If inventory full, drop compass at feet (true) or skip giving (false)
 
 protection:
-  containers: true
-  pvp-in-claims: false
-  mob-grief: true
+  containers: true       # Block opening containers by non-owners in claims
+  pvp-in-claims: false   # If false, cancel PvP inside claims
+  mob-grief: true        # If true, explosions won't break blocks in claimed chunks
   creeper-explosions: true
   tnt-explosions: true
   wither-explosions: true
@@ -53,16 +38,25 @@ protection:
       explosion: true
       spread: true
 
+  # Non-container interactions (doors, buttons, etc.)
   interactions:
     enabled: true
-    mode: blacklist
-    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
-    list: []
+    mode: blacklist      # "blacklist" or "whitelist"
+    categories:
+      - doors
+      - trapdoors
+      - fence_gates
+      - buttons
+      - levers
+      - pressure_plates
+    list: []             # Explicit materials e.g. [NOTE_BLOCK, BELL]
 
+  # Bucket usage
   buckets:
-    block-empty: true
-    block-fill: true
+    block-empty: true    # Block placing water/lava in other players' claims
+    block-fill: true     # Block picking up source blocks from other players' claims
 
+  # Entity griefing toggles
   entity-grief:
     enderman: true
     ravager: true
@@ -70,22 +64,19 @@ protection:
     ender-dragon: true
     wither: true
 
+  # Entity teleport denial
   entity-teleport:
     enderman: true
 
-item-keep:
-  enabled: false          # NEW: default off as requested
-  despawn-seconds: 600    # NEW: default 600s; allowed range 300..900 for hygiene
-  anti-theft: true        # cancel pickup by non-owners inside the claim
+# Per-world overrides (optional). Copy keys from protection.* above.
+world-overrides: {}
 
-autogive:
-  compass-on-join: true
+# Keep items (dropped item) protection inside claims
+# (Feature default OFF — admin can enable per claim or globally later)
+items:
+  keep-in-claims:
+    enabled: false
+    seconds: 600          # default lifespan when enabled (will be clamped 300..900)
 
-debug:
-  enabled: false
-
-# per-world overrides can go here (optional)
-# worlds:
-#   world_nether:
-#     protection:
-#       pvp-in-claims: true
+# ---- Data sections (do not edit manually unless you know what you're doing) ----
+claims: {}

@@ -1,8 +1,11 @@
-# ProShield configuration (v1.2.3)
+# ProShield configuration (v1.2.4)
 messages:
   prefix: "&3[ProShield]&r "
 
-version: "1.2.3"
+# Written by the plugin on load/reload as well (kept for readability)
+version: "1.2.4"
+meta:
+  config-version: "1.2.4"
 
 limits:
   max-claims: 5          # -1 = unlimited (players with proshield.unlimited bypass)
@@ -11,18 +14,24 @@ expiry:
   enabled: false         # If true, remove claims whose owners have been inactive for N days
   days: 30               # Days of inactivity before claim is expired (checked on startup + daily)
 
-# By default, everything is PROTECTED inside claims.
-# Most toggles = true means "block / protect that behavior".
+# ------------------------------------------------------------------------------------
+# PROTECTION (defaults are "safe": true means 'block/deny' inside claims)
+# ------------------------------------------------------------------------------------
 protection:
   containers: true
-  pvp-in-claims: false         # false = PVP is blocked in claims (safer default)
-  mob-grief: true              # true = block explosions from entities in claims
+
+  # PvP: false = block PvP inside claims (safer default). /pvp listener enforces this.
+  pvp-in-claims: false
+
+  # Explosion & grief toggles
+  mob-grief: true
   creeper-explosions: true
   tnt-explosions: true
   wither-explosions: true
   wither-skull-explosions: true
   ender-crystal-explosions: true
   ender-dragon-explosions: true
+
   fire:
     spread: true
     burn: true
@@ -32,63 +41,93 @@ protection:
       lightning: true
       explosion: true
       spread: true
+
   interactions:
     enabled: true
-    mode: blacklist             # "blacklist" blocks common redstone/door stuff to non-trusted
+    mode: blacklist             # "blacklist" blocks common door/redstone use for non-trusted
     categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
     list: []                    # explicit materials e.g. [NOTE_BLOCK, BELL]
+
   buckets:
     block-empty: true
     block-fill: true
+
   entity-grief:
     enderman: true
     ravager: true
     silverfish: true
     ender-dragon: true
     wither: true
+
   entity-teleport:
     enderman: true
-# --- Admin toggles master switches (read by Admin GUI) ---
-protection:
-  fire:
-    enabled: true
-  explosions:
-    enabled: true
-  entity-grief:
-    enabled: true
-  interactions:
-    enabled: true
-  # If true, PvP occurs inside claims; if false, PvP is blocked in claims.
-  pvp-in-claims: false
 
+  # ---------------------------------------------
+  # Player damage protection INSIDE their claims
+  # ---------------------------------------------
+  player:
+    enabled: true
+    damage:
+      owner-immune: true          # protect claim owner while inside their claim
+      trusted-immune: true        # protect trusted players while inside the claim
+      mobs: true                  # cancel mob melee damage (zombies, skeleton melee, etc.)
+      projectiles: true           # cancel arrows, tridents, ghast fireballs, etc.
+      explosions: true            # block TNT/creeper/dragon/etc. damage to players
+      fire-lava: true             # cancel fire, fire_tick, lava, magma floor
+      fall: true                  # cancel fall damage (safe default per request)
+      other-environment: true     # cactus, suffocation, drowning, lightning, wither, etc.
+
+# ------------------------------------------------------------------------------------
+# FEATURE TOGGLES
+# ------------------------------------------------------------------------------------
+
+# Items dropped inside claims: optionally keep them from despawning.
+# (Off by default; admin GUI can toggle if you enabled that feature in your build.)
 claims:
   keep-items:
     enabled: false
-    despawn-seconds: 900   # 300–900 allowed
+    despawn-seconds: 900   # Allowed range 300–900 seconds
 
+# Extra entity protections for 'owned' displays/animals inside claims (read by listeners if present)
 proshield:
   debug: false
-  # NEW: Entities protection inside claims (blocked unless owner/trusted/bypass)
   entities:
     item-frames: true
     armor-stands: true
     passive-animals: true
     tamed-pets: true
 
-# Give compass on join?
+# ------------------------------------------------------------------------------------
+# COMPASS / AUTOGIVE
+# ------------------------------------------------------------------------------------
 autogive:
   compass-on-join: true
 
 # If inventory is full when giving the compass:
 # true  -> drop at player's feet
-# false -> do not give; player must free slot or use /proshield compass
+# false -> do not give; player must free a slot or use /proshield compass
 compass:
   drop-if-full: true
 
-# Optional per-world overrides (leave empty to use global)
+# ------------------------------------------------------------------------------------
+# PER-WORLD OVERRIDES
+# (example)
+# per-world:
+#   world_nether:
+#     protection:
+#       fire:
+#         spread: false
+#       interactions:
+#         enabled: false
+#   world_the_end:
+#     protection:
+#       ender-dragon-explosions: false
+# ------------------------------------------------------------------------------------
 per-world: {}
 
-# GUI slot mapping (with sanity checks applied in code)
+# ------------------------------------------------------------------------------------
+# GUI SLOT MAPPING
+# ------------------------------------------------------------------------------------
 gui:
   slots:
     main:
@@ -96,28 +135,16 @@ gui:
       info: 13
       remove: 15
       admin: 33
-      help: 49
-      back: 48
+      help: 31
+      back: 49
     admin:
       toggle-drop-if-full: 20
       help: 22
       back: 31
 
-# Claims are stored automatically
+# ------------------------------------------------------------------------------------
+# CLAIM STORAGE
+# (Claims are stored here automatically by the plugin)
+# NOTE: 'keep-items' sits above in this same section path; that's intentional for now.
+# ------------------------------------------------------------------------------------
 claims: {}
-# --- NEW: Damage protection inside claims (ON by default) ---
-protection:
-  damage:
-    enabled: true
-    protect-owner-and-trusted: true   # only protect claim owner + trusted/roles
-    cancel-all: true                  # if true, cancels ALL damage to protected players inside their claim
-
-    # The options below are only used if cancel-all = false
-    pve: true                         # block mob/creature melee damage
-    projectiles: true                 # arrows, tridents, ghast fireballs etc.
-    environment: true                 # cactus, magma blocks, sweet berries, etc.
-    fire-lava: true                   # fire/fire_tick/lava
-    fall: true                        # fall damage
-    explosions: true                  # TNT/creeper/etc.
-    drown-void-suffocate: true        # drowning, void, suffocation
-    poison-wither: true               # DoT/potion effects

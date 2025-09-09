@@ -12,8 +12,11 @@ Perfect for survival or SMP communities, it provides simple claiming, intuitive 
 - ✅ **Protection System** – Prevents griefing (block break/place, containers, interactions, fire spread, TNT/creeper explosions, entity grief).  
 - ✅ **Trust System** – Owners can `/proshield trust <player>` to allow friends access.  
 - ✅ **Claim Roles (since 1.2.1)** – Define granular access levels: Visitor, Member, Container, Builder, Co-Owner.  
-- ✅ **Keep Items in Claims (NEW in 1.2.2)** – Optional toggle to prevent items dropped in claims from despawning (configurable, off by default).  
-- ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, unclaiming, and help.  
+- ✅ **Keep Items in Claims (1.2.2+)** – Optional toggle to prevent items dropped in claims from despawning (configurable, off by default).  
+- ✅ **Claim Ownership Transfer (NEW in 1.2.3)** – Owners can hand over claims to another player.  
+- ✅ **Claim Borders Preview (NEW in 1.2.3)** – Visualize claim boundaries before confirming.  
+- ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, unclaiming, help, and admin.  
+- ✅ **Back Button in GUIs (NEW in 1.2.3)** – Navigate menus without closing them.  
 - ✅ **Admin Compass** – Special compass item that opens the ProShield GUI. Auto-given to ops (configurable).  
 - ✅ **Claim Expiry** – Automatically removes claims of inactive players (optional, fully configurable).  
 - ✅ **Configurable Protections** – Containers, doors, buttons, buckets, fire, mobs, explosions, Enderman teleport, and more.  
@@ -60,6 +63,9 @@ Players can claim land in two ways:
 - `/proshield bypass <on|off|toggle>` – Toggle admin bypass  
 - `/proshield reload` – Reload configuration  
 - `/proshield purgeexpired <days> [dryrun]` – Force claim expiry cleanup (admins)  
+- `/proshield transfer <player>` – Transfer claim ownership (1.2.3+)  
+- `/proshield preview` – Show claim borders before confirming (1.2.3+)  
+- `/proshield debug <on|off>` – Toggle debug logging (1.2.3+)  
 
 ---
 
@@ -76,6 +82,8 @@ Players can claim land in two ways:
 | `proshield.admin.reload`         | Use `/proshield reload`                                    | ❌ op   |
 | `proshield.admin.expired.purge`  | Manage expired claims                                      | ❌ op   |
 | `proshield.admin.keepdrops`      | Toggle item-keep inside claims (1.2.2+)                    | ❌ op   |
+| `proshield.admin.transfer`       | Transfer ownership of claims (1.2.3+)                      | ❌ op   |
+| `proshield.admin.debug`          | Toggle debug logging (1.2.3+)                              | ❌ op   |
 
 ---
 

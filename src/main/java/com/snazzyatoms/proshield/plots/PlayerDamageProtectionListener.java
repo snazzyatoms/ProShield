@@ -4,25 +4,12 @@ import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 
 import java.util.UUID;
 
-/**
- * Cancels damage to claim owner/trusted players inside their own claim
- * according to config protection.damage settings.
- *
- * Config (defaults ON):
- * protection:
- *   damage:
- *     enabled: true
- *     protect-owner-and-trusted: true
- *     cancel-all: true
- *     # if cancel-all = false, use category toggles...
- */
 public class PlayerDamageProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -30,97 +17,56 @@ public class PlayerDamageProtectionListener implements Listener {
 
     public PlayerDamageProtectionListener(ProShield plugin, PlotManager plots) {
         this.plugin = plugin;
-        this.plots  = plots;
+        this.plots = plots;
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onEntityDamage(EntityDamageEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
+    private boolean shouldProtect(Player p) {
+        if (!plugin.getConfig().getBoolean("protection.damage.enabled", true)) return false;
+        Location l = p.getLocation();
+        var claimOpt = plots.getClaim(l);
+        if (claimOpt.isEmpty()) return false;
 
-        // Global toggle
-        if (!plugin.getConfig().getBoolean("protection.damage.enabled", true)) return;
+        if (!plugin.getConfig().getBoolean("protection.damage.protect-owner-and-trusted", true))
+            return false;
 
-        Location loc = player.getLocation();
-        if (!plots.isClaimed(loc)) return;
+        UUID u = p.getUniqueId();
+        return plots.isOwner(u, l) || plots.isTrustedOrOwner(u, l);
+    }
 
-        // Only protect owner/trusted if configured
-        boolean protectOwnerTrusted = plugin.getConfig().getBoolean("protection.damage.protect-owner-and-trusted", true);
-        if (protectOwnerTrusted) {
-            UUID u = player.getUniqueId();
-            if (!(plots.isOwner(u, loc) || plots.isTrustedOrOwner(u, loc))) {
-                return; // not protected here
-            }
-        }
+    @EventHandler(ignoreCancelled = true)
+    public void onAnyDamage(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Player p)) return;
+        if (!shouldProtect(p)) return;
 
-        // cancel-all short-circuit
         if (plugin.getConfig().getBoolean("protection.damage.cancel-all", true)) {
-            event.setCancelled(true);
+            e.setCancelled(true);
             return;
         }
-
-        // Otherwise use per-cause controls
-        EntityDamageEvent.DamageCause cause = event.getCause();
-        switch (cause) {
-            case ENTITY_ATTACK: // melee mobs/players
-                if (event instanceof EntityDamageByEntityEvent) {
-                    if (plugin.getConfig().getBoolean("protection.damage.pve", true)) {
-                        event.setCancelled(true);
-                    }
-                }
-                break;
-
-            case PROJECTILE:
-                if (plugin.getConfig().getBoolean("protection.damage.projectiles", true)) {
-                    event.setCancelled(true);
-                }
-                break;
-
-            case CONTACT: // cactus, sweet berry, etc.
-                if (plugin.getConfig().getBoolean("protection.damage.environment", true)) {
-                    event.setCancelled(true);
-                }
-                break;
-
-            case FIRE:
-            case FIRE_TICK:
-            case LAVA:
-                if (plugin.getConfig().getBoolean("protection.damage.fire-lava", true)) {
-                    event.setCancelled(true);
-                }
-                break;
-
-            case FALL:
-                if (plugin.getConfig().getBoolean("protection.damage.fall", true)) {
-                    event.setCancelled(true);
-                }
-                break;
-
-            case BLOCK_EXPLOSION:
-            case ENTITY_EXPLOSION:
-                if (plugin.getConfig().getBoolean("protection.damage.explosions", true)) {
-                    event.setCancelled(true);
-                }
-                break;
-
-            case DROWNING:
-            case SUFFOCATION:
-            case VOID:
-                if (plugin.getConfig().getBoolean("protection.damage.drown-void-suffocate", true)) {
-                    event.setCancelled(true);
-                }
-                break;
-
-            case POISON:
-            case WITHER:
-            case MAGIC:
-                if (plugin.getConfig().getBoolean("protection.damage.poison-wither", true)) {
-                    event.setCancelled(true);
-                }
-                break;
-
-            default:
-                // leave as-is for other exotic causes unless cancel-all is true
-                break;
+        switch (e.getCause()) {
+            case FALL -> cancelIf("protection.damage.fall", e);
+            case FIRE, FIRE_TICK, LAVA -> cancelIf("protection.damage.fire-lava", e);
+            case BLOCK_EXPLOSION, ENTITY_EXPLOSION -> cancelIf("protection.damage.explosions", e);
+            case DROWNING, SUFFOCATION, VOID -> cancelIf("protection.damage.drown-void-suffocate", e);
+            case CONTACT, HOT_FLOOR, ENTITY_SWEEP_ATTACK, THORNS -> cancelIf("protection.damage.environment", e);
+            case WITHER, POISON, MAGIC -> cancelIf("protection.damage.poison-wither", e);
+            default -> {}
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPvEDamage(EntityDamageByEntityEvent e) {
+        if (!(e.getEntity() instanceof Player p)) return;
+        if (!shouldProtect(p)) return;
+
+        // projectiles & melee from mobs
+        switch (e.getCause()) {
+            case PROJECTILE -> cancelIf("protection.damage.projectiles", e);
+            case ENTITY_ATTACK -> cancelIf("protection.damage.pve", e);
+            default -> {}
+        }
+    }
+
+    private void cancelIf(String path, EntityDamageEvent e) {
+        if (plugin.getConfig().getBoolean(path, true)) e.setCancelled(true);
     }
 }

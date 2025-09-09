@@ -1,91 +1,57 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/PvpProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
+import org.bukkit.event.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
 /**
- * Cancels PvP inside claimed chunks when protection.pvp-in-claims = false.
- * Exceptions:
- *  - Attacker or victim has "proshield.bypass"
- *  - (Optional) If protection.pvp.allow-trusted = true AND
- *    BOTH attacker & victim are owner/trusted in the victim's claim, allow PvP.
+ * Blocks PvP inside claims based on config:
+ * - protection.pvp-in-claims: false  => PvP is BLOCKED in claims (default/safe)
+ * - protection.pvp-in-claims: true   => PvP allowed in claims
  *
- * Config keys used (with safe defaults):
- *   protection.pvp-in-claims: false
- *   protection.pvp.allow-trusted: false
- *   messages.pvp-denied: "&cPvP is disabled in this claim!"
+ * Also respects bypass: players with "proshield.bypass" ignore protection.
  */
 public class PvpProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plots;
-
-    private boolean pvpInClaims;        // if false, we block PvP in claims
-    private boolean allowTrustedPvp;    // optional exception
-    private String  denyMessage;        // message sent to attacker when blocked
+    private boolean pvpInClaims;
 
     public PvpProtectionListener(PlotManager plots) {
         this.plugin = ProShield.getInstance();
-        this.plots = plots;
+        this.plots  = plots;
         reloadPvpFlag();
     }
 
-    /** Called by /proshield reload */
-    public final void reloadPvpFlag() {
-        this.pvpInClaims     = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
-        this.allowTrustedPvp = plugin.getConfig().getBoolean("protection.pvp.allow-trusted", false);
-        this.denyMessage     = ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages.pvp-denied", "&cPvP is disabled in this claim!"));
+    public void reloadPvpFlag() {
+        this.pvpInClaims = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent e) {
-        // We only care about Player -> Player damage.
-        Player victim = asPlayer(e.getEntity());
-        if (victim == null) return;
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) return;
+        if (!(event.getDamager() instanceof Player attacker)) return;
 
-        Player attacker = getAttackingPlayer(e.getDamager());
-        if (attacker == null) return;
-
-        // Bypass check first.
+        // Bypass players ignore protection
         if (attacker.hasPermission("proshield.bypass") || victim.hasPermission("proshield.bypass")) return;
 
-        // If config allows PvP in claims, nothing to do.
-        if (pvpInClaims) return;
+        // Only evaluate inside claims
+        var claim = plots.getClaim(victim.getLocation());
+        if (claim.isEmpty()) return;
 
-        // Evaluate the claim at the victim's location.
-        Location where = victim.getLocation();
-        if (!plots.isClaimed(where)) return; // only restrict inside claims
+        // If PvP is disallowed inside claims => cancel
+        if (!pvpInClaims) {
+            event.setCancelled(true);
 
-        // Optional: allow trusted-vs-trusted PvP inside SAME claim.
-        if (allowTrustedPvp) {
-            boolean atkOk = plots.isTrustedOrOwner(attacker.getUniqueId(), where);
-            boolean vicOk = plots.isTrustedOrOwner(victim.getUniqueId(),   where);
-            if (atkOk && vicOk) return; // both are trusted/owner in the claim → allow
+            // Gentle, non-spammy feedback (attacker only)
+            attacker.sendMessage(prefix() + ChatColor.RED + "PvP is disabled inside claims.");
         }
-
-        // Otherwise block the hit.
-        e.setCancelled(true);
-        if (!denyMessage.isEmpty()) attacker.sendMessage(denyMessage);
     }
 
-    private Player asPlayer(Entity ent) {
-        return (ent instanceof Player) ? (Player) ent : null;
-    }
-
-    private Player getAttackingPlayer(Entity damager) {
-        if (damager instanceof Player) return (Player) damager;
-        if (damager instanceof Projectile proj && proj.getShooter() instanceof Player) {
-            return (Player) proj.getShooter();
-        }
-        return null;
+    private String prefix() {
+        return ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r "));
     }
 }

@@ -1,4 +1,3 @@
-# path: src/main/resources/plugin.yml
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
 version: 1.2.4
@@ -31,12 +30,12 @@ permissions:
     description: Use ProShield commands and GUI
     default: true
 
-  proshield.admin:
-    description: Admin tools (bypass, transfer, purge, preview, admin GUI)
-    default: op
-
   proshield.compass:
     description: Receive/use the ProShield compass
+    default: op
+
+  proshield.admin:
+    description: Admin tools (bypass, transfer, purge, preview)
     default: op
 
   proshield.bypass:
@@ -52,26 +51,25 @@ permissions:
     default: op
 
   proshield.admin.reload:
-    description: Allows /proshield reload
+    description: /proshield reload
     default: op
 
   proshield.admin.expired.purge:
-    description: Purge expired claims (command or GUI)
+    description: Purge expired claims
     default: op
 
   proshield.admin.debug:
     description: Toggle debug logging
     default: op
 
-  proshield.admin.keepdrops:
-    description: Toggle claim item-drop keep/anti-despawn in admin GUI
-    default: op
-
-  # Back-compat alias for earlier typo ("keydrops"); keep both so existing perms still work
   proshield.admin.keydrops:
-    description: (Alias) Toggle claim item-drop keep/anti-despawn in admin GUI
+    description: Allow toggling claim item-keep/pickup rules
     default: op
 
   proshield.admin.gui:
     description: Open the ProShield Admin GUI
+    default: op
+
+  proshield.admin.spawnoverride:
+    description: Allows claiming inside the protected spawn radius
     default: op

@@ -1,10 +1,10 @@
-// path: src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.BlockProtectionListener;
+import com.snazzyatoms.proshield.plots.EntityDamageProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.plots.PlayerJoinListener;
 import com.snazzyatoms.proshield.plots.PvpProtectionListener;
@@ -19,127 +19,96 @@ import java.util.concurrent.TimeUnit;
 
 public final class ProShield extends JavaPlugin {
 
-    /* ==== Singleton & managers ==== */
     private static ProShield instance;
     private PlotManager plotManager;
     private GUIManager guiManager;
 
-    /* ==== Listeners we keep references to for reload ==== */
+    // listeners we keep so we can reload their config
     private BlockProtectionListener protectionListener;
     private PvpProtectionListener pvpListener;
+    private EntityDamageProtectionListener damageListener;
     private GUIListener guiListener;
 
-    /* ==== Runtime flags ==== */
-    private volatile boolean debugEnabled = false;
+    // simple cached version string for config header stamping
+    private String runningVersion;
 
     public static ProShield getInstance() { return instance; }
     public PlotManager getPlotManager() { return plotManager; }
     public GUIManager getGuiManager() { return guiManager; }
 
-    public boolean isDebug() { return debugEnabled; }
-    public void setDebug(boolean v) {
-        debugEnabled = v;
-        getLogger().info("[Debug] setDebug=" + v);
-    }
-
     @Override
     public void onEnable() {
         instance = this;
+        runningVersion = getDescription().getVersion(); // "1.2.4"
 
-        // Ensure baseline config exists and stamp version
         saveDefaultConfig();
         ensureBaseSections();
-        ensureConfigVersion("1.2.4", /*saveNow*/ true);
+        ensureConfigVersionHeader();
 
-        // Managers
         plotManager = new PlotManager(this);
         guiManager  = new GUIManager(this, plotManager);
 
-        // Listeners (pass plotManager, not 'this')
         protectionListener = new BlockProtectionListener(plotManager);
         pvpListener        = new PvpProtectionListener(plotManager);
+        damageListener     = new EntityDamageProtectionListener(plotManager);
         guiListener        = new GUIListener(plotManager, guiManager);
 
         Bukkit.getPluginManager().registerEvents(protectionListener, this);
         Bukkit.getPluginManager().registerEvents(pvpListener, this);
+        Bukkit.getPluginManager().registerEvents(damageListener, this);
         Bukkit.getPluginManager().registerEvents(guiListener, this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
-        // Commands
-        if (getCommand("proshield") != null) {
-            getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
-        } else {
-            getLogger().warning("Command 'proshield' not found in plugin.yml!");
-        }
+        getCommand("proshield").setExecutor(new ProShieldCommand(this, plotManager));
 
-        // Custom recipe (admin compass)
         registerCompassRecipe();
-
-        // Expiry maintenance
         maybeRunExpiryNow();
         scheduleDailyExpiry();
 
-        getLogger().info("ProShield " + getDescription().getVersion() +
-                " enabled. Claims loaded: " + plotManager.getClaimCount());
+        getLogger().info("ProShield " + runningVersion + " enabled. Claims loaded: " + plotManager.getClaimCount());
     }
 
     @Override
     public void onDisable() {
-        try {
-            if (plotManager != null) plotManager.saveAll();
-            saveConfig();
-        } catch (Exception ex) {
-            getLogger().warning("Error during shutdown save: " + ex.getMessage());
-        }
+        plotManager.saveAll();
+        saveConfig();
         getLogger().info("ProShield disabled.");
     }
 
-    /** Called by /proshield reload */
+    /** /proshield reload */
     public void reloadAllConfigs() {
         reloadConfig();
-        ensureBaseSections();
-        ensureConfigVersion("1.2.4", /*saveNow*/ false);
-
+        ensureConfigVersionHeader(); // keep the header stamped to current version
         if (protectionListener != null) protectionListener.reloadProtectionConfig();
         if (pvpListener != null)         pvpListener.reloadPvpFlag();
+        if (damageListener != null)      damageListener.reloadConfig();
         if (plotManager != null)         plotManager.reloadFromConfig();
-
-        // Persist version stamp after reload tweaks
-        saveConfigSafely();
-        getLogger().info("Configs reloaded.");
     }
-
-    /* ================= Helpers ================= */
 
     private void ensureBaseSections() {
         if (!getConfig().isConfigurationSection("claims")) {
             getConfig().createSection("claims");
         }
-
-        // Add tiny migration for keep-items block (safely no-op if present)
-        if (!getConfig().isConfigurationSection("claims.settings")) {
-            getConfig().createSection("claims.settings");
+        // make sure new player protection section exists with safe defaults
+        if (!getConfig().isConfigurationSection("protection.player")) {
+            getConfig().set("protection.player.enabled", true);
+            getConfig().set("protection.player.damage.owner-immune", true);
+            getConfig().set("protection.player.damage.trusted-immune", true);
+            getConfig().set("protection.player.damage.mobs", true);
+            getConfig().set("protection.player.damage.projectiles", true);
+            getConfig().set("protection.player.damage.explosions", true);
+            getConfig().set("protection.player.damage.fire-lava", true);
+            getConfig().set("protection.player.damage.fall", true);
+            getConfig().set("protection.player.damage.other-environment", true);
         }
-        String keepPath = "claims.settings.keep-items";
-        if (!getConfig().isSet(keepPath)) {
-            // default OFF for server-owner control
-            getConfig().set(keepPath + ".enabled", false);
-            getConfig().set(keepPath + ".seconds", 900); // capped default within 300–900
-        }
+        saveConfig();
     }
 
-    /** Stamp plugin-version in config so server owners see what's running on disk */
-    private void ensureConfigVersion(String version, boolean saveNow) {
-        getConfig().set("plugin-version", version);
-        if (saveNow) saveConfigSafely();
-    }
-
-    private void saveConfigSafely() {
-        try {
-            saveConfig();
-        } catch (Exception e) {
-            getLogger().warning("Failed to save config: " + e.getMessage());
-        }
+    /** Puts a visible header with the running plugin version into the config (non-breaking). */
+    private void ensureConfigVersionHeader() {
+        // Stamp a simple string; safe to overwrite or create each boot/reload
+        getConfig().set("meta.config-version", runningVersion);
+        saveConfig();
     }
 
     private void registerCompassRecipe() {
@@ -150,7 +119,6 @@ public final class ProShield extends JavaPlugin {
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setIngredient('R', Material.REDSTONE);
         recipe.setIngredient('C', Material.COMPASS);
-        // Avoid duplicates on reload
         Bukkit.removeRecipe(key);
         Bukkit.addRecipe(recipe);
     }
@@ -158,7 +126,6 @@ public final class ProShield extends JavaPlugin {
     private void maybeRunExpiryNow() {
         if (getConfig().getBoolean("expiry.enabled", false)) {
             int days = getConfig().getInt("expiry.days", 30);
-            // commit=true does actual cleanup (not a dry-run)
             int removed = plotManager.cleanupExpiredClaims(days, true);
             if (removed > 0) {
                 getLogger().info("Expiry: removed " + removed + " expired claim(s).");

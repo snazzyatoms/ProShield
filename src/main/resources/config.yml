@@ -82,6 +82,17 @@ protection:
   entity-grief:
     enabled: true
 
+gui:
+  slots:
+    main:
+      create: 11
+      info: 13
+      remove: 15
+      admin: 33
+      help: 49
+      back: 48
+      admin-shortcut: 50   # NEW: shows “Admin Access ▶” to ops/admins in the *player* GUI
+
 # ---------------------------------------------------------------------------
 # NO-CLAIM ZONES
 # Prevent claiming near the world spawn (players cannot claim within this radius)

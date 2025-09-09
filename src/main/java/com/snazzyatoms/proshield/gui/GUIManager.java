@@ -24,10 +24,10 @@ import java.util.*;
  */
 public class GUIManager {
 
-    // Titles
-    private static final String TITLE_MAIN  = ChatColor.DARK_AQUA + "ProShield";
-    private static final String TITLE_ADMIN = ChatColor.DARK_RED + "ProShield Admin";
-    private static final String TITLE_HELP  = ChatColor.GOLD + "ProShield Help";
+    // Titles must be compile-time constants for String switch/case:
+    private static final String TITLE_MAIN  = "§3ProShield";
+    private static final String TITLE_ADMIN = "§4ProShield Admin";
+    private static final String TITLE_HELP  = "§6ProShield Help";
 
     private final ProShield plugin;
     private final PlotManager plots;
@@ -46,14 +46,14 @@ public class GUIManager {
         readSlotsFromConfig();
     }
 
-    // =========================
-    // ==== Public helpers  ====
-    // =========================
-
     /** Called by /proshield reload and Admin Reload button. */
     public void onConfigReload() {
         readSlotsFromConfig();
     }
+
+    // =========================
+    // ==== Public helpers  ====
+    // =========================
 
     /** Open Player Main GUI (push to history). */
     public void openMain(Player p) {
@@ -61,6 +61,11 @@ public class GUIManager {
         pushHistory(p, TITLE_MAIN);
         p.openInventory(inv);
         clickSfx(p);
+    }
+
+    /** Back-compat overload (some older call sites used a boolean). */
+    public void openMain(Player p, boolean ignored) {
+        openMain(p);
     }
 
     /** Open Admin GUI (push to history). */
@@ -90,8 +95,8 @@ public class GUIManager {
         }
         switch (prev) {
             case TITLE_ADMIN -> p.openInventory(buildAdmin(p));
-            case TITLE_HELP -> p.openInventory(buildHelp(p));
-            default -> p.openInventory(buildMain(p));
+            case TITLE_HELP  -> p.openInventory(buildHelp(p));
+            default          -> p.openInventory(buildMain(p));
         }
         clickSfx(p);
         return true;
@@ -186,11 +191,10 @@ public class GUIManager {
             } else if (slot == ADM_SPAWN_GUARD) {
                 toggle(cfg, "spawn.block-claiming"); changed = true;
             } else if (slot == ADM_RELOAD) {
-                // Save any toggles before reloading
                 plugin.saveConfig();
                 plugin.onConfigReload();
                 p.sendMessage(prefix() + ChatColor.YELLOW + "Config reloaded.");
-                openAdmin(p); // rebuild to reflect fresh state
+                openAdmin(p); // reflect fresh state
                 return;
             } else if (slot == ADM_TP_TOOLS) {
                 p.sendMessage(prefix() + ChatColor.GRAY + "Teleport tools coming soon.");
@@ -255,7 +259,7 @@ public class GUIManager {
 
     private Inventory buildMain(Player p) {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_MAIN);
-        fill(inv, pane(ChatColor.DARK_GRAY + "ProShield"));
+        fill(inv, pane("§8ProShield"));
 
         inv.setItem(MAIN_CREATE, icon(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk",
                 List.of(ChatColor.GRAY + "Claim the chunk you are standing in")));
@@ -277,7 +281,7 @@ public class GUIManager {
 
     private Inventory buildAdmin(Player p) {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_ADMIN);
-        fill(inv, pane(ChatColor.DARK_RED + "Admin Controls"));
+        fill(inv, pane("§8Admin Controls"));
 
         FileConfiguration cfg = plugin.getConfig();
 
@@ -307,7 +311,7 @@ public class GUIManager {
 
     private Inventory buildHelp(Player p) {
         Inventory inv = Bukkit.createInventory(p, 54, TITLE_HELP);
-        fill(inv, pane(ChatColor.GOLD + "Help"));
+        fill(inv, pane("§8Help"));
 
         inv.setItem(22, icon(Material.KNOWLEDGE_BOOK, ChatColor.GOLD + "Quick Reference", List.of(
                 ChatColor.GRAY + "/proshield claim",
@@ -347,11 +351,11 @@ public class GUIManager {
         ADM_PURGE_EXPIRED = cfg.getInt("gui.slots.admin.purge-expired", 21);
         ADM_DEBUG         = cfg.getInt("gui.slots.admin.debug", 23);
         ADM_COMPASS_DROP  = cfg.getInt("gui.slots.admin.compass-drop-if-full", 24);
-        ADM_SPAWN_GUARD   = cfg.getInt("gui.slots.admin.spawn-guard", 26); // default 26 (Reload uses 25)
+        ADM_RELOAD        = cfg.getInt("gui.slots.admin.reload", 25);
+        ADM_SPAWN_GUARD   = cfg.getInt("gui.slots.admin.spawn-guard", 26);
         ADM_TP_TOOLS      = cfg.getInt("gui.slots.admin.tp-tools", 30);
         ADM_BACK          = cfg.getInt("gui.slots.admin.back", 31);
         ADM_HELP          = cfg.getInt("gui.slots.admin.help", 22);
-        ADM_RELOAD        = cfg.getInt("gui.slots.admin.reload", 25);
     }
 
     private void toggle(FileConfiguration cfg, String path) {

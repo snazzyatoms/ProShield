@@ -1,4 +1,4 @@
-# ❓ ProShield FAQ (v1.2.3)
+# ❓ ProShield FAQ (v1.2.4)
 
 This FAQ covers the most common questions, problems, and solutions for running ProShield.  
 If your issue isn’t listed here, please [open a GitHub issue](https://github.com/snazzyatoms/ProShield/issues).
@@ -39,7 +39,7 @@ A: Players can claim in **two ways**:
 
 **Q: I didn’t get the compass when joining. What’s wrong?**  
 A: Check these points:  
-- You are **OP** or have `proshield.compass` or `proshield.admin`.  
+- You are **OP** (ops automatically get the **Admin Compass**) or have `proshield.compass` / `proshield.admin`.  
 - In `config.yml`, `autogive.compass-on-join: true`.  
 - Use `/proshield compass` to get one manually if missing.  
 
@@ -47,7 +47,8 @@ A: Check these points:
 
 **Q: Can I reload configs without restarting?**  
 A: Yes! Run `/proshield reload`.  
-This refreshes **config.yml**, protections, claim expiry, and **role settings** without restarting the server.
+This refreshes **config.yml**, protections, claim expiry, and **role settings** without restarting the server.  
+🔹 New in **1.2.4**: A **Reload button** is available in the **Admin GUI**.
 
 ---
 
@@ -84,11 +85,37 @@ A: Use `/proshield preview` to see a **particle outline** of your claim before c
 
 ---
 
+**Q: What is Spawn Guard? (NEW in 1.2.4)**  
+A: Spawn Guard prevents claims too close to the **world spawn**:  
+- Configurable radius via `spawn.radius`.  
+- Default = 32 blocks.  
+- Admins with `proshield.admin.bypass` can override it.  
+
+---
+
+**Q: How does Mob Repel work? (NEW in 1.2.4)**  
+A: Hostile mobs are **pushed back** at claim borders:  
+- Configurable in `protection.mobs.border-repel`.  
+- Radius, push force, and tick interval can be changed.  
+- Prevents mobs from entering claims at all.  
+
+---
+
 **Q: Where are claims stored? Can I back them up?**  
 A: Claims and trust data are stored in:  
 `/plugins/ProShield/config.yml`  
 
 ✅ Always back up this file (or the full ProShield folder) before updates.
+
+---
+
+**Q: Do I need to delete my config for 1.2.4?**  
+A: ⚠️ Yes, in some cases.  
+Because of major **config restructuring** in 1.2.4, you may need to:  
+1. Stop the server.  
+2. Delete `/plugins/ProShield/`.  
+3. Restart to regenerate fresh configs.  
+4. Reapply your custom edits.
 
 ---
 
@@ -146,10 +173,18 @@ A: Use the [GitHub Issues page](https://github.com/snazzyatoms/ProShield/issues)
 
 ---
 
+**Problem:** Mobs still walk into claims  
+✅ Fix:  
+- Ensure `protection.mobs.border-repel.enabled: true`.  
+- Adjust `radius` and push strength in config.  
+- Reload after edits.
+
+---
+
 **Problem:** GUI feels tedious (need to exit to return)  
 ✅ Fix:  
 - v1.2.3 added a **Back button** in all menus.  
-- Use this to return to the main menu without pressing `Esc`.
+- v1.2.4 fixed **Back button bugs** in Player & Admin GUIs.  
 
 ---
 
@@ -171,5 +206,6 @@ A: Use the [GitHub Issues page](https://github.com/snazzyatoms/ProShield/issues)
 ## 📌 Notes
 
 - Always back up `/plugins/ProShield/` before updating.  
+- For **1.2.4 only**, you may need to **delete and regenerate configs**.  
 - Test updates on a dev/test server before going live.  
 - Join the **Spigot discussion thread** for help & tips.

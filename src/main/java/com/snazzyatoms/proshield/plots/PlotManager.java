@@ -80,9 +80,9 @@ public class PlotManager {
         return c.getOwner().equals(uuid) || c.getTrusted().contains(uuid);
     }
 
-    // ===== Roles helpers (safe if roleManager is null) =====
+    // ===== roles helpers =====
     public ClaimRole getRoleAt(Location loc, UUID player) {
-        if (isOwner(player, loc)) return ClaimRole.CO_OWNER; // treat owner as highest equivalent
+        if (isOwner(player, loc)) return ClaimRole.CO_OWNER;
         if (roleManager == null) return ClaimRole.VISITOR;
         return roleManager.getRole(loc, player);
     }
@@ -206,22 +206,43 @@ public class PlotManager {
         loadAll();
     }
 
-    // ===== Expiry: removes claims whose owners haven't joined in N days =====
-    /** Compatibility overload (assumes commit=true). */
-    public int cleanupExpiredClaims(int days) {
-        return cleanupExpiredClaims(days, true);
+    /** Transfer claim ownership (owner→newOwner) for the claim at loc. */
+    public boolean transferOwnership(UUID fromOwner, Location loc, UUID toOwner) {
+        String k = key(loc);
+        Claim c = claims.get(k);
+        if (c == null) return false;
+        if (!c.getOwner().equals(fromOwner)) return false;
+
+        // update counts
+        ownerCounts.put(fromOwner, Math.max(0, ownerCounts.getOrDefault(fromOwner, 1) - 1));
+        ownerCounts.put(toOwner, ownerCounts.getOrDefault(toOwner, 0) + 1);
+
+        // set and persist
+        c.setOwner(toOwner);
+        saveClaim(c);
+        return true;
     }
 
-    /** New form: if commit=false, only counts (preview). */
+    // Expiry: removes claims whose owners haven't joined in N days
+    /** @param commit true = actually delete; false = preview only (count) */
     public int cleanupExpiredClaims(int days, boolean commit) {
         long cutoff = System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L;
         List<String> toRemove = new ArrayList<>();
+
         for (Map.Entry<String, Claim> e : claims.entrySet()) {
-            UUID owner = e.getValue().getOwner();
-            long last = lastSeenMillis(owner);
-            if (last == 0L) continue; // no data: skip
-            if (last < cutoff) toRemove.add(e.getKey());
+            String k = e.getKey();
+            Claim c = e.getValue();
+            UUID owner = c.getOwner();
+            OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
+            long last = Math.max(
+                    // handle API differences gracefully
+                    safe(op.getLastPlayed()),
+                    safe(op.getFirstPlayed())
+            );
+            if (last == 0L) continue; // no data, skip
+            if (last < cutoff) toRemove.add(k);
         }
+
         if (!commit) return toRemove.size();
 
         for (String k : toRemove) {
@@ -235,39 +256,5 @@ public class PlotManager {
         return toRemove.size();
     }
 
-    private long lastSeenMillis(UUID u) {
-        OfflinePlayer op = Bukkit.getOfflinePlayer(u);
-        long lastPlayed = op.getLastPlayed();   // may be 0 on some implementations
-        long firstPlayed = op.getFirstPlayed(); // fallback
-        long best = Math.max(lastPlayed, firstPlayed);
-        return best <= 0 ? 0 : best;
-    }
-
-    // ===== New helpers used by 1.2.3 features =====
-
-    /** Trust + assign role via ClaimRoleManager (if present). */
-    public boolean trustWithRole(UUID owner, Location loc, UUID target, String roleName) {
-        boolean ok = trust(owner, loc, target);
-        if (ok && roleManager != null) {
-            roleManager.setRole(loc, target, roleName == null ? "member" : roleName.toLowerCase());
-        }
-        if (ok) saveAll();
-        return ok;
-    }
-
-    /** Transfer claim ownership to another player (only current owner can run). */
-    public boolean transferOwnership(UUID fromOwner, Location loc, UUID toOwner) {
-        var opt = getClaim(loc);
-        if (opt.isEmpty()) return false;
-        var c = opt.get();
-        if (!c.getOwner().equals(fromOwner)) return false;
-
-        // adjust ownerCounts
-        ownerCounts.put(fromOwner, Math.max(0, ownerCounts.getOrDefault(fromOwner, 1) - 1));
-        ownerCounts.put(toOwner, ownerCounts.getOrDefault(toOwner, 0) + 1);
-
-        c.setOwner(toOwner);
-        saveClaim(c);
-        return true;
-    }
+    private long safe(long val) { return val < 0 ? 0 : val; }
 }

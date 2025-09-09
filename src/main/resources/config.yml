@@ -90,7 +90,7 @@ protection:
 
   # Mob control inside claims
   mobs:
-    block-spawn: true            # cancel spawns inside claims (natural)
+    block-spawn: true            # cancel natural spawns inside claims
     allow-spawner-spawn: true    # allow if origin is SPAWNER
     border-repel:
       enabled: true
@@ -134,13 +134,13 @@ gui:
       pvp: 14
       keep-items: 20
       purge-expired: 21
-      reload: 22
+      help: 22
       debug: 23
       compass-drop-if-full: 24
-      spawn-guard: 25
+      reload: 25          # 🔁 keep Reload on 25
+      spawn-guard: 26     # ✅ moved Spawn Guard to 26 to avoid conflict
       tp-tools: 30
       back: 31
-      help: 22
 
 # Claims storage (runtime)
 claims: {}

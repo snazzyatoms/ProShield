@@ -12,9 +12,14 @@ website: https://github.com/snazzyatoms/ProShield
 
 commands:
   proshield:
-    description: Main ProShield command
+    description: Main ProShield command and help menu
     usage: /<command> [args]
     aliases: [ps, shield]
+    permission: proshield.use
+
+  help:
+    description: Show ProShield help menu
+    usage: /<command>
     permission: proshield.use
 
   # 🔹 Core Claim Commands
@@ -65,10 +70,20 @@ commands:
     usage: /<command>
     permission: proshield.use
 
+  flags:
+    description: Manage claim flags via GUI (PvP, containers, redstone, animals, keep-items, etc.)
+    usage: /<command>
+    permission: proshield.use
+
   compass:
     description: Get the ProShield compass
     usage: /<command>
     permission: proshield.compass
+
+  compassgive:
+    description: Give a ProShield compass to another player
+    usage: /<command> <player>
+    permission: proshield.admin
 
   # 🔹 Admin & Maintenance
   bypass:
@@ -140,5 +155,5 @@ permissions:
     default: op
 
   proshield.admin.flags:
-    description: Manage claim flags (PvP, explosions, fire, etc.)
+    description: Manage claim flags (PvP, explosions, fire, containers, redstone, animals, keep-items, etc.)
     default: op

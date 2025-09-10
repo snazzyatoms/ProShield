@@ -1,49 +1,39 @@
 package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Chunk;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * Represents a claimed chunk (a "plot").
- * Stores owner, trusted players, roles, and settings.
+ * Represents a land claim (a single chunk).
+ * Stores owner, trusted players, roles, and claim-specific settings.
  */
 public class Plot {
 
-    private final UUID owner;                // Claim owner
-    private final String world;              // World name
-    private final int x;                     // Chunk X
-    private final int z;                     // Chunk Z
-
+    private final Chunk chunk;
+    private final UUID owner;
     private final Set<UUID> trusted = new HashSet<>();
-    private final PlotSettings settings;     // Per-claim settings (PvP, keep-drops, etc.)
+    private final PlotSettings settings = new PlotSettings();
 
-    public Plot(UUID owner, String world, int x, int z) {
+    public Plot(Chunk chunk, UUID owner, ProShield plugin) {
+        this.chunk = chunk;
         this.owner = owner;
-        this.world = world;
-        this.x = x;
-        this.z = z;
-        this.settings = new PlotSettings(); // Initialize with defaults
+
+        // Initialize per-claim settings from global config
+        this.settings.initDefaults(plugin);
     }
 
-    // === Basic Getters ===
+    public Chunk getChunk() {
+        return chunk;
+    }
+
     public UUID getOwner() {
         return owner;
     }
 
-    public String getWorld() {
-        return world;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    // === Trusted Players ===
     public Set<UUID> getTrusted() {
         return trusted;
     }
@@ -60,25 +50,23 @@ public class Plot {
         return trusted.contains(player);
     }
 
-    // === Plot Settings ===
+    // === Claim settings ===
     public PlotSettings getSettings() {
         return settings;
     }
 
-    // === Utility ===
+    // === Serialization (example methods for persistence) ===
+    public String serializeChunk() {
+        return chunk.getWorld().getName() + ":" + chunk.getX() + "," + chunk.getZ();
+    }
+
     @Override
     public String toString() {
         return "Plot{" +
-                "owner=" + owner +
-                ", world='" + world + '\'' +
-                ", x=" + x +
-                ", z=" + z +
-                ", trusted=" + trusted.size() +
+                "chunk=" + serializeChunk() +
+                ", owner=" + owner +
+                ", trusted=" + trusted +
                 ", settings=" + settings +
                 '}';
-    }
-
-    public String getKey() {
-        return world + ":" + x + "," + z;
     }
 }

@@ -1,85 +1,78 @@
-package com.snazzyatoms.proshield.gui;
+package com.snazzyatoms.proshield.cache;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
 import java.util.HashMap;
-import java.util.UUID;
+import java.util.Map;
 
 /**
- * Lightweight cache for ProShield GUIs to avoid regenerating
- * menus on every click. Keeps inventories per player in memory.
+ * Lightweight cache for GUIs and items to reduce rebuild overhead.
+ * Ensures menus don’t hammer config or rebuild inventories every click.
  */
 public class GUICache {
 
-    private final HashMap<UUID, Inventory> mainMenus = new HashMap<>();
-    private final HashMap<UUID, Inventory> adminMenus = new HashMap<>();
-    private final HashMap<UUID, Inventory> trustMenus = new HashMap<>();
-    private final HashMap<UUID, Inventory> roleMenus = new HashMap<>();
-    private final HashMap<UUID, Inventory> flagMenus = new HashMap<>();
-    private final HashMap<UUID, Inventory> transferMenus = new HashMap<>();
+    private final Map<String, Inventory> guiCache = new HashMap<>();
+    private final Map<String, ItemStack> itemCache = new HashMap<>();
 
-    public void cacheMain(UUID uuid, Inventory inv) {
-        mainMenus.put(uuid, inv);
+    // ==========================
+    // INVENTORY CACHING
+    // ==========================
+
+    public void storeGUI(String key, Inventory inv) {
+        guiCache.put(key, inv);
     }
 
-    public Inventory getMain(UUID uuid) {
-        return mainMenus.get(uuid);
+    public Inventory getGUI(String key) {
+        return guiCache.get(key);
     }
 
-    public void cacheAdmin(UUID uuid, Inventory inv) {
-        adminMenus.put(uuid, inv);
+    public void clearGUIs() {
+        guiCache.clear();
     }
 
-    public Inventory getAdmin(UUID uuid) {
-        return adminMenus.get(uuid);
+    // ==========================
+    // ITEM CACHING
+    // ==========================
+
+    public void storeItem(String key, ItemStack item) {
+        itemCache.put(key, item);
     }
 
-    public void cacheTrust(UUID uuid, Inventory inv) {
-        trustMenus.put(uuid, inv);
+    public ItemStack getItem(String key) {
+        return itemCache.get(key);
     }
 
-    public Inventory getTrust(UUID uuid) {
-        return trustMenus.get(uuid);
+    public void clearItems() {
+        itemCache.clear();
     }
 
-    public void cacheRole(UUID uuid, Inventory inv) {
-        roleMenus.put(uuid, inv);
+    // ==========================
+    // FACTORY HELPERS
+    // ==========================
+
+    public static ItemStack createItem(Material mat, String name, String... lore) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+            if (lore.length > 0) {
+                java.util.List<String> loreList = new java.util.ArrayList<>();
+                for (String line : lore) {
+                    loreList.add(ChatColor.translateAlternateColorCodes('&', line));
+                }
+                meta.setLore(loreList);
+            }
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
-    public Inventory getRole(UUID uuid) {
-        return roleMenus.get(uuid);
-    }
-
-    public void cacheFlag(UUID uuid, Inventory inv) {
-        flagMenus.put(uuid, inv);
-    }
-
-    public Inventory getFlag(UUID uuid) {
-        return flagMenus.get(uuid);
-    }
-
-    public void cacheTransfer(UUID uuid, Inventory inv) {
-        transferMenus.put(uuid, inv);
-    }
-
-    public Inventory getTransfer(UUID uuid) {
-        return transferMenus.get(uuid);
-    }
-
-    public void clear(UUID uuid) {
-        mainMenus.remove(uuid);
-        adminMenus.remove(uuid);
-        trustMenus.remove(uuid);
-        roleMenus.remove(uuid);
-        flagMenus.remove(uuid);
-        transferMenus.remove(uuid);
-    }
-
-    public void clearAll() {
-        mainMenus.clear();
-        adminMenus.clear();
-        trustMenus.clear();
-        roleMenus.clear();
-        flagMenus.clear();
-        transferMenus.clear();
+    public static Inventory createInventory(String title, int size) {
+        return Bukkit.createInventory(null, size, ChatColor.translateAlternateColorCodes('&', title));
     }
 }

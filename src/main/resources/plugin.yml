@@ -1,29 +1,84 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.2.4
+version: 1.2.5
 api-version: 1.18
-author: snazzyatoms
-description: Land and plot protection plugin with GUI management and admin tools.
-softdepend: [Vault, LuckPerms]
+author: SnazzyAtoms
+description: >
+  ProShield is a lightweight yet powerful land and plot protection plugin
+  for Spigot & Paper servers. Claim land, protect builds, manage trust and roles,
+  and control protections with intuitive GUIs and admin tools.
 
 commands:
   proshield:
-    description: Main ProShield command
-    usage: |
-      /proshield
-      /proshield claim
-      /proshield unclaim
-      /proshield info
-      /proshield compass
-      /proshield trust <player> [role]
-      /proshield untrust <player>
-      /proshield trusted
-      /proshield bypass <on|off|toggle>
-      /proshield preview [seconds]
-      /proshield transfer <player>
-      /proshield purgeexpired <days> [dryrun]
-      /proshield debug <on|off|toggle>
-      /proshield reload
+    description: Main command for ProShield
+    aliases: [ps, shield]
+    usage: /<command> help
+    permission: proshield.use
+
+  claim:
+    description: Claim the current chunk
+    usage: /claim
+    permission: proshield.use
+
+  unclaim:
+    description: Unclaim the current chunk
+    usage: /unclaim
+    permission: proshield.use
+
+  trust:
+    description: Trust a player with an optional role
+    usage: /trust <player> [role]
+    permission: proshield.use
+
+  untrust:
+    description: Remove trust from a player
+    usage: /untrust <player>
+    permission: proshield.use
+
+  trusted:
+    description: List trusted players in the claim
+    usage: /trusted
+    permission: proshield.use
+
+  info:
+    description: Show information about the current claim
+    usage: /info
+    permission: proshield.use
+
+  transfer:
+    description: Transfer claim ownership to another player
+    usage: /transfer <player>
+    permission: proshield.use
+
+  preview:
+    description: Preview the borders of the current claim
+    usage: /preview
+    permission: proshield.use
+
+  compass:
+    description: Give yourself a ProShield compass
+    usage: /compass
+    permission: proshield.compass
+
+  bypass:
+    description: Toggle admin bypass
+    usage: /bypass <on|off|toggle>
+    permission: proshield.bypass
+
+  reload:
+    description: Reload ProShield configuration
+    usage: /reload
+    permission: proshield.admin.reload
+
+  purgeexpired:
+    description: Purge expired claims
+    usage: /purgeexpired <days> [dryrun]
+    permission: proshield.admin.expired.purge
+
+  debug:
+    description: Toggle debug mode
+    usage: /debug <on|off>
+    permission: proshield.admin.debug
 
 permissions:
   proshield.use:
@@ -31,19 +86,15 @@ permissions:
     default: true
 
   proshield.compass:
-    description: Receive/use the ProShield compass
+    description: Receive and use ProShield compass
     default: op
 
   proshield.admin:
-    description: Admin tools (bypass, transfer, purge, preview)
-    default: op
-
-  proshield.admin.gui:
-    description: Open the ProShield Admin GUI
+    description: Access all admin tools
     default: op
 
   proshield.bypass:
-    description: Toggle protection bypass
+    description: Toggle bypass protection
     default: op
 
   proshield.unlimited:
@@ -55,17 +106,21 @@ permissions:
     default: op
 
   proshield.admin.reload:
-    description: /proshield reload
+    description: Reload ProShield configuration
     default: op
 
   proshield.admin.expired.purge:
-    description: Purge expired claims
-    default: op
-
-  proshield.admin.debug:
-    description: Toggle debug logging
+    description: Manage and purge expired claims
     default: op
 
   proshield.admin.keepdrops:
-    description: Allow toggling claim item-keep/pickup rules
+    description: Toggle item-keep in claims
+    default: op
+
+  proshield.admin.transfer:
+    description: Transfer ownership of claims
+    default: op
+
+  proshield.admin.debug:
+    description: Enable debug logging
     default: op

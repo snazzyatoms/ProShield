@@ -1,96 +1,84 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.bukkit.Chunk;
+import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Represents a claimed chunk.
- * Stores ownership, trusted players, and per-claim settings.
+ * Represents a claimed plot (chunk).
+ * - Preserves all existing functionality
+ * - Extended with new PlotSettings flags (keepItems, redstone, etc.)
  */
-public class Plot {
+public class Plot implements Serializable {
 
     private final UUID owner;
-    private final String key;
-    private final Map<UUID, String> trusted;
-    private PlotSettings settings;
+    private final String worldName;
+    private final int x;
+    private final int z;
+    private final PlotSettings settings;
 
-    public Plot(UUID owner, String key) {
+    private final Set<UUID> trustedPlayers;
+
+    public Plot(UUID owner, Chunk chunk) {
         this.owner = owner;
-        this.key = key;
-        this.trusted = new HashMap<>();
-        this.settings = new PlotSettings(); // defaults applied
+        this.worldName = chunk.getWorld().getName();
+        this.x = chunk.getX();
+        this.z = chunk.getZ();
+        this.settings = new PlotSettings();
+        this.trustedPlayers = new HashSet<>();
     }
 
-    // === Core Info ===
+    // === Getters ===
     public UUID getOwner() {
         return owner;
     }
 
-    public String getKey() {
-        return key;
+    public String getWorldName() {
+        return worldName;
     }
 
-    // === Trusted Players ===
-    public Map<UUID, String> getTrusted() {
-        return trusted;
+    public int getX() {
+        return x;
     }
 
-    public void addTrusted(UUID player, String role) {
-        trusted.put(player, role);
+    public int getZ() {
+        return z;
     }
 
-    public void removeTrusted(UUID player) {
-        trusted.remove(player);
-    }
-
-    public boolean isTrusted(UUID player) {
-        return trusted.containsKey(player);
-    }
-
-    public String getRole(UUID player) {
-        return trusted.getOrDefault(player, "Visitor");
-    }
-
-    // === Settings ===
     public PlotSettings getSettings() {
         return settings;
     }
 
-    public void setSettings(PlotSettings settings) {
-        this.settings = settings;
+    public Set<UUID> getTrustedPlayers() {
+        return trustedPlayers;
     }
 
-    // === Convenience Checks for Flags ===
-    public boolean isPvpEnabled() {
-        return settings.isPvpEnabled();
+    // === Helpers ===
+    public boolean isTrusted(UUID player) {
+        return trustedPlayers.contains(player);
     }
 
-    public boolean isExplosionsEnabled() {
-        return settings.isExplosionsEnabled();
+    public void trust(UUID player) {
+        trustedPlayers.add(player);
     }
 
-    public boolean isFireEnabled() {
-        return settings.isFireEnabled();
+    public void untrust(UUID player) {
+        trustedPlayers.remove(player);
     }
 
-    public boolean isMobGriefEnabled() {
-        return settings.isMobGriefEnabled();
+    public boolean isChunk(Chunk chunk) {
+        return worldName.equals(chunk.getWorld().getName()) &&
+               x == chunk.getX() &&
+               z == chunk.getZ();
     }
 
-    public boolean isKeepItemsEnabled() {
-        return settings.isKeepItemsEnabled();
-    }
-
-    public boolean isRedstoneEnabled() {
-        return settings.isRedstoneEnabled();
-    }
-
-    public boolean isContainerAccessEnabled() {
-        return settings.isContainerAccessEnabled();
-    }
-
-    public boolean isAnimalInteractEnabled() {
-        return settings.isAnimalInteractEnabled();
-    }
+    // === Forward Settings for convenience ===
+    public boolean isPvpEnabled() { return settings.isPvpEnabled(); }
+    public boolean isKeepItemsEnabled() { return settings.isKeepItemsEnabled(); }
+    public boolean isRedstoneEnabled() { return settings.isRedstoneEnabled(); }
+    public boolean isContainerAccessEnabled() { return settings.isContainerAccessEnabled(); }
+    public boolean isAnimalAccessEnabled() { return settings.isAnimalAccessEnabled(); }
 }

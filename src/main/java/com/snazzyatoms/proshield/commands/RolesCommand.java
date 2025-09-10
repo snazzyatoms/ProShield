@@ -4,6 +4,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
@@ -11,41 +12,51 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+/**
+ * /roles
+ *
+ * Opens the roles management menu for the current claim.
+ */
 public class RolesCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
-    private final GUIManager guiManager;
-    private final MessagesUtil messages;
+    private final PlotManager plots;
+    private final ClaimRoleManager roles;
+    private final GUIManager gui;
+    private final MessagesUtil msg;
 
-    public RolesCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, GUIManager guiManager) {
+    public RolesCommand(ProShield plugin, PlotManager plots, ClaimRoleManager roles, GUIManager gui) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.roleManager = roleManager;
-        this.guiManager = guiManager;
-        this.messages = plugin.getMessagesUtil();
+        this.plots = plots;
+        this.roles = roles;
+        this.gui = gui;
+        this.msg = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            messages.send(sender, "general.no-console");
+            msg.send(sender, "error.player-only");
             return true;
         }
 
-        Plot plot = plotManager.getPlot(player.getLocation().getChunk());
+        // Must be inside a claim
+        Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) {
-            messages.send(player, "roles.no-claim");
+            msg.send(player, "roles.no-claim");
             return true;
         }
 
-        if (!plot.isOwner(player.getUniqueId())) {
-            messages.send(player, "roles.not-owner");
+        // Must be owner or co-owner
+        ClaimRole role = roles.getRole(plot, player.getUniqueId());
+        if (role != ClaimRole.OWNER && role != ClaimRole.CO_OWNER) {
+            msg.send(player, "roles.not-allowed", plot.getDisplayNameSafe());
             return true;
         }
 
-        guiManager.openRolesMenu(player);
+        // Open the GUI
+        gui.openRolesMenu(player);
+        msg.debug("Opened roles menu for " + player.getName() + " in claim " + plot.getDisplayNameSafe());
         return true;
     }
 }

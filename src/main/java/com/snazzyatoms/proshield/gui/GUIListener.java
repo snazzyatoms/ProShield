@@ -1,9 +1,8 @@
 package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.plots.PlotManager.Claim;
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,13 +11,18 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
-
+    private final ProShield plugin;
     private final GUIManager gui;
-    private final PlotManager plotManager;
+    private final GUICache cache;
 
-    public GUIListener(GUIManager gui, PlotManager plotManager) {
+    public GUIListener(ProShield plugin, GUIManager gui, GUICache cache) {
+        this.plugin = plugin;
         this.gui = gui;
-        this.plotManager = plotManager;
+        this.cache = cache;
+    }
+
+    private boolean isSameItem(ItemStack clicked, Material expected) {
+        return clicked != null && clicked.getType() == expected && clicked.hasItemMeta();
     }
 
     @EventHandler
@@ -26,103 +30,99 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         Inventory inv = event.getInventory();
         ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
 
-        String title = ChatColor.stripColor(inv.getTitle());
-        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        event.setCancelled(true);
+        if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        // === MAIN MENU ===
-        if (title.equalsIgnoreCase("ProShield Menu")) {
-            switch (name.toLowerCase()) {
-                case "claim chunk" -> plotManager.claimChunk(player);
-                case "claim info" -> plotManager.showClaimInfo(player);
-                case "unclaim chunk" -> plotManager.unclaimChunk(player);
-                case "trust player" -> {
-                    player.closeInventory();
-                    player.sendMessage(ChatColor.YELLOW + "Type /proshield trust <player>");
-                }
-                case "untrust player" -> {
-                    player.closeInventory();
-                    player.sendMessage(ChatColor.YELLOW + "Type /proshield untrust <player>");
-                }
-                case "manage roles" -> {
-                    Claim claim = plotManager.getClaimAt(player.getLocation());
-                    if (claim != null && claim.isOwner(player.getUniqueId())) {
-                        gui.openRoleMenu(player, claim);
-                    } else {
-                        player.sendMessage(ChatColor.RED + "You must be the claim owner.");
-                    }
-                }
-                case "toggle claim flags" -> {
-                    Claim claim = plotManager.getClaimAt(player.getLocation());
-                    if (claim != null && claim.isOwner(player.getUniqueId())) {
-                        gui.openFlagMenu(player, claim);
-                    } else {
-                        player.sendMessage(ChatColor.RED + "You must be the claim owner.");
-                    }
-                }
-                case "transfer ownership" -> {
-                    player.closeInventory();
-                    player.sendMessage(ChatColor.YELLOW + "Type /proshield transfer <player>");
-                }
-                case "help" -> player.performCommand("proshield help");
-                case "admin tools" -> gui.openAdmin(player);
+        String title = event.getView().getTitle();
+        event.setCancelled(true); // prevent taking GUI items
+
+        // --- MAIN MENU ---
+        if (title.equals("ProShield Menu")) {
+            if (isSameItem(clicked, Material.GRASS_BLOCK)) {
+                player.performCommand("proshield claim");
+            } else if (isSameItem(clicked, Material.BARRIER)) {
+                player.performCommand("proshield unclaim");
+            } else if (isSameItem(clicked, Material.BOOK)) {
+                player.performCommand("proshield info");
+            } else if (isSameItem(clicked, Material.PAPER)) {
+                player.performCommand("proshield help");
+            } else if (isSameItem(clicked, Material.COMPASS)) {
+                gui.openAdmin(player);
+            } else if (isSameItem(clicked, Material.ARROW)) {
+                player.closeInventory();
             }
         }
 
-        // === ADMIN MENU ===
-        else if (title.equalsIgnoreCase("ProShield Admin")) {
-            switch (name.toLowerCase()) {
-                case "fire toggle" -> plotManager.toggleFire(player);
-                case "explosions toggle" -> plotManager.toggleExplosions(player);
-                case "entity grief toggle" -> plotManager.toggleEntityGrief(player);
-                case "interactions toggle" -> plotManager.toggleInteractions(player);
-                case "pvp toggle" -> plotManager.togglePvP(player);
-                case "keep items toggle" -> plotManager.toggleKeepItems(player);
-                case "purge expired claims" -> player.performCommand("proshield purgeexpired 30 dryrun");
-                case "reload config" -> Bukkit.getScheduler().runTask(gui.getPlugin(), () -> {
-                    gui.getPlugin().reloadConfig();
-                    player.sendMessage(ChatColor.GREEN + "ProShield config reloaded!");
-                });
-                case "debug mode" -> player.performCommand("proshield debug toggle");
-                case "teleport tools" -> player.performCommand("proshield tp");
-                case "back" -> gui.openMain(player, true);
-                case "close" -> player.closeInventory();
+        // --- ADMIN MENU ---
+        else if (title.equals("ProShield Admin")) {
+            if (isSameItem(clicked, Material.FLINT_AND_STEEL)) {
+                plugin.getConfig().set("protection.fire.enabled",
+                        !plugin.getConfig().getBoolean("protection.fire.enabled"));
+                plugin.saveConfig();
+                player.sendMessage("§cFire protection toggled.");
+            } else if (isSameItem(clicked, Material.TNT)) {
+                plugin.getConfig().set("protection.explosions.enabled",
+                        !plugin.getConfig().getBoolean("protection.explosions.enabled"));
+                plugin.saveConfig();
+                player.sendMessage("§cExplosion protection toggled.");
+            } else if (isSameItem(clicked, Material.ENDERMAN_SPAWN_EGG)) {
+                plugin.getConfig().set("protection.entity-grief.enabled",
+                        !plugin.getConfig().getBoolean("protection.entity-grief.enabled"));
+                plugin.saveConfig();
+                player.sendMessage("§cEntity grief toggled.");
+            } else if (isSameItem(clicked, Material.OAK_DOOR)) {
+                plugin.getConfig().set("protection.interactions.enabled",
+                        !plugin.getConfig().getBoolean("protection.interactions.enabled"));
+                plugin.saveConfig();
+                player.sendMessage("§cInteractions toggled.");
+            } else if (isSameItem(clicked, Material.DIAMOND_SWORD)) {
+                plugin.getConfig().set("protection.pvp-in-claims",
+                        !plugin.getConfig().getBoolean("protection.pvp-in-claims"));
+                plugin.saveConfig();
+                player.sendMessage("§cPvP protection toggled.");
+            } else if (isSameItem(clicked, Material.CHEST)) {
+                plugin.getConfig().set("claims.keep-items.enabled",
+                        !plugin.getConfig().getBoolean("claims.keep-items.enabled"));
+                plugin.saveConfig();
+                player.sendMessage("§cKeep items toggled.");
+            } else if (isSameItem(clicked, Material.LAVA_BUCKET)) {
+                player.performCommand("proshield purgeexpired 30 dryrun");
+            } else if (isSameItem(clicked, Material.REDSTONE)) {
+                player.performCommand("proshield reload");
+            } else if (isSameItem(clicked, Material.COMPARATOR)) {
+                player.performCommand("proshield debug toggle");
+            } else if (isSameItem(clicked, Material.BEDROCK)) {
+                plugin.getConfig().set("spawn.block-claiming",
+                        !plugin.getConfig().getBoolean("spawn.block-claiming"));
+                plugin.saveConfig();
+                player.sendMessage("§cSpawn Guard toggled.");
+            } else if (isSameItem(clicked, Material.ENDER_PEARL)) {
+                player.sendMessage("§eUse /proshield tp <player|claim> to teleport.");
+            } else if (isSameItem(clicked, Material.PAPER)) {
+                player.performCommand("proshield help");
+            } else if (isSameItem(clicked, Material.ARROW)) {
+                gui.openMain(player, true);
             }
         }
 
-        // === ROLE MENU ===
-        else if (title.equalsIgnoreCase("Manage Roles")) {
-            Claim claim = plotManager.getClaimAt(player.getLocation());
-            if (claim == null) {
-                player.sendMessage(ChatColor.RED + "Not inside a claim.");
-                return;
-            }
-            switch (name.toLowerCase()) {
-                case "visitor" -> plotManager.setRole(player, "Visitor");
-                case "member" -> plotManager.setRole(player, "Member");
-                case "container" -> plotManager.setRole(player, "Container");
-                case "builder" -> plotManager.setRole(player, "Builder");
-                case "co-owner" -> plotManager.setRole(player, "Co-Owner");
-                case "back" -> gui.openMain(player, false);
-            }
-        }
-
-        // === FLAG MENU ===
-        else if (title.equalsIgnoreCase("Claim Flags")) {
-            Claim claim = plotManager.getClaimAt(player.getLocation());
-            if (claim == null) {
-                player.sendMessage(ChatColor.RED + "Not inside a claim.");
-                return;
-            }
-            switch (name.toLowerCase()) {
-                case "pvp" -> plotManager.toggleFlag(player, claim, "pvp");
-                case "explosions" -> plotManager.toggleFlag(player, claim, "explosions");
-                case "fire" -> plotManager.toggleFlag(player, claim, "fire");
-                case "enderman teleport" -> plotManager.toggleFlag(player, claim, "enderman-teleport");
-                case "containers" -> plotManager.toggleFlag(player, claim, "containers");
-                case "back" -> gui.openMain(player, false);
+        // --- PLAYER MENU (NEW in 1.2.5) ---
+        else if (title.equals("ProShield Player")) {
+            if (isSameItem(clicked, Material.PLAYER_HEAD)) {
+                player.sendMessage("§aUse /proshield trust <player> [role] to trust a player.");
+            } else if (isSameItem(clicked, Material.ZOMBIE_HEAD)) {
+                player.sendMessage("§cUse /proshield untrust <player> to untrust a player.");
+            } else if (isSameItem(clicked, Material.NAME_TAG)) {
+                player.sendMessage("§bUse /proshield trust <player> <role> to manage roles.");
+            } else if (isSameItem(clicked, Material.WRITABLE_BOOK)) {
+                player.sendMessage("§eUse /proshield transfer <player> to transfer ownership.");
+            } else if (isSameItem(clicked, Material.BANNER)) {
+                player.sendMessage("§dUse /proshield flags to manage claim flags.");
+            } else if (isSameItem(clicked, Material.GLASS)) {
+                player.performCommand("proshield preview");
+            } else if (isSameItem(clicked, Material.PAPER)) {
+                player.performCommand("proshield help");
+            } else if (isSameItem(clicked, Material.ARROW)) {
+                gui.openMain(player, false);
             }
         }
     }

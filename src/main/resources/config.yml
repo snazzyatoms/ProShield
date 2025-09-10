@@ -102,10 +102,10 @@ protection:
 
 claims:
   keep-items:
-    enabled: false           # If true, items dropped inside claims will NOT despawn naturally
+    enabled: false           # Global default: if true, all claims keep dropped items
     despawn-seconds: 900     # How long items persist before forced cleanup
                              # 300–1800 recommended (5–30 minutes)
-                             # ⚠️ Setting too high may cause lag if items accumulate
+    allow-per-claim-toggle: true   # If true, claim owners can toggle keep-items inside their own claims
 
 proshield:
   debug: false
@@ -146,6 +146,13 @@ gui:
       compass-drop-if-full: 24
       spawn-guard: 25
       tp-tools: 30
+      back: 31
+      help: 32
+    flags:
+      pvp: 10
+      explosions: 11
+      fire: 12
+      keep-items: 13
       back: 31
       help: 32
 

@@ -1,108 +1,83 @@
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
-import java.util.logging.Level;
 
 /**
- * MessagesUtil - Central utility for ProShield messages.
- * 
- * ✅ Preserves all prior logic
- * ✅ Adds clean debug() method (no plugin arg needed anymore)
- * ✅ Reload support for messages.yml
- * ✅ Console + broadcast helpers
+ * Centralized messages loader + helpers.
+ * Preserves previous keys and adds utility overloads used across code.
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private YamlConfiguration config;
+    private FileConfiguration messages;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        reload();
+        load();
     }
 
-    /** Reloads messages.yml from disk. */
-    public void reload() {
+    private void load() {
         File file = new File(plugin.getDataFolder(), "messages.yml");
         if (!file.exists()) {
             plugin.saveResource("messages.yml", false);
         }
-        this.config = YamlConfiguration.loadConfiguration(file);
+        messages = YamlConfiguration.loadConfiguration(file);
     }
 
-    /* =========================================================
-     * Core message sending
-     * ========================================================= */
-
-    public void send(CommandSender sender, String path, Object... args) {
-        String msg = get(path, args);
-        if (msg != null && !msg.isEmpty()) {
-            sender.sendMessage(colorize(msg));
-        }
+    public void reload() {
+        load();
     }
 
-    public void send(Player player, String path, Object... args) {
-        send((CommandSender) player, path, args);
+    public FileConfiguration getMessagesConfig() {
+        return messages;
     }
 
-    public void broadcast(String path, Object... args) {
-        String msg = get(path, args);
-        if (msg != null && !msg.isEmpty()) {
-            Bukkit.broadcastMessage(colorize(msg));
-        }
+    /* -------------------------
+     * Sending helpers
+     * ------------------------- */
+    public void send(CommandSender to, String key) {
+        to.sendMessage(colorize(get(key)));
     }
 
-    public void broadcastConsole(String path, Object... args) {
-        String msg = get(path, args);
-        if (msg != null && !msg.isEmpty()) {
-            plugin.getLogger().info(ChatColor.stripColor(colorize(msg)));
-        }
+    public void send(CommandSender to, String key, String... params) {
+        to.sendMessage(colorize(format(get(key), params)));
     }
 
-    /* =========================================================
-     * Debug logging
-     * ========================================================= */
-
-    /**
-     * Sends a debug message if debug mode is enabled.
-     * Usage: messages.debug("&cSomething happened!");
-     */
-    public void debug(String message) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().log(Level.INFO, ChatColor.translateAlternateColorCodes('&',
-                    config.getString("messages.debug-prefix", "&8[Debug] &r") + message));
-        }
+    public void broadcastConsole(String key, CommandSender console) {
+        console.sendMessage(colorize(get(key)));
     }
 
-    /* =========================================================
-     * Helpers
-     * ========================================================= */
-
-    private String get(String path, Object... args) {
-        String msg = config.getString(path);
-        if (msg == null) {
-            return null;
-        }
-        if (args != null && args.length > 0) {
-            for (int i = 0; i < args.length; i++) {
-                msg = msg.replace("{" + i + "}", String.valueOf(args[i]));
-            }
-        }
-        return msg;
-    }
-
-    private String colorize(String msg) {
-        return ChatColor.translateAlternateColorCodes('&', msg);
+    public String get(String key) {
+        String def = "&7" + key;
+        return messages.getString(key, def);
     }
 
     public String onOff(boolean value) {
         return value ? ChatColor.GREEN + "ON" + ChatColor.RESET : ChatColor.RED + "OFF" + ChatColor.RESET;
+    }
+
+    public void debug(String msg) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info(ChatColor.translateAlternateColorCodes('&', "[DEBUG] " + msg));
+        }
+    }
+
+    public static String colorize(String in) {
+        return ChatColor.translateAlternateColorCodes('&', in);
+    }
+
+    private String format(String base, String... params) {
+        String out = base;
+        // Replace {0}..{n}
+        for (int i = 0; i < params.length; i++) {
+            out = out.replace("{" + i + "}", String.valueOf(params[i]));
+        }
+        return out;
     }
 }

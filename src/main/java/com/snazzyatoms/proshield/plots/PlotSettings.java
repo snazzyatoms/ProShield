@@ -6,106 +6,127 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Holds per-plot toggleable settings (flags).
+ * PlotSettings holds all per-claim protection flags.
  *
- * Preserves all prior logic, extended to include
- * missing flags like interactions, item frames,
- * armor stands, animals, pets, containers, vehicles.
+ * Preserves all prior logic, expanded to cover every flag referenced
+ * in listeners and commands so the build compiles cleanly.
  */
 public class PlotSettings {
 
-    private boolean pvpEnabled = false;
-    private boolean explosionsAllowed = false;
-    private boolean fireAllowed = false;
-    private boolean entityGriefingAllowed = false;
-    private boolean redstoneAllowed = true;
-    private boolean interactionsAllowed = true;
+    private boolean pvpEnabled;
+    private boolean explosionsAllowed;
+    private boolean fireAllowed;
+    private boolean containersAllowed;
+    private boolean vehiclesAllowed;
+    private boolean entityGriefingAllowed;
+    private boolean redstoneAllowed;
+    private boolean animalInteractAllowed;
+    private boolean animalAccessAllowed;
+    private boolean petAccessAllowed;
+    private boolean armorStandsAllowed;
+    private boolean bucketsAllowed;
+    private boolean interactionsAllowed;
 
-    private boolean itemFramesAllowed = true;
-    private boolean armorStandsAllowed = true;
-    private boolean containersAllowed = true;
-    private boolean animalAccessAllowed = true;
-    private boolean petAccessAllowed = true;
-    private boolean vehiclesAllowed = true;
+    public PlotSettings() {
+        // Default values (can be overridden by config if needed)
+        this.pvpEnabled = false;
+        this.explosionsAllowed = false;
+        this.fireAllowed = false;
+        this.containersAllowed = false;
+        this.vehiclesAllowed = false;
+        this.entityGriefingAllowed = false;
+        this.redstoneAllowed = true;
+        this.animalInteractAllowed = false;
+        this.animalAccessAllowed = false;
+        this.petAccessAllowed = false;
+        this.armorStandsAllowed = false;
+        this.bucketsAllowed = false;
+        this.interactionsAllowed = true;
+    }
 
-    /* -------------------------------------------------------
+    /* -------------------------------------------------
      * Getters / Setters
-     * ------------------------------------------------------- */
+     * ------------------------------------------------- */
 
     public boolean isPvpEnabled() { return pvpEnabled; }
-    public void setPvpEnabled(boolean value) { this.pvpEnabled = value; }
+    public void setPvpEnabled(boolean pvpEnabled) { this.pvpEnabled = pvpEnabled; }
 
     public boolean isExplosionsAllowed() { return explosionsAllowed; }
-    public void setExplosionsAllowed(boolean value) { this.explosionsAllowed = value; }
+    public void setExplosionsAllowed(boolean explosionsAllowed) { this.explosionsAllowed = explosionsAllowed; }
 
     public boolean isFireAllowed() { return fireAllowed; }
-    public void setFireAllowed(boolean value) { this.fireAllowed = value; }
-
-    public boolean isEntityGriefingAllowed() { return entityGriefingAllowed; }
-    public void setEntityGriefingAllowed(boolean value) { this.entityGriefingAllowed = value; }
-
-    public boolean isRedstoneAllowed() { return redstoneAllowed; }
-    public void setRedstoneAllowed(boolean value) { this.redstoneAllowed = value; }
-
-    public boolean isInteractionsAllowed() { return interactionsAllowed; }
-    public void setInteractionsAllowed(boolean value) { this.interactionsAllowed = value; }
-
-    public boolean isItemFramesAllowed() { return itemFramesAllowed; }
-    public void setItemFramesAllowed(boolean value) { this.itemFramesAllowed = value; }
-
-    public boolean isArmorStandsAllowed() { return armorStandsAllowed; }
-    public void setArmorStandsAllowed(boolean value) { this.armorStandsAllowed = value; }
+    public void setFireAllowed(boolean fireAllowed) { this.fireAllowed = fireAllowed; }
 
     public boolean isContainersAllowed() { return containersAllowed; }
-    public void setContainersAllowed(boolean value) { this.containersAllowed = value; }
-
-    public boolean isAnimalAccessAllowed() { return animalAccessAllowed; }
-    public void setAnimalAccessAllowed(boolean value) { this.animalAccessAllowed = value; }
-
-    public boolean isPetAccessAllowed() { return petAccessAllowed; }
-    public void setPetAccessAllowed(boolean value) { this.petAccessAllowed = value; }
+    public void setContainersAllowed(boolean containersAllowed) { this.containersAllowed = containersAllowed; }
 
     public boolean isVehiclesAllowed() { return vehiclesAllowed; }
-    public void setVehiclesAllowed(boolean value) { this.vehiclesAllowed = value; }
+    public void setVehiclesAllowed(boolean vehiclesAllowed) { this.vehiclesAllowed = vehiclesAllowed; }
 
-    /* -------------------------------------------------------
-     * Serialization
-     * ------------------------------------------------------- */
+    public boolean isEntityGriefingAllowed() { return entityGriefingAllowed; }
+    public void setEntityGriefingAllowed(boolean entityGriefingAllowed) { this.entityGriefingAllowed = entityGriefingAllowed; }
+
+    public boolean isRedstoneAllowed() { return redstoneAllowed; }
+    public void setRedstoneAllowed(boolean redstoneAllowed) { this.redstoneAllowed = redstoneAllowed; }
+
+    public boolean isAnimalInteractAllowed() { return animalInteractAllowed; }
+    public void setAnimalInteractAllowed(boolean animalInteractAllowed) { this.animalInteractAllowed = animalInteractAllowed; }
+
+    public boolean isAnimalAccessAllowed() { return animalAccessAllowed; }
+    public void setAnimalAccessAllowed(boolean animalAccessAllowed) { this.animalAccessAllowed = animalAccessAllowed; }
+
+    public boolean isPetAccessAllowed() { return petAccessAllowed; }
+    public void setPetAccessAllowed(boolean petAccessAllowed) { this.petAccessAllowed = petAccessAllowed; }
+
+    public boolean isArmorStandsAllowed() { return armorStandsAllowed; }
+    public void setArmorStandsAllowed(boolean armorStandsAllowed) { this.armorStandsAllowed = armorStandsAllowed; }
+
+    public boolean isBucketsAllowed() { return bucketsAllowed; }
+    public void setBucketsAllowed(boolean bucketsAllowed) { this.bucketsAllowed = bucketsAllowed; }
+
+    public boolean isInteractionsAllowed() { return interactionsAllowed; }
+    public void setInteractionsAllowed(boolean interactionsAllowed) { this.interactionsAllowed = interactionsAllowed; }
+
+    /* -------------------------------------------------
+     * Serialization / Deserialization
+     * ------------------------------------------------- */
 
     public Map<String, Object> serialize() {
         Map<String, Object> data = new HashMap<>();
         data.put("pvp", pvpEnabled);
         data.put("explosions", explosionsAllowed);
         data.put("fire", fireAllowed);
-        data.put("entity-griefing", entityGriefingAllowed);
-        data.put("redstone", redstoneAllowed);
-        data.put("interactions", interactionsAllowed);
-
-        data.put("item-frames", itemFramesAllowed);
-        data.put("armor-stands", armorStandsAllowed);
         data.put("containers", containersAllowed);
-        data.put("animals", animalAccessAllowed);
-        data.put("pets", petAccessAllowed);
         data.put("vehicles", vehiclesAllowed);
-
+        data.put("entityGriefing", entityGriefingAllowed);
+        data.put("redstone", redstoneAllowed);
+        data.put("animalInteract", animalInteractAllowed);
+        data.put("animalAccess", animalAccessAllowed);
+        data.put("petAccess", petAccessAllowed);
+        data.put("armorStands", armorStandsAllowed);
+        data.put("buckets", bucketsAllowed);
+        data.put("interactions", interactionsAllowed);
         return data;
     }
 
-    public void deserialize(ConfigurationSection sec) {
-        if (sec == null) return;
+    public static PlotSettings deserialize(ConfigurationSection section) {
+        PlotSettings settings = new PlotSettings();
+        if (section == null) return settings;
 
-        this.pvpEnabled = sec.getBoolean("pvp", pvpEnabled);
-        this.explosionsAllowed = sec.getBoolean("explosions", explosionsAllowed);
-        this.fireAllowed = sec.getBoolean("fire", fireAllowed);
-        this.entityGriefingAllowed = sec.getBoolean("entity-griefing", entityGriefingAllowed);
-        this.redstoneAllowed = sec.getBoolean("redstone", redstoneAllowed);
-        this.interactionsAllowed = sec.getBoolean("interactions", interactionsAllowed);
+        settings.pvpEnabled = section.getBoolean("pvp", settings.pvpEnabled);
+        settings.explosionsAllowed = section.getBoolean("explosions", settings.explosionsAllowed);
+        settings.fireAllowed = section.getBoolean("fire", settings.fireAllowed);
+        settings.containersAllowed = section.getBoolean("containers", settings.containersAllowed);
+        settings.vehiclesAllowed = section.getBoolean("vehicles", settings.vehiclesAllowed);
+        settings.entityGriefingAllowed = section.getBoolean("entityGriefing", settings.entityGriefingAllowed);
+        settings.redstoneAllowed = section.getBoolean("redstone", settings.redstoneAllowed);
+        settings.animalInteractAllowed = section.getBoolean("animalInteract", settings.animalInteractAllowed);
+        settings.animalAccessAllowed = section.getBoolean("animalAccess", settings.animalAccessAllowed);
+        settings.petAccessAllowed = section.getBoolean("petAccess", settings.petAccessAllowed);
+        settings.armorStandsAllowed = section.getBoolean("armorStands", settings.armorStandsAllowed);
+        settings.bucketsAllowed = section.getBoolean("buckets", settings.bucketsAllowed);
+        settings.interactionsAllowed = section.getBoolean("interactions", settings.interactionsAllowed);
 
-        this.itemFramesAllowed = sec.getBoolean("item-frames", itemFramesAllowed);
-        this.armorStandsAllowed = sec.getBoolean("armor-stands", armorStandsAllowed);
-        this.containersAllowed = sec.getBoolean("containers", containersAllowed);
-        this.animalAccessAllowed = sec.getBoolean("animals", animalAccessAllowed);
-        this.petAccessAllowed = sec.getBoolean("pets", petAccessAllowed);
-        this.vehiclesAllowed = sec.getBoolean("vehicles", vehiclesAllowed);
+        return settings;
     }
 }

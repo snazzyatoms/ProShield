@@ -1,5 +1,4 @@
 # ProShield configuration (v1.2.5)
-
 messages:
   prefix: "&3[ProShield]&r "
 
@@ -18,6 +17,7 @@ spawn:
 
 # === PROTECTION (ON by default inside claims) ===
 protection:
+  # Damage guard for owner + trusted inside their own claim
   damage:
     enabled: true
     protect-owner-and-trusted: true
@@ -31,14 +31,17 @@ protection:
     drown-void-suffocate: true
     poison-wither: true
 
+  # PvP - false means PvP is blocked in claims
   pvp-in-claims: false
 
+  # Blocks & redstone interactions by non-trusted
   interactions:
     enabled: true
     mode: blacklist
     categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
     list: []
 
+  # Explosions
   explosions:
     enabled: true
     creeper: true
@@ -48,6 +51,7 @@ protection:
     end_crystal: true
     ender_dragon: true
 
+  # Fire
   fire:
     enabled: true
     spread: true
@@ -59,10 +63,12 @@ protection:
       explosion: true
       spread: true
 
+  # Buckets
   buckets:
     block-empty: true
     block-fill: true
 
+  # Entity grief
   entity-grief:
     enabled: true
     enderman: true
@@ -71,9 +77,11 @@ protection:
     ender-dragon: true
     wither: true
 
+  # Enderman teleport
   entity-teleport:
     enderman: true
 
+  # Entities inside claims
   entities:
     item-frames: true
     armor-stands: true
@@ -82,15 +90,15 @@ protection:
 
   # Mob control inside claims
   mobs:
-    block-spawn: true            # cancel natural spawns inside claims
-    allow-spawner-spawn: true    # allow spawner mobs
-    despawn-inside-claims: true  # instantly despawn mobs that appear inside claims
+    block-spawn: true            # cancel spawns inside claims (natural)
+    allow-spawner-spawn: true    # allow if origin is SPAWNER
+    despawn-in-claims: true      # remove mobs that spawn inside claims
     border-repel:
       enabled: true
-      radius: 3.0                # default repel radius (blocks outside claim border)
-      horizontal-push: 0.8       # stronger pushback force
-      vertical-push: 0.25
-      interval-ticks: 20
+      radius: 5.0               # default repel radius (increased from 1.5)
+      horizontal-push: 1.2      # stronger knockback
+      vertical-push: 0.3        # lift mobs slightly when pushed
+      interval-ticks: 20        # how often repel runs (20 = 1 second)
 
 claims:
   keep-items:
@@ -132,13 +140,14 @@ gui:
       compass-drop-if-full: 24
       spawn-guard: 25
       tp-tools: 30
-      mob-block-spawn: 32
-      mob-despawn: 33
-      mob-repel-toggle: 34
-      mob-repel-radius: 41
-      mob-repel-force: 42
-      back: 48
-      help: 49
-
-# Claims storage (runtime)
-claims: {}
+      back: 31
+      help: 32
+    player:
+      trust: 10
+      untrust: 11
+      roles: 12
+      transfer: 13
+      flags: 14
+      preview: 15
+      back: 31
+      help: 32

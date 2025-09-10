@@ -1,36 +1,30 @@
 package com.snazzyatoms.proshield.plots;
 
 /**
- * Per-claim settings for protection and customization.
- * 
- * These settings override global config values when enabled.
- * They allow claim owners to decide what happens inside their claim
- * (e.g., PvP, explosions, fire, mob grief, item keep, containers, animals, redstone).
+ * Holds per-claim configurable settings (flags).
+ * These are merged with global config defaults.
  */
 public class PlotSettings {
 
-    // === Claim-specific toggles ===
-    private boolean keepItemsEnabled = false;
-    private boolean pvpEnabled = false;
-    private boolean explosionsEnabled = false;
-    private boolean fireEnabled = false;
-    private boolean mobGriefEnabled = false;
-
-    // Newly added per-claim settings
-    private boolean redstoneEnabled = true;      // Default allow
-    private boolean containerAccessEnabled = true; // Default allow
-    private boolean animalInteractEnabled = true;  // Default allow
+    private boolean pvpEnabled;
+    private boolean explosionsEnabled;
+    private boolean fireEnabled;
+    private boolean mobGriefEnabled;
+    private boolean keepItemsEnabled;
+    private boolean redstoneEnabled;
+    private boolean containerAccessEnabled;
+    private boolean animalInteractEnabled;
 
     public PlotSettings() {
-    }
-
-    // === Keep Items ===
-    public boolean isKeepItemsEnabled() {
-        return keepItemsEnabled;
-    }
-
-    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
-        this.keepItemsEnabled = keepItemsEnabled;
+        // defaults from global config (safety-first)
+        this.pvpEnabled = false;
+        this.explosionsEnabled = false;
+        this.fireEnabled = false;
+        this.mobGriefEnabled = false;
+        this.keepItemsEnabled = false;
+        this.redstoneEnabled = true;
+        this.containerAccessEnabled = true;
+        this.animalInteractEnabled = true;
     }
 
     // === PvP ===
@@ -51,7 +45,7 @@ public class PlotSettings {
         this.explosionsEnabled = explosionsEnabled;
     }
 
-    // === Fire Spread ===
+    // === Fire ===
     public boolean isFireEnabled() {
         return fireEnabled;
     }
@@ -60,7 +54,7 @@ public class PlotSettings {
         this.fireEnabled = fireEnabled;
     }
 
-    // === Mob Grief (e.g. Endermen, Ravagers, Withers) ===
+    // === Mob Grief ===
     public boolean isMobGriefEnabled() {
         return mobGriefEnabled;
     }
@@ -69,7 +63,16 @@ public class PlotSettings {
         this.mobGriefEnabled = mobGriefEnabled;
     }
 
-    // === Redstone Mechanics ===
+    // === Keep Items ===
+    public boolean isKeepItemsEnabled() {
+        return keepItemsEnabled;
+    }
+
+    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
+        this.keepItemsEnabled = keepItemsEnabled;
+    }
+
+    // === Redstone ===
     public boolean isRedstoneEnabled() {
         return redstoneEnabled;
     }
@@ -78,7 +81,7 @@ public class PlotSettings {
         this.redstoneEnabled = redstoneEnabled;
     }
 
-    // === Container Access (Chests, Barrels, Furnaces, etc.) ===
+    // === Container Access ===
     public boolean isContainerAccessEnabled() {
         return containerAccessEnabled;
     }
@@ -87,7 +90,7 @@ public class PlotSettings {
         this.containerAccessEnabled = containerAccessEnabled;
     }
 
-    // === Animal Interactions (Feeding, Breeding, Riding, etc.) ===
+    // === Animal Interact ===
     public boolean isAnimalInteractEnabled() {
         return animalInteractEnabled;
     }
@@ -99,11 +102,11 @@ public class PlotSettings {
     @Override
     public String toString() {
         return "PlotSettings{" +
-                "keepItemsEnabled=" + keepItemsEnabled +
-                ", pvpEnabled=" + pvpEnabled +
+                "pvpEnabled=" + pvpEnabled +
                 ", explosionsEnabled=" + explosionsEnabled +
                 ", fireEnabled=" + fireEnabled +
                 ", mobGriefEnabled=" + mobGriefEnabled +
+                ", keepItemsEnabled=" + keepItemsEnabled +
                 ", redstoneEnabled=" + redstoneEnabled +
                 ", containerAccessEnabled=" + containerAccessEnabled +
                 ", animalInteractEnabled=" + animalInteractEnabled +

@@ -3,17 +3,12 @@ package com.snazzyatoms.proshield.commands;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
+import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
@@ -27,180 +22,101 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         this.gui = gui;
     }
 
+    private void msg(CommandSender sender, String msg) {
+        sender.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r ") + msg));
+    }
+
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Players only.");
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (!(sender instanceof Player player)) {
+            msg(sender, "&cOnly players can use ProShield commands.");
             return true;
         }
 
-        Player player = (Player) sender;
+        String name = cmd.getName().toLowerCase(Locale.ROOT);
 
-        if (args.length == 0) {
-            gui.openPlayerMain(player);
-            return true;
-        }
-
-        switch (args[0].toLowerCase()) {
-            case "claim":
-                plots.claimChunk(player);
-                return true;
-
-            case "unclaim":
-                plots.unclaimChunk(player);
-                return true;
-
-            case "info":
-                plots.showClaimInfo(player);
-                return true;
-
-            case "trust":
-                if (args.length >= 2) {
-                    String role = args.length >= 3 ? args[2] : "member";
-                    plots.trustPlayer(player, args[1], role);
-                } else {
-                    player.sendMessage(ChatColor.RED + "Usage: /proshield trust <player> [role]");
-                }
-                return true;
-
-            case "untrust":
-                if (args.length >= 2) {
-                    plots.untrustPlayer(player, args[1]);
-                } else {
-                    player.sendMessage(ChatColor.RED + "Usage: /proshield untrust <player>");
-                }
-                return true;
-
-            case "trusted":
-                plots.listTrusted(player);
-                return true;
-
-            case "compass":
-                gui.openPlayerMain(player);
-                return true;
-
-            case "reload":
-                plugin.reloadAllConfigs();
-                player.sendMessage(ChatColor.GREEN + "ProShield reloaded!");
-                return true;
-
-            case "purgeexpired":
-                plots.purgeExpiredClaims(player, args);
-                return true;
-
-            case "debug":
-                plugin.toggleDebug();
-                player.sendMessage(ChatColor.YELLOW + "Debug mode toggled.");
-                return true;
-
-            case "toggle":
-                if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /proshield toggle <option>");
+        switch (name) {
+            case "proshield" -> openMain(player, true);
+            case "claim" -> plots.claim(player);
+            case "unclaim" -> plots.unclaim(player);
+            case "info" -> plots.sendInfo(player);
+            case "trust" -> {
+                if (args.length < 1) {
+                    msg(player, "&cUsage: /trust <player> [role]");
                     return true;
                 }
-                return handleToggle(player, args[1].toLowerCase());
-
-            case "set":
-                if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /proshield set <option> <value>");
-                    return true;
-                }
-                return handleSet(player, args);
-
-            default:
-                player.sendMessage(ChatColor.RED + "Unknown subcommand. Use /proshield help.");
-                return true;
-        }
-    }
-
-    private boolean handleToggle(Player player, String option) {
-        switch (option) {
-            case "fire":
-            case "explosions":
-            case "entitygrief":
-            case "interactions":
-            case "pvp":
-            case "keepitems":
-            case "compassdrop":
-            case "spawnguard":
-                plugin.toggleConfig("protection." + option);
-                player.sendMessage(ChatColor.YELLOW + "Toggled " + option);
-                return true;
-
-            // NEW mob toggles
-            case "mobspawn":
-                plugin.toggleConfig("protection.mobs.block-spawn");
-                player.sendMessage(ChatColor.YELLOW + "Toggled mob spawning");
-                return true;
-
-            case "mobdespawn":
-                plugin.toggleConfig("protection.mobs.despawn-in-claims");
-                player.sendMessage(ChatColor.YELLOW + "Toggled mob despawn in claims");
-                return true;
-
-            case "repel":
-                plugin.toggleConfig("protection.mobs.border-repel.enabled");
-                player.sendMessage(ChatColor.YELLOW + "Toggled mob repel");
-                return true;
-
-            default:
-                player.sendMessage(ChatColor.RED + "Unknown toggle option.");
-                return false;
-        }
-    }
-
-    private boolean handleSet(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage(ChatColor.RED + "Usage: /proshield set <option> <value>");
-            return false;
-        }
-
-        String option = args[1].toLowerCase();
-        String valueStr = args[2];
-
-        try {
-            double value = Double.parseDouble(valueStr);
-            switch (option) {
-                case "repelradius":
-                    plugin.getConfig().set("protection.mobs.border-repel.radius", value);
-                    plugin.saveConfig();
-                    player.sendMessage(ChatColor.GREEN + "Set repel radius to " + value);
-                    return true;
-
-                case "repelforce":
-                    if (args.length < 4) {
-                        player.sendMessage(ChatColor.RED + "Usage: /proshield set repelforce <horizontal> <vertical>");
-                        return false;
-                    }
-                    double h = Double.parseDouble(valueStr);
-                    double v = Double.parseDouble(args[3]);
-                    plugin.getConfig().set("protection.mobs.border-repel.horizontal-push", h);
-                    plugin.getConfig().set("protection.mobs.border-repel.vertical-push", v);
-                    plugin.saveConfig();
-                    player.sendMessage(ChatColor.GREEN + "Set repel force H=" + h + " V=" + v);
-                    return true;
-
-                default:
-                    player.sendMessage(ChatColor.RED + "Unknown set option.");
-                    return false;
+                String target = args[0];
+                String role = args.length > 1 ? args[1] : "member";
+                plots.trust(player, target, role);
             }
-        } catch (NumberFormatException e) {
-            player.sendMessage(ChatColor.RED + "Invalid number: " + valueStr);
-            return false;
+            case "untrust" -> {
+                if (args.length < 1) {
+                    msg(player, "&cUsage: /untrust <player>");
+                    return true;
+                }
+                plots.untrust(player, args[0]);
+            }
+            case "trusted" -> plots.listTrusted(player);
+            case "roles" -> gui.openRolesMenu(player);
+            case "transfer" -> {
+                if (args.length < 1) {
+                    msg(player, "&cUsage: /transfer <player>");
+                    return true;
+                }
+                plots.transferClaim(player, args[0]);
+            }
+            case "preview" -> plots.previewClaim(player);
+            case "compass" -> gui.giveCompass(player, player.isOp()); // admins get admin compass
+            case "bypass" -> plots.toggleBypass(player, args);
+            case "reload" -> {
+                if (!player.hasPermission("proshield.admin.reload")) {
+                    msg(player, "&cNo permission.");
+                    return true;
+                }
+                plugin.reloadConfig();
+                gui.onConfigReload();
+                msg(player, "&aConfiguration reloaded.");
+            }
+            case "purgeexpired" -> plots.purgeExpired(player, args);
+            case "debug" -> plots.toggleDebug(player, args);
+            default -> msg(player, "&cUnknown command. Use /proshield for help.");
+        }
+        return true;
+    }
+
+    private void openMain(Player player, boolean isRoot) {
+        gui.openMain(player);
+        if (isRoot) {
+            msg(player, "&7Opening ProShield menu...");
         }
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        if (args.length == 1) {
-            return Arrays.asList("claim", "unclaim", "info", "trust", "untrust", "trusted",
-                    "compass", "reload", "purgeexpired", "debug", "toggle", "set");
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("toggle")) {
-            return Arrays.asList("fire", "explosions", "entitygrief", "interactions", "pvp",
-                    "keepitems", "compassdrop", "spawnguard", "mobspawn", "mobdespawn", "repel");
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
-            return Arrays.asList("repelradius", "repelforce");
+        List<String> suggestions = new ArrayList<>();
+        String name = cmd.getName().toLowerCase(Locale.ROOT);
+
+        if (!(sender instanceof Player)) return suggestions;
+
+        switch (name) {
+            case "trust", "untrust", "transfer" -> {
+                if (args.length == 1) {
+                    Bukkit.getOnlinePlayers().forEach(p -> suggestions.add(p.getName()));
+                }
+            }
+            case "debug" -> {
+                if (args.length == 1) suggestions.addAll(Arrays.asList("on", "off", "toggle"));
+            }
+            case "bypass" -> {
+                if (args.length == 1) suggestions.addAll(Arrays.asList("on", "off", "toggle"));
+            }
+            case "purgeexpired" -> {
+                if (args.length == 1) suggestions.add("<days>");
+                else if (args.length == 2) suggestions.add("dryrun");
+            }
         }
-        return Collections.emptyList();
+
+        return suggestions;
     }
 }

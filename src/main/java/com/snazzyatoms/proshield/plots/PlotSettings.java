@@ -1,80 +1,69 @@
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.configuration.file.FileConfiguration;
-
-import java.util.HashSet;
-import java.util.Set;
+import org.bukkit.configuration.ConfigurationSection;
 
 /**
- * Stores per-claim settings, merged with global defaults but
- * configurable per-claim. Persisted via PlotManager.
+ * Per-claim settings for ProShield.
+ * Stored alongside claim ownership & trusted players.
+ * Supports merging with global config defaults.
  */
 public class PlotSettings {
 
-    // === Core Settings ===
     private boolean pvpEnabled;
     private boolean keepDropsEnabled;
 
-    // Item rules (extra granularity per-claim)
-    private final Set<String> allowedItems = new HashSet<>();
-    private final Set<String> blockedItems = new HashSet<>();
+    // Future-proof: we can add more toggles like explosions/fire/etc.
 
     public PlotSettings() {
-        // defaults: read from global config later in loadFromConfig
-        this.pvpEnabled = false;
-        this.keepDropsEnabled = false;
+        // defaults
+        this.pvpEnabled = false;          // global default (from config)
+        this.keepDropsEnabled = false;    // global default (from config)
     }
-
-    // ==================================================
-    // Getters & Setters
-    // ==================================================
 
     public boolean isPvpEnabled() {
         return pvpEnabled;
     }
 
-    public void setPvpEnabled(boolean pvpEnabled) {
-        this.pvpEnabled = pvpEnabled;
+    public void setPvpEnabled(boolean enabled) {
+        this.pvpEnabled = enabled;
     }
 
     public boolean isKeepDropsEnabled() {
         return keepDropsEnabled;
     }
 
-    public void setKeepDropsEnabled(boolean keepDropsEnabled) {
-        this.keepDropsEnabled = keepDropsEnabled;
+    public void setKeepDropsEnabled(boolean enabled) {
+        this.keepDropsEnabled = enabled;
     }
 
-    public Set<String> getAllowedItems() {
-        return allowedItems;
+    /**
+     * Load per-claim settings from a YAML section.
+     * Falls back to defaults if missing.
+     */
+    public static PlotSettings fromConfig(ConfigurationSection section) {
+        PlotSettings settings = new PlotSettings();
+
+        if (section == null) return settings;
+
+        settings.setPvpEnabled(section.getBoolean("pvp", false));
+        settings.setKeepDropsEnabled(section.getBoolean("keep-drops", false));
+
+        return settings;
     }
 
-    public Set<String> getBlockedItems() {
-        return blockedItems;
+    /**
+     * Save per-claim settings to YAML.
+     */
+    public void saveToConfig(ConfigurationSection section) {
+        section.set("pvp", this.pvpEnabled);
+        section.set("keep-drops", this.keepDropsEnabled);
     }
 
-    // ==================================================
-    // Persistence
-    // ==================================================
-
-    public void saveToConfig(FileConfiguration config, String path) {
-        config.set(path + ".pvp-enabled", pvpEnabled);
-        config.set(path + ".keep-drops-enabled", keepDropsEnabled);
-        config.set(path + ".allowed-items", new HashSet<>(allowedItems));
-        config.set(path + ".blocked-items", new HashSet<>(blockedItems));
-    }
-
-    @SuppressWarnings("unchecked")
-    public void loadFromConfig(FileConfiguration config, String path) {
-        this.pvpEnabled = config.getBoolean(path + ".pvp-enabled",
-                config.getBoolean("protection.pvp-in-claims", false));
-        this.keepDropsEnabled = config.getBoolean(path + ".keep-drops-enabled",
-                config.getBoolean("claims.keep-items.enabled", false));
-
-        this.allowedItems.clear();
-        this.blockedItems.clear();
-
-        this.allowedItems.addAll(config.getStringList(path + ".allowed-items"));
-        this.blockedItems.addAll(config.getStringList(path + ".blocked-items"));
+    @Override
+    public String toString() {
+        return "PlotSettings{" +
+                "pvpEnabled=" + pvpEnabled +
+                ", keepDropsEnabled=" + keepDropsEnabled +
+                '}';
     }
 }

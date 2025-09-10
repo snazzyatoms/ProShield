@@ -1,30 +1,37 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/PlotSettings.java
 package com.snazzyatoms.proshield.plots;
 
+import java.io.Serializable;
+
 /**
- * Holds per-claim configurable settings (flags).
- * These are merged with global config defaults.
+ * Per-claim settings for protection flags.
+ * - Preserves all previous settings
+ * - Extended with keepItemsEnabled flag and more toggles
  */
-public class PlotSettings {
+public class PlotSettings implements Serializable {
 
     private boolean pvpEnabled;
     private boolean explosionsEnabled;
     private boolean fireEnabled;
-    private boolean mobGriefEnabled;
-    private boolean keepItemsEnabled;
+    private boolean interactionsEnabled;
+    private boolean entityGriefEnabled;
+    private boolean keepItemsEnabled; // NEW per-claim toggle for keep-items
+
+    // Future extended flags (preserved from roadmap)
     private boolean redstoneEnabled;
     private boolean containerAccessEnabled;
-    private boolean animalInteractEnabled;
+    private boolean animalAccessEnabled;
 
     public PlotSettings() {
-        // defaults from global config (safety-first)
         this.pvpEnabled = false;
-        this.explosionsEnabled = false;
-        this.fireEnabled = false;
-        this.mobGriefEnabled = false;
+        this.explosionsEnabled = true;
+        this.fireEnabled = true;
+        this.interactionsEnabled = true;
+        this.entityGriefEnabled = true;
         this.keepItemsEnabled = false;
         this.redstoneEnabled = true;
         this.containerAccessEnabled = true;
-        this.animalInteractEnabled = true;
+        this.animalAccessEnabled = true;
     }
 
     // === PvP ===
@@ -54,13 +61,22 @@ public class PlotSettings {
         this.fireEnabled = fireEnabled;
     }
 
-    // === Mob Grief ===
-    public boolean isMobGriefEnabled() {
-        return mobGriefEnabled;
+    // === Interactions ===
+    public boolean isInteractionsEnabled() {
+        return interactionsEnabled;
     }
 
-    public void setMobGriefEnabled(boolean mobGriefEnabled) {
-        this.mobGriefEnabled = mobGriefEnabled;
+    public void setInteractionsEnabled(boolean interactionsEnabled) {
+        this.interactionsEnabled = interactionsEnabled;
+    }
+
+    // === Entity grief ===
+    public boolean isEntityGriefEnabled() {
+        return entityGriefEnabled;
+    }
+
+    public void setEntityGriefEnabled(boolean entityGriefEnabled) {
+        this.entityGriefEnabled = entityGriefEnabled;
     }
 
     // === Keep Items ===
@@ -90,26 +106,12 @@ public class PlotSettings {
         this.containerAccessEnabled = containerAccessEnabled;
     }
 
-    // === Animal Interact ===
-    public boolean isAnimalInteractEnabled() {
-        return animalInteractEnabled;
+    // === Animal Access ===
+    public boolean isAnimalAccessEnabled() {
+        return animalAccessEnabled;
     }
 
-    public void setAnimalInteractEnabled(boolean animalInteractEnabled) {
-        this.animalInteractEnabled = animalInteractEnabled;
-    }
-
-    @Override
-    public String toString() {
-        return "PlotSettings{" +
-                "pvpEnabled=" + pvpEnabled +
-                ", explosionsEnabled=" + explosionsEnabled +
-                ", fireEnabled=" + fireEnabled +
-                ", mobGriefEnabled=" + mobGriefEnabled +
-                ", keepItemsEnabled=" + keepItemsEnabled +
-                ", redstoneEnabled=" + redstoneEnabled +
-                ", containerAccessEnabled=" + containerAccessEnabled +
-                ", animalInteractEnabled=" + animalInteractEnabled +
-                '}';
+    public void setAnimalAccessEnabled(boolean animalAccessEnabled) {
+        this.animalAccessEnabled = animalAccessEnabled;
     }
 }

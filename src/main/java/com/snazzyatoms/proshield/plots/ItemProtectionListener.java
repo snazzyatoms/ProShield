@@ -4,24 +4,20 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Chunk;
-import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
-import org.bukkit.inventory.ItemStack;
-
-import java.util.Set;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 
 /**
- * Handles item drops and pickups inside claims.
- * - Supports per-claim overrides (allowed/blocked items, keep-drops).
- * - Falls back to global config if no claim override.
- * - Role-based: only trusted roles can bypass item restrictions.
+ * Handles item-frame, armor-stand, and container protections inside claims.
+ * Extended to merge global + per-claim keep-items rules.
  */
-@SuppressWarnings("deprecation") // PlayerPickupItemEvent is legacy but still used in 1.18–1.20
 public class ItemProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -34,89 +30,87 @@ public class ItemProtectionListener implements Listener {
         this.roleManager = roleManager;
     }
 
+    // === Item Frames ===
     @EventHandler(ignoreCancelled = true)
-    public void onItemDrop(PlayerDropItemEvent event) {
+    public void onItemFrameInteract(PlayerInteractEntityEvent event) {
+        if (!(event.getRightClicked() instanceof ItemFrame frame)) return;
+
         Player player = event.getPlayer();
-        ItemStack item = event.getItemDrop().getItemStack();
+        Chunk chunk = frame.getLocation().getChunk();
 
-        Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return; // wilderness, allow
 
-        if (plot == null) {
-            // Wilderness → follow global rules only
-            FileConfiguration config = plugin.getConfig();
-            boolean wildernessAllow = config.getBoolean("protection.wilderness.allow-item-drop", true);
-            if (!wildernessAllow) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items in the wilderness.");
-            }
-            return;
-        }
-
-        // === Inside a claim ===
         ClaimRole role = roleManager.getRole(plot, player);
-        PlotSettings settings = plot.getSettings();
-
-        // Check role → Owners/Co-Owners can always drop
-        if (roleManager.isOwnerOrCoOwner(role)) return;
-
-        // Check per-claim allowed items
-        Set<String> allowedItems = settings.getAllowedItems();
-        Set<String> blockedItems = settings.getBlockedItems();
-
-        Material type = item.getType();
-        if (!allowedItems.isEmpty() && !allowedItems.contains(type.name())) {
+        if (!roleManager.canInteract(role)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot drop " + type.name() + " in this claim.");
-            return;
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with item frames here.");
         }
+    }
 
-        if (blockedItems.contains(type.name())) {
+    // === Armor Stands ===
+    @EventHandler(ignoreCancelled = true)
+    public void onArmorStandInteract(PlayerInteractEntityEvent event) {
+        if (!(event.getRightClicked() instanceof ArmorStand stand)) return;
+
+        Player player = event.getPlayer();
+        Chunk chunk = stand.getLocation().getChunk();
+
+        Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return; // wilderness, allow
+
+        ClaimRole role = roleManager.getRole(plot, player);
+        if (!roleManager.canInteract(role)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cDropping " + type.name() + " is blocked in this claim.");
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with armor stands here.");
+        }
+    }
+
+    // === Hanging Entities (Item Frames, Paintings) ===
+    @EventHandler(ignoreCancelled = true)
+    public void onHangingBreak(HangingBreakByEntityEvent event) {
+        if (!(event.getRemover() instanceof Player player)) return;
+
+        Chunk chunk = event.getEntity().getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return; // wilderness
+
+        ClaimRole role = roleManager.getRole(plot, player);
+        if (!roleManager.canBuild(role)) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot break hanging entities here.");
         }
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onItemPickup(PlayerPickupItemEvent event) {
+    public void onHangingPlace(HangingPlaceEvent event) {
         Player player = event.getPlayer();
-        ItemStack item = event.getItem().getItemStack();
+        Chunk chunk = event.getEntity().getLocation().getChunk();
 
-        Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return; // wilderness
 
-        if (plot == null) {
-            // Wilderness → follow global rules only
-            FileConfiguration config = plugin.getConfig();
-            boolean wildernessAllow = config.getBoolean("protection.wilderness.allow-item-pickup", true);
-            if (!wildernessAllow) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in the wilderness.");
-            }
-            return;
-        }
-
-        // === Inside a claim ===
         ClaimRole role = roleManager.getRole(plot, player);
-        PlotSettings settings = plot.getSettings();
-
-        // Check role → Owners/Co-Owners can always pick up
-        if (roleManager.isOwnerOrCoOwner(role)) return;
-
-        // Check per-claim allowed items
-        Set<String> allowedItems = settings.getAllowedItems();
-        Set<String> blockedItems = settings.getBlockedItems();
-
-        Material type = item.getType();
-        if (!allowedItems.isEmpty() && !allowedItems.contains(type.name())) {
+        if (!roleManager.canBuild(role)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up " + type.name() + " in this claim.");
-            return;
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot place hanging entities here.");
+        }
+    }
+
+    // === Global + Per-Claim Item Keep Logic ===
+    public boolean isKeepItemsEnabled(Chunk chunk) {
+        FileConfiguration config = plugin.getConfig();
+
+        // Global toggle
+        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
+
+        Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) {
+            return globalKeep; // wilderness uses global
         }
 
-        if (blockedItems.contains(type.name())) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cPicking up " + type.name() + " is blocked in this claim.");
-        }
+        // Per-claim override if set, otherwise fall back to global
+        Boolean claimKeep = plot.getSettings().getKeepItemsEnabled();
+        return (claimKeep != null) ? claimKeep : globalKeep;
     }
 }

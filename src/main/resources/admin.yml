@@ -1,3 +1,7 @@
+# ==================================================
+# 🛡️ ProShield Admin Menu (v1.2.5)
+# ==================================================
+
 admin-menu:
   enabled: true
   open-when-sneaking-with-compass: true
@@ -12,6 +16,29 @@ teleport:
   max-list: 27
   title: "&3Claims (click to TP)"
 
+# ==================================================
+# Admin GUI Slots
+# These map directly to config.yml → gui.slots.admin
+# ==================================================
+slots:
+  fire: 10
+  explosions: 11
+  entity-grief: 12
+  interactions: 13
+  pvp: 14
+  containers: 15
+  redstone: 16
+  animals: 19
+  keep-items: 20
+  purge-expired: 21
+  debug: 22
+  reload: 23
+  compass-drop-if-full: 24
+  spawn-guard: 25
+  tp-tools: 30
+  back: 31
+  help: 32
+
 messages:
   prefix: "&3[ProShield]&r "
   no-permission: "&cNo permission."
@@ -21,3 +48,4 @@ messages:
   bypass-off: "&eBypass &cDISABLED"
   tp-disabled: "&cTeleporting to claims is disabled."
   no-claims: "&7No claims found."
+  flags-updated: "&aClaim flags updated."

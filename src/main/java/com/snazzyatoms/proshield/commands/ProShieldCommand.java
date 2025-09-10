@@ -3,120 +3,98 @@ package com.snazzyatoms.proshield.commands;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.command.*;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.*;
-
-public class ProShieldCommand implements CommandExecutor, TabCompleter {
+/**
+ * Handles /proshield and related commands.
+ * - Opens GUI
+ * - Handles compass distribution
+ * - Admin reload/debug/purge
+ * - Feedback now goes through MessagesUtil for consistency
+ */
+public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plots;
-    private final GUIManager gui;
+    private final GUIManager guiManager;
+    private final PlotManager plotManager;
+    private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plots, GUIManager gui) {
+    public ProShieldCommand(ProShield plugin, GUIManager guiManager, PlotManager plotManager) {
         this.plugin = plugin;
-        this.plots = plots;
-        this.gui = gui;
-    }
-
-    private void msg(CommandSender sender, String msg) {
-        sender.sendMessage(ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r ") + msg));
+        this.guiManager = guiManager;
+        this.plotManager = plotManager;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            msg(sender, "&cOnly players can use ProShield commands.");
+            messages.send(sender, "general.players-only");
             return true;
         }
 
-        String name = cmd.getName().toLowerCase(Locale.ROOT);
+        if (args.length == 0) {
+            guiManager.openMain(player);
+            return true;
+        }
 
-        switch (name) {
-            case "proshield" -> openMain(player, true);
-            case "claim" -> plots.claim(player);
-            case "unclaim" -> plots.unclaim(player);
-            case "info" -> plots.sendInfo(player);
-            case "trust" -> {
-                if (args.length < 1) {
-                    msg(player, "&cUsage: /trust <player> [role]");
+        switch (args[0].toLowerCase()) {
+            case "compass" -> {
+                if (!player.hasPermission("proshield.compass")) {
+                    messages.send(player, "general.no-permission");
                     return true;
                 }
-                String target = args[0];
-                String role = args.length > 1 ? args[1] : "member";
-                plots.trust(player, target, role);
+                guiManager.giveCompass(player, true);
+                messages.send(player, "compass.given");
             }
-            case "untrust" -> {
-                if (args.length < 1) {
-                    msg(player, "&cUsage: /untrust <player>");
-                    return true;
-                }
-                plots.untrust(player, args[0]);
-            }
-            case "trusted" -> plots.listTrusted(player);
-            case "roles" -> gui.openRolesMenu(player);
-            case "transfer" -> {
-                if (args.length < 1) {
-                    msg(player, "&cUsage: /transfer <player>");
-                    return true;
-                }
-                plots.transferClaim(player, args[0]);
-            }
-            case "preview" -> plots.previewClaim(player);
-            case "compass" -> gui.giveCompass(player, player.isOp()); // admins get admin compass
-            case "bypass" -> plots.toggleBypass(player, args);
             case "reload" -> {
                 if (!player.hasPermission("proshield.admin.reload")) {
-                    msg(player, "&cNo permission.");
+                    messages.send(player, "general.no-permission");
                     return true;
                 }
                 plugin.reloadConfig();
-                gui.onConfigReload();
-                msg(player, "&aConfiguration reloaded.");
-            }
-            case "purgeexpired" -> plots.purgeExpired(player, args);
-            case "debug" -> plots.toggleDebug(player, args);
-            default -> msg(player, "&cUnknown command. Use /proshield for help.");
-        }
-        return true;
-    }
-
-    private void openMain(Player player, boolean isRoot) {
-        gui.openMain(player);
-        if (isRoot) {
-            msg(player, "&7Opening ProShield menu...");
-        }
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        List<String> suggestions = new ArrayList<>();
-        String name = cmd.getName().toLowerCase(Locale.ROOT);
-
-        if (!(sender instanceof Player)) return suggestions;
-
-        switch (name) {
-            case "trust", "untrust", "transfer" -> {
-                if (args.length == 1) {
-                    Bukkit.getOnlinePlayers().forEach(p -> suggestions.add(p.getName()));
-                }
-            }
-            case "debug" -> {
-                if (args.length == 1) suggestions.addAll(Arrays.asList("on", "off", "toggle"));
+                plugin.getPlotManager().reloadFromConfig();
+                messages.send(player, "admin.reloaded");
             }
             case "bypass" -> {
-                if (args.length == 1) suggestions.addAll(Arrays.asList("on", "off", "toggle"));
+                if (!player.hasPermission("proshield.bypass")) {
+                    messages.send(player, "general.no-permission");
+                    return true;
+                }
+                plugin.toggleBypass(player);
+                boolean bypass = plugin.isBypassing(player);
+                messages.send(player, bypass ? "admin.bypass-on" : "admin.bypass-off");
             }
             case "purgeexpired" -> {
-                if (args.length == 1) suggestions.add("<days>");
-                else if (args.length == 2) suggestions.add("dryrun");
+                if (!player.hasPermission("proshield.admin.expired.purge")) {
+                    messages.send(player, "general.no-permission");
+                    return true;
+                }
+                int days = args.length > 1 ? Integer.parseInt(args[1]) : 30;
+                boolean dryRun = args.length > 2 && args[2].equalsIgnoreCase("dryrun");
+                int removed = plotManager.purgeExpired(days, dryRun);
+                messages.send(player, "admin.purge-expired",
+                        "%count%", String.valueOf(removed),
+                        "%days%", String.valueOf(days),
+                        "%dryrun%", String.valueOf(dryRun));
+            }
+            case "debug" -> {
+                if (!player.hasPermission("proshield.admin.debug")) {
+                    messages.send(player, "general.no-permission");
+                    return true;
+                }
+                boolean enabled = plugin.toggleDebug();
+                messages.send(player, enabled ? "admin.debug-on" : "admin.debug-off");
+            }
+            default -> {
+                messages.send(player, "general.unknown-command");
             }
         }
-
-        return suggestions;
+        return true;
     }
 }

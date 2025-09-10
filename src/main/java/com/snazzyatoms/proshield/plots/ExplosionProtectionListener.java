@@ -3,8 +3,8 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Explosive;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityExplodeEvent;
@@ -12,9 +12,9 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import java.util.Iterator;
 
 /**
- * Handles explosion protection inside claims and globally.
- * - Prevents block damage from creepers, TNT, withers, etc.
- * - Fully configurable per explosion type
+ * Handles explosion protection inside claims and wilderness.
+ * - Respects global config and per-claim settings
+ * - Uses MessagesUtil for player/admin debug feedback
  */
 public class ExplosionProtectionListener implements Listener {
 
@@ -30,57 +30,42 @@ public class ExplosionProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
-        EntityType type = event.getEntityType();
-        Chunk chunk = event.getLocation().getChunk();
+        Entity entity = event.getEntity();
+        Chunk chunk = entity.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        FileConfiguration config = plugin.getConfig();
+        String explosionType = entity.getType().name();
 
-        // Global toggle
-        if (!config.getBoolean("protection.explosions.enabled", true)) {
-            return; // explosions allowed everywhere
-        }
-
-        // Per-type checks
-        boolean cancel = switch (type) {
-            case CREEPER -> !config.getBoolean("protection.explosions.creeper", true);
-            case PRIMED_TNT, TNT_MINECART -> !config.getBoolean("protection.explosions.tnt", true);
-            case WITHER -> !config.getBoolean("protection.explosions.wither", true);
-            case WITHER_SKULL -> !config.getBoolean("protection.explosions.wither_skull", true);
-            case ENDER_CRYSTAL -> !config.getBoolean("protection.explosions.end_crystal", true);
-            case ENDER_DRAGON -> !config.getBoolean("protection.explosions.ender_dragon", true);
-            default -> false;
-        };
-
-        if (cancel) {
-            event.blockList().clear();
+        // Wilderness explosions → global toggle
+        if (plot == null) {
+            boolean allowExplosions = plugin.getConfig().getBoolean("protection.explosions.enabled", true);
+            if (!allowExplosions) {
+                event.setCancelled(true);
+                messages.debug(plugin, "&cExplosion cancelled in wilderness: " + explosionType);
+            }
             return;
         }
 
-        // Claim-specific rule: block all explosions unless explicitly allowed
-        if (plot != null) {
-            if (!plot.getSettings().isExplosionAllowed()) {
-                event.blockList().clear();
-                messages.broadcastToNearby(event.getLocation(),
-                        "protection.explosion-blocked",
-                        "%type%", type.name());
-            }
-        } else {
-            // Wilderness check: global wilderness flag
-            boolean wildernessAllowed = config.getBoolean("protection.wilderness.allow-explosions", true);
-            if (!wildernessAllowed) {
-                event.blockList().clear();
-            }
+        // Inside claim → per-claim flags
+        if (!plot.getSettings().isExplosionsAllowed()) {
+            event.setCancelled(true);
+            messages.debug(plugin, "&cExplosion cancelled in claim: " + explosionType + " @ " + plot.getName());
+            return;
         }
 
-        // Cleanup any invalid or protected blocks
+        // If explosions allowed, filter affected blocks
         Iterator<org.bukkit.block.Block> it = event.blockList().iterator();
         while (it.hasNext()) {
             org.bukkit.block.Block block = it.next();
-            Plot blockPlot = plotManager.getPlot(block.getChunk());
-            if (blockPlot != null && !blockPlot.getSettings().isExplosionAllowed()) {
+
+            // Prevent claim grief
+            if (plotManager.getPlot(block.getChunk()) != null) {
                 it.remove();
             }
+        }
+
+        if (entity instanceof Explosive) {
+            messages.debug(plugin, "&eExplosion processed: " + explosionType + " in " + plot.getName());
         }
     }
 }

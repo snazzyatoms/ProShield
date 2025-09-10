@@ -1,9 +1,12 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -13,19 +16,14 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * PlotManager handles all claim storage, lookup, and persistence.
- *
- * Preserves prior logic and enhances:
- * - Uses world name (String) not World object for keys
- * - Provides saveAsync(plot) and saveAsync() overloads
- * - Adds purgeExpired and getClaimName
- * - Ensures Plot.getX()/getZ() are available
+ * PlotManager – claim storage, lookup, helpers, and persistence.
+ * Preserves earlier behavior + reintroduces helpers used by listeners/commands.
  */
 public class PlotManager {
 
     private final ProShield plugin;
 
-    // Claims indexed by world + chunk coords
+    // worldName -> "x,z" -> plot
     private final Map<String, Map<String, Plot>> claims = new ConcurrentHashMap<>();
 
     private final File dataFile;
@@ -38,9 +36,7 @@ public class PlotManager {
         loadClaims();
     }
 
-    /* -------------------------------------------------------
-     * Claim CRUD
-     * ------------------------------------------------------- */
+    /* ---------------------- Queries ---------------------- */
 
     public Plot getPlot(Chunk chunk) {
         if (chunk == null) return null;
@@ -51,6 +47,7 @@ public class PlotManager {
         return claims.getOrDefault(world, Collections.emptyMap()).get(key(x, z));
     }
 
+    /** Compatibility alias used widely in the codebase. */
     public Plot getClaim(Location loc) {
         if (loc == null || loc.getWorld() == null) return null;
         return getPlot(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ());
@@ -60,118 +57,148 @@ public class PlotManager {
         return getClaim(loc) != null;
     }
 
-    public Collection<Plot> getClaims() {
-        List<Plot> list = new ArrayList<>();
-        for (Map<String, Plot> perWorld : claims.values()) {
-            list.addAll(perWorld.values());
+    public boolean hasAnyClaim(UUID playerId) {
+        if (playerId == null) return false;
+        for (Plot p : getAllClaims()) {
+            if (playerId.equals(p.getOwner())) return true;
+            if (p.getTrusted().containsKey(playerId)) return true;
         }
-        return list;
+        return false;
+    }
+
+    public boolean isOwner(UUID playerId, Location loc) {
+        Plot p = getClaim(loc);
+        return p != null && p.isOwner(playerId);
+    }
+
+    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
+        Plot p = getClaim(loc);
+        if (p == null || playerId == null) return false;
+        if (p.isOwner(playerId)) return true;
+        return p.getTrusted().containsKey(playerId);
+    }
+
+    public String getClaimName(Location loc) {
+        Plot p = getClaim(loc);
+        return p != null ? p.getDisplayNameSafe() : null;
+    }
+
+    public Collection<Plot> getAllClaims() {
+        List<Plot> out = new ArrayList<>();
+        for (Map<String, Plot> perWorld : claims.values()) out.addAll(perWorld.values());
+        return out;
+    }
+
+    /* ---------------------- CRUD ---------------------- */
+
+    public Plot createClaim(UUID owner, Location loc) {
+        if (owner == null || loc == null || loc.getWorld() == null) return null;
+        Plot existing = getClaim(loc);
+        if (existing != null) return existing;
+
+        Plot plot = new Plot(loc.getChunk(), owner);
+        claims.computeIfAbsent(plot.getWorldName(), w -> new ConcurrentHashMap<>())
+                .put(key(plot.getX(), plot.getZ()), plot);
+        saveAsync(plot);
+        return plot;
     }
 
     public void addPlot(Plot plot) {
+        if (plot == null) return;
         claims.computeIfAbsent(plot.getWorldName(), w -> new ConcurrentHashMap<>())
                 .put(key(plot.getX(), plot.getZ()), plot);
         saveAsync(plot);
     }
 
     public void removePlot(Plot plot) {
-        Map<String, Plot> worldClaims = claims.get(plot.getWorldName());
-        if (worldClaims != null) {
-            worldClaims.remove(key(plot.getX(), plot.getZ()));
-        }
+        if (plot == null) return;
+        Map<String, Plot> perWorld = claims.get(plot.getWorldName());
+        if (perWorld != null) perWorld.remove(key(plot.getX(), plot.getZ()));
         saveAsync();
     }
 
-    /* -------------------------------------------------------
-     * Persistence
-     * ------------------------------------------------------- */
+    /* ---------------------- Persistence ---------------------- */
 
     private void loadClaims() {
         if (!dataFile.exists()) return;
 
         for (String world : yaml.getKeys(false)) {
-            for (String chunkKey : yaml.getConfigurationSection(world).getKeys(false)) {
-                Plot plot = Plot.deserialize(yaml.getConfigurationSection(world + "." + chunkKey));
+            ConfigurationSection worldSec = yaml.getConfigurationSection(world);
+            if (worldSec == null) continue;
+            for (String chunkKey : worldSec.getKeys(false)) {
+                ConfigurationSection sec = worldSec.getConfigurationSection(chunkKey);
+                if (sec == null) continue;
+                Plot plot = Plot.deserialize(sec);
                 if (plot != null) {
                     claims.computeIfAbsent(world, w -> new ConcurrentHashMap<>())
                             .put(chunkKey, plot);
                 }
             }
         }
-        plugin.getLogger().info("[ProShield] Loaded " + getClaims().size() + " claims.");
+        plugin.getLogger().info("[ProShield] Loaded " + getAllClaims().size() + " claims.");
     }
 
     public void saveAsync() {
         new BukkitRunnable() {
-            @Override
-            public void run() {
-                saveAll();
-            }
+            @Override public void run() { saveAll(); }
         }.runTaskAsynchronously(plugin);
     }
 
     public void saveAsync(Plot plot) {
         if (plot == null) return;
         new BukkitRunnable() {
-            @Override
-            public void run() {
-                savePlot(plot);
-            }
+            @Override public void run() { savePlot(plot); }
         }.runTaskAsynchronously(plugin);
     }
 
     private synchronized void saveAll() {
-        // clear file then write
-        yaml.getKeys(false).forEach(yaml::set);
-        for (Map.Entry<String, Map<String, Plot>> worldEntry : claims.entrySet()) {
-            String world = worldEntry.getKey();
-            for (Plot plot : worldEntry.getValue().values()) {
-                yaml.createSection(world + "." + key(plot.getX(), plot.getZ()), plot.serialize());
+        // Clear current
+        for (String k : new HashSet<>(yaml.getKeys(false))) {
+            yaml.set(k, null);
+        }
+        for (Map.Entry<String, Map<String, Plot>> e : claims.entrySet()) {
+            String world = e.getKey();
+            for (Plot p : e.getValue().values()) {
+                yaml.createSection(world + "." + key(p.getX(), p.getZ()), p.serialize());
             }
         }
         try {
             yaml.save(dataFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("[ProShield] Failed to save claims.yml: " + e.getMessage());
+        } catch (IOException ex) {
+            plugin.getLogger().severe("[ProShield] Failed to save claims.yml: " + ex.getMessage());
         }
     }
 
-    private synchronized void savePlot(Plot plot) {
+    /* NOTE: keep package-private so TransferCommand can call via saveAsync(plot) instead */
+    synchronized void savePlot(Plot plot) {
         String path = plot.getWorldName() + "." + key(plot.getX(), plot.getZ());
+        yaml.set(path, null);
         yaml.createSection(path, plot.serialize());
         try {
             yaml.save(dataFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("[ProShield] Failed to save claim: " + e.getMessage());
+        } catch (IOException ex) {
+            plugin.getLogger().severe("[ProShield] Failed to save claim: " + ex.getMessage());
         }
     }
 
-    /* -------------------------------------------------------
-     * Maintenance
-     * ------------------------------------------------------- */
+    /* ---------------------- Maintenance ---------------------- */
 
     public void reloadFromConfig() {
-        plugin.getLogger().info("[ProShield] PlotManager reloaded settings.");
+        // Placeholder: flags are per-plot; nothing to reload globally yet.
+        plugin.getLogger().info("[ProShield] PlotManager reloaded.");
     }
 
-    /**
-     * Purge expired claims.
-     */
     public int purgeExpired(int daysOld, boolean unowned) {
         int purged = 0;
-        long cutoff = (daysOld > 0) ? (System.currentTimeMillis() - (daysOld * 86_400_000L)) : 0L;
+        long cutoff = (daysOld > 0) ? (System.currentTimeMillis() - daysOld * 86_400_000L) : 0L;
 
-        for (Map<String, Plot> worldClaims : claims.values()) {
-            Iterator<Plot> it = worldClaims.values().iterator();
+        for (Map<String, Plot> perWorld : claims.values()) {
+            Iterator<Plot> it = perWorld.values().iterator();
             while (it.hasNext()) {
-                Plot plot = it.next();
+                Plot p = it.next();
                 boolean remove = false;
-
-                if (unowned && plot.getOwner() == null) {
-                    remove = true;
-                } else if (daysOld > 0 && plot.getCreated() < cutoff) {
-                    remove = true;
-                }
+                if (unowned && p.getOwner() == null) remove = true;
+                if (cutoff > 0 && p.getCreated() < cutoff) remove = true;
 
                 if (remove) {
                     it.remove();
@@ -179,21 +206,13 @@ public class PlotManager {
                 }
             }
         }
-
         if (purged > 0) saveAsync();
         return purged;
     }
 
-    /* -------------------------------------------------------
-     * Helpers
-     * ------------------------------------------------------- */
+    /* ---------------------- Helpers ---------------------- */
 
     private String key(int x, int z) {
         return x + "," + z;
-    }
-
-    public String getClaimName(Location loc) {
-        Plot plot = getClaim(loc);
-        return (plot != null) ? plot.getDisplayNameSafe() : null;
     }
 }

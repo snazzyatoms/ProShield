@@ -1,32 +1,20 @@
 package com.snazzyatoms.proshield.plots;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.bukkit.configuration.ConfigurationSection;
 
 /**
- * Stores per-claim settings such as PvP, explosions, fire, and item persistence.
- * Extended to support keep-items toggle.
+ * Stores per-claim settings such as PvP, item-keep, and flags.
  */
 public class PlotSettings {
 
     private boolean pvpEnabled;
-    private boolean explosionsEnabled;
-    private boolean fireEnabled;
-
-    // New: per-claim keep-items toggle
-    private Boolean keepItemsEnabled; // nullable → null = fallback to global
-
-    // Generic future-proof map for custom flags
-    private final Map<String, Object> customFlags = new HashMap<>();
+    private boolean keepItemsEnabled;
 
     public PlotSettings() {
-        this.pvpEnabled = false;
-        this.explosionsEnabled = true;
-        this.fireEnabled = true;
-        this.keepItemsEnabled = null; // default → defer to global
+        this.pvpEnabled = false;       // default: PvP disabled
+        this.keepItemsEnabled = false; // default: no keep-items
     }
 
-    // === PvP ===
     public boolean isPvpEnabled() {
         return pvpEnabled;
     }
@@ -35,43 +23,29 @@ public class PlotSettings {
         this.pvpEnabled = pvpEnabled;
     }
 
-    // === Explosions ===
-    public boolean isExplosionsEnabled() {
-        return explosionsEnabled;
-    }
-
-    public void setExplosionsEnabled(boolean explosionsEnabled) {
-        this.explosionsEnabled = explosionsEnabled;
-    }
-
-    // === Fire ===
-    public boolean isFireEnabled() {
-        return fireEnabled;
-    }
-
-    public void setFireEnabled(boolean fireEnabled) {
-        this.fireEnabled = fireEnabled;
-    }
-
-    // === Keep Items ===
-    public Boolean getKeepItemsEnabled() {
+    public boolean isKeepItemsEnabled() {
         return keepItemsEnabled;
     }
 
-    public void setKeepItemsEnabled(Boolean keepItemsEnabled) {
+    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
         this.keepItemsEnabled = keepItemsEnabled;
     }
 
-    // === Custom Flags ===
-    public Map<String, Object> getCustomFlags() {
-        return customFlags;
+    /**
+     * Load settings from config section.
+     */
+    public void load(ConfigurationSection section) {
+        if (section == null) return;
+        this.pvpEnabled = section.getBoolean("pvp", false);
+        this.keepItemsEnabled = section.getBoolean("keep-items", false);
     }
 
-    public void setCustomFlag(String key, Object value) {
-        customFlags.put(key, value);
-    }
-
-    public Object getCustomFlag(String key) {
-        return customFlags.get(key);
+    /**
+     * Save settings into config section.
+     */
+    public void save(ConfigurationSection section) {
+        if (section == null) return;
+        section.set("pvp", this.pvpEnabled);
+        section.set("keep-items", this.keepItemsEnabled);
     }
 }

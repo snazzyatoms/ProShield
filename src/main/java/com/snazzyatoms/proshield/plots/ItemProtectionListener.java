@@ -4,42 +4,32 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Chunk;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
+import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.inventory.ItemStack;
 
 /**
- * Handles item dropping & picking up inside claims and wilderness
- * with role-based checks and configurable wilderness toggles.
+ * Handles item-related protections (dropping, item frames, armor stands, buckets)
+ * This does NOT handle item persistence/keep-drops (handled by KeepDropsListener).
  */
-@SuppressWarnings("deprecation") // PlayerPickupItemEvent is deprecated but works up to 1.19
 public class ItemProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
 
-    // Cached wilderness config values
-    private boolean wildernessDropAllowed;
-    private boolean wildernessPickupAllowed;
-
     public ItemProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
-        reloadConfigValues();
-    }
-
-    /**
-     * Reloads wilderness config values from config.yml
-     */
-    public void reloadConfigValues() {
-        FileConfiguration config = plugin.getConfig();
-        this.wildernessDropAllowed = config.getBoolean("protection.wilderness.allow-item-drop", true);
-        this.wildernessPickupAllowed = config.getBoolean("protection.wilderness.allow-item-pickup", true);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -48,45 +38,69 @@ public class ItemProtectionListener implements Listener {
         Chunk chunk = player.getLocation().getChunk();
 
         Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return; // wilderness = allowed
 
-        if (plot == null) {
-            // Wilderness
-            if (!wildernessDropAllowed && !player.hasPermission("proshield.bypass")) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items in the wilderness.");
-            }
-            return;
-        }
-
-        // Inside claim
         ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canDropItems(role)) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items in this claim.");
+        ItemStack dropped = event.getItemDrop().getItemStack();
+
+        // Example: block TNT, lava buckets, or other restricted items
+        if (!roleManager.canBuild(role)) {
+            if (dropped.getType() == Material.TNT ||
+                dropped.getType() == Material.LAVA_BUCKET) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.getPrefix() + "§cYou cannot drop that item inside this claim.");
+            }
         }
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onItemPickup(PlayerPickupItemEvent event) {
+    public void onEntityInteract(PlayerInteractEntityEvent event) {
         Player player = event.getPlayer();
-        Chunk chunk = player.getLocation().getChunk();
+        Chunk chunk = event.getRightClicked().getLocation().getChunk();
 
         Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return;
 
-        if (plot == null) {
-            // Wilderness
-            if (!wildernessPickupAllowed && !player.hasPermission("proshield.bypass")) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in the wilderness.");
-            }
-            return;
-        }
-
-        // Inside claim
         ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canPickupItems(role)) {
+
+        // Protect item frames & armor stands
+        if (event.getRightClicked() instanceof ItemFrame || event.getRightClicked() instanceof ArmorStand) {
+            if (!roleManager.canContainer(role)) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with that here.");
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBucketEmpty(PlayerBucketEmptyEvent event) {
+        Player player = event.getPlayer();
+        Chunk chunk = event.getBlock().getChunk();
+
+        Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return;
+
+        ClaimRole role = roleManager.getRole(plot, player);
+
+        if (!roleManager.canBuild(role)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in this claim.");
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot empty buckets in this claim.");
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBucketFill(PlayerBucketFillEvent event) {
+        Player player = event.getPlayer();
+        Chunk chunk = event.getBlock().getChunk();
+
+        Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return;
+
+        ClaimRole role = roleManager.getRole(plot, player);
+
+        if (!roleManager.canBuild(role)) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot fill buckets in this claim.");
         }
     }
 }

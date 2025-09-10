@@ -10,6 +10,10 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+/**
+ * Handles inventory clicks and compass interactions for ProShield GUIs.
+ * Supports both Player and Admin menus.
+ */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
@@ -20,44 +24,53 @@ public class GUIListener implements Listener {
         this.gui = gui;
     }
 
-    /* ===============================
-     * COMPASS INTERACTION
-     * =============================== */
+    // =========================================================
+    // COMPASS OPENING
+    // =========================================================
 
     @EventHandler
     public void onCompassUse(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
 
         ItemStack item = event.getItem();
+        if (item == null) return;
         if (!gui.isProShieldCompass(item)) return;
 
         Player player = event.getPlayer();
-        event.setCancelled(true);
+        boolean admin = player.hasPermission("proshield.admin");
 
-        boolean isAdmin = player.hasPermission("proshield.admin");
-        gui.openMain(player, isAdmin);
+        event.setCancelled(true);
+        gui.openMain(player, admin);
     }
 
-    /* ===============================
-     * INVENTORY CLICKS
-     * =============================== */
+    // =========================================================
+    // INVENTORY CLICKS
+    // =========================================================
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getClickedInventory() == null) return;
+        if (event.getCurrentItem() == null) return;
+        if (event.getView().getTitle() == null) return;
 
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null) return;
-
-        boolean isAdmin = title.toLowerCase().contains("admin");
-        String menuTitle = isAdmin ? "proshield admin menu" : "proshield menu";
-
-        if (!title.toLowerCase().contains("proshield")) return;
-
         ItemStack clicked = event.getCurrentItem();
-        int slot = event.getSlot();
 
-        gui.handleInventoryClick(player, slot, clicked, event, isAdmin);
+        // Stop taking GUI items
+        event.setCancelled(true);
+
+        // Detect if this is a ProShield GUI
+        boolean admin = player.hasPermission("proshield.admin");
+
+        if (title.equalsIgnoreCase("ProShield Menu")
+                || title.equalsIgnoreCase("ProShield Admin")
+                || title.equalsIgnoreCase("ProShield Help")) {
+
+            String action = GUICache.getAction(clicked);
+
+            if (action != null) {
+                gui.handleButtonClick(player, action, admin);
+            }
+        }
     }
 }

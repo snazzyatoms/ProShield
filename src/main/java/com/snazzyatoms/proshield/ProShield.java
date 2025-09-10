@@ -1,115 +1,96 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
+import com.snazzyatoms.proshield.gui.GUICache;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.*;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class ProShield extends JavaPlugin {
+public class ProShield extends JavaPlugin {
 
     private static ProShield instance;
 
-    private FileConfiguration config;
     private PlotManager plotManager;
     private ClaimRoleManager roleManager;
     private GUIManager guiManager;
+    private GUICache guiCache;
+
+    public static ProShield getInstance() {
+        return instance;
+    }
 
     @Override
     public void onEnable() {
         instance = this;
 
         saveDefaultConfig();
-        this.config = getConfig();
 
         // Core managers
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
-        this.guiManager = new GUIManager(this, plotManager);
+        this.guiCache = new GUICache();
+        this.guiManager = new GUIManager(this, guiCache);
 
-        // Register commands
-        ProShieldCommand cmd = new ProShieldCommand(this, plotManager, guiManager);
-        getCommand("proshield").setExecutor(cmd);
-        getCommand("proshield").setTabCompleter(cmd);
+        // Register command
+        ProShieldCommand commandExecutor = new ProShieldCommand(this, plotManager, guiManager);
+        PluginCommand command = getCommand("proshield");
+        if (command != null) {
+            command.setExecutor(commandExecutor);
+            command.setTabCompleter(commandExecutor);
+        }
 
         // Register listeners
+        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, plotManager, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new GUIListener(guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MobBorderRepelListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new MobBorderRepelListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        getLogger().info("ProShield v" + getDescription().getVersion() + " enabled!");
+        getLogger().info("✅ ProShield 1.2.5 enabled!");
     }
 
     @Override
     public void onDisable() {
-        instance = null;
-        getLogger().info("ProShield disabled.");
+        guiCache.clearAll();
+        getLogger().info("⛔ ProShield disabled.");
     }
 
     /**
-     * Reload all plugin configs, plots, and GUIs.
+     * Reload plugin configuration and refresh caches.
      */
     public void reloadAllConfigs() {
         reloadConfig();
-        this.config = getConfig();
 
-        plotManager.reloadFromConfig();
-        roleManager.reloadFromConfig();
+        // Re-init managers with new config
+        this.plotManager.reloadFromConfig();
+        this.roleManager.reloadFromConfig();
 
-        // Invalidate GUIs
-        guiManager.onConfigReload();
+        // Clear GUI caches
+        this.guiCache.clearAll();
 
-        getLogger().info("ProShield config reloaded.");
-    }
-
-    public FileConfiguration getConfiguration() {
-        return this.config;
+        getLogger().info("🔄 ProShield configuration reloaded.");
     }
 
     public PlotManager getPlotManager() {
-        return this.plotManager;
+        return plotManager;
     }
 
     public ClaimRoleManager getRoleManager() {
-        return this.roleManager;
+        return roleManager;
     }
 
     public GUIManager getGuiManager() {
-        return this.guiManager;
+        return guiManager;
     }
 
-    public static ProShield getInstance() {
-        return instance;
-    }
-
-    /**
-     * Helper for prefixing messages with plugin prefix.
-     */
-    public String prefixed(String msg) {
-        String prefix = ChatColor.translateAlternateColorCodes('&',
-                getConfiguration().getString("messages.prefix", "&3[ProShield]&r "));
-        return prefix + ChatColor.translateAlternateColorCodes('&', msg);
-    }
-
-    /**
-     * Give compass to a player on join if enabled in config.
-     * Handles admin vs player compass.
-     */
-    public void giveJoinCompass(Player p) {
-        boolean auto = getConfiguration().getBoolean("autogive.compass-on-join", true);
-        if (!auto) return;
-
-        boolean preferAdmin = p.isOp() || p.hasPermission("proshield.admin") || p.hasPermission("proshield.admin.gui");
-        guiManager.giveCompass(p, preferAdmin);
+    public GUICache getGuiCache() {
+        return guiCache;
     }
 }

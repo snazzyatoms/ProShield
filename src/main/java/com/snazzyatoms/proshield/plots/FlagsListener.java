@@ -50,7 +50,7 @@ public class FlagsListener implements Listener {
         // Only owner or co-owner should be able to toggle flags
         if (!plot.isOwner(player.getUniqueId())) {
             ClaimRole r = roles.getRole(plot, player.getUniqueId());
-            if (!(r == ClaimRole.CO_OWNER || r == ClaimRole.COOWNER)) {
+            if (r != ClaimRole.COOWNER) {
                 msg.send(player, "errors.not-owner");
                 return;
             }
@@ -64,53 +64,53 @@ public class FlagsListener implements Listener {
             case DIAMOND_SWORD -> {
                 newValue = !plot.getSettings().isPvpEnabled();
                 plot.getSettings().setPvpEnabled(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "pvp", msg.onOff(newValue));
             }
             case TNT -> {
                 newValue = !plot.getSettings().isExplosionsAllowed();
                 plot.getSettings().setExplosionsAllowed(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "explosions", msg.onOff(newValue));
             }
             case FLINT_AND_STEEL -> {
                 newValue = !plot.getSettings().isFireAllowed();
                 plot.getSettings().setFireAllowed(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "fire", msg.onOff(newValue));
             }
             case ENDERMAN_SPAWN_EGG -> {
                 newValue = !plot.getSettings().isEntityGriefingAllowed();
                 plot.getSettings().setEntityGriefingAllowed(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "entity-grief", msg.onOff(newValue));
             }
             case REDSTONE -> {
                 newValue = !plot.getSettings().isRedstoneAllowed();
                 plot.getSettings().setRedstoneAllowed(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "interactions", msg.onOff(newValue));
             }
             case CHEST -> {
                 newValue = !plot.getSettings().isContainersAllowed();
                 plot.getSettings().setContainersAllowed(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "containers", msg.onOff(newValue));
             }
             case LEAD -> {
                 newValue = !plot.getSettings().isAnimalInteractAllowed();
                 plot.getSettings().setAnimalInteractAllowed(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "animals", msg.onOff(newValue));
             }
             case MINECART -> {
                 newValue = !plot.getSettings().isVehiclesAllowed();
                 plot.getSettings().setVehiclesAllowed(newValue);
-                plots.saveAsync();
+                plots.saveAsync(plot);
                 msg.send(player, "flags.toggled", "vehicles", msg.onOff(newValue));
             }
             default -> {
-                // ignore filler/back buttons here; handled by GUIListener if any
+                // ignore filler/back buttons here; handled by GUIManager if needed
             }
         }
     }

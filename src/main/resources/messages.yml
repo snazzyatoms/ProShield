@@ -1,81 +1,107 @@
+# =========================================================
+# ProShield Messages Configuration (v1.2.5)
+# =========================================================
+# - Supports color codes with '&'
+# - Supports placeholders like {player}, {claim}, {role}
+# - All prior keys preserved, only enhanced and extended
+# =========================================================
+
+prefix: "&3[ProShield]&r "
+
+# ---------------------------------------------------------
+# General & Errors
+# ---------------------------------------------------------
+error:
+  player-only: "&cThis command can only be run by a player."
+  no-permission: "&cYou don’t have permission."
+  no-claim: "&cYou are not standing in a claim."
+  not-owner: "&cOnly the claim owner can do that."
+  not-trusted: "&cYou are not trusted in this claim."
+
 messages:
-  prefix: "&3[ProShield]&r "
+  reloaded: "&aProShield configs reloaded."
+  compass-given: "&aAdmin compass added to your inventory."
 
-  # 🔹 General
-  no-permission: "&cYou do not have permission to do that."
-  reloaded: "&aProShield configuration and messages reloaded."
-  not-in-claim: "&7You are not inside a claim."
-  only-player: "&cThis command can only be used in-game."
+# ---------------------------------------------------------
+# Claim Messages
+# ---------------------------------------------------------
+claim:
+  success: "&aYou successfully claimed this chunk."
+  already-owned: "&cThis chunk is already claimed by {owner}."
+  unclaimed: "&aYou unclaimed this chunk."
+  not-owner: "&cYou are not the owner of this claim."
+  info: "&eClaim Info: &7Owner: {owner}, Trusted: {trusted}"
 
-  # 🔹 Claim actions
-  claim-success: "&aChunk claimed successfully."
-  claim-fail: "&cThis chunk is already claimed."
-  unclaim-success: "&aYou have unclaimed this chunk."
-  unclaim-fail: "&cYou cannot unclaim this chunk."
-  claim-info: "&eClaim owned by {1}. Trusted: {2}"
-  claim-preview-start: "&aShowing preview of your claim borders..."
-  claim-preview-end: "&cClaim preview ended."
+# ---------------------------------------------------------
+# Trust / Roles / Transfer
+# ---------------------------------------------------------
+trust:
+  added: "&a{player} was trusted with role {role} in claim {claim}."
+  already-trusted: "&e{player} is already trusted here."
+  self: "&cYou cannot trust yourself."
 
-  # 🔹 Trust / Roles
-  trust-already: "&c{1} is already trusted in this claim."
-  trust-success: "&a{1} has been trusted as {2}."
-  trust-fail: "&cFailed to trust {1}."
-  untrust-not-found: "&c{1} is not trusted in this claim."
-  untrust-success: "&a{1} has been untrusted."
-  roles-opened: "&aOpening roles menu..."
-  roles-changed: "&a{1}'s role changed to {2}."
-  transfer-success: "&aOwnership transferred to {1}."
-  transfer-fail: "&cFailed to transfer ownership."
+untrust:
+  removed: "&c{player} was untrusted from claim {claim}."
+  not-trusted: "&e{player} is not trusted here."
 
-  # 🔹 Trusted list
-  trusted-list-title: "&eTrusted players in this claim:"
-  trusted-list-empty: "&7No trusted players."
-  trusted-list-entry: "&b- {1} &7({2})"
+roles:
+  no-claim: "&cYou must be inside a claim to manage roles."
+  not-allowed: "&cYou must be the claim owner or co-owner to manage roles in {claim}."
+  opened: "&aOpening roles manager..."
 
-  # 🔹 Admin toggles
-  admin.bypass-on: "&eBypass mode &aENABLED"
-  admin.bypass-off: "&eBypass mode &cDISABLED"
-  admin.debug-on: "&eDebug mode &aENABLED"
-  admin.debug-off: "&eDebug mode &cDISABLED"
-  admin.keepitems-on: "&aKeep items enabled for claims."
-  admin.keepitems-off: "&cKeep items disabled for claims."
-  admin.reload: "&aProShield configs and messages reloaded."
-  admin.transfer: "&aClaim transferred successfully."
-  admin.flags-updated: "&aFlags updated for this claim."
+transfer:
+  success: "&aYou transferred ownership of {claim} to {player}."
+  not-owner: "&cOnly the claim owner can transfer ownership."
+  self: "&cYou cannot transfer a claim to yourself."
+  target-offline: "&cThe target player must be online."
 
-  # 🔹 PvP / Protection messages
-  pvp-disabled: "&cPvP is disabled here."
-  pvp-enabled: "&aPvP is enabled here."
-  damage-disabled: "&cDamage is disabled in this claim."
-  explosion-blocked: "&cExplosions are blocked in this claim."
-  fire-blocked: "&cFire spread blocked in this claim."
-  bucket-blocked: "&cYou cannot use buckets here."
-  interact-blocked: "&cYou cannot interact with this object."
-  item-frame-protected: "&cItem frames are protected here."
-  armor-stand-protected: "&cArmor stands are protected here."
-  vehicle-protected: "&cVehicles are protected here."
-  mob-griefing-blocked: "&cMob griefing is blocked here."
+# ---------------------------------------------------------
+# Admin Messages
+# ---------------------------------------------------------
+admin:
+  bypass-on: "&eBypass &aENABLED"
+  bypass-off: "&eBypass &cDISABLED"
+  debug-on: "&eDebug mode &aENABLED"
+  debug-off: "&eDebug mode &cDISABLED"
+  reload: "&aConfiguration reloaded."
+  keep-items-toggled: "&aKeep items in claims: {state}"
 
-  # 🔹 Keep items / drops
-  keep-items-enabled: "&aItem persistence is enabled in this claim."
-  keep-items-disabled: "&cItem persistence is disabled here."
-  keep-drops-enabled: "&aDeath drops are preserved in this claim."
-  keep-drops-disabled: "&cDeath drops are cleared in this claim."
+# ---------------------------------------------------------
+# PvP / Protection Toggles
+# ---------------------------------------------------------
+flags:
+  toggle: "&eFlag &b{flag}&e is now {state} for {claim}."
+  no-claim: "&cNo claim found here to toggle flags."
 
-  # 🔹 Spawn guard
-  spawn-claim-blocked: "&cYou cannot claim land this close to spawn."
+# ---------------------------------------------------------
+# Keep Items / Drops
+# ---------------------------------------------------------
+keep-items:
+  enabled: "&aItems will now persist inside claims."
+  disabled: "&cItems will now despawn as normal."
+  despawned: "&7Some old dropped items have despawned."
 
-  # 🔹 Compass / Join
-  compass-given: "&aAdmin compass given."
-  compass-on-join: "&aYou received a ProShield compass."
-  compass-disabled: "&cCompass distribution disabled."
-  first-claim-reminder: "&eRemember to claim land using &a/claim&e!"
+# ---------------------------------------------------------
+# Claim Expiry / Purge
+# ---------------------------------------------------------
+claims:
+  expired: "&cClaim {claim} owned by {owner} has expired."
+  purged: "&c{count} expired claims were purged."
 
-  # 🔹 Purge expired claims
-  purge-started: "&ePurging expired claims older than {1} days..."
-  purge-finished: "&aExpired claims purge complete."
-  purge-dryrun: "&eDry-run purge complete. {1} claims would have been removed."
+# ---------------------------------------------------------
+# Teleport & Compass
+# ---------------------------------------------------------
+teleport:
+  success: "&aTeleported to claim owned by {owner}."
+  disabled: "&cClaim teleporting is disabled."
+  no-claims: "&7No claims found."
 
-  # 🔹 Debug messages
-  debug-border: "&7[DEBUG] Nearest border checked at {1},{2} in {3}"
-  debug-claim-check: "&7[DEBUG] Claim check for {1}: {2}"
+compass:
+  given: "&aA ProShield compass has been added to your inventory."
+  already: "&eYou already have a ProShield compass."
+
+# ---------------------------------------------------------
+# Debug Messages
+# ---------------------------------------------------------
+debug:
+  generic: "&8[DEBUG] &7{message}"

@@ -1,8 +1,11 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
+import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.*;
+import com.snazzyatoms.proshield.tasks.MobBorderRepelListener;
+import com.snazzyatoms.proshield.tasks.ClaimExpiryTask;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -14,7 +17,9 @@ public class ProShield extends JavaPlugin {
     private ClaimRoleManager roleManager;
     private GUIManager guiManager;
 
-    private MobBorderRepelListener mobRepelTask;
+    // Listeners & tasks
+    private MobBorderRepelListener mobBorderRepelListener;
+    private ClaimExpiryTask claimExpiryTask;
 
     public static ProShield getInstance() {
         return instance;
@@ -27,72 +32,84 @@ public class ProShield extends JavaPlugin {
         saveDefaultConfig();
         reloadConfig();
 
-        // Initialize core managers
+        // Core managers
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
         this.guiManager = new GUIManager(this);
 
-        // Register commands
-        ProShieldCommand cmd = new ProShieldCommand(this, plotManager, guiManager);
-        getCommand("proshield").setExecutor(cmd);
-        getCommand("proshield").setTabCompleter(cmd);
+        // Register command
+        ProShieldCommand command = new ProShieldCommand(this, plotManager, guiManager);
+        getCommand("proshield").setExecutor(command);
+        getCommand("proshield").setTabCompleter(command);
 
-        // Register event listeners
-        registerListeners();
+        // Register listeners
+        Bukkit.getPluginManager().registerEvents(new GUIListener(guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(plotManager, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(plotManager), this);
 
-        getLogger().info("✅ ProShield v" + getDescription().getVersion() + " enabled!");
+        // Start tasks
+        startClaimExpiryTask();
+        startMobBorderRepelTask();
+
+        getLogger().info("✅ ProShield enabled!");
     }
 
     @Override
     public void onDisable() {
-        if (mobRepelTask != null) {
-            mobRepelTask.stopTask();
-        }
-        getLogger().info("⛔ ProShield disabled.");
+        stopMobBorderRepelTask();
+        stopClaimExpiryTask();
+        getLogger().info("🛑 ProShield disabled!");
     }
 
-    private void registerListeners() {
-        // Core protections
-        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(plotManager, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plotManager), this);
+    // === Task Management ===
 
-        // GUI
-        Bukkit.getPluginManager().registerEvents(new com.snazzyatoms.proshield.gui.GUIListener(guiManager), this);
+    private void startClaimExpiryTask() {
+        this.claimExpiryTask = new ClaimExpiryTask(plotManager);
+        this.claimExpiryTask.runTaskTimer(this, 20L * 60L, 20L * 60L * 60L); // hourly
+    }
 
-        // Spawn guard protection
-        Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(plotManager), this);
-
-        // Conditional mob repel system
-        if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
-            mobRepelTask = new MobBorderRepelListener(plotManager);
-            mobRepelTask.startTask();
-            getLogger().info("🟢 Mob repel system enabled.");
-        } else {
-            getLogger().info("⚪ Mob repel system disabled in config.");
+    private void stopClaimExpiryTask() {
+        if (this.claimExpiryTask != null) {
+            this.claimExpiryTask.cancel();
+            this.claimExpiryTask = null;
         }
     }
+
+    private void startMobBorderRepelTask() {
+        this.mobBorderRepelListener = new MobBorderRepelListener(this, plotManager);
+        this.mobBorderRepelListener.start();
+    }
+
+    private void stopMobBorderRepelTask() {
+        if (this.mobBorderRepelListener != null) {
+            this.mobBorderRepelListener.stop();
+            this.mobBorderRepelListener = null;
+        }
+    }
+
+    // === Reload ===
 
     public void reloadAllConfigs() {
         reloadConfig();
-        roleManager.reloadFromConfig();
+        roleManager.reloadFromConfigSafe();
+        guiManager.onConfigReload();
 
-        // Restart repel task if needed
-        if (mobRepelTask != null) {
-            mobRepelTask.stopTask();
-            mobRepelTask = null;
-        }
-        if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
-            mobRepelTask = new MobBorderRepelListener(plotManager);
-            mobRepelTask.startTask();
-        }
+        // Restart tasks so config changes apply immediately
+        stopClaimExpiryTask();
+        startClaimExpiryTask();
 
-        getLogger().info("🔄 ProShield configuration reloaded.");
+        stopMobBorderRepelTask();
+        startMobBorderRepelTask();
+
+        getLogger().info("🔄 ProShield configs reloaded successfully!");
     }
 
+    // === Getters ===
     public PlotManager getPlotManager() {
         return plotManager;
     }

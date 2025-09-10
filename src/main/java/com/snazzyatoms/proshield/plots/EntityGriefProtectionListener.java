@@ -4,9 +4,8 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Enderman;
-import org.bukkit.entity.Monster;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Ravager;
 import org.bukkit.entity.Silverfish;
 import org.bukkit.entity.Wither;
@@ -14,16 +13,14 @@ import org.bukkit.entity.EnderDragon;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
-import org.bukkit.event.entity.EntityExplodeEvent;
 
 /**
- * Handles entity griefing protection:
- * - Endermen block movement
- * - Ravagers trampling
- * - Silverfish infestations
- * - Wither & Dragon destruction
- * - Uses both global + per-claim toggles
- * - Integrated with MessagesUtil
+ * Handles entity griefing protection inside claims.
+ * - Enderman block pickup
+ * - Ravager trampling
+ * - Silverfish block infestation
+ * - Wither + EnderDragon destruction
+ * Supports both global config and per-claim settings.
  */
 public class EntityGriefProtectionListener implements Listener {
 
@@ -41,58 +38,52 @@ public class EntityGriefProtectionListener implements Listener {
     public void onEntityChangeBlock(EntityChangeBlockEvent event) {
         Entity entity = event.getEntity();
         Chunk chunk = event.getBlock().getChunk();
-
         Plot plot = plotManager.getPlot(chunk);
+
         FileConfiguration config = plugin.getConfig();
 
-        boolean globalEnabled = config.getBoolean("protection.entity-grief.enabled", true);
-        boolean perClaimEnabled = plot != null && plot.getSettings().isEntityGriefingAllowed();
+        boolean globalGriefEnabled = config.getBoolean("protection.entity-grief.enabled", true);
+        boolean perClaimGriefAllowed = plot != null && plot.getSettings().isEntityGriefingAllowed();
 
-        // If globally disabled and claim does not allow, cancel
-        if (!globalEnabled && (plot == null || !perClaimEnabled)) return;
-
-        // Endermen
-        if (entity instanceof Enderman && !config.getBoolean("protection.entity-grief.enderman", true)) {
-            event.setCancelled(true);
-            messages.debug(plugin, "EntityGrief blocked: Enderman in " + chunk);
+        // Wilderness check
+        if (plot == null) {
+            if (!globalGriefEnabled) {
+                if (isProtectedEntity(entity, config)) {
+                    event.setCancelled(true);
+                    messages.debug(plugin, "&cEntity grief blocked in wilderness by " + entity.getType());
+                }
+            }
+            return;
         }
 
-        // Ravagers
-        if (entity instanceof Ravager && !config.getBoolean("protection.entity-grief.ravager", true)) {
-            event.setCancelled(true);
-            messages.debug(plugin, "EntityGrief blocked: Ravager in " + chunk);
-        }
-
-        // Silverfish
-        if (entity instanceof Silverfish && !config.getBoolean("protection.entity-grief.silverfish", true)) {
-            event.setCancelled(true);
-            messages.debug(plugin, "EntityGrief blocked: Silverfish in " + chunk);
+        // Inside claim check
+        if (!perClaimGriefAllowed) {
+            if (isProtectedEntity(entity, config)) {
+                event.setCancelled(true);
+                messages.debug(plugin, "&cEntity grief blocked in claim [" + plot.getName() + "] by " + entity.getType());
+            }
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onEntityExplosion(EntityExplodeEvent event) {
-        Entity entity = event.getEntity();
-        Chunk chunk = event.getLocation().getChunk();
-
-        Plot plot = plotManager.getPlot(chunk);
-        FileConfiguration config = plugin.getConfig();
-
-        boolean globalEnabled = config.getBoolean("protection.entity-grief.enabled", true);
-        boolean perClaimEnabled = plot != null && plot.getSettings().isEntityGriefingAllowed();
-
-        if (!globalEnabled && (plot == null || !perClaimEnabled)) return;
-
-        // Wither explosion protection
-        if (entity instanceof Wither && !config.getBoolean("protection.entity-grief.wither", true)) {
-            event.blockList().clear();
-            messages.debug(plugin, "EntityGrief blocked: Wither explosion in " + chunk);
+    /**
+     * Determines if the entity type should be blocked based on config.
+     */
+    private boolean isProtectedEntity(Entity entity, FileConfiguration config) {
+        if (entity instanceof Enderman) {
+            return config.getBoolean("protection.entity-grief.enderman", true);
         }
-
-        // Ender Dragon destruction
-        if (entity instanceof EnderDragon && !config.getBoolean("protection.entity-grief.ender-dragon", true)) {
-            event.blockList().clear();
-            messages.debug(plugin, "EntityGrief blocked: EnderDragon in " + chunk);
+        if (entity instanceof Ravager) {
+            return config.getBoolean("protection.entity-grief.ravager", true);
         }
+        if (entity instanceof Silverfish) {
+            return config.getBoolean("protection.entity-grief.silverfish", true);
+        }
+        if (entity instanceof Wither) {
+            return config.getBoolean("protection.entity-grief.wither", true);
+        }
+        if (entity instanceof EnderDragon) {
+            return config.getBoolean("protection.entity-grief.ender-dragon", true);
+        }
+        return false;
     }
 }

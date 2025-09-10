@@ -8,10 +8,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager - Handles trusted players and their roles per-plot.
- *
- * Preserves all previous trust/untrust logic.
- * Fixed enum usage (ClaimRole.OWNER, etc.) and typing issues (UUID -> ClaimRole).
+ * ClaimRoleManager - Trust map ops and role checks.
+ * Preserves earlier logic and adds helper methods referenced by listeners.
  */
 public class ClaimRoleManager {
 
@@ -23,60 +21,63 @@ public class ClaimRoleManager {
         this.plots = plugin.getPlotManager();
     }
 
-    /**
-     * Trust a player in a plot with the given role.
-     */
+    /* -------------------------
+     * Trust map operations
+     * ------------------------- */
     public boolean trustPlayer(Plot plot, UUID playerId, ClaimRole role) {
         if (plot == null || playerId == null || role == null) return false;
+        if (role == ClaimRole.OWNER) return false; // don't grant OWNER via trust
 
-        // Prevent overriding owner role
-        if (role == ClaimRole.OWNER) return false;
-
-        Map<UUID, ClaimRole> trusted = plot.getTrusted();
-        trusted.put(playerId, role);
-        plot.setDirty(true);
+        // mutate internal trusted
+        // Obtain modifiable map via internal bridge (or use plot.putTrusted)
+        plot.putTrusted(playerId, role);
         plots.saveAsync(plot);
         return true;
     }
 
-    /**
-     * Untrust a player in a plot.
-     */
     public boolean untrustPlayer(Plot plot, UUID playerId) {
         if (plot == null || playerId == null) return false;
-        if (!plot.getTrusted().containsKey(playerId)) return false;
+        if (!plot.hasTrusted(playerId)) return false;
 
-        plot.getTrusted().remove(playerId);
-        plot.setDirty(true);
+        plot.removeTrusted(playerId);
         plots.saveAsync(plot);
         return true;
     }
 
-    /**
-     * Get the role of a player in a plot (or null if not trusted).
-     */
     public ClaimRole getRole(Plot plot, UUID playerId) {
         if (plot == null || playerId == null) return null;
-
         if (plot.getOwner() != null && plot.getOwner().equals(playerId)) {
             return ClaimRole.OWNER;
         }
-        return plot.getTrusted().get(playerId);
+        Map<UUID, ClaimRole> map = plot.getTrusted();
+        return map.get(playerId);
     }
 
-    /**
-     * Check whether a player is owner or trusted in a plot.
-     */
     public boolean isTrustedOrOwner(UUID playerId, Plot plot) {
         if (plot == null || playerId == null) return false;
         if (plot.getOwner() != null && plot.getOwner().equals(playerId)) return true;
         return plot.getTrusted().containsKey(playerId);
     }
 
-    /**
-     * Reload manager settings (currently placeholder, but consistent with plugin reload).
-     */
+    /* -------------------------
+     * Capability helpers (used by listeners)
+     * ------------------------- */
+    public boolean canBuild(ClaimRole role) {
+        return role != null && role.atLeast(ClaimRole.BUILDER);
+    }
+
+    public boolean canInteract(ClaimRole role) {
+        return role != null && role.atLeast(ClaimRole.CONTAINER);
+    }
+
+    public boolean isOwnerOrCoOwner(ClaimRole role) {
+        return role == ClaimRole.OWNER || role == ClaimRole.COOWNER || role == ClaimRole.CO_OWNER;
+    }
+
+    /* -------------------------
+     * Reload hook
+     * ------------------------- */
     public void reloadFromConfig() {
-        // Future: hook into config for role defaults if needed
+        // no-op for now; placeholder kept for API symmetry
     }
 }

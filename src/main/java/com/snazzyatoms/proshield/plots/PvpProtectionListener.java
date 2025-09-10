@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.Location;
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -8,22 +9,35 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
 public class PvpProtectionListener implements Listener {
 
+    private final ProShield plugin;
     private final PlotManager plots;
 
-    public PvpProtectionListener(PlotManager plots) {
+    public PvpProtectionListener(ProShield plugin, PlotManager plots) {
+        this.plugin = plugin;
         this.plots = plots;
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onPvp(EntityDamageByEntityEvent e) {
-        if (!(e.getEntity() instanceof Player victim)) return;
-        if (!(e.getDamager() instanceof Player attacker)) return;
+    public void onPlayerDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) return;
+        if (!(event.getDamager() instanceof Player attacker)) return;
 
-        Location l = victim.getLocation();
-        if (plots.getClaim(l).isEmpty()) return;
+        Claim claim = plots.getClaimAt(victim.getLocation());
+        if (claim == null) return;
 
-        // pvp-in-claims false => block PvP in claims
-        boolean pvpInClaims = plots.getPlugin().getConfig().getBoolean("protection.pvp-in-claims", false);
-        if (!pvpInClaims) e.setCancelled(true);
+        // Admin bypass ignores PvP rules
+        if (plots.isBypassing(attacker) || plots.isBypassing(victim)) return;
+
+        // Global config (default)
+        boolean globalPvpAllowed = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
+
+        // Per-claim setting (if defined, overrides global)
+        Boolean claimPvp = claim.getFlag("pvp");
+        boolean isAllowed = (claimPvp != null) ? claimPvp : globalPvpAllowed;
+
+        if (!isAllowed) {
+            event.setCancelled(true);
+            attacker.sendMessage(plugin.prefix() + ChatColor.RED + "PvP is disabled in this claim.");
+        }
     }
 }

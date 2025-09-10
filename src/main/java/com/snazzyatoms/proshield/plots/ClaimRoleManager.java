@@ -1,57 +1,67 @@
+// path: src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Manages claim roles (permissions inside claims).
+ * Centralized role resolution + capability checks.
+ * Preserves previous semantics and adds helpers for new flags.
  */
 public class ClaimRoleManager {
 
-    // Stores player roles per-claim
-    private final Map<UUID, Map<UUID, ClaimRole>> claimRoles = new HashMap<>();
+    private final ProShield plugin;
 
-    /**
-     * Get a player’s role inside a claim.
-     */
+    public ClaimRoleManager(ProShield plugin) {
+        this.plugin = plugin;
+    }
+
+    /** Resolve effective role of player inside a plot. */
     public ClaimRole getRole(Plot plot, Player player) {
-        if (plot == null) return ClaimRole.VISITOR;
-        if (plot.getOwner().equals(player.getUniqueId())) return ClaimRole.OWNER;
-
-        return claimRoles
-                .getOrDefault(plot.getId(), new HashMap<>())
-                .getOrDefault(player.getUniqueId(), ClaimRole.VISITOR);
-    }
-
-    /**
-     * Assign a role to a player in a claim.
-     */
-    public void setRole(Plot plot, Player player, ClaimRole role) {
-        claimRoles
-                .computeIfAbsent(plot.getId(), k -> new HashMap<>())
-                .put(player.getUniqueId(), role);
-    }
-
-    /**
-     * Permission checks by role.
-     */
-    public boolean canBuild(ClaimRole role) {
-        return role.isAtLeast(ClaimRole.BUILDER);
-    }
-
-    public boolean canUseContainers(ClaimRole role) {
-        return role.isAtLeast(ClaimRole.CONTAINER);
-    }
-
-    public boolean canInteract(ClaimRole role) {
-        return role.isAtLeast(ClaimRole.MEMBER);
+        if (plot == null || player == null) return ClaimRole.VISITOR;
+        UUID owner = plot.getOwner();
+        if (owner != null && owner.equals(player.getUniqueId())) {
+            return ClaimRole.OWNER;
+        }
+        Map<UUID, String> trusted = plot.getTrusted(); // role names stored as strings
+        if (trusted != null) {
+            String roleName = trusted.get(player.getUniqueId());
+            if (roleName != null) {
+                return ClaimRole.fromString(roleName, ClaimRole.MEMBER);
+            }
+        }
+        return ClaimRole.VISITOR;
     }
 
     public boolean isOwnerOrCoOwner(ClaimRole role) {
         return role == ClaimRole.OWNER || role == ClaimRole.CO_OWNER;
+    }
+
+    public boolean canBuild(ClaimRole role) {
+        return role == ClaimRole.BUILDER || role == ClaimRole.CO_OWNER || role == ClaimRole.OWNER;
+    }
+
+    public boolean canUseContainers(ClaimRole role) {
+        return role == ClaimRole.CONTAINER || canBuild(role);
+    }
+
+    public boolean canBasicInteract(ClaimRole role) {
+        return role == ClaimRole.MEMBER || canUseContainers(role);
+    }
+
+    public boolean canManageFlags(ClaimRole role) {
+        return role == ClaimRole.CO_OWNER || role == ClaimRole.OWNER;
+    }
+
+    public boolean canTrust(ClaimRole role) {
+        return role == ClaimRole.CO_OWNER || role == ClaimRole.OWNER;
+    }
+
+    public boolean canTransfer(ClaimRole role) {
+        return role == ClaimRole.OWNER;
     }
 }

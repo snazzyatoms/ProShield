@@ -1,6 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.snazzyatoms</groupId>
@@ -9,13 +10,13 @@
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>Lightweight land and plot protection plugin for Spigot &amp; Paper servers</description>
+    <description>Lightweight land and plot protection plugin for Spigot & Paper servers.</description>
     <url>https://github.com/snazzyatoms/ProShield</url>
 
     <licenses>
         <license>
             <name>GPL-3.0 License</name>
-            <url>https://www.gnu.org/licenses/gpl-3.0.html</url>
+            <url>https://www.gnu.org/licenses/gpl-3.0.en.html</url>
         </license>
     </licenses>
 
@@ -35,13 +36,12 @@
     </properties>
 
     <repositories>
-        <!-- Spigot repo -->
+        <!-- Spigot snapshot repo -->
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
-
-        <!-- Sonatype for Paper API -->
+        <!-- Sonatype (fallback) -->
         <repository>
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
@@ -49,18 +49,10 @@
     </repositories>
 
     <dependencies>
-        <!-- Spigot API -->
+        <!-- ✅ Use Spigot API only (works on Paper too) -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.20.1-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Paper API (optional, if using Paper-only features) -->
-        <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
             <version>1.20.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
@@ -68,7 +60,7 @@
 
     <build>
         <plugins>
-            <!-- Compiler plugin -->
+            <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -79,23 +71,17 @@
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin for packaging -->
+            <!-- Shade plugin for building -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.5.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
-                        <configuration>
-                            <minimizeJar>false</minimizeJar>
-                            <relocations>
-                                <!-- Example if we need to relocate dependencies -->
-                            </relocations>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

@@ -5,7 +5,7 @@ package com.snazzyatoms.proshield.plots;
  * 
  * These settings override global config values when enabled.
  * They allow claim owners to decide what happens inside their claim
- * (e.g., PvP, explosions, fire, mob grief, item keep).
+ * (e.g., PvP, explosions, fire, mob grief, item keep, containers, animals, redstone).
  */
 public class PlotSettings {
 
@@ -16,7 +16,10 @@ public class PlotSettings {
     private boolean fireEnabled = false;
     private boolean mobGriefEnabled = false;
 
-    // Future-proof: could add more flags here (e.g. redstone, animals, etc.)
+    // Newly added per-claim settings
+    private boolean redstoneEnabled = true;      // Default allow
+    private boolean containerAccessEnabled = true; // Default allow
+    private boolean animalInteractEnabled = true;  // Default allow
 
     public PlotSettings() {
     }
@@ -66,6 +69,33 @@ public class PlotSettings {
         this.mobGriefEnabled = mobGriefEnabled;
     }
 
+    // === Redstone Mechanics ===
+    public boolean isRedstoneEnabled() {
+        return redstoneEnabled;
+    }
+
+    public void setRedstoneEnabled(boolean redstoneEnabled) {
+        this.redstoneEnabled = redstoneEnabled;
+    }
+
+    // === Container Access (Chests, Barrels, Furnaces, etc.) ===
+    public boolean isContainerAccessEnabled() {
+        return containerAccessEnabled;
+    }
+
+    public void setContainerAccessEnabled(boolean containerAccessEnabled) {
+        this.containerAccessEnabled = containerAccessEnabled;
+    }
+
+    // === Animal Interactions (Feeding, Breeding, Riding, etc.) ===
+    public boolean isAnimalInteractEnabled() {
+        return animalInteractEnabled;
+    }
+
+    public void setAnimalInteractEnabled(boolean animalInteractEnabled) {
+        this.animalInteractEnabled = animalInteractEnabled;
+    }
+
     @Override
     public String toString() {
         return "PlotSettings{" +
@@ -74,6 +104,9 @@ public class PlotSettings {
                 ", explosionsEnabled=" + explosionsEnabled +
                 ", fireEnabled=" + fireEnabled +
                 ", mobGriefEnabled=" + mobGriefEnabled +
+                ", redstoneEnabled=" + redstoneEnabled +
+                ", containerAccessEnabled=" + containerAccessEnabled +
+                ", animalInteractEnabled=" + animalInteractEnabled +
                 '}';
     }
 }

@@ -1,48 +1,151 @@
 package com.snazzyatoms.proshield.plots;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Stores per-plot flags/settings (PvP, explosions, fire, redstone, etc).
+ * Stores per-claim protection settings (flags).
+ * Synced with config.yml defaults and preserved from earlier versions.
  */
 public class PlotSettings {
 
-    private final Map<String, Boolean> flags = new HashMap<>();
+    // === Core toggles ===
+    private boolean pvpEnabled;
+    private boolean explosionsAllowed;
+    private boolean fireAllowed;
+    private boolean bucketsAllowed;
+
+    // === Extended toggles ===
+    private boolean itemKeepEnabled;
+    private boolean entityGriefingAllowed;
+    private boolean interactionsAllowed;
+    private boolean redstoneAllowed;
+    private boolean containerAccessAllowed;
+
+    // === Entities / items ===
+    private boolean itemFramesAllowed;
+    private boolean vehiclesAllowed;
 
     public PlotSettings() {
-        // Default flags (should sync with config.yml defaults)
-        flags.put("pvp", false);
-        flags.put("explosions", false);
-        flags.put("fire", false);
-        flags.put("redstone", true);
-        flags.put("containers", true);
-        flags.put("animal-access", true);
-        flags.put("entity-grief", false);
-        flags.put("buckets", false);
-        flags.put("keep-items", false);
-        flags.put("item-frames", false);
-        flags.put("vehicles", false);
+        // Default values synced with config.yml
+        this.pvpEnabled = false;
+        this.explosionsAllowed = false;
+        this.fireAllowed = false;
+        this.bucketsAllowed = false;
+
+        this.itemKeepEnabled = false;
+        this.entityGriefingAllowed = false;
+        this.interactionsAllowed = true;
+        this.redstoneAllowed = true;
+        this.containerAccessAllowed = true;
+
+        this.itemFramesAllowed = true;
+        this.vehiclesAllowed = true;
     }
 
-    public boolean isFlagEnabled(String flag) {
-        return flags.getOrDefault(flag, false);
+    /* ---------------------------------------------------------
+     * Getters / Setters
+     * --------------------------------------------------------- */
+
+    public boolean isPvpEnabled() {
+        return pvpEnabled;
     }
 
-    public void setFlag(String flag, boolean value) {
-        flags.put(flag, value);
+    public void setPvpEnabled(boolean pvpEnabled) {
+        this.pvpEnabled = pvpEnabled;
     }
 
-    // Convenience wrappers
-    public boolean isPvpEnabled() { return isFlagEnabled("pvp"); }
-    public boolean isExplosionsEnabled() { return isFlagEnabled("explosions"); }
-    public boolean isFireEnabled() { return isFlagEnabled("fire"); }
-    public boolean isRedstoneEnabled() { return isFlagEnabled("redstone"); }
-    public boolean isContainersEnabled() { return isFlagEnabled("containers"); }
-    public boolean isAnimalAccessEnabled() { return isFlagEnabled("animal-access"); }
-    public boolean isEntityGriefingAllowed() { return isFlagEnabled("entity-grief"); }
-    public boolean isBucketsAllowed() { return isFlagEnabled("buckets"); }
-    public boolean isKeepItemsEnabled() { return isFlagEnabled("keep-items"); }
-    public boolean isItemFramesAllowed() { return isFlagEnabled("item-frames"); }
-    public boolean isVehiclesAllowed() { return isFlagEnabled("vehicles"); }
+    public boolean isExplosionsAllowed() {
+        return explosionsAllowed;
+    }
+
+    public void setExplosionsAllowed(boolean explosionsAllowed) {
+        this.explosionsAllowed = explosionsAllowed;
+    }
+
+    public boolean isFireAllowed() {
+        return fireAllowed;
+    }
+
+    public void setFireAllowed(boolean fireAllowed) {
+        this.fireAllowed = fireAllowed;
+    }
+
+    public boolean isBucketsAllowed() {
+        return bucketsAllowed;
+    }
+
+    public void setBucketsAllowed(boolean bucketsAllowed) {
+        this.bucketsAllowed = bucketsAllowed;
+    }
+
+    public boolean isKeepItemsEnabled() {
+        return itemKeepEnabled;
+    }
+
+    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
+        this.itemKeepEnabled = keepItemsEnabled;
+    }
+
+    public boolean isEntityGriefingAllowed() {
+        return entityGriefingAllowed;
+    }
+
+    public void setEntityGriefingAllowed(boolean entityGriefingAllowed) {
+        this.entityGriefingAllowed = entityGriefingAllowed;
+    }
+
+    public boolean isInteractionsAllowed() {
+        return interactionsAllowed;
+    }
+
+    public void setInteractionsAllowed(boolean interactionsAllowed) {
+        this.interactionsAllowed = interactionsAllowed;
+    }
+
+    public boolean isRedstoneAllowed() {
+        return redstoneAllowed;
+    }
+
+    public void setRedstoneAllowed(boolean redstoneAllowed) {
+        this.redstoneAllowed = redstoneAllowed;
+    }
+
+    public boolean isContainerAccessAllowed() {
+        return containerAccessAllowed;
+    }
+
+    public void setContainerAccessAllowed(boolean containerAccessAllowed) {
+        this.containerAccessAllowed = containerAccessAllowed;
+    }
+
+    public boolean isItemFramesAllowed() {
+        return itemFramesAllowed;
+    }
+
+    public void setItemFramesAllowed(boolean itemFramesAllowed) {
+        this.itemFramesAllowed = itemFramesAllowed;
+    }
+
+    public boolean isVehiclesAllowed() {
+        return vehiclesAllowed;
+    }
+
+    public void setVehiclesAllowed(boolean vehiclesAllowed) {
+        this.vehiclesAllowed = vehiclesAllowed;
+    }
+
+    @Override
+    public String toString() {
+        return "PlotSettings{" +
+                "pvpEnabled=" + pvpEnabled +
+                ", explosionsAllowed=" + explosionsAllowed +
+                ", fireAllowed=" + fireAllowed +
+                ", bucketsAllowed=" + bucketsAllowed +
+                ", itemKeepEnabled=" + itemKeepEnabled +
+                ", entityGriefingAllowed=" + entityGriefingAllowed +
+                ", interactionsAllowed=" + interactionsAllowed +
+                ", redstoneAllowed=" + redstoneAllowed +
+                ", containerAccessAllowed=" + containerAccessAllowed +
+                ", itemFramesAllowed=" + itemFramesAllowed +
+                ", vehiclesAllowed=" + vehiclesAllowed +
+                '}';
+    }
 }

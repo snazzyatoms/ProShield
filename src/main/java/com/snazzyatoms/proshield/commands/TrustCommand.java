@@ -6,56 +6,87 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.UUID;
+
+/**
+ * /trust <player> [role]
+ *
+ * Trusts a player in your current claim.
+ * Default role = MEMBER if not specified.
+ */
 public class TrustCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
-    private final MessagesUtil messages;
+    private final PlotManager plots;
+    private final ClaimRoleManager roles;
+    private final MessagesUtil msg;
 
-    public TrustCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
+    public TrustCommand(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.roleManager = roleManager;
-        this.messages = plugin.getMessagesUtil();
+        this.plots = plots;
+        this.roles = roles;
+        this.msg = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            messages.send(sender, "general.no-console");
-            return true;
-        }
-
-        Plot plot = plotManager.getPlot(player.getLocation().getChunk());
-        if (plot == null) {
-            messages.send(player, "trust.no-claim");
-            return true;
-        }
-
-        if (!plot.isOwner(player.getUniqueId())) {
-            messages.send(player, "trust.not-owner");
+            msg.send(sender, "error.player-only");
             return true;
         }
 
         if (args.length < 1) {
-            messages.send(player, "trust.usage");
+            msg.send(player, "trust.usage");
             return true;
         }
 
-        String targetName = args[0];
-        ClaimRole role = ClaimRole.MEMBER;
-        if (args.length > 1) {
-            role = ClaimRole.fromString(args[1], ClaimRole.MEMBER);
+        // Resolve target player
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+        UUID targetId = target.getUniqueId();
+        if (targetId.equals(player.getUniqueId())) {
+            msg.send(player, "trust.cannot-self");
+            return true;
         }
 
-        roleManager.trustPlayer(plot, targetName, role);
-        messages.send(player, "trust.success", targetName, role.name());
+        // Get role (default MEMBER if not specified)
+        ClaimRole role = ClaimRole.MEMBER;
+        if (args.length >= 2) {
+            try {
+                role = ClaimRole.fromString(args[1]);
+            } catch (IllegalArgumentException ex) {
+                msg.send(player, "trust.invalid-role", args[1]);
+                return true;
+            }
+        }
+
+        // Ensure player is standing in a claim
+        Plot plot = plots.getPlot(player.getLocation());
+        if (plot == null) {
+            msg.send(player, "trust.no-claim");
+            return true;
+        }
+
+        // Must be owner of the claim
+        if (!plot.isOwner(player.getUniqueId())) {
+            msg.send(player, "trust.not-owner", plot.getDisplayNameSafe());
+            return true;
+        }
+
+        // Apply trust
+        boolean success = roles.trustPlayer(plot, targetId, role);
+        if (!success) {
+            msg.send(player, "trust.failed", target.getName());
+            return true;
+        }
+
+        msg.send(player, "trust.success", target.getName(), role.name());
         return true;
     }
 }

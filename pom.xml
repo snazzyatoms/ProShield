@@ -42,7 +42,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Paper API (optional, enhances dev experience) -->
+        <!-- Paper API (optional) -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
@@ -76,12 +76,6 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <relocations>
-                                <relocation>
-                                    <pattern>com.snazzyatoms.proshield</pattern>
-                                    <shadedPattern>com.snazzyatoms.proshield.shaded</shadedPattern>
-                                </relocation>
-                            </relocations>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                         </configuration>
                     </execution>

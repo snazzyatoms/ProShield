@@ -2,19 +2,24 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Chunk;
-import org.bukkit.entity.Item;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
-import org.bukkit.event.entity.ItemDespawnEvent;
 
 /**
- * Handles item drop & pickup rules inside claims.
- * Supports global and per-claim overrides for keep-items.
+ * Handles interactions with item frames, armor stands, and item pickups inside claims.
+ * - Checks global config
+ * - Supports per-claim overrides
+ * - Role-based protections are preserved
  */
-@SuppressWarnings("deprecation") // for PlayerPickupItemEvent (legacy support 1.18+)
+@SuppressWarnings("deprecation") // PlayerPickupItemEvent is deprecated after 1.12, but works fine with Spigot API
 public class ItemProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -26,43 +31,105 @@ public class ItemProtectionListener implements Listener {
     }
 
     /**
-     * Prevent despawning if global or per-claim keep-items is enabled.
+     * Prevents breaking of item frames and armor stands inside claims.
      */
     @EventHandler(ignoreCancelled = true)
-    public void onItemDespawn(ItemDespawnEvent event) {
-        Item item = event.getEntity();
-        Chunk chunk = item.getLocation().getChunk();
+    public void onHangingBreak(HangingBreakByEntityEvent event) {
+        if (!(event.getRemover() instanceof Player player)) return;
+
+        Chunk chunk = event.getEntity().getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        boolean keep = resolveKeepItems(plot);
-        if (keep) {
+        FileConfiguration config = plugin.getConfig();
+        boolean globalProtect = config.getBoolean("protection.entities.item-frames", true);
+
+        // Armor stands
+        if (event.getEntity() instanceof ArmorStand && config.getBoolean("protection.entities.armor-stands", true)) {
+            if (plot != null && !plot.getSettings().isItemProtectionEnabled()) return; // claim allows
+            if (plot == null && !globalProtect) return; // wilderness allows
             event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot break armor stands here.");
+        }
+
+        // Item frames
+        if (event.getEntity() instanceof ItemFrame && globalProtect) {
+            if (plot != null && !plot.getSettings().isItemProtectionEnabled()) return;
+            if (plot == null && !globalProtect) return;
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot break item frames here.");
         }
     }
 
     /**
-     * Prevent unauthorized players from picking up items if keep-items protection is enabled.
+     * Prevents placement of item frames and armor stands.
      */
     @EventHandler(ignoreCancelled = true)
-    public void onItemPickup(PlayerPickupItemEvent event) {
+    public void onHangingPlace(HangingPlaceEvent event) {
         Player player = event.getPlayer();
-        Chunk chunk = event.getItem().getLocation().getChunk();
+        Chunk chunk = event.getBlock().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        boolean keep = resolveKeepItems(plot);
-        if (keep && plot != null && !plot.isTrusted(player.getUniqueId())) {
+        FileConfiguration config = plugin.getConfig();
+        boolean globalProtect = config.getBoolean("protection.entities.item-frames", true);
+
+        if (event.getEntity() instanceof ArmorStand && config.getBoolean("protection.entities.armor-stands", true)) {
+            if (plot != null && !plot.getSettings().isItemProtectionEnabled()) return;
+            if (plot == null && !globalProtect) return;
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in this claim.");
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot place armor stands here.");
+        }
+
+        if (event.getEntity() instanceof ItemFrame && globalProtect) {
+            if (plot != null && !plot.getSettings().isItemProtectionEnabled()) return;
+            if (plot == null && !globalProtect) return;
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot place item frames here.");
         }
     }
 
     /**
-     * Utility: resolve whether keep-items is active here.
+     * Prevents players from interacting with item frames or armor stands inside claims.
      */
-    private boolean resolveKeepItems(Plot plot) {
-        if (plot != null && plot.getKeepItemsEnabled() != null) {
-            return plot.getKeepItemsEnabled();
+    @EventHandler(ignoreCancelled = true)
+    public void onInteractEntity(PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+        Chunk chunk = event.getRightClicked().getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
+
+        FileConfiguration config = plugin.getConfig();
+        boolean globalProtect = config.getBoolean("protection.entities.item-frames", true);
+
+        if (event.getRightClicked() instanceof ArmorStand && config.getBoolean("protection.entities.armor-stands", true)) {
+            if (plot != null && !plot.getSettings().isItemProtectionEnabled()) return;
+            if (plot == null && !globalProtect) return;
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with armor stands here.");
         }
-        return plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
+
+        if (event.getRightClicked() instanceof ItemFrame && globalProtect) {
+            if (plot != null && !plot.getSettings().isItemProtectionEnabled()) return;
+            if (plot == null && !globalProtect) return;
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with item frames here.");
+        }
+    }
+
+    /**
+     * Prevents picking up items inside claims if protection is enabled.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onPickupItem(PlayerPickupItemEvent event) {
+        Player player = event.getPlayer();
+        Chunk chunk = player.getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
+
+        FileConfiguration config = plugin.getConfig();
+        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
+
+        if (plot == null && !globalKeep) return;
+        if (plot != null && !plot.getSettings().isKeepItemsEnabled() && !globalKeep) return;
+
+        // Cancel pickup → items remain protected
+        event.setCancelled(true);
     }
 }

@@ -8,8 +8,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager - Trust map ops and role checks.
- * Preserves earlier logic and adds helper methods referenced by listeners.
+ * ClaimRoleManager - Handles trusted players and their roles per-plot.
+ *
+ * Preserves all prior trust/untrust logic and extends
+ * with helper methods (canBuild, canInteract, isOwnerOrCoOwner).
  */
 public class ClaimRoleManager {
 
@@ -21,36 +23,42 @@ public class ClaimRoleManager {
         this.plots = plugin.getPlotManager();
     }
 
-    /* -------------------------
-     * Trust map operations
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * Trust / Untrust
+     * ------------------------------------------------------- */
+
     public boolean trustPlayer(Plot plot, UUID playerId, ClaimRole role) {
         if (plot == null || playerId == null || role == null) return false;
-        if (role == ClaimRole.OWNER) return false; // don't grant OWNER via trust
 
-        // mutate internal trusted
-        // Obtain modifiable map via internal bridge (or use plot.putTrusted)
-        plot.putTrusted(playerId, role);
-        plots.saveAsync(plot);
+        // Prevent overriding owner role
+        if (role == ClaimRole.OWNER) return false;
+
+        Map<UUID, ClaimRole> trusted = plot.getTrusted();
+        trusted.put(playerId, role);
+        plots.saveAsync();
         return true;
     }
 
     public boolean untrustPlayer(Plot plot, UUID playerId) {
         if (plot == null || playerId == null) return false;
-        if (!plot.hasTrusted(playerId)) return false;
+        if (!plot.getTrusted().containsKey(playerId)) return false;
 
-        plot.removeTrusted(playerId);
-        plots.saveAsync(plot);
+        plot.getTrusted().remove(playerId);
+        plots.saveAsync();
         return true;
     }
 
+    /* -------------------------------------------------------
+     * Role Lookups
+     * ------------------------------------------------------- */
+
     public ClaimRole getRole(Plot plot, UUID playerId) {
         if (plot == null || playerId == null) return null;
+
         if (plot.getOwner() != null && plot.getOwner().equals(playerId)) {
             return ClaimRole.OWNER;
         }
-        Map<UUID, ClaimRole> map = plot.getTrusted();
-        return map.get(playerId);
+        return plot.getTrusted().get(playerId);
     }
 
     public boolean isTrustedOrOwner(UUID playerId, Plot plot) {
@@ -59,25 +67,33 @@ public class ClaimRoleManager {
         return plot.getTrusted().containsKey(playerId);
     }
 
-    /* -------------------------
-     * Capability helpers (used by listeners)
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * Role Permission Helpers
+     * ------------------------------------------------------- */
+
+    /** Can this role build (break/place blocks)? */
     public boolean canBuild(ClaimRole role) {
-        return role != null && role.atLeast(ClaimRole.BUILDER);
+        if (role == null) return false;
+        return role.atLeast(ClaimRole.BUILDER);
     }
 
+    /** Can this role interact with entities/blocks? */
     public boolean canInteract(ClaimRole role) {
-        return role != null && role.atLeast(ClaimRole.CONTAINER);
+        if (role == null) return false;
+        return role.atLeast(ClaimRole.CONTAINER);
     }
 
+    /** Is this role the owner or co-owner of the claim? */
     public boolean isOwnerOrCoOwner(ClaimRole role) {
+        if (role == null) return false;
         return role == ClaimRole.OWNER || role == ClaimRole.COOWNER || role == ClaimRole.CO_OWNER;
     }
 
-    /* -------------------------
-     * Reload hook
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * Reload
+     * ------------------------------------------------------- */
+
     public void reloadFromConfig() {
-        // no-op for now; placeholder kept for API symmetry
+        // Future: load role defaults/permissions from config
     }
 }

@@ -1,34 +1,37 @@
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.configuration.ConfigurationSection;
-
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Represents a single land claim.
+ * Represents a single claimed chunk.
+ * Each plot stores its owner, trusted players, roles, and per-claim settings.
  */
 public class Plot {
 
-    private final UUID id;
     private final UUID owner;
     private final String worldName;
     private final int chunkX;
     private final int chunkZ;
+
+    private final Set<UUID> trustedPlayers = new HashSet<>();
+
+    // Per-claim settings (merged from PlotSettings)
     private final PlotSettings settings;
 
-    public Plot(UUID id, UUID owner, Chunk chunk) {
-        this.id = id;
-        this.owner = owner;
-        this.worldName = chunk.getWorld().getName();
-        this.chunkX = chunk.getX();
-        this.chunkZ = chunk.getZ();
-        this.settings = new PlotSettings();
-    }
+    // === NEW: Per-claim item keep & item protection toggles ===
+    private boolean keepItemsEnabled;
+    private boolean itemProtectionEnabled;
 
-    public UUID getId() {
-        return id;
+    public Plot(UUID owner, String worldName, int chunkX, int chunkZ) {
+        this.owner = owner;
+        this.worldName = worldName;
+        this.chunkX = chunkX;
+        this.chunkZ = chunkZ;
+        this.settings = new PlotSettings();
+        this.keepItemsEnabled = false;         // default -> inherit global config
+        this.itemProtectionEnabled = true;     // default -> inherit global config
     }
 
     public UUID getOwner() {
@@ -51,37 +54,37 @@ public class Plot {
         return settings;
     }
 
-    /**
-     * Load plot data from config section.
-     */
-    public static Plot fromConfig(UUID id, ConfigurationSection section) {
-        UUID owner = UUID.fromString(section.getString("owner"));
-        String worldName = section.getString("world");
-        int x = section.getInt("x");
-        int z = section.getInt("z");
-
-        Chunk chunk = Bukkit.getWorld(worldName).getChunkAt(x, z);
-        Plot plot = new Plot(id, owner, chunk);
-
-        // load settings (PvP, keep-items, etc.)
-        ConfigurationSection settingsSection = section.getConfigurationSection("settings");
-        if (settingsSection != null) {
-            plot.getSettings().load(settingsSection);
-        }
-
-        return plot;
+    public Set<UUID> getTrustedPlayers() {
+        return trustedPlayers;
     }
 
-    /**
-     * Save plot data into config section.
-     */
-    public void save(ConfigurationSection section) {
-        section.set("owner", owner.toString());
-        section.set("world", worldName);
-        section.set("x", chunkX);
-        section.set("z", chunkZ);
+    public void addTrustedPlayer(UUID uuid) {
+        trustedPlayers.add(uuid);
+    }
 
-        ConfigurationSection settingsSection = section.createSection("settings");
-        settings.save(settingsSection);
+    public void removeTrustedPlayer(UUID uuid) {
+        trustedPlayers.remove(uuid);
+    }
+
+    public boolean isTrusted(UUID uuid) {
+        return trustedPlayers.contains(uuid);
+    }
+
+    // === NEW GETTERS/SETTERS ===
+
+    public boolean isKeepItemsEnabled() {
+        return keepItemsEnabled;
+    }
+
+    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
+        this.keepItemsEnabled = keepItemsEnabled;
+    }
+
+    public boolean isItemProtectionEnabled() {
+        return itemProtectionEnabled;
+    }
+
+    public void setItemProtectionEnabled(boolean itemProtectionEnabled) {
+        this.itemProtectionEnabled = itemProtectionEnabled;
     }
 }

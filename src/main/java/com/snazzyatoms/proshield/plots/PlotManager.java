@@ -10,9 +10,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Handles storage, retrieval, and management of plots (claims).
- * - Preserves all existing claim logic
- * - Extended with support for per-claim settings (PvP, keep items, explosions, fire, mob grief)
+ * Handles creation, loading, saving, and management of plots (claims).
+ * Each plot is bound to a chunk and stores settings + ownership + trust.
  */
 public class PlotManager {
 
@@ -25,106 +24,130 @@ public class PlotManager {
     }
 
     /**
-     * Build a unique ID for a chunk.
-     */
-    private String chunkKey(Chunk chunk) {
-        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
-    }
-
-    /**
-     * Get a plot by chunk.
-     */
-    public Plot getPlot(Chunk chunk) {
-        return plots.get(chunkKey(chunk));
-    }
-
-    /**
-     * Claim a chunk for a player.
-     */
-    public Plot claimChunk(Chunk chunk, UUID owner) {
-        String key = chunkKey(chunk);
-        Plot plot = new Plot(owner, chunk);
-        plots.put(key, plot);
-        savePlots();
-        return plot;
-    }
-
-    /**
-     * Unclaim a chunk.
-     */
-    public void unclaimChunk(Chunk chunk) {
-        plots.remove(chunkKey(chunk));
-        savePlots();
-    }
-
-    /**
-     * Load plots from config.yml
+     * Loads all plots and their settings from config.yml
      */
     public void loadPlots() {
         plots.clear();
         FileConfiguration config = plugin.getConfig();
+
         ConfigurationSection section = config.getConfigurationSection("claims");
         if (section == null) return;
 
-        for (String key : section.getKeys(false)) {
-            ConfigurationSection claimSec = section.getConfigurationSection(key);
-            if (claimSec == null) continue;
+        ConfigurationSection claimsSection = section.getConfigurationSection("data");
+        if (claimsSection == null) return;
 
-            UUID owner = UUID.fromString(claimSec.getString("owner", ""));
-            String[] parts = key.split(",");
-            if (parts.length < 3) continue;
+        for (String key : claimsSection.getKeys(false)) {
+            ConfigurationSection plotSec = claimsSection.getConfigurationSection(key);
+            if (plotSec == null) continue;
 
-            String world = parts[0];
-            int x = Integer.parseInt(parts[1]);
-            int z = Integer.parseInt(parts[2]);
+            UUID owner = UUID.fromString(plotSec.getString("owner"));
+            Plot plot = new Plot(owner, key);
 
-            Plot plot = new Plot(owner, world, x, z);
-
-            // Load old fields if they exist (trust etc.)
-            plot.loadFromConfig(claimSec);
-
-            // Extended: load new settings safely with defaults
+            // === Load claim-specific settings ===
             PlotSettings settings = plot.getSettings();
-            settings.setKeepItemsEnabled(claimSec.getBoolean("settings.keep-items", false));
-            settings.setPvpEnabled(claimSec.getBoolean("settings.pvp", false));
-            settings.setExplosionsEnabled(claimSec.getBoolean("settings.explosions", false));
-            settings.setFireEnabled(claimSec.getBoolean("settings.fire", false));
-            settings.setMobGriefEnabled(claimSec.getBoolean("settings.mob-grief", false));
+            settings.setKeepItemsEnabled(plotSec.getBoolean("settings.keep-items", false));
+            settings.setPvpEnabled(plotSec.getBoolean("settings.pvp", false));
+            settings.setExplosionsEnabled(plotSec.getBoolean("settings.explosions", false));
+            settings.setFireEnabled(plotSec.getBoolean("settings.fire", false));
+            settings.setMobGriefEnabled(plotSec.getBoolean("settings.mob-grief", false));
+
+            // Extended flags
+            settings.setRedstoneEnabled(plotSec.getBoolean("settings.redstone", true));
+            settings.setContainerAccessEnabled(plotSec.getBoolean("settings.container-access", true));
+            settings.setAnimalInteractEnabled(plotSec.getBoolean("settings.animal-interact", true));
+
+            plot.setSettings(settings);
+
+            // === Trusted players ===
+            ConfigurationSection trustSec = plotSec.getConfigurationSection("trusted");
+            if (trustSec != null) {
+                for (String uuidStr : trustSec.getKeys(false)) {
+                    plot.addTrusted(UUID.fromString(uuidStr), trustSec.getString(uuidStr));
+                }
+            }
 
             plots.put(key, plot);
         }
     }
 
     /**
-     * Save plots to config.yml
+     * Saves all plots and their settings to config.yml
      */
     public void savePlots() {
         FileConfiguration config = plugin.getConfig();
-        ConfigurationSection section = config.createSection("claims");
+
+        // Reset section
+        config.set("claims.data", null);
 
         for (Map.Entry<String, Plot> entry : plots.entrySet()) {
             String key = entry.getKey();
             Plot plot = entry.getValue();
 
-            ConfigurationSection claimSec = section.createSection(key);
-            claimSec.set("owner", plot.getOwner().toString());
+            String basePath = "claims.data." + key;
 
-            // Save trust, role, or other old metadata
-            plot.saveToConfig(claimSec);
+            config.set(basePath + ".owner", plot.getOwner().toString());
 
-            // Save new settings
+            // === Save settings ===
             PlotSettings settings = plot.getSettings();
-            claimSec.set("settings.keep-items", settings.isKeepItemsEnabled());
-            claimSec.set("settings.pvp", settings.isPvpEnabled());
-            claimSec.set("settings.explosions", settings.isExplosionsEnabled());
-            claimSec.set("settings.fire", settings.isFireEnabled());
-            claimSec.set("settings.mob-grief", settings.isMobGriefEnabled());
+            config.set(basePath + ".settings.keep-items", settings.isKeepItemsEnabled());
+            config.set(basePath + ".settings.pvp", settings.isPvpEnabled());
+            config.set(basePath + ".settings.explosions", settings.isExplosionsEnabled());
+            config.set(basePath + ".settings.fire", settings.isFireEnabled());
+            config.set(basePath + ".settings.mob-grief", settings.isMobGriefEnabled());
+
+            // Extended flags
+            config.set(basePath + ".settings.redstone", settings.isRedstoneEnabled());
+            config.set(basePath + ".settings.container-access", settings.isContainerAccessEnabled());
+            config.set(basePath + ".settings.animal-interact", settings.isAnimalInteractEnabled());
+
+            // === Trusted players ===
+            for (Map.Entry<UUID, String> trustEntry : plot.getTrusted().entrySet()) {
+                config.set(basePath + ".trusted." + trustEntry.getKey().toString(), trustEntry.getValue());
+            }
         }
 
         plugin.saveConfig();
     }
 
-    public Map<String, Plot> getPlots() {
-        return plots;
+    /**
+     * Returns a plot by chunk, or null if not claimed.
+     */
+    public Plot getPlot(Chunk chunk) {
+        String key = chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
+        return plots.get(key);
+    }
+
+    /**
+     * Creates a new plot.
+     */
+    public Plot createPlot(UUID owner, Chunk chunk) {
+        String key = chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
+        Plot plot = new Plot(owner, key);
+        plots.put(key, plot);
+        savePlots();
+        return plot;
+    }
+
+    /**
+     * Removes a plot.
+     */
+    public void removePlot(Chunk chunk) {
+        String key = chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
+        plots.remove(key);
+        savePlots();
+    }
+
+    /**
+     * Checks if a chunk is already claimed.
+     */
+    public boolean isClaimed(Chunk chunk) {
+        return getPlot(chunk) != null;
+    }
+
+    /**
+     * Saves everything on shutdown.
+     */
+    public void shutdown() {
+        savePlots();
     }
 }

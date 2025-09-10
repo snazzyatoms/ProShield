@@ -12,7 +12,8 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 
 /**
- * Handles block breaking & placing inside claims and wilderness with role-based checks.
+ * Handles block breaking & placing inside claims and wilderness
+ * with role-based checks and configurable wilderness toggles.
  */
 public class BlockProtectionListener implements Listener {
 
@@ -20,33 +21,44 @@ public class BlockProtectionListener implements Listener {
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
 
+    // Cached config values for wilderness
+    private boolean wildernessBreakAllowed;
+    private boolean wildernessPlaceAllowed;
+
     public BlockProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
+        reloadConfigValues();
+    }
+
+    /**
+     * Reloads wilderness config values from config.yml
+     */
+    public void reloadConfigValues() {
+        FileConfiguration config = plugin.getConfig();
+        this.wildernessBreakAllowed = config.getBoolean("protection.wilderness.allow-block-break", true);
+        this.wildernessPlaceAllowed = config.getBoolean("protection.wilderness.allow-block-place", true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        if (player.hasPermission("proshield.bypass")) return;
-
         Chunk chunk = event.getBlock().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-        FileConfiguration config = plugin.getConfig();
 
-        // === Wilderness ===
+        Plot plot = plotManager.getPlot(chunk);
+
         if (plot == null) {
-            if (!config.getBoolean("protection.wilderness.allow-block-break", true)) {
+            // Wilderness
+            if (!wildernessBreakAllowed && !player.hasPermission("proshield.bypass")) {
                 event.setCancelled(true);
                 player.sendMessage(plugin.getPrefix() + "§cYou cannot break blocks in the wilderness.");
             }
             return;
         }
 
-        // === Inside a claim ===
+        // Inside claim
         ClaimRole role = roleManager.getRole(plot, player);
-
         if (!roleManager.canBuild(role)) {
             event.setCancelled(true);
             player.sendMessage(plugin.getPrefix() + "§cYou cannot break blocks in this claim.");
@@ -56,24 +68,21 @@ public class BlockProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        if (player.hasPermission("proshield.bypass")) return;
-
         Chunk chunk = event.getBlock().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-        FileConfiguration config = plugin.getConfig();
 
-        // === Wilderness ===
+        Plot plot = plotManager.getPlot(chunk);
+
         if (plot == null) {
-            if (!config.getBoolean("protection.wilderness.allow-block-place", true)) {
+            // Wilderness
+            if (!wildernessPlaceAllowed && !player.hasPermission("proshield.bypass")) {
                 event.setCancelled(true);
                 player.sendMessage(plugin.getPrefix() + "§cYou cannot place blocks in the wilderness.");
             }
             return;
         }
 
-        // === Inside a claim ===
+        // Inside claim
         ClaimRole role = roleManager.getRole(plot, player);
-
         if (!roleManager.canBuild(role)) {
             event.setCancelled(true);
             player.sendMessage(plugin.getPrefix() + "§cYou cannot place blocks in this claim.");

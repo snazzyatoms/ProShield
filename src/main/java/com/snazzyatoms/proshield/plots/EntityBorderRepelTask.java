@@ -2,7 +2,6 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -17,10 +16,12 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Periodically repels hostile mobs that are attempting to step inside claimed chunks.
- * Uses a narrow "border radius" and a small push vector to nudge them outward.
+ * Periodically repels hostile mobs attempting to step inside claimed chunks.
+ * - Uses a border radius near chunk edges to detect intrusion
+ * - Applies a configurable push vector
+ * - Optional: can integrate despawn logic per PlotSettings (future-proofed)
  */
-public class EntityBorderRepelTask extends BukkitRunnable {
+public class EntityMobRepelTask extends BukkitRunnable {
 
     private final ProShield plugin;
     private final PlotManager plots;
@@ -34,12 +35,13 @@ public class EntityBorderRepelTask extends BukkitRunnable {
     private double pushH; // horizontal
     private double pushV; // vertical
 
-    public EntityBorderRepelTask(ProShield plugin, PlotManager plots) {
+    public EntityMobRepelTask(ProShield plugin, PlotManager plots) {
         this.plugin = plugin;
         this.plots = plots;
         reloadSettings();
     }
 
+    /** Reloads all repel settings from config.yml */
     public void reloadSettings() {
         FileConfiguration cfg = plugin.getConfig();
         this.enabled = cfg.getBoolean("protection.mobs.border-repel.enabled", true);
@@ -57,11 +59,15 @@ public class EntityBorderRepelTask extends BukkitRunnable {
                 // Only repel hostile mobs; skip players, animals, items, etc.
                 if (!(e instanceof Monster)) continue;
 
-                // If tamed hostile variants ever exist (unlikely), be nice:
+                // If tamed hostile variants ever exist (unlikely), skip them
                 if (e instanceof Tameable t && t.isTamed()) continue;
 
                 Location loc = e.getLocation();
-                if (!plots.isClaimed(loc)) continue; // Only act when entering a claimed chunk
+                Plot plot = plots.getPlot(loc.getChunk());
+                if (plot == null) continue; // only act inside claims
+
+                // If the claim disables mob repel, respect settings
+                if (!plot.getSettings().isMobRepelEnabled()) continue;
 
                 // Only act near the *chunk border* to keep cost/feel reasonable.
                 if (!isNearChunkBorder(loc, borderRadius)) continue;
@@ -117,7 +123,7 @@ public class EntityBorderRepelTask extends BukkitRunnable {
 
         if (east < min) { min = east; n = new Vector(1, 0, 0); }
         if (north < min) { min = north; n = new Vector(0, 0, -1); }
-        if (south < min) { /*min = south;*/ n = new Vector(0, 0, 1); }
+        if (south < min) { n = new Vector(0, 0, 1); }
 
         return n; // already unit length in axis directions
     }

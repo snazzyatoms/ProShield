@@ -1,71 +1,53 @@
-// path: src/main/java/com/snazzyatoms/proshield/util/ClaimPreview.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import org.bukkit.plugin.Plugin;
 
 /**
- * Simple glowing particle border preview for the current chunk.
- * Call ClaimPreview.start(player, durationTicks) to show; it auto-stops after duration.
+ * Lightweight chunk border preview using particles.
+ * Removes dependency on ProShield.getInstance() – we acquire the plugin via Bukkit.
+ * Preserves previous concept; call ClaimPreview.show(player, player.getLocation()).
  */
-public class ClaimPreview {
+public final class ClaimPreview {
 
-    private static final Map<UUID, BukkitTask> RUNNING = new HashMap<>();
+    private ClaimPreview() {}
 
-    /** Start a temporary preview for the player's current chunk. */
-    public static void start(Player player, long durationTicks) {
-        stop(player); // ensure no duplicate
-        BukkitTask task = Bukkit.getScheduler().runTaskTimer(ProShield.getInstance(), new BorderRunnable(player), 0L, 10L);
-        RUNNING.put(player.getUniqueId(), task);
-        // auto-stop
-        Bukkit.getScheduler().runTaskLater(ProShield.getInstance(), () -> stop(player), Math.max(40L, durationTicks));
+    private static ProShield plugin() {
+        Plugin p = Bukkit.getPluginManager().getPlugin("ProShield");
+        return (ProShield) p;
     }
 
-    /** Stop any running preview for this player. */
-    public static void stop(Player player) {
-        BukkitTask t = RUNNING.remove(player.getUniqueId());
-        if (t != null) t.cancel();
+    public static void show(Player player, Location center) {
+        if (player == null || center == null) return;
+        ProShield plugin = plugin();
+        if (plugin == null) return;
+
+        World world = center.getWorld();
+        if (world == null) return;
+
+        Chunk chunk = center.getChunk();
+        int minX = chunk.getX() << 4;
+        int minZ = chunk.getZ() << 4;
+        int y = Math.max(64, center.getBlockY());
+
+        // draw a simple square with particles
+        for (int x = minX; x < minX + 16; x+=1) {
+            spawnParticle(world, x + 0.5, y, minZ + 0.5, player);
+            spawnParticle(world, x + 0.5, y, minZ + 15.5, player);
+        }
+        for (int z = minZ; z < minZ + 16; z+=1) {
+            spawnParticle(world, minX + 0.5, y, z + 0.5, player);
+            spawnParticle(world, minX + 15.5, y, z + 0.5, player);
+        }
     }
 
-    /** The draw loop. */
-    private static class BorderRunnable implements Runnable {
-        private final UUID uuid;
-
-        BorderRunnable(Player p) { this.uuid = p.getUniqueId(); }
-
-        @Override
-        public void run() {
-            Player p = Bukkit.getPlayer(uuid);
-            if (p == null || !p.isOnline()) {
-                BukkitTask t = RUNNING.remove(uuid);
-                if (t != null) t.cancel();
-                return;
-            }
-            World w = p.getWorld();
-            Chunk chunk = p.getLocation().getChunk();
-            drawChunkOutline(w, chunk, p.getLocation().getY() + 0.2, p);
-        }
-
-        private void drawChunkOutline(World w, Chunk c, double y, Player viewer) {
-            int bx = c.getX() << 4;
-            int bz = c.getZ() << 4;
-            // draw perimeter with particles
-            for (int i = 0; i <= 16; i += 2) {
-                spawn(w, bx + i, y, bz, viewer);
-                spawn(w, bx + i, y, bz + 16, viewer);
-                spawn(w, bx, y, bz + i, viewer);
-                spawn(w, bx + 16, y, bz + i, viewer);
-            }
-        }
-
-        private void spawn(World w, double x, double y, double z, Player viewer) {
-            viewer.spawnParticle(Particle.VILLAGER_HAPPY, x + 0.5, y, z + 0.5, 1, 0, 0, 0, 0);
-        }
+    private static void spawnParticle(World world, double x, double y, double z, Player player) {
+        world.spawnParticle(Particle.VILLAGER_HAPPY, x, y, z, 1, 0, 0, 0, 0.0);
     }
 }

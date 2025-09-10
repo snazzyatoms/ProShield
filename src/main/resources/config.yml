@@ -38,8 +38,9 @@ protection:
   wilderness:
     allow-block-break: true   # If false, prevents breaking in wilderness
     allow-block-place: true   # If false, prevents placing in wilderness
+    allow-pvp: true           # If false, disables PvP in wilderness
 
-  # PvP inside claims
+  # PvP inside claims (default, can be overridden per-claim)
   pvp-in-claims: false
 
   interactions:
@@ -89,6 +90,24 @@ protection:
     passive-animals: true
     tamed-pets: true
 
+  # Item protection (drop/pickup rules inside claims)
+  items:
+    enabled: true
+    drop:
+      visitor: false
+      member: true
+      container: true
+      builder: true
+      co-owner: true
+      owner: true
+    pickup:
+      visitor: false
+      member: true
+      container: true
+      builder: true
+      co-owner: true
+      owner: true
+
   mobs:
     block-spawn: true            # Cancel natural mob spawns inside claims
     allow-spawner-spawn: true    # Allow mobs from spawners
@@ -102,10 +121,9 @@ protection:
 
 claims:
   keep-items:
-    enabled: false           # Global default: if true, all claims keep dropped items
-    despawn-seconds: 900     # How long items persist before forced cleanup
-                             # 300–1800 recommended (5–30 minutes)
-    allow-per-claim-toggle: true   # If true, claim owners can toggle keep-items inside their own claims
+    enabled: false
+    despawn-seconds: 900         # 300–900 allowed (default 15 minutes)
+    per-claim-override: true     # Claim owners can toggle this per-claim
 
 proshield:
   debug: false
@@ -146,13 +164,6 @@ gui:
       compass-drop-if-full: 24
       spawn-guard: 25
       tp-tools: 30
-      back: 31
-      help: 32
-    flags:
-      pvp: 10
-      explosions: 11
-      fire: 12
-      keep-items: 13
       back: 31
       help: 32
 

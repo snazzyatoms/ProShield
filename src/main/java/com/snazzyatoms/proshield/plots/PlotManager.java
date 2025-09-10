@@ -1,16 +1,17 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
- * Handles creation, storage, and lookup of plots (claims).
- * Now supports per-claim settings (PvP, keep-drops, item rules).
+ * Manages all plots (claims) in the server.
+ * Handles loading, saving, and runtime cache of plots & settings.
  */
 public class PlotManager {
 
@@ -19,127 +20,92 @@ public class PlotManager {
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-        loadClaims();
+        loadPlots();
     }
 
-    /**
-     * Create a claim at the given chunk.
-     */
-    public Plot createPlot(Chunk chunk, UUID owner) {
-        String key = serializeChunk(chunk);
-        Plot plot = new Plot(chunk, owner, plugin);
-        plots.put(key, plot);
-        saveClaims();
-        return plot;
+    public ProShield getPlugin() {
+        return plugin;
     }
 
-    /**
-     * Remove a claim at the given chunk.
-     */
-    public void removePlot(Chunk chunk) {
-        String key = serializeChunk(chunk);
-        plots.remove(key);
-        saveClaims();
-    }
-
-    /**
-     * Lookup claim at chunk.
-     */
     public Plot getPlot(Chunk chunk) {
-        return plots.get(serializeChunk(chunk));
+        String key = chunkToKey(chunk);
+        return plots.get(key);
+    }
+
+    public Plot getOrCreatePlot(Chunk chunk, UUID owner) {
+        String key = chunkToKey(chunk);
+        return plots.computeIfAbsent(key, k -> new Plot(owner, new PlotSettings()));
+    }
+
+    public void removePlot(Chunk chunk) {
+        String key = chunkToKey(chunk);
+        plots.remove(key);
+    }
+
+    public Map<String, Plot> getAllPlots() {
+        return plots;
+    }
+
+    private String chunkToKey(Chunk chunk) {
+        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
     }
 
     /**
-     * Get all plots owned by a player.
+     * Load plots + settings from config.yml
      */
-    public List<Plot> getPlots(UUID owner) {
-        List<Plot> result = new ArrayList<>();
-        for (Plot plot : plots.values()) {
-            if (plot.getOwner().equals(owner)) {
-                result.add(plot);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Check if chunk is claimed.
-     */
-    public boolean isClaimed(Chunk chunk) {
-        return plots.containsKey(serializeChunk(chunk));
-    }
-
-    /**
-     * Serialize chunk location.
-     */
-    private String serializeChunk(Chunk chunk) {
-        return chunk.getWorld().getName() + ":" + chunk.getX() + "," + chunk.getZ();
-    }
-
-    // ==================================================
-    // Persistence
-    // ==================================================
-
-    public void saveClaims() {
+    public void loadPlots() {
         FileConfiguration config = plugin.getConfig();
-        config.set("claims", null); // clear
+        ConfigurationSection claimsSection = config.getConfigurationSection("claims");
+
+        if (claimsSection == null) {
+            plugin.getLogger().info("No claims found in config.");
+            return;
+        }
+
+        for (String key : claimsSection.getKeys(false)) {
+            ConfigurationSection claimSection = claimsSection.getConfigurationSection(key);
+            if (claimSection == null) continue;
+
+            String ownerStr = claimSection.getString("owner");
+            if (ownerStr == null) continue;
+
+            UUID owner = UUID.fromString(ownerStr);
+
+            // Load per-claim settings safely
+            ConfigurationSection settingsSection = claimSection.getConfigurationSection("settings");
+            PlotSettings settings = PlotSettings.fromConfig(settingsSection);
+
+            Plot plot = new Plot(owner, settings);
+            plot.loadTrusted(claimSection.getConfigurationSection("trusted"));
+
+            plots.put(key, plot);
+        }
+
+        plugin.getLogger().info("Loaded " + plots.size() + " plots.");
+    }
+
+    /**
+     * Save plots + settings to config.yml
+     */
+    public void savePlots() {
+        FileConfiguration config = plugin.getConfig();
+        ConfigurationSection claimsSection = config.createSection("claims");
 
         for (Map.Entry<String, Plot> entry : plots.entrySet()) {
             String key = entry.getKey();
             Plot plot = entry.getValue();
 
-            String path = "claims." + key;
-            config.set(path + ".owner", plot.getOwner().toString());
-            config.set(path + ".trusted", serializeTrusted(plot.getTrusted()));
+            ConfigurationSection claimSection = claimsSection.createSection(key);
+            claimSection.set("owner", plot.getOwner().toString());
+
+            // Save trusted players
+            plot.saveTrusted(claimSection.createSection("trusted"));
 
             // Save per-claim settings
-            plot.getSettings().saveToConfig(config, path + ".settings");
+            ConfigurationSection settingsSection = claimSection.createSection("settings");
+            plot.getSettings().saveToConfig(settingsSection);
         }
 
         plugin.saveConfig();
-    }
-
-    public void loadClaims() {
-        plots.clear();
-        FileConfiguration config = plugin.getConfig();
-        ConfigurationSection section = config.getConfigurationSection("claims");
-        if (section == null) return;
-
-        for (String key : section.getKeys(false)) {
-            String path = "claims." + key;
-            String[] parts = key.split(":");
-            if (parts.length != 2) continue;
-
-            String world = parts[0];
-            String[] coords = parts[1].split(",");
-            if (coords.length != 2) continue;
-
-            Chunk chunk = Bukkit.getWorld(world).getChunkAt(
-                    Integer.parseInt(coords[0]),
-                    Integer.parseInt(coords[1])
-            );
-            UUID owner = UUID.fromString(config.getString(path + ".owner"));
-
-            Plot plot = new Plot(chunk, owner, plugin);
-
-            // Load trusted players
-            List<String> trustedList = config.getStringList(path + ".trusted");
-            for (String uuid : trustedList) {
-                plot.addTrusted(UUID.fromString(uuid));
-            }
-
-            // Load per-claim settings
-            plot.getSettings().loadFromConfig(config, path + ".settings");
-
-            plots.put(key, plot);
-        }
-    }
-
-    private List<String> serializeTrusted(Set<UUID> trusted) {
-        List<String> list = new ArrayList<>();
-        for (UUID uuid : trusted) {
-            list.add(uuid.toString());
-        }
-        return list;
     }
 }

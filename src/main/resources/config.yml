@@ -1,23 +1,27 @@
-# ProShield configuration (v1.2.5)
+# ==================================================
+# 🛡️ ProShield Configuration (v1.2.5)
+# ==================================================
+# All claim, GUI, and protection settings for ProShield.
+# ==================================================
+
 messages:
   prefix: "&3[ProShield]&r "
 
 version: "1.2.5"
 
 limits:
-  max-claims: 5  # -1 = unlimited (players with proshield.unlimited bypass)
+  max-claims: 5     # -1 = unlimited (players with proshield.unlimited bypass)
 
 expiry:
   enabled: false
-  days: 30
+  days: 30          # Claims expire after X days of owner inactivity
 
 spawn:
   block-claiming: true
-  radius: 32    # blocks within radius of world spawn cannot be claimed (unless admin bypass)
+  radius: 32        # Blocks within radius of world spawn cannot be claimed (unless admin bypass)
 
-# === PROTECTION (ON by default inside claims) ===
+# === PROTECTION SYSTEM ===
 protection:
-  # Damage guard for owner + trusted inside their own claim
   damage:
     enabled: true
     protect-owner-and-trusted: true
@@ -31,17 +35,15 @@ protection:
     drown-void-suffocate: true
     poison-wither: true
 
-  # PvP - false means PvP is blocked in claims
+  # PvP inside claims
   pvp-in-claims: false
 
-  # Blocks & redstone interactions by non-trusted
   interactions:
     enabled: true
     mode: blacklist
     categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
     list: []
 
-  # Explosions
   explosions:
     enabled: true
     creeper: true
@@ -51,7 +53,6 @@ protection:
     end_crystal: true
     ender_dragon: true
 
-  # Fire
   fire:
     enabled: true
     spread: true
@@ -63,12 +64,10 @@ protection:
       explosion: true
       spread: true
 
-  # Buckets
   buckets:
     block-empty: true
     block-fill: true
 
-  # Entity grief
   entity-grief:
     enabled: true
     enderman: true
@@ -77,33 +76,30 @@ protection:
     ender-dragon: true
     wither: true
 
-  # Enderman teleport
   entity-teleport:
     enderman: true
 
-  # Entities inside claims
   entities:
     item-frames: true
     armor-stands: true
     passive-animals: true
     tamed-pets: true
 
-  # Mob control inside claims
   mobs:
-    block-spawn: true            # cancel spawns inside claims (natural)
-    allow-spawner-spawn: true    # allow if origin is SPAWNER
+    block-spawn: true            # Cancel natural mob spawns inside claims
+    allow-spawner-spawn: true    # Allow mobs from spawners
     border-repel:
       enabled: true
-      radius: 4.0               # bigger radius for pushing mobs back
-      horizontal-push: 1.2      # stronger push
-      vertical-push: 0.4
+      radius: 3.0                # How far mobs are pushed away from claim edges
+      horizontal-push: 1.0       # Pushback force (X/Z)
+      vertical-push: 0.3         # Pushback force (Y)
       interval-ticks: 20
-    despawn-inside-claims: true  # mobs inside claims despawn instantly if not tamed
+      despawn-inside: true       # Instantly remove mobs that spawn inside claims
 
 claims:
   keep-items:
     enabled: false
-    despawn-seconds: 900   # 300–900 allowed
+    despawn-seconds: 900   # 300–900 allowed (default 15 minutes)
 
 proshield:
   debug: false
@@ -114,10 +110,9 @@ autogive:
 compass:
   drop-if-full: true
 
-# Per-world overrides (optional)
-per-world: {}
-
-# GUI slots
+# ==================================================
+# GUI Configuration
+# ==================================================
 gui:
   slots:
     main:
@@ -127,14 +122,11 @@ gui:
       help: 31
       admin: 33
       back: 48
-    player:
-      trust: 10
-      untrust: 11
-      roles: 12
-      transfer: 13
-      flags: 14
-      back: 31
-      help: 22
+      trust: 20
+      untrust: 21
+      roles: 22
+      transfer: 23
+      flags: 24
     admin:
       fire: 10
       explosions: 11
@@ -143,13 +135,25 @@ gui:
       pvp: 14
       keep-items: 20
       purge-expired: 21
-      reload: 22
-      debug: 23
+      debug: 22
+      reload: 23
       compass-drop-if-full: 24
       spawn-guard: 25
       tp-tools: 30
       back: 31
-      help: 22
+      help: 32
 
-# Claims storage (runtime)
+# ==================================================
+# Per-World Overrides
+# ==================================================
+# Example:
+# per-world:
+#   world_nether:
+#     protection:
+#       pvp-in-claims: true
+per-world: {}
+
+# ==================================================
+# CLAIM STORAGE (runtime - DO NOT EDIT MANUALLY)
+# ==================================================
 claims: {}

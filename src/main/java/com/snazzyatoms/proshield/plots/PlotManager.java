@@ -1,163 +1,119 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
-import org.bukkit.World;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
- * Manages all plots (claims) for ProShield.
+ * Manages all plots and integrates with global + per-claim settings.
  */
 public class PlotManager {
 
     private final ProShield plugin;
-    private final Map<UUID, Plot> plots = new HashMap<>();
+    private final Map<Chunk, Plot> plots = new HashMap<>();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
-    /**
-     * Load plots from config.
-     */
-    public void loadPlots() {
-        plots.clear();
-        FileConfiguration config = plugin.getConfig();
-        ConfigurationSection claimsSection = config.getConfigurationSection("claims");
-
-        if (claimsSection == null) return;
-
-        for (String key : claimsSection.getKeys(false)) {
-            try {
-                UUID id = UUID.fromString(key);
-                ConfigurationSection section = claimsSection.getConfigurationSection(key);
-                if (section == null) continue;
-
-                Plot plot = Plot.fromConfig(id, section);
-                plots.put(id, plot);
-            } catch (Exception ex) {
-                plugin.getLogger().warning("Failed to load plot: " + key + " (" + ex.getMessage() + ")");
-            }
-        }
-
-        plugin.getLogger().info("Loaded " + plots.size() + " plots.");
+    public Plot getPlot(Chunk chunk) {
+        return plots.get(chunk);
     }
 
-    /**
-     * Save plots into config.
-     */
-    public void savePlots() {
-        FileConfiguration config = plugin.getConfig();
-        config.set("claims", null); // reset
-
-        ConfigurationSection claimsSection = config.createSection("claims");
-        for (Map.Entry<UUID, Plot> entry : plots.entrySet()) {
-            ConfigurationSection section = claimsSection.createSection(entry.getKey().toString());
-            entry.getValue().save(section);
-        }
-
-        plugin.saveConfig();
-    }
-
-    /**
-     * Register a new plot.
-     */
-    public Plot createPlot(UUID owner, Chunk chunk) {
-        UUID id = UUID.randomUUID();
-        Plot plot = new Plot(id, owner, chunk);
-        plots.put(id, plot);
+    public Plot createPlot(Chunk chunk, UUID owner) {
+        Plot plot = new Plot(owner, chunk);
+        plots.put(chunk, plot);
         return plot;
     }
 
-    /**
-     * Unregister and delete a plot.
-     */
-    public void removePlot(UUID id) {
-        plots.remove(id);
+    public void removePlot(Chunk chunk) {
+        plots.remove(chunk);
     }
 
-    /**
-     * Get a plot by UUID.
-     */
-    public Plot getPlot(UUID id) {
-        return plots.get(id);
+    public boolean isClaimed(Chunk chunk) {
+        return plots.containsKey(chunk);
     }
 
+    // === Global + per-claim config lookups ===
+
     /**
-     * Get a plot at a chunk.
+     * Whether PvP is allowed in this chunk.
      */
-    public Plot getPlot(Chunk chunk) {
-        for (Plot plot : plots.values()) {
-            if (plot.getWorldName().equals(chunk.getWorld().getName())
-                    && plot.getChunkX() == chunk.getX()
-                    && plot.getChunkZ() == chunk.getZ()) {
-                return plot;
-            }
+    public boolean isPvpAllowed(Chunk chunk) {
+        FileConfiguration config = plugin.getConfig();
+        boolean global = config.getBoolean("protection.pvp-in-claims", false);
+
+        Plot plot = getPlot(chunk);
+        if (plot != null) {
+            return plot.getSettings().isPvpEnabled();
         }
-        return null;
+        return global;
     }
 
     /**
-     * Get all plots owned by a player.
+     * Whether explosions are allowed in this chunk.
      */
-    public List<Plot> getPlotsByOwner(UUID owner) {
-        List<Plot> result = new ArrayList<>();
-        for (Plot plot : plots.values()) {
-            if (plot.getOwner().equals(owner)) {
-                result.add(plot);
-            }
+    public boolean isExplosionsAllowed(Chunk chunk) {
+        FileConfiguration config = plugin.getConfig();
+        boolean global = config.getBoolean("protection.explosions.enabled", true);
+
+        Plot plot = getPlot(chunk);
+        if (plot != null) {
+            return plot.getSettings().isExplosionsEnabled();
         }
-        return result;
+        return global;
     }
 
     /**
-     * Check if PvP is enabled for this plot.
+     * Whether fire spread is allowed in this chunk.
      */
-    public boolean isPvpEnabled(Plot plot) {
-        if (plot == null) return false;
-        return plot.getSettings().isPvpEnabled();
-    }
+    public boolean isFireSpreadAllowed(Chunk chunk) {
+        FileConfiguration config = plugin.getConfig();
+        boolean global = config.getBoolean("protection.fire.spread", true);
 
-    /**
-     * Check if keep-items is enabled for this plot.
-     */
-    public boolean isKeepItemsEnabled(Plot plot) {
-        if (plot == null) return false;
-
-        // fallback: if per-claim setting is off, check global config
-        boolean globalKeep = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
-        return globalKeep || plot.getSettings().isKeepItemsEnabled();
-    }
-
-    /**
-     * Utility: get plot at location by world name + chunk coords.
-     */
-    public Plot getPlot(String worldName, int x, int z) {
-        for (Plot plot : plots.values()) {
-            if (plot.getWorldName().equals(worldName)
-                    && plot.getChunkX() == x
-                    && plot.getChunkZ() == z) {
-                return plot;
-            }
+        Plot plot = getPlot(chunk);
+        if (plot != null) {
+            return plot.getSettings().isFireSpreadEnabled();
         }
-        return null;
+        return global;
     }
 
     /**
-     * Debug utility: dump all plots.
+     * Whether item drops should be kept inside claims (global + per-claim).
      */
-    public void debugDump() {
-        plugin.getLogger().info("== ProShield Plots ==");
-        for (Plot plot : plots.values()) {
-            plugin.getLogger().info(" - " + plot.getOwner() +
-                    " @ " + plot.getWorldName() +
-                    " (" + plot.getChunkX() + "," + plot.getChunkZ() + ")" +
-                    " PvP=" + plot.getSettings().isPvpEnabled() +
-                    " KeepItems=" + plot.getSettings().isKeepItemsEnabled());
+    public boolean isKeepItemsEnabled(Chunk chunk) {
+        FileConfiguration config = plugin.getConfig();
+        boolean global = config.getBoolean("claims.keep-items.enabled", false);
+
+        Plot plot = getPlot(chunk);
+        if (plot != null) {
+            return plot.getSettings().isKeepItemsEnabled();
         }
+        return global;
+    }
+
+    /**
+     * Whether item protection is enabled in this chunk.
+     */
+    public boolean isItemProtectionEnabled(Chunk chunk) {
+        FileConfiguration config = plugin.getConfig();
+        boolean global = config.getBoolean("protection.items.enabled", true);
+
+        Plot plot = getPlot(chunk);
+        if (plot != null) {
+            return plot.getSettings().isItemProtectionEnabled();
+        }
+        return global;
+    }
+
+    /**
+     * Expose plots for iteration (e.g., saving).
+     */
+    public Map<Chunk, Plot> getAllPlots() {
+        return plots;
     }
 }

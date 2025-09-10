@@ -1,22 +1,21 @@
 package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.cache.GUICache;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.gui.GUICache;
 import com.snazzyatoms.proshield.plots.*;
 import org.bukkit.Bukkit;
-import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
-
-    private static ProShield instance;
 
     private PlotManager plotManager;
     private ClaimRoleManager roleManager;
     private GUIManager guiManager;
     private GUICache guiCache;
+
+    private static ProShield instance;
 
     public static ProShield getInstance() {
         return instance;
@@ -27,34 +26,28 @@ public class ProShield extends JavaPlugin {
         instance = this;
 
         saveDefaultConfig();
-        reloadConfig();
 
-        // Initialize managers
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
         this.guiCache = new GUICache();
-        this.guiManager = new GUIManager(this, guiCache);
+        this.guiManager = new GUIManager(this, plotManager, roleManager, guiCache);
 
-        // Register commands
-        ProShieldCommand commandExecutor = new ProShieldCommand(this, plotManager, guiManager);
-        PluginCommand cmd = getCommand("proshield");
-        if (cmd != null) {
-            cmd.setExecutor(commandExecutor);
-            cmd.setTabCompleter(commandExecutor);
-        }
+        getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+        getServer().getPluginManager().registerEvents(new ClaimMessageListener(plotManager), this);
+        getServer().getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
+        getServer().getPluginManager().registerEvents(new ItemProtectionListener(plotManager), this);
+        getServer().getPluginManager().registerEvents(new KeepDropsListener(plotManager), this);
+        getServer().getPluginManager().registerEvents(new EntityDamageProtectionListener(plotManager), this);
+        getServer().getPluginManager().registerEvents(new PvpProtectionListener(plotManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(guiManager), this);
+        getServer().getPluginManager().registerEvents(new SpawnGuardListener(this, plotManager), this);
+        getServer().getPluginManager().registerEvents(new MobBorderRepelListener(this, plotManager), this);
 
-        // Register listeners
-        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, plotManager, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new SpawnClaimGuardListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MobBorderRepelListener(this), this);
+        ProShieldCommand command = new ProShieldCommand(this, plotManager, guiManager);
+        getCommand("proshield").setExecutor(command);
+        getCommand("proshield").setTabCompleter(command);
 
-        getLogger().info("✅ ProShield v1.2.5 enabled!");
+        getLogger().info("✅ ProShield v" + getDescription().getVersion() + " enabled!");
     }
 
     @Override
@@ -62,26 +55,12 @@ public class ProShield extends JavaPlugin {
         getLogger().info("⛔ ProShield disabled.");
     }
 
-    // ==========================
-    // RELOAD SUPPORT
-    // ==========================
+    /** Reload configuration and reset caches */
     public void reloadAllConfigs() {
         reloadConfig();
         roleManager.reloadFromConfig();
-        guiCache.clearGUIs();
-        guiCache.clearItems();
-        getLogger().info("♻️ ProShield configuration & cache reloaded.");
-    }
-
-    // ==========================
-    // GETTERS
-    // ==========================
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
-
-    public ClaimRoleManager getRoleManager() {
-        return roleManager;
+        guiCache.clear();
+        getLogger().info("🔄 ProShield config reloaded.");
     }
 
     public GUIManager getGuiManager() {
@@ -90,5 +69,13 @@ public class ProShield extends JavaPlugin {
 
     public GUICache getGuiCache() {
         return guiCache;
+    }
+
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
     }
 }

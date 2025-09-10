@@ -1,167 +1,81 @@
-# ==================================================
-# 🛡️ ProShield Configuration (v1.2.5)
-# ==================================================
-# All claim, GUI, and protection settings for ProShield.
-# This file merges all previous logic + extended per-claim flags.
-# ==================================================
+# ==========================================================
+# ProShield Configuration
+# Version: 1.2.5
+# ==========================================================
+# All protection features can be globally toggled here.
+# Individual claims may override via /flags GUI.
+# ==========================================================
 
-version: "1.2.5"
-
-messages:
-  prefix: "&3[ProShield]&r "
-
-limits:
-  max-claims: 5     # -1 = unlimited (players with proshield.unlimited bypass)
-
-expiry:
-  enabled: false
-  days: 30          # Claims expire after X days of owner inactivity
-
-spawn:
-  block-claiming: true
-  radius: 32        # Blocks within radius of world spawn cannot be claimed (unless admin bypass)
-
-# === PROTECTION SYSTEM ===
 protection:
-  damage:
-    enabled: true
-    protect-owner-and-trusted: true
-    cancel-all: true
-    pve: true
-    projectiles: true
-    environment: true
-    fire-lava: true
-    fall: true
-    explosions: true
-    drown-void-suffocate: true
-    poison-wither: true
-
-  wilderness:
-    allow-block-break: true   # If false, prevents breaking in wilderness
-    allow-block-place: true   # If false, prevents placing in wilderness
-    allow-pvp: true           # PvP in wilderness (false = disabled globally)
-
-  pvp-in-claims: false        # Default global claim PvP toggle
-
-  interactions:
-    enabled: true
-    mode: blacklist
-    categories: [doors, trapdoors, fence_gates, buttons, levers, pressure_plates]
-    list: []
-
-  explosions:
-    enabled: true
-    creeper: true
-    tnt: true
-    wither: true
-    wither_skull: true
-    end_crystal: true
-    ender_dragon: true
-
+  # -------------------------
+  # Fire settings
+  # -------------------------
   fire:
-    enabled: true
-    spread: true
-    burn: true
+    burn: false
+    spread: false
     ignite:
-      flint_and_steel: true
-      lava: true
-      lightning: true
-      explosion: true
-      spread: true
+      flint_and_steel: false
+      lava: false
+      lightning: false
 
+  # -------------------------
+  # Explosion settings
+  # -------------------------
+  explosions:
+    enabled: false
+
+  # -------------------------
+  # Bucket settings
+  # -------------------------
   buckets:
-    block-empty: true
-    block-fill: true
+    block-empty: false
+    block-fill: false
 
-  entity-grief:
-    enabled: true
-    enderman: true
-    ravager: true
-    silverfish: true
-    ender-dragon: true
-    wither: true
-
-  entity-teleport:
-    enderman: true
-
-  entities:
-    item-frames: true
-    armor-stands: true
-    passive-animals: true
-    tamed-pets: true
-    villagers: true
-    vehicles: true
-
+  # -------------------------
+  # Mob settings
+  # -------------------------
   mobs:
-    block-spawn: true            # Cancel natural mob spawns inside claims
-    allow-spawner-spawn: true    # Allow mobs from spawners
     border-repel:
       enabled: true
-      radius: 5.0                # How far mobs are pushed away from claim edges
-      horizontal-push: 1.2       # Pushback force (X/Z)
-      vertical-push: 0.4         # Pushback force (Y)
-      interval-ticks: 20
-      despawn-inside: true       # Instantly remove mobs that spawn inside claims
+      radius: 1.5
+      horizontal-push: 0.6
+      vertical-push: 0.15
 
-claims:
-  keep-items:
-    enabled: false
-    despawn-seconds: 900   # 300–900 allowed (default 15 minutes)
-    allow-per-claim: true  # Players can override globally per claim
+  # -------------------------
+  # Wilderness entity settings
+  # -------------------------
+  entities:
+    wilderness:
+      item-frames: false
+      vehicles: false
 
-proshield:
-  debug: false
+# ==========================================================
+# Messages and GUI
+# ==========================================================
+messages:
+  prefix: "&3[ProShield] &r"
+  debug-prefix: "&8[Debug] &r"
 
-autogive:
-  compass-on-join: true
-
-compass:
-  drop-if-full: true
-
-# ==================================================
-# GUI Configuration
-# ==================================================
 gui:
-  slots:
-    main:
-      create: 11
-      info: 13
-      remove: 15
-      help: 31
-      admin: 33
-      back: 48
-      trust: 19
-      untrust: 20
-      roles: 21
-      flags: 22
-      transfer: 23
-    admin:
-      fire: 10
-      explosions: 11
-      entity-grief: 12
-      interactions: 13
-      pvp: 14
-      keep-items: 20
-      purge-expired: 21
-      debug: 22
-      reload: 23
-      compass-drop-if-full: 24
-      spawn-guard: 25
-      tp-tools: 30
-      back: 31
-      help: 32
+  flags:
+    title: "§dClaim Flags"
 
-# ==================================================
-# Per-World Overrides
-# ==================================================
-# Example:
-# per-world:
-#   world_nether:
-#     protection:
-#       pvp-in-claims: true
-per-world: {}
-
-# ==================================================
-# CLAIM STORAGE (runtime - DO NOT EDIT MANUALLY)
-# ==================================================
-claims: {}
+# ==========================================================
+# Claim Defaults
+# ==========================================================
+claims:
+  default-flags:
+    pvp: false
+    explosions: false
+    fire: false
+    entity-grief: false
+    redstone: true
+    containers: false
+    animals: false
+    vehicles: false
+    armor-stands: false
+    item-frames: false
+    buckets: false
+    pets: false
+    mob-repel: true
+    mob-despawn: true

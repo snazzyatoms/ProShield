@@ -1,75 +1,94 @@
 package com.snazzyatoms.proshield.gui;
 
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Simple in-memory GUI cache for ProShield menus.
- * Prevents lag from regenerating inventories every time a player clicks.
+ * GUICache holds lightweight mappings between GUI buttons (ItemStacks)
+ * and their corresponding actions. This prevents heavy config lookups
+ * or meta parsing on every click.
+ *
+ * All menus (Player & Admin) register their buttons here.
  */
 public class GUICache {
 
-    private final Map<String, Inventory> playerMainCache = new HashMap<>();
-    private final Map<String, Inventory> playerFlagsCache = new HashMap<>();
-    private final Map<String, Inventory> playerRolesCache = new HashMap<>();
-    private final Map<String, Inventory> playerTrustCache = new HashMap<>();
-    private final Map<String, Inventory> adminMainCache = new HashMap<>();
+    // Cache of Item → action string
+    private static final Map<String, String> itemActionCache = new HashMap<>();
 
-    /** Get cached Player Main GUI */
-    public Inventory getPlayerMain(Player player) {
-        return playerMainCache.get(player.getName());
+    // =========================================================
+    // REGISTRATION
+    // =========================================================
+
+    /**
+     * Registers a mapping between an ItemStack and an action string.
+     */
+    public static void register(ItemStack item, String action) {
+        if (item == null || action == null) return;
+
+        String key = makeKey(item);
+        itemActionCache.put(key, action.toLowerCase());
     }
 
-    /** Save Player Main GUI */
-    public void setPlayerMain(Player player, Inventory inv) {
-        playerMainCache.put(player.getName(), inv);
+    /**
+     * Bulk registration for convenience.
+     */
+    public static void registerAll(Map<ItemStack, String> items) {
+        for (Map.Entry<ItemStack, String> entry : items.entrySet()) {
+            register(entry.getKey(), entry.getValue());
+        }
     }
 
-    /** Get cached Player Flags GUI */
-    public Inventory getPlayerFlags(Player player) {
-        return playerFlagsCache.get(player.getName());
+    // =========================================================
+    // LOOKUP
+    // =========================================================
+
+    /**
+     * Gets the action string for a clicked item.
+     *
+     * @param clicked ItemStack clicked
+     * @return action string, or null if not recognized
+     */
+    public static String getAction(ItemStack clicked) {
+        if (clicked == null) return null;
+
+        String key = makeKey(clicked);
+        return itemActionCache.getOrDefault(key, null);
     }
 
-    public void setPlayerFlags(Player player, Inventory inv) {
-        playerFlagsCache.put(player.getName(), inv);
+    /**
+     * Debugging utility to see all registered mappings.
+     */
+    public static Map<String, String> dumpCache() {
+        return Collections.unmodifiableMap(itemActionCache);
     }
 
-    /** Get cached Player Roles GUI */
-    public Inventory getPlayerRoles(Player player) {
-        return playerRolesCache.get(player.getName());
+    // =========================================================
+    // UTIL
+    // =========================================================
+
+    /**
+     * Generates a stable key for caching.
+     * Uses Material + DisplayName if present.
+     */
+    private static String makeKey(ItemStack item) {
+        Material type = item.getType();
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta != null && meta.hasDisplayName()) {
+            return type.name() + "|" + meta.getDisplayName().toLowerCase();
+        }
+        return type.name();
     }
 
-    public void setPlayerRoles(Player player, Inventory inv) {
-        playerRolesCache.put(player.getName(), inv);
-    }
-
-    /** Get cached Player Trust GUI */
-    public Inventory getPlayerTrust(Player player) {
-        return playerTrustCache.get(player.getName());
-    }
-
-    public void setPlayerTrust(Player player, Inventory inv) {
-        playerTrustCache.put(player.getName(), inv);
-    }
-
-    /** Get cached Admin Main GUI */
-    public Inventory getAdminMain(Player player) {
-        return adminMainCache.get(player.getName());
-    }
-
-    public void setAdminMain(Player player, Inventory inv) {
-        adminMainCache.put(player.getName(), inv);
-    }
-
-    /** Clear all caches (called on /proshield reload) */
-    public void clear() {
-        playerMainCache.clear();
-        playerFlagsCache.clear();
-        playerRolesCache.clear();
-        playerTrustCache.clear();
-        adminMainCache.clear();
+    /**
+     * Clears all cache entries (e.g., on reload).
+     */
+    public static void clear() {
+        itemActionCache.clear();
     }
 }

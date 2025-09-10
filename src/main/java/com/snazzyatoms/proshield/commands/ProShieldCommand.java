@@ -13,9 +13,12 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
+/**
+ * ProShieldCommand - Handles all /proshield commands.
+ * Commands either run directly or open GUIs (player/admin).
+ */
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
@@ -28,194 +31,145 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         this.gui = gui;
     }
 
-    private void sendUsage(CommandSender sender) {
-        sender.sendMessage(ChatColor.AQUA + "ProShield Commands:");
-        sender.sendMessage(ChatColor.GRAY + "/proshield claim " + ChatColor.WHITE + "- Claim current chunk");
-        sender.sendMessage(ChatColor.GRAY + "/proshield unclaim " + ChatColor.WHITE + "- Unclaim current chunk");
-        sender.sendMessage(ChatColor.GRAY + "/proshield info " + ChatColor.WHITE + "- Show claim info");
-        sender.sendMessage(ChatColor.GRAY + "/proshield trust <player> [role] " + ChatColor.WHITE + "- Trust player with role");
-        sender.sendMessage(ChatColor.GRAY + "/proshield untrust <player> " + ChatColor.WHITE + "- Remove trust");
-        sender.sendMessage(ChatColor.GRAY + "/proshield transfer <player> " + ChatColor.WHITE + "- Transfer ownership");
-        sender.sendMessage(ChatColor.GRAY + "/proshield preview " + ChatColor.WHITE + "- Preview claim borders");
-        sender.sendMessage(ChatColor.GRAY + "/proshield compass " + ChatColor.WHITE + "- Get ProShield compass");
-        sender.sendMessage(ChatColor.GRAY + "/proshield reload " + ChatColor.WHITE + "- Reload configuration (admin)");
-        sender.sendMessage(ChatColor.GRAY + "/proshield purgeexpired <days> [dryrun] " + ChatColor.WHITE + "- Purge expired claims (admin)");
-        sender.sendMessage(ChatColor.GRAY + "/proshield bypass " + ChatColor.WHITE + "- Toggle bypass mode (admin)");
-        sender.sendMessage(ChatColor.GRAY + "/proshield debug <on|off> " + ChatColor.WHITE + "- Toggle debug logging (admin)");
-    }
-
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (args.length == 0) {
-            if (sender instanceof Player player) {
-                gui.openMain(player);
-            } else {
-                sendUsage(sender);
-            }
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "Players only.");
             return true;
         }
 
-        String sub = args[0].toLowerCase();
+        Player player = (Player) sender;
 
-        switch (sub) {
-            case "claim" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can claim land.");
-                    return true;
-                }
+        if (args.length == 0) {
+            gui.openMain(player);
+            return true;
+        }
+
+        switch (args[0].toLowerCase()) {
+            case "claim":
                 plots.claimChunk(player);
-                return true;
-            }
+                break;
 
-            case "unclaim" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can unclaim land.");
-                    return true;
-                }
+            case "unclaim":
                 plots.unclaimChunk(player);
-                return true;
-            }
+                break;
 
-            case "info" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can use this.");
-                    return true;
-                }
+            case "info":
                 plots.showClaimInfo(player);
-                return true;
-            }
+                break;
 
-            case "trust" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can trust others.");
-                    return true;
-                }
+            case "trust":
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /proshield trust <player> [role]");
+                    player.sendMessage(ChatColor.YELLOW + "Usage: /proshield trust <player> [role]");
                     return true;
                 }
-                String target = args[1];
-                String role = args.length > 2 ? args[2] : "member";
-                plots.trustPlayer(player, target, role);
-                return true;
-            }
+                String targetTrust = args[1];
+                String role = args.length >= 3 ? args[2] : "member";
+                plots.trustPlayer(player, targetTrust, role);
+                break;
 
-            case "untrust" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can untrust others.");
-                    return true;
-                }
+            case "untrust":
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /proshield untrust <player>");
+                    player.sendMessage(ChatColor.YELLOW + "Usage: /proshield untrust <player>");
                     return true;
                 }
-                String target = args[1];
-                plots.untrustPlayer(player, target);
-                return true;
-            }
+                String targetUntrust = args[1];
+                plots.untrustPlayer(player, targetUntrust);
+                break;
 
-            case "transfer" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can transfer claims.");
-                    return true;
-                }
+            case "trusted":
+                plots.listTrusted(player);
+                break;
+
+            case "transfer":
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /proshield transfer <player>");
+                    player.sendMessage(ChatColor.YELLOW + "Usage: /proshield transfer <player>");
                     return true;
                 }
-                String target = args[1];
-                plots.transferClaim(player, target);
-                return true;
-            }
+                String newOwner = args[1];
+                plots.transferOwnership(player, newOwner);
+                break;
 
-            case "preview" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can preview claims.");
-                    return true;
-                }
-                plots.previewClaim(player);
-                return true;
-            }
+            case "flags":
+                gui.openPlayerFlags(player);
+                break;
 
-            case "compass" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can get a compass.");
-                    return true;
-                }
+            case "roles":
+                gui.openPlayerRoles(player);
+                break;
+
+            case "gui":
+            case "menu":
+                gui.openMain(player);
+                break;
+
+            case "compass":
                 gui.giveCompass(player, player.isOp());
-                return true;
-            }
+                break;
 
-            case "reload" -> {
-                if (!sender.hasPermission("proshield.admin.reload")) {
-                    sender.sendMessage(ChatColor.RED + "No permission.");
-                    return true;
-                }
-                plugin.reloadAllConfigs();
-                sender.sendMessage(ChatColor.GREEN + "ProShield reloaded.");
-                return true;
-            }
-
-            case "purgeexpired" -> {
-                if (!sender.hasPermission("proshield.admin.expired.purge")) {
-                    sender.sendMessage(ChatColor.RED + "No permission.");
-                    return true;
-                }
-                int days = args.length > 1 ? Integer.parseInt(args[1]) : 30;
-                boolean dryRun = args.length > 2 && args[2].equalsIgnoreCase("dryrun");
-                plots.purgeExpiredClaims(sender, days, dryRun);
-                return true;
-            }
-
-            case "bypass" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can toggle bypass.");
-                    return true;
-                }
+            case "bypass":
                 if (!player.hasPermission("proshield.bypass")) {
-                    player.sendMessage(ChatColor.RED + "No permission.");
+                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.bypass");
                     return true;
                 }
                 plots.toggleBypass(player);
-                return true;
-            }
+                break;
 
-            case "debug" -> {
-                if (!sender.hasPermission("proshield.admin.debug")) {
-                    sender.sendMessage(ChatColor.RED + "No permission.");
+            case "reload":
+                if (!player.hasPermission("proshield.admin.reload")) {
+                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.admin.reload");
                     return true;
                 }
-                if (args.length < 2) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /proshield debug <on|off>");
+                plugin.reloadAllConfigs();
+                player.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
+                break;
+
+            case "purgeexpired":
+                if (!player.hasPermission("proshield.admin.expired.purge")) {
+                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.admin.expired.purge");
                     return true;
                 }
-                boolean enable = args[1].equalsIgnoreCase("on");
-                plugin.getConfig().set("proshield.debug", enable);
-                sender.sendMessage(ChatColor.YELLOW + "Debug mode set to: " + enable);
-                return true;
-            }
+                int days = args.length >= 2 ? Integer.parseInt(args[1]) : plugin.getConfig().getInt("expiry.days", 30);
+                boolean dryrun = args.length >= 3 && args[2].equalsIgnoreCase("dryrun");
+                plots.purgeExpiredClaims(player, days, dryrun);
+                break;
 
-            default -> sendUsage(sender);
+            case "debug":
+                if (!player.hasPermission("proshield.admin.debug")) {
+                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.admin.debug");
+                    return true;
+                }
+                plots.toggleDebug(player);
+                break;
+
+            default:
+                player.sendMessage(ChatColor.YELLOW + "Unknown subcommand. Use /proshield for menu.");
+                break;
         }
+
         return true;
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!(sender instanceof Player)) return null;
+
+        List<String> subs = Arrays.asList(
+                "claim", "unclaim", "info", "trust", "untrust",
+                "trusted", "transfer", "flags", "roles", "menu",
+                "compass", "bypass", "reload", "purgeexpired", "debug"
+        );
+
         if (args.length == 1) {
-            return Arrays.asList("claim", "unclaim", "info", "trust", "untrust",
-                    "transfer", "preview", "compass", "reload", "purgeexpired", "bypass", "debug");
+            List<String> matches = new ArrayList<>();
+            for (String sub : subs) {
+                if (sub.startsWith(args[0].toLowerCase())) {
+                    matches.add(sub);
+                }
+            }
+            return matches;
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("trust")) {
-            List<String> online = new ArrayList<>();
-            Bukkit.getOnlinePlayers().forEach(p -> online.add(p.getName()));
-            return online;
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("transfer")) {
-            List<String> online = new ArrayList<>();
-            Bukkit.getOnlinePlayers().forEach(p -> online.add(p.getName()));
-            return online;
-        }
-        return Collections.emptyList();
+
+        return null;
     }
 }

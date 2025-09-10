@@ -16,7 +16,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 /**
  * Handles block breaking & placing with:
  * - Wilderness allow/deny toggles (config)
- * - Per-claim role checks (preserved)
+ * - Per-claim role checks (preserved logic)
  * - Admin bypass
  * - Messages via MessagesUtil
  */
@@ -51,7 +51,6 @@ public class BlockProtectionListener implements Listener {
             boolean allow = cfg.getBoolean("protection.wilderness.allow-block-break", true);
             if (!allow) {
                 event.setCancelled(true);
-                // keep message generic to avoid depending on claim-name methods
                 msg.send(p, "wilderness.break-deny");
             }
             return;
@@ -61,8 +60,7 @@ public class BlockProtectionListener implements Listener {
         ClaimRole role = roles.getRole(plot, p);
         if (!roles.canBuild(role)) {
             event.setCancelled(true);
-            // generic message key; your messages.yml can be customized
-            msg.send(p, "build.break-deny");
+            msg.send(p, "build.break-deny", plot.getDisplayNameSafe(), p.getName());
         }
     }
 
@@ -92,7 +90,7 @@ public class BlockProtectionListener implements Listener {
         ClaimRole role = roles.getRole(plot, p);
         if (!roles.canBuild(role)) {
             event.setCancelled(true);
-            msg.send(p, "build.place-deny");
+            msg.send(p, "build.place-deny", plot.getDisplayNameSafe(), p.getName());
         }
     }
 }

@@ -1,18 +1,40 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotSettings.java
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.configuration.ConfigurationSection;
-
 /**
- * Holds per-claim flags and settings.
- * Extended to include all flags referenced by listeners/commands.
+ * PlotSettings - all per-claim toggles/flags.
+ * Defaults mirror config.yml; PlotManager should sync on (de)serialization.
+ *
+ * Extended to include interaction/containers/animals/vehicles/itemframes/armorstands/pets/etc.
+ * Also exposes damage-* toggles used by DamageProtectionListener.
  */
 public class PlotSettings {
 
-    // --- Damage umbrella ---
+    /* ---- Core toggles ---- */
+    private boolean pvpEnabled = false;
+    private boolean explosionsAllowed = true;
+    private boolean fireAllowed = true;
+    private boolean entityGriefingAllowed = true;
+
+    /* ---- Interactions & access ---- */
+    private boolean interactionsAllowed = true;   // general redstone/pressure plates etc (GUI label "interactions")
+    private boolean redstoneAllowed = true;       // alias/back-compat for interactions
+    private boolean containersAllowed = true;     // chests, barrels, etc.
+    private boolean animalInteractAllowed = true; // breeding, leashing, shearing, milking...
+    private boolean animalAccessAllowed = true;   // synonym used by some listeners
+    private boolean petAccessAllowed = true;      // interact with tamed pets
+
+    private boolean vehiclesAllowed = true;       // break/enter boats/minecarts
+    private boolean itemFramesAllowed = true;
+    private boolean armorStandsAllowed = true;
+    private boolean bucketsAllowed = true;
+
+    /* ---- Keep items (per-claim override) ---- */
+    private boolean keepItemsEnabled = false;
+
+    /* ---- Damage sub-toggles (used by DamageProtectionListener) ---- */
     private boolean damageEnabled = true;
     private boolean damageProtectOwnerAndTrusted = true;
-    private boolean damageCancelAll = false;
+    private boolean damageCancelAll = true;
     private boolean damagePveEnabled = true;
     private boolean damageProjectilesEnabled = true;
     private boolean damageEnvironmentEnabled = true;
@@ -22,155 +44,85 @@ public class PlotSettings {
     private boolean damageDrownVoidSuffocateEnabled = true;
     private boolean damagePoisonWitherEnabled = true;
 
-    // --- Core flags ---
-    private boolean pvpEnabled = false;
-    private boolean explosionsAllowed = false;
-    private boolean fireAllowed = false;
-    private boolean entityGriefingAllowed = false;
-
-    // --- Interactions & access ---
-    private boolean redstoneAllowed = true;
-    private boolean containersAllowed = true;
-    private boolean animalInteractAllowed = true;   // for breeding/leads/milk etc
-    private boolean petAccessAllowed = true;        // tamed pets
-    private boolean armorStandsAllowed = true;
-    private boolean itemFramesAllowed = true;
-    private boolean vehiclesAllowed = false;        // boats/minecarts
-    private boolean bucketsAllowed = false;
-
-    // --- Items ---
-    private boolean keepItemsEnabled = false;       // per-claim override
-
-    // --- Mobs (border repel) ---
-    private boolean mobRepelEnabled = false;
-    private boolean mobDespawnInsideEnabled = false;
-
-    public PlotSettings() {}
-
-    // ===== getters/setters (used by listeners) =====
-    public boolean isDamageEnabled() { return damageEnabled; }
-    public boolean isDamageProtectOwnerAndTrusted() { return damageProtectOwnerAndTrusted; }
-    public boolean isDamageCancelAll() { return damageCancelAll; }
-    public boolean isDamagePveEnabled() { return damagePveEnabled; }
-    public boolean isDamageProjectilesEnabled() { return damageProjectilesEnabled; }
-    public boolean isDamageEnvironmentEnabled() { return damageEnvironmentEnabled; }
-    public boolean isDamageFireLavaEnabled() { return damageFireLavaEnabled; }
-    public boolean isDamageFallEnabled() { return damageFallEnabled; }
-    public boolean isDamageExplosionsEnabled() { return damageExplosionsEnabled; }
-    public boolean isDamageDrownVoidSuffocateEnabled() { return damageDrownVoidSuffocateEnabled; }
-    public boolean isDamagePoisonWitherEnabled() { return damagePoisonWitherEnabled; }
-
+    /* ============================================================
+     * Getters / Setters (kept verbose for clarity & API stability)
+     * ============================================================ */
     public boolean isPvpEnabled() { return pvpEnabled; }
-    public void setPvpEnabled(boolean v) { pvpEnabled = v; }
+    public void setPvpEnabled(boolean v) { this.pvpEnabled = v; }
 
     public boolean isExplosionsAllowed() { return explosionsAllowed; }
-    public void setExplosionsAllowed(boolean v) { explosionsAllowed = v; }
+    public void setExplosionsAllowed(boolean v) { this.explosionsAllowed = v; }
 
     public boolean isFireAllowed() { return fireAllowed; }
-    public void setFireAllowed(boolean v) { fireAllowed = v; }
+    public void setFireAllowed(boolean v) { this.fireAllowed = v; }
 
     public boolean isEntityGriefingAllowed() { return entityGriefingAllowed; }
-    public void setEntityGriefingAllowed(boolean v) { entityGriefingAllowed = v; }
+    public void setEntityGriefingAllowed(boolean v) { this.entityGriefingAllowed = v; }
+
+    public boolean isInteractionsAllowed() { return interactionsAllowed; }
+    public void setInteractionsAllowed(boolean v) { this.interactionsAllowed = v; this.redstoneAllowed = v; }
 
     public boolean isRedstoneAllowed() { return redstoneAllowed; }
-    public void setRedstoneAllowed(boolean v) { redstoneAllowed = v; }
+    public void setRedstoneAllowed(boolean v) { this.redstoneAllowed = v; this.interactionsAllowed = v; }
 
     public boolean isContainersAllowed() { return containersAllowed; }
-    public void setContainersAllowed(boolean v) { containersAllowed = v; }
+    public void setContainersAllowed(boolean v) { this.containersAllowed = v; }
 
     public boolean isAnimalInteractAllowed() { return animalInteractAllowed; }
-    public void setAnimalInteractAllowed(boolean v) { animalInteractAllowed = v; }
+    public void setAnimalInteractAllowed(boolean v) { this.animalInteractAllowed = v; }
+
+    public boolean isAnimalAccessAllowed() { return animalAccessAllowed; }
+    public void setAnimalAccessAllowed(boolean v) { this.animalAccessAllowed = v; }
 
     public boolean isPetAccessAllowed() { return petAccessAllowed; }
-    public void setPetAccessAllowed(boolean v) { petAccessAllowed = v; }
-
-    public boolean isArmorStandsAllowed() { return armorStandsAllowed; }
-    public void setArmorStandsAllowed(boolean v) { armorStandsAllowed = v; }
-
-    public boolean isItemFramesAllowed() { return itemFramesAllowed; }
-    public void setItemFramesAllowed(boolean v) { itemFramesAllowed = v; }
+    public void setPetAccessAllowed(boolean v) { this.petAccessAllowed = v; }
 
     public boolean isVehiclesAllowed() { return vehiclesAllowed; }
-    public void setVehiclesAllowed(boolean v) { vehiclesAllowed = v; }
+    public void setVehiclesAllowed(boolean v) { this.vehiclesAllowed = v; }
+
+    public boolean isItemFramesAllowed() { return itemFramesAllowed; }
+    public void setItemFramesAllowed(boolean v) { this.itemFramesAllowed = v; }
+
+    public boolean isArmorStandsAllowed() { return armorStandsAllowed; }
+    public void setArmorStandsAllowed(boolean v) { this.armorStandsAllowed = v; }
 
     public boolean isBucketsAllowed() { return bucketsAllowed; }
-    public void setBucketsAllowed(boolean v) { bucketsAllowed = v; }
+    public void setBucketsAllowed(boolean v) { this.bucketsAllowed = v; }
 
     public boolean isKeepItemsEnabled() { return keepItemsEnabled; }
-    public void setKeepItemsEnabled(boolean v) { keepItemsEnabled = v; }
+    public void setKeepItemsEnabled(boolean v) { this.keepItemsEnabled = v; }
 
-    public boolean isMobRepelEnabled() { return mobRepelEnabled; }
-    public void setMobRepelEnabled(boolean v) { mobRepelEnabled = v; }
+    /* ---- Damage group ---- */
+    public boolean isDamageEnabled() { return damageEnabled; }
+    public void setDamageEnabled(boolean v) { this.damageEnabled = v; }
 
-    public boolean isMobDespawnInsideEnabled() { return mobDespawnInsideEnabled; }
-    public void setMobDespawnInsideEnabled(boolean v) { mobDespawnInsideEnabled = v; }
+    public boolean isDamageProtectOwnerAndTrusted() { return damageProtectOwnerAndTrusted; }
+    public void setDamageProtectOwnerAndTrusted(boolean v) { this.damageProtectOwnerAndTrusted = v; }
 
-    // ===== load/save helpers (optional call from manager) =====
-    public void loadFrom(ConfigurationSection sec) {
-        if (sec == null) return;
-        damageEnabled = sec.getBoolean("damage.enabled", damageEnabled);
-        damageProtectOwnerAndTrusted = sec.getBoolean("damage.protect-owner-and-trusted", damageProtectOwnerAndTrusted);
-        damageCancelAll = sec.getBoolean("damage.cancel-all", damageCancelAll);
-        damagePveEnabled = sec.getBoolean("damage.pve", damagePveEnabled);
-        damageProjectilesEnabled = sec.getBoolean("damage.projectiles", damageProjectilesEnabled);
-        damageEnvironmentEnabled = sec.getBoolean("damage.environment", damageEnvironmentEnabled);
-        damageFireLavaEnabled = sec.getBoolean("damage.fire-lava", damageFireLavaEnabled);
-        damageFallEnabled = sec.getBoolean("damage.fall", damageFallEnabled);
-        damageExplosionsEnabled = sec.getBoolean("damage.explosions", damageExplosionsEnabled);
-        damageDrownVoidSuffocateEnabled = sec.getBoolean("damage.drown-void-suffocate", damageDrownVoidSuffocateEnabled);
-        damagePoisonWitherEnabled = sec.getBoolean("damage.poison-wither", damagePoisonWitherEnabled);
+    public boolean isDamageCancelAll() { return damageCancelAll; }
+    public void setDamageCancelAll(boolean v) { this.damageCancelAll = v; }
 
-        pvpEnabled = sec.getBoolean("pvp", pvpEnabled);
-        explosionsAllowed = sec.getBoolean("explosions", explosionsAllowed);
-        fireAllowed = sec.getBoolean("fire", fireAllowed);
-        entityGriefingAllowed = sec.getBoolean("entity-grief", entityGriefingAllowed);
+    public boolean isDamagePveEnabled() { return damagePveEnabled; }
+    public void setDamagePveEnabled(boolean v) { this.damagePveEnabled = v; }
 
-        redstoneAllowed = sec.getBoolean("redstone", redstoneAllowed);
-        containersAllowed = sec.getBoolean("containers", containersAllowed);
-        animalInteractAllowed = sec.getBoolean("animal-interact", animalInteractAllowed);
-        petAccessAllowed = sec.getBoolean("pet-access", petAccessAllowed);
-        armorStandsAllowed = sec.getBoolean("armor-stands", armorStandsAllowed);
-        itemFramesAllowed = sec.getBoolean("item-frames", itemFramesAllowed);
-        vehiclesAllowed = sec.getBoolean("vehicles", vehiclesAllowed);
-        bucketsAllowed = sec.getBoolean("buckets", bucketsAllowed);
+    public boolean isDamageProjectilesEnabled() { return damageProjectilesEnabled; }
+    public void setDamageProjectilesEnabled(boolean v) { this.damageProjectilesEnabled = v; }
 
-        keepItemsEnabled = sec.getBoolean("keep-items", keepItemsEnabled);
+    public boolean isDamageEnvironmentEnabled() { return damageEnvironmentEnabled; }
+    public void setDamageEnvironmentEnabled(boolean v) { this.damageEnvironmentEnabled = v; }
 
-        mobRepelEnabled = sec.getBoolean("mobs.repel.enabled", mobRepelEnabled);
-        mobDespawnInsideEnabled = sec.getBoolean("mobs.despawn-inside", mobDespawnInsideEnabled);
-    }
+    public boolean isDamageFireLavaEnabled() { return damageFireLavaEnabled; }
+    public void setDamageFireLavaEnabled(boolean v) { this.damageFireLavaEnabled = v; }
 
-    public void saveTo(ConfigurationSection sec) {
-        if (sec == null) return;
-        sec.set("damage.enabled", damageEnabled);
-        sec.set("damage.protect-owner-and-trusted", damageProtectOwnerAndTrusted);
-        sec.set("damage.cancel-all", damageCancelAll);
-        sec.set("damage.pve", damagePveEnabled);
-        sec.set("damage.projectiles", damageProjectilesEnabled);
-        sec.set("damage.environment", damageEnvironmentEnabled);
-        sec.set("damage.fire-lava", damageFireLavaEnabled);
-        sec.set("damage.fall", damageFallEnabled);
-        sec.set("damage.explosions", damageExplosionsEnabled);
-        sec.set("damage.drown-void-suffocate", damageDrownVoidSuffocateEnabled);
-        sec.set("damage.poison-wither", damagePoisonWitherEnabled);
+    public boolean isDamageFallEnabled() { return damageFallEnabled; }
+    public void setDamageFallEnabled(boolean v) { this.damageFallEnabled = v; }
 
-        sec.set("pvp", pvpEnabled);
-        sec.set("explosions", explosionsAllowed);
-        sec.set("fire", fireAllowed);
-        sec.set("entity-grief", entityGriefingAllowed);
+    public boolean isDamageExplosionsEnabled() { return damageExplosionsEnabled; }
+    public void setDamageExplosionsEnabled(boolean v) { this.damageExplosionsEnabled = v; }
 
-        sec.set("redstone", redstoneAllowed);
-        sec.set("containers", containersAllowed);
-        sec.set("animal-interact", animalInteractAllowed);
-        sec.set("pet-access", petAccessAllowed);
-        sec.set("armor-stands", armorStandsAllowed);
-        sec.set("item-frames", itemFramesAllowed);
-        sec.set("vehicles", vehiclesAllowed);
-        sec.set("buckets", bucketsAllowed);
+    public boolean isDamageDrownVoidSuffocateEnabled() { return damageDrownVoidSuffocateEnabled; }
+    public void setDamageDrownVoidSuffocateEnabled(boolean v) { this.damageDrownVoidSuffocateEnabled = v; }
 
-        sec.set("keep-items", keepItemsEnabled);
-
-        sec.set("mobs.repel.enabled", mobRepelEnabled);
-        sec.set("mobs.despawn-inside", mobDespawnInsideEnabled);
-    }
+    public boolean isDamagePoisonWitherEnabled() { return damagePoisonWitherEnabled; }
+    public void setDamagePoisonWitherEnabled(boolean v) { this.damagePoisonWitherEnabled = v; }
 }

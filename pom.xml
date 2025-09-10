@@ -1,7 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -11,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>Lightweight land and plot protection plugin for Spigot &amp; Paper</description>
+    <description>Lightweight land and plot protection plugin for Spigot &amp; Paper servers</description>
     <url>https://github.com/snazzyatoms/ProShield</url>
 
     <properties>
@@ -22,24 +21,32 @@
     </properties>
 
     <repositories>
-        <!-- Spigot API -->
+        <!-- Spigot snapshots repo -->
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
 
-        <!-- Sonatype for snapshots -->
+        <!-- PaperMC repo -->
         <repository>
-            <id>sonatype-oss</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <id>papermc-repo</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
     </repositories>
 
     <dependencies>
-        <!-- Spigot API (works with Paper as well) -->
+        <!-- Spigot API (fallback) -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
+            <version>1.20.1-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Paper API (preferred) -->
+        <dependency>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
             <version>1.20.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
@@ -58,7 +65,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin for fat JARs (if needed) -->
+            <!-- Shade plugin (optional, in case we bundle later) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -69,19 +76,9 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
-                        <configuration>
-                            <minimizeJar>false</minimizeJar>
-                            <relocations>
-                                <relocation>
-                                    <pattern>com.snazzyatoms.proshield</pattern>
-                                    <shadedPattern>com.snazzyatoms.proshield.shaded</shadedPattern>
-                                </relocation>
-                            </relocations>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
-
 </project>

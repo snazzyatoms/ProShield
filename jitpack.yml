@@ -1,8 +1,18 @@
+# ==================================================
+# 🛡️ ProShield - JitPack Build Configuration
+# Version: 1.2.5
+# ==================================================
+
 jdk:
   - openjdk17
 
 before_install:
-  - echo "Using Java 17 for Minecraft 1.18+ builds"
+  - echo "Using JDK 17 for ProShield build"
 
 install:
-  - mvn -B install -DskipTests
+  - mvn -B install -DskipTests --file pom.xml
+
+# Optional: publish artifacts for testing
+cache:
+  paths:
+    - $HOME/.m2

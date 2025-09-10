@@ -35,14 +35,11 @@ protection:
     drown-void-suffocate: true
     poison-wither: true
 
-  # Wilderness settings (apply outside claims)
   wilderness:
-    allow-block-break: true    # If false, prevents breaking in wilderness
-    allow-block-place: true    # If false, prevents placing in wilderness
-    allow-item-pickup: true    # If false, prevents picking up items in wilderness
-    allow-item-drop: true      # If false, prevents dropping items in wilderness
+    allow-block-break: true   # If false, prevents breaking in wilderness
+    allow-block-place: true   # If false, prevents placing in wilderness
 
-  # PvP inside claims (default: disabled)
+  # PvP inside claims
   pvp-in-claims: false
 
   interactions:
@@ -105,8 +102,10 @@ protection:
 
 claims:
   keep-items:
-    enabled: false
-    despawn-seconds: 900   # 300–900 allowed (default 15 minutes)
+    enabled: false           # If true, items dropped inside claims will NOT despawn naturally
+    despawn-seconds: 900     # How long items persist before forced cleanup
+                             # 300–1800 recommended (5–30 minutes)
+                             # ⚠️ Setting too high may cause lag if items accumulate
 
 proshield:
   debug: false

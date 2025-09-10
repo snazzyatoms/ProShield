@@ -1,0 +1,79 @@
+# ==================================================
+# 🛡️ ProShield Player Messages (v1.2.5)
+# ==================================================
+# All messages players see from ProShield.
+# Supports Minecraft color codes (&).
+# ==================================================
+
+prefix: "&3[ProShield]&r "
+
+# === Claim Actions ===
+claim:
+  created: "&aChunk claimed successfully!"
+  removed: "&cClaim removed."
+  already-owned: "&cThis chunk is already claimed by &e{owner}&c."
+  limit-reached: "&cYou have reached your claim limit."
+  transfer-success: "&aClaim transferred to &e{player}&a."
+  transfer-failed: "&cTransfer failed."
+  preview-start: "&7Showing claim preview for 15 seconds..."
+  preview-end: "&7Claim preview ended."
+
+unclaim:
+  success: "&aYou have unclaimed this chunk."
+  not-owner: "&cYou cannot unclaim this chunk. It belongs to &e{owner}&c."
+
+info:
+  header: "&3--- Claim Info ---"
+  owner: "&bOwner: &e{owner}"
+  trusted: "&bTrusted Players: &e{list}"
+  role: "&bYour Role: &e{role}"
+  none: "&7No claim here."
+
+# === Trust & Roles ===
+trust:
+  success: "&aYou trusted &e{player}&a with role &e{role}&a."
+  already-trusted: "&e{player} &cis already trusted."
+  not-owner: "&cOnly claim owners can manage trust."
+
+untrust:
+  success: "&aYou removed trust from &e{player}&a."
+  not-trusted: "&c{player} is not trusted."
+
+roles:
+  list-header: "&3--- Roles ---"
+  list-entry: "&e{role}&7: {description}"
+  updated: "&aRole updated for &e{player}&a → &e{role}"
+
+# === Flags ===
+flags:
+  updated: "&aFlag &e{flag} &a→ &e{value}"
+  pvp-disabled: "&cPvP is disabled in this claim."
+  pvp-enabled: "&aPvP is enabled in this claim."
+  containers-disabled: "&cYou cannot open containers here."
+  containers-enabled: "&aContainers can be used here."
+  redstone-disabled: "&cRedstone is disabled in this claim."
+  redstone-enabled: "&aRedstone is enabled in this claim."
+  animals-disabled: "&cYou cannot interact with animals here."
+  animals-enabled: "&aYou can now interact with animals here."
+
+# === Item Keep ===
+items:
+  kept-global: "&aItem drops are protected globally."
+  kept-claim: "&aItem drops are protected in this claim."
+  not-kept: "&cItem drops are not protected here."
+  despawned: "&7Some items despawned after {time} seconds."
+
+# === Expiry ===
+expiry:
+  claim-expired: "&cClaim expired due to inactivity."
+  purge-start: "&ePurging expired claims..."
+  purge-done: "&aPurge complete: {count} claims removed."
+
+# === General ===
+general:
+  no-permission: "&cYou don't have permission for this."
+  bypass-on: "&eBypass mode: &aENABLED"
+  bypass-off: "&eBypass mode: &cDISABLED"
+  reload-complete: "&aProShield reloaded successfully."
+  error: "&cAn error occurred. Check console for details."
+  not-player: "&cOnly players can use this command."

@@ -39,7 +39,6 @@ public class PvpProtectionListener implements Listener {
         if (attacker.hasPermission("proshield.bypass")) return; // admins bypass
 
         FileConfiguration config = plugin.getConfig();
-
         Chunk chunk = target.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
@@ -53,8 +52,10 @@ public class PvpProtectionListener implements Listener {
             return;
         }
 
-        // === Inside a claim ===
-        boolean allowClaimPvP = plot.getSettings().isPvpEnabled(); // per-claim setting
+        // === Claim PvP ===
+        boolean globalClaimPvP = config.getBoolean("protection.pvp-in-claims", false);
+        boolean allowClaimPvP = plotManager.getFlag(chunk, "pvp", plot.getSettings().isPvpEnabled() || globalClaimPvP);
+
         if (!allowClaimPvP) {
             event.setCancelled(true);
             attacker.sendMessage(plugin.getPrefix() + "§cPvP is disabled in this claim.");
@@ -65,13 +66,12 @@ public class PvpProtectionListener implements Listener {
         ClaimRole attackerRole = roleManager.getRole(plot, attacker);
         ClaimRole victimRole = roleManager.getRole(plot, target);
 
-        // Example rule: Owners & Co-Owners can always fight each other if claim PvP is enabled
+        // Example: allow fights between owners/co-owners if PvP is enabled
         if (roleManager.isOwnerOrCoOwner(attackerRole) && roleManager.isOwnerOrCoOwner(victimRole)) {
             return; // allow
         }
 
-        // Default: follow config
-        boolean globalClaimPvP = config.getBoolean("protection.pvp-in-claims", false);
+        // Otherwise: follow global claim PvP setting
         if (!globalClaimPvP) {
             event.setCancelled(true);
             attacker.sendMessage(plugin.getPrefix() + "§cPvP is not allowed in this claim.");

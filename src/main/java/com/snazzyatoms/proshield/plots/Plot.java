@@ -1,78 +1,87 @@
 package com.snazzyatoms.proshield.plots;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.configuration.ConfigurationSection;
+
 import java.util.UUID;
 
 /**
- * Represents a single claimed plot of land.
- * Holds ownership, settings, and trusted players/roles.
+ * Represents a single land claim.
  */
 public class Plot {
 
-    private final Chunk chunk;
+    private final UUID id;
     private final UUID owner;
-
+    private final String worldName;
+    private final int chunkX;
+    private final int chunkZ;
     private final PlotSettings settings;
 
-    public Plot(Chunk chunk, UUID owner) {
-        this.chunk = chunk;
+    public Plot(UUID id, UUID owner, Chunk chunk) {
+        this.id = id;
         this.owner = owner;
+        this.worldName = chunk.getWorld().getName();
+        this.chunkX = chunk.getX();
+        this.chunkZ = chunk.getZ();
         this.settings = new PlotSettings();
     }
 
-    public Chunk getChunk() {
-        return chunk;
+    public UUID getId() {
+        return id;
     }
 
     public UUID getOwner() {
         return owner;
     }
 
+    public String getWorldName() {
+        return worldName;
+    }
+
+    public int getChunkX() {
+        return chunkX;
+    }
+
+    public int getChunkZ() {
+        return chunkZ;
+    }
+
     public PlotSettings getSettings() {
         return settings;
     }
 
-    // === Shortcut helpers for flags ===
-
-    public boolean isPvpEnabled() {
-        return settings.isPvpEnabled();
-    }
-
-    public void setPvpEnabled(boolean enabled) {
-        settings.setPvpEnabled(enabled);
-    }
-
-    public boolean isExplosionsEnabled() {
-        return settings.isExplosionsEnabled();
-    }
-
-    public void setExplosionsEnabled(boolean enabled) {
-        settings.setExplosionsEnabled(enabled);
-    }
-
-    public boolean isFireEnabled() {
-        return settings.isFireEnabled();
-    }
-
-    public void setFireEnabled(boolean enabled) {
-        settings.setFireEnabled(enabled);
-    }
-
-    // === Keep Items (NEW) ===
-
     /**
-     * @return Boolean flag if explicitly set, otherwise null (use global fallback).
+     * Load plot data from config section.
      */
-    public Boolean getKeepItemsEnabled() {
-        return settings.getKeepItemsEnabled();
+    public static Plot fromConfig(UUID id, ConfigurationSection section) {
+        UUID owner = UUID.fromString(section.getString("owner"));
+        String worldName = section.getString("world");
+        int x = section.getInt("x");
+        int z = section.getInt("z");
+
+        Chunk chunk = Bukkit.getWorld(worldName).getChunkAt(x, z);
+        Plot plot = new Plot(id, owner, chunk);
+
+        // load settings (PvP, keep-items, etc.)
+        ConfigurationSection settingsSection = section.getConfigurationSection("settings");
+        if (settingsSection != null) {
+            plot.getSettings().load(settingsSection);
+        }
+
+        return plot;
     }
 
     /**
-     * @param enabled true = force keep items in this claim,
-     *                false = force disable,
-     *                null = fallback to global config.
+     * Save plot data into config section.
      */
-    public void setKeepItemsEnabled(Boolean enabled) {
-        settings.setKeepItemsEnabled(enabled);
+    public void save(ConfigurationSection section) {
+        section.set("owner", owner.toString());
+        section.set("world", worldName);
+        section.set("x", chunkX);
+        section.set("z", chunkZ);
+
+        ConfigurationSection settingsSection = section.createSection("settings");
+        settings.save(settingsSection);
     }
 }

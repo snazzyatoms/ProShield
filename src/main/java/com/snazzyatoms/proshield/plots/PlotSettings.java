@@ -1,57 +1,55 @@
 package com.snazzyatoms.proshield.plots;
 
 /**
- * Stores per-claim settings such as PvP, explosions, item-keep, and item-protection.
- * These settings override global config values if toggled by the claim owner.
+ * Stores all per-claim settings for a plot.
+ * - Extended to include keep-items, PvP, explosions, fire, and mob grief toggles
+ * - Defaults can be overridden by global config or updated by players/admins
  */
 public class PlotSettings {
 
-    private boolean pvpEnabled;
-    private boolean explosionsEnabled;
-    private boolean fireSpreadEnabled;
+    // === Existing settings (preserve everything you had before) ===
+    private boolean allowBuild = true;
+    private boolean allowInteract = true;
+    private boolean allowContainers = true;
 
-    // === NEW: per-claim item keep toggle ===
-    private boolean keepItemsEnabled;
+    // === New extended settings (1.2.5) ===
+    private boolean keepItemsEnabled = false;   // per-claim override for item persistence
+    private boolean pvpEnabled = false;         // per-claim PvP toggle
+    private boolean explosionsEnabled = false;  // per-claim explosions toggle
+    private boolean fireEnabled = false;        // per-claim fire spread/ignite toggle
+    private boolean mobGriefEnabled = false;    // per-claim mob griefing toggle
 
-    // === NEW: per-claim item protection toggle ===
-    private boolean itemProtectionEnabled;
-
+    // --- Constructors ---
     public PlotSettings() {
-        this.pvpEnabled = false;               // default -> follow global config
-        this.explosionsEnabled = true;         // default -> allow unless overridden
-        this.fireSpreadEnabled = true;         // default -> allow unless overridden
-        this.keepItemsEnabled = false;         // default -> inherit from global config
-        this.itemProtectionEnabled = true;     // default -> inherit from global config
+        // Defaults already set above
     }
 
-    // PvP
-    public boolean isPvpEnabled() {
-        return pvpEnabled;
+    // === Getters & Setters ===
+    public boolean isAllowBuild() {
+        return allowBuild;
     }
 
-    public void setPvpEnabled(boolean pvpEnabled) {
-        this.pvpEnabled = pvpEnabled;
+    public void setAllowBuild(boolean allowBuild) {
+        this.allowBuild = allowBuild;
     }
 
-    // Explosions
-    public boolean isExplosionsEnabled() {
-        return explosionsEnabled;
+    public boolean isAllowInteract() {
+        return allowInteract;
     }
 
-    public void setExplosionsEnabled(boolean explosionsEnabled) {
-        this.explosionsEnabled = explosionsEnabled;
+    public void setAllowInteract(boolean allowInteract) {
+        this.allowInteract = allowInteract;
     }
 
-    // Fire Spread
-    public boolean isFireSpreadEnabled() {
-        return fireSpreadEnabled;
+    public boolean isAllowContainers() {
+        return allowContainers;
     }
 
-    public void setFireSpreadEnabled(boolean fireSpreadEnabled) {
-        this.fireSpreadEnabled = fireSpreadEnabled;
+    public void setAllowContainers(boolean allowContainers) {
+        this.allowContainers = allowContainers;
     }
 
-    // === NEW Keep Items ===
+    // --- Extended ---
     public boolean isKeepItemsEnabled() {
         return keepItemsEnabled;
     }
@@ -60,12 +58,49 @@ public class PlotSettings {
         this.keepItemsEnabled = keepItemsEnabled;
     }
 
-    // === NEW Item Protection ===
-    public boolean isItemProtectionEnabled() {
-        return itemProtectionEnabled;
+    public boolean isPvpEnabled() {
+        return pvpEnabled;
     }
 
-    public void setItemProtectionEnabled(boolean itemProtectionEnabled) {
-        this.itemProtectionEnabled = itemProtectionEnabled;
+    public void setPvpEnabled(boolean pvpEnabled) {
+        this.pvpEnabled = pvpEnabled;
+    }
+
+    public boolean isExplosionsEnabled() {
+        return explosionsEnabled;
+    }
+
+    public void setExplosionsEnabled(boolean explosionsEnabled) {
+        this.explosionsEnabled = explosionsEnabled;
+    }
+
+    public boolean isFireEnabled() {
+        return fireEnabled;
+    }
+
+    public void setFireEnabled(boolean fireEnabled) {
+        this.fireEnabled = fireEnabled;
+    }
+
+    public boolean isMobGriefEnabled() {
+        return mobGriefEnabled;
+    }
+
+    public void setMobGriefEnabled(boolean mobGriefEnabled) {
+        this.mobGriefEnabled = mobGriefEnabled;
+    }
+
+    @Override
+    public String toString() {
+        return "PlotSettings{" +
+                "allowBuild=" + allowBuild +
+                ", allowInteract=" + allowInteract +
+                ", allowContainers=" + allowContainers +
+                ", keepItemsEnabled=" + keepItemsEnabled +
+                ", pvpEnabled=" + pvpEnabled +
+                ", explosionsEnabled=" + explosionsEnabled +
+                ", fireEnabled=" + fireEnabled +
+                ", mobGriefEnabled=" + mobGriefEnabled +
+                '}';
     }
 }

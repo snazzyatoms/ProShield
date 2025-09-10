@@ -34,10 +34,13 @@ protection:
     explosions: true
     drown-void-suffocate: true
     poison-wither: true
-   
-    wilderness:
-  allow-block-break: true   # If false, prevents breaking in wilderness
-  allow-block-place: true   # If false, prevents placing in wilderness
+
+  # Wilderness behavior (outside claims)
+  wilderness:
+    allow-block-break: true    # If false, prevents breaking in wilderness
+    allow-block-place: true    # If false, prevents placing in wilderness
+    allow-interact: true       # If false, prevents right-click/item use
+    allow-drops: true          # If false, cancels item drops in wilderness
 
   # PvP inside claims
   pvp-in-claims: false

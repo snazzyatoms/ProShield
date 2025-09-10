@@ -1,6 +1,10 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.ClaimRoleManager;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotManager;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -8,162 +12,180 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-/**
- * GUIManager builds and manages all ProShield GUIs (Player + Admin).
- * Uses GUICache to register actions for fast lookups in GUIListener.
- */
 public class GUIManager {
 
     private final ProShield plugin;
+    private final PlotManager plotManager;
+    private final ClaimRoleManager roleManager;
+    private final GUICache cache;
 
-    public GUIManager(ProShield plugin) {
+    public GUIManager(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
+        this.plotManager = plotManager;
+        this.roleManager = plugin.getRoleManager();
+        this.cache = new GUICache();
     }
 
-    // =========================================================
-    // MAIN PLAYER MENU
-    // =========================================================
+    // === MAIN MENU ===
+    public void openMain(Player player) {
+        boolean isAdmin = player.hasPermission("proshield.admin");
+        String key = "main_" + isAdmin;
 
-    public void openMain(Player player, boolean admin) {
-        Inventory inv = Bukkit.createInventory(null, 54, "§bProShield Menu");
+        Inventory inv = cache.getInventory(key);
+        if (inv == null) {
+            inv = Bukkit.createInventory(null, 54, "🛡️ ProShield Menu");
 
-        Map<ItemStack, String> buttonMap = new HashMap<>();
+            inv.setItem(11, makeItem(Material.GRASS_BLOCK, "§aClaim Chunk", "Protect this chunk"));
+            inv.setItem(13, makeItem(Material.PAPER, "§bClaim Info", "View owner, trusted players"));
+            inv.setItem(15, makeItem(Material.BARRIER, "§cUnclaim", "Release this chunk"));
 
-        ItemStack claim = createButton(Material.GRASS_BLOCK, "§aClaim Land", "Claim your current chunk");
-        inv.setItem(11, claim);
-        buttonMap.put(claim, "claim");
+            inv.setItem(29, makeItem(Material.PLAYER_HEAD, "§eTrust Player", "Trust a player into your claim"));
+            inv.setItem(30, makeItem(Material.SKELETON_SKULL, "§eUntrust Player", "Remove a player from your claim"));
+            inv.setItem(31, makeItem(Material.BOOK, "§bHelp", "View commands"));
+            inv.setItem(32, makeItem(Material.WRITABLE_BOOK, "§6Role Manager", "Assign roles to trusted players"));
+            inv.setItem(33, makeItem(Material.REDSTONE_TORCH, "§6Flags", "Toggle claim-specific protections"));
+            inv.setItem(34, makeItem(Material.ENDER_EYE, "§dTransfer Claim", "Give this claim to another player"));
 
-        ItemStack info = createButton(Material.PAPER, "§eClaim Info", "View details of your current claim");
-        inv.setItem(13, info);
-        buttonMap.put(info, "info");
-
-        ItemStack unclaim = createButton(Material.BARRIER, "§cUnclaim Land", "Unclaim your current chunk");
-        inv.setItem(15, unclaim);
-        buttonMap.put(unclaim, "unclaim");
-
-        ItemStack trust = createButton(Material.PLAYER_HEAD, "§aTrust Player", "Trust a player in your claim");
-        inv.setItem(20, trust);
-        buttonMap.put(trust, "trust");
-
-        ItemStack untrust = createButton(Material.SKELETON_SKULL, "§cUntrust Player", "Remove a player from your claim");
-        inv.setItem(21, untrust);
-        buttonMap.put(untrust, "untrust");
-
-        ItemStack roles = createButton(Material.BOOK, "§bManage Roles", "Manage trusted player roles");
-        inv.setItem(22, roles);
-        buttonMap.put(roles, "roles");
-
-        ItemStack flags = createButton(Material.REDSTONE, "§dClaim Flags", "Toggle claim protections (PvP, fire, mobs)");
-        inv.setItem(23, flags);
-        buttonMap.put(flags, "flags");
-
-        ItemStack transfer = createButton(Material.ENDER_PEARL, "§6Transfer Ownership", "Transfer this claim to another player");
-        inv.setItem(24, transfer);
-        buttonMap.put(transfer, "transfer");
-
-        ItemStack help = createButton(Material.BOOK, "§eHelp", "View available commands");
-        inv.setItem(31, help);
-        buttonMap.put(help, "help");
-
-        if (admin) {
-            ItemStack adminMenu = createButton(Material.COMPASS, "§cAdmin Menu", "Open admin tools");
-            inv.setItem(33, adminMenu);
-            buttonMap.put(adminMenu, "admin");
-        }
-
-        ItemStack back = createButton(Material.ARROW, "§7Back", "Return to previous menu");
-        inv.setItem(48, back);
-        buttonMap.put(back, "back");
-
-        // Register all buttons in cache
-        GUICache.registerAll(buttonMap);
-
-        player.openInventory(inv);
-    }
-
-    // =========================================================
-    // ADMIN MENU
-    // =========================================================
-
-    public void openAdmin(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, "§cProShield Admin Menu");
-
-        Map<ItemStack, String> buttonMap = new HashMap<>();
-
-        ItemStack fire = createButton(Material.FLINT_AND_STEEL, "§cToggle Fire", "Enable/disable fire spread/burning");
-        inv.setItem(10, fire);
-        buttonMap.put(fire, "toggle_fire");
-
-        ItemStack explosions = createButton(Material.TNT, "§cToggle Explosions", "Enable/disable explosions in claims");
-        inv.setItem(11, explosions);
-        buttonMap.put(explosions, "toggle_explosions");
-
-        ItemStack entityGrief = createButton(Material.ENDERMAN_SPAWN_EGG, "§cToggle Entity Grief", "Enable/disable mob griefing");
-        inv.setItem(12, entityGrief);
-        buttonMap.put(entityGrief, "toggle_entity_grief");
-
-        ItemStack interactions = createButton(Material.LEVER, "§cToggle Interactions", "Control door/button/lever access");
-        inv.setItem(13, interactions);
-        buttonMap.put(interactions, "toggle_interactions");
-
-        ItemStack pvp = createButton(Material.IRON_SWORD, "§cToggle PvP", "Enable/disable PvP inside claims");
-        inv.setItem(14, pvp);
-        buttonMap.put(pvp, "toggle_pvp");
-
-        ItemStack keepItems = createButton(Material.CHEST, "§6Toggle Item Keep", "Prevent dropped items in claims from despawning");
-        inv.setItem(20, keepItems);
-        buttonMap.put(keepItems, "toggle_keepitems");
-
-        ItemStack purge = createButton(Material.LAVA_BUCKET, "§cPurge Expired Claims", "Remove inactive player claims");
-        inv.setItem(21, purge);
-        buttonMap.put(purge, "purge_expired");
-
-        ItemStack debug = createButton(Material.REDSTONE_TORCH, "§dToggle Debug", "Enable/disable debug logging");
-        inv.setItem(23, debug);
-        buttonMap.put(debug, "toggle_debug");
-
-        ItemStack reload = createButton(Material.SUNFLOWER, "§eReload Config", "Reload ProShield configuration");
-        inv.setItem(25, reload);
-        buttonMap.put(reload, "reload");
-
-        ItemStack tpTools = createButton(Material.ENDER_EYE, "§bTeleport Tools", "Teleport to claims");
-        inv.setItem(30, tpTools);
-        buttonMap.put(tpTools, "tp_tools");
-
-        ItemStack spawnGuard = createButton(Material.BEACON, "§aSpawn Guard", "Toggle spawn protection radius");
-        inv.setItem(32, spawnGuard);
-        buttonMap.put(spawnGuard, "toggle_spawnguard");
-
-        ItemStack back = createButton(Material.ARROW, "§7Back", "Return to main menu");
-        inv.setItem(48, back);
-        buttonMap.put(back, "back");
-
-        ItemStack help = createButton(Material.BOOK, "§eHelp", "Admin help commands");
-        inv.setItem(49, help);
-        buttonMap.put(help, "help");
-
-        GUICache.registerAll(buttonMap);
-
-        player.openInventory(inv);
-    }
-
-    // =========================================================
-    // UTILS
-    // =========================================================
-
-    private ItemStack createButton(Material material, String name, String... lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(name);
-            if (lore.length > 0) {
-                meta.setLore(java.util.Arrays.asList(lore));
+            if (isAdmin) {
+                inv.setItem(49, makeItem(Material.COMPASS, "§cAdmin Menu", "Access advanced tools"));
             }
-            item.setItemMeta(meta);
+
+            cache.putInventory(key, inv);
         }
+
+        player.openInventory(inv);
+    }
+
+    // === TRUST MENU ===
+    public void openTrustMenu(Player player, Plot plot) {
+        String key = "trust_" + plot.getId();
+        Inventory inv = cache.getInventory(key);
+
+        if (inv == null) {
+            inv = Bukkit.createInventory(null, 54, "👥 Trust Players");
+            inv.setItem(49, makeItem(Material.ARROW, "§7Back", "Return to ProShield Menu"));
+            cache.putInventory(key, inv);
+        }
+
+        player.openInventory(inv);
+    }
+
+    // === UNTRUST MENU ===
+    public void openUntrustMenu(Player player, Plot plot) {
+        String key = "untrust_" + plot.getId();
+        Inventory inv = cache.getInventory(key);
+
+        if (inv == null) {
+            inv = Bukkit.createInventory(null, 54, "🚫 Untrust Players");
+            inv.setItem(49, makeItem(Material.ARROW, "§7Back", "Return to ProShield Menu"));
+            cache.putInventory(key, inv);
+        }
+
+        player.openInventory(inv);
+    }
+
+    // === ROLE MENU ===
+    public void openRoleMenu(Player player, Plot plot) {
+        String key = "roles_" + plot.getId();
+        Inventory inv = cache.getInventory(key);
+
+        if (inv == null) {
+            inv = Bukkit.createInventory(null, 54, "⚙️ Role Manager");
+
+            inv.setItem(10, makeItem(Material.GRAY_DYE, "§7Visitor", "Default: no interactions"));
+            inv.setItem(12, makeItem(Material.GREEN_DYE, "§aMember", "Can use doors, buttons, etc."));
+            inv.setItem(14, makeItem(Material.CHEST, "§6Container", "Can access chests, furnaces"));
+            inv.setItem(16, makeItem(Material.IRON_PICKAXE, "§bBuilder", "Can build and break"));
+            inv.setItem(28, makeItem(Material.NETHER_STAR, "§dCo-Owner", "Full access"));
+
+            inv.setItem(49, makeItem(Material.ARROW, "§7Back", "Return to ProShield Menu"));
+
+            cache.putInventory(key, inv);
+        }
+
+        player.openInventory(inv);
+    }
+
+    // === FLAG MENU ===
+    public void openFlagMenu(Player player, Plot plot) {
+        String key = "flags_" + plot.getId();
+        Inventory inv = cache.getInventory(key);
+
+        if (inv == null) {
+            inv = Bukkit.createInventory(null, 54, "🚩 Claim Flags");
+
+            inv.setItem(10, makeItem(Material.DIAMOND_SWORD, "§cPvP", "Toggle PvP inside claim"));
+            inv.setItem(12, makeItem(Material.TNT, "§cExplosions", "Toggle TNT/creeper/wither"));
+            inv.setItem(14, makeItem(Material.FLINT_AND_STEEL, "§cFire", "Toggle fire spread/ignite"));
+            inv.setItem(16, makeItem(Material.ENDERMAN_SPAWN_EGG, "§cMob Grief", "Toggle mob griefing"));
+
+            inv.setItem(49, makeItem(Material.ARROW, "§7Back", "Return to ProShield Menu"));
+
+            cache.putInventory(key, inv);
+        }
+
+        player.openInventory(inv);
+    }
+
+    // === TRANSFER MENU ===
+    public void openTransferMenu(Player player, Plot plot) {
+        String key = "transfer_" + plot.getId();
+        Inventory inv = cache.getInventory(key);
+
+        if (inv == null) {
+            inv = Bukkit.createInventory(null, 54, "📦 Transfer Ownership");
+            inv.setItem(22, makeItem(Material.ENDER_EYE, "§dTransfer", "Give claim to another player"));
+            inv.setItem(49, makeItem(Material.ARROW, "§7Back", "Return to ProShield Menu"));
+            cache.putInventory(key, inv);
+        }
+
+        player.openInventory(inv);
+    }
+
+    // === ADMIN MENU (unchanged from 1.2.4) ===
+    public void openAdmin(Player player) {
+        String key = "admin";
+        Inventory inv = cache.getInventory(key);
+
+        if (inv == null) {
+            inv = Bukkit.createInventory(null, 54, "⚙️ ProShield Admin");
+
+            inv.setItem(10, makeItem(Material.FLINT_AND_STEEL, "§cToggle Fire", "Enable/disable fire spread"));
+            inv.setItem(11, makeItem(Material.TNT, "§cToggle Explosions", "Enable/disable explosions"));
+            inv.setItem(12, makeItem(Material.ENDERMAN_SPAWN_EGG, "§cToggle Entity Grief", "Endermen, Ravagers, etc."));
+            inv.setItem(13, makeItem(Material.LEVER, "§cToggle Interactions", "Buttons, levers, doors"));
+            inv.setItem(14, makeItem(Material.DIAMOND_SWORD, "§cToggle PvP", "Enable/disable PvP"));
+            inv.setItem(20, makeItem(Material.CHEST, "§6Keep Items", "Toggle item-keep inside claims"));
+            inv.setItem(21, makeItem(Material.BARRIER, "§cPurge Expired", "Remove expired claims"));
+            inv.setItem(22, makeItem(Material.BOOK, "§eHelp", "Admin command guide"));
+            inv.setItem(23, makeItem(Material.REDSTONE, "§cDebug Mode", "Enable/disable debug logging"));
+            inv.setItem(24, makeItem(Material.COMPASS, "§aCompass Drop", "Toggle drop-if-inventory-full"));
+            inv.setItem(25, makeItem(Material.REPEATER, "§bReload Config", "Reload plugin configs"));
+            inv.setItem(30, makeItem(Material.ENDER_PEARL, "§dTeleport Tools", "Teleport to claims"));
+            inv.setItem(31, makeItem(Material.ARROW, "§7Back", "Return to Main Menu"));
+
+            cache.putInventory(key, inv);
+        }
+
+        player.openInventory(inv);
+    }
+
+    // === HELPER ===
+    private ItemStack makeItem(Material mat, String name, String lore) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        meta.setLore(List.of(lore));
+        item.setItemMeta(meta);
         return item;
+    }
+
+    // Called after /proshield reload
+    public void onConfigReload() {
+        cache.clear();
     }
 }

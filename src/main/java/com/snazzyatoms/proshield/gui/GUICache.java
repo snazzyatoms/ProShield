@@ -3,58 +3,39 @@ package com.snazzyatoms.proshield.gui;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * GUICache is responsible for storing and reusing inventories
- * so menus don't have to be rebuilt every time a player opens them.
- *
- * Supports per-player caching for all GUI types.
- */
 public class GUICache {
 
-    public enum MenuType {
-        MAIN,
-        TRUST,
-        UNTRUST,
-        ROLES,
-        FLAGS,
-        TRANSFER,
-        ADMIN
-    }
-
-    // Map<PlayerUUID, Map<MenuType, Inventory>>
-    private final Map<UUID, Map<MenuType, Inventory>> cache = new HashMap<>();
+    private final Map<UUID, Inventory> playerMenus = new ConcurrentHashMap<>();
 
     /**
-     * Store an inventory in cache.
+     * Cache a player's inventory GUI.
      */
-    public void put(Player player, MenuType type, Inventory inv) {
-        cache.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).put(type, inv);
+    public void set(Player player, Inventory inv) {
+        playerMenus.put(player.getUniqueId(), inv);
     }
 
     /**
-     * Retrieve a cached inventory if it exists.
+     * Get a cached inventory for the player.
      */
-    public Inventory get(Player player, MenuType type) {
-        Map<MenuType, Inventory> menus = cache.get(player.getUniqueId());
-        if (menus == null) return null;
-        return menus.get(type);
+    public Inventory get(Player player) {
+        return playerMenus.get(player.getUniqueId());
     }
 
     /**
-     * Clear cache for a specific player (e.g., on quit).
+     * Remove cached GUI for a player.
      */
-    public void clear(Player player) {
-        cache.remove(player.getUniqueId());
+    public void invalidate(Player player) {
+        playerMenus.remove(player.getUniqueId());
     }
 
     /**
-     * Clear everything (e.g., on config reload).
+     * Clear all caches.
      */
     public void clearAll() {
-        cache.clear();
+        playerMenus.clear();
     }
 }

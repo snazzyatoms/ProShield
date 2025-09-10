@@ -1,105 +1,127 @@
 package com.snazzyatoms.proshield.plots;
 
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+
 import java.util.*;
 
-/**
- * Represents a single ProShield claim.
- * Stores owner, trusted players with roles, flags, and metadata.
- */
 public class Claim {
+    private final UUID owner;
+    private final String ownerName;
+    private final Chunk chunk;
+    private long lastActive;
 
-    private UUID owner;
-    private final String chunkKey;
-
-    // Trusted players: UUID → role (visitor, member, builder, etc.)
-    private final Map<UUID, String> trusted = new HashMap<>();
-
-    // Per-claim flags (PvP, explosions, fire, etc.)
+    private final Map<UUID, String> trustedPlayers = new HashMap<>();
     private final Map<String, Boolean> flags = new HashMap<>();
 
-    // Metadata (for expiry, timestamps, etc.)
-    private final Map<String, Object> meta = new HashMap<>();
-
-    public Claim(UUID owner, String chunkKey) {
+    public Claim(UUID owner, String ownerName, Chunk chunk) {
         this.owner = owner;
-        this.chunkKey = chunkKey;
+        this.ownerName = ownerName;
+        this.chunk = chunk;
+        this.lastActive = System.currentTimeMillis();
 
-        // Default flags
+        // Default flags (inherit from config.yml normally, but hard defaults here)
         flags.put("pvp", false);
-        flags.put("explosions", false);
         flags.put("fire", false);
-        flags.put("mob-grief", false);
+        flags.put("explosions", false);
+        flags.put("entity-grief", false);
     }
 
-    // === Core Access ===
+    // ==========================
+    // Ownership
+    // ==========================
+
     public UUID getOwner() {
         return owner;
     }
 
-    public void setOwner(UUID newOwner) {
-        this.owner = newOwner;
+    public String getOwnerName() {
+        return ownerName;
     }
 
-    public String getChunkKey() {
-        return chunkKey;
+    public boolean isOwner(Player p) {
+        return p.getUniqueId().equals(owner);
     }
 
-    // === Trusted Players ===
-    public Map<UUID, String> getTrusted() {
-        return trusted;
+    // ==========================
+    // Trusted Players
+    // ==========================
+
+    public void trust(UUID player, String role) {
+        trustedPlayers.put(player, role.toLowerCase());
+        touch();
     }
 
-    public void addTrusted(UUID uuid, String role) {
-        trusted.put(uuid, role.toLowerCase(Locale.ROOT));
+    public void untrust(UUID player) {
+        trustedPlayers.remove(player);
+        touch();
     }
 
-    public void removeTrusted(UUID uuid) {
-        trusted.remove(uuid);
+    public boolean isTrusted(UUID player, String minRole) {
+        if (trustedPlayers.containsKey(player)) {
+            String role = trustedPlayers.get(player);
+            return roleRank(role) >= roleRank(minRole);
+        }
+        return false;
     }
 
-    public boolean isTrusted(UUID uuid) {
-        return trusted.containsKey(uuid);
+    public Map<UUID, String> getTrustedPlayers() {
+        return Collections.unmodifiableMap(trustedPlayers);
     }
 
-    public String getRole(UUID uuid) {
-        return trusted.getOrDefault(uuid, "visitor");
+    // Role hierarchy
+    private int roleRank(String role) {
+        return switch (role.toLowerCase()) {
+            case "visitor" -> 0;
+            case "member" -> 1;
+            case "container" -> 2;
+            case "builder" -> 3;
+            case "co-owner" -> 4;
+            default -> 0;
+        };
     }
 
-    // === Flags ===
-    public Map<String, Boolean> getFlags() {
-        return flags;
-    }
+    // ==========================
+    // Flags
+    // ==========================
 
     public void setFlag(String flag, boolean value) {
-        flags.put(flag.toLowerCase(Locale.ROOT), value);
+        flags.put(flag.toLowerCase(), value);
+        touch();
     }
 
     public boolean getFlag(String flag) {
-        return flags.getOrDefault(flag.toLowerCase(Locale.ROOT), false);
+        return flags.getOrDefault(flag.toLowerCase(), false);
     }
 
-    // === Metadata ===
-    public Map<String, Object> getMeta() {
-        return meta;
+    public Map<String, Boolean> getFlags() {
+        return Collections.unmodifiableMap(flags);
     }
 
-    public void setMeta(String key, Object value) {
-        meta.put(key, value);
+    // ==========================
+    // Claim Location
+    // ==========================
+
+    public Chunk getChunk() {
+        return chunk;
     }
 
-    public Object getMeta(String key) {
-        return meta.get(key);
+    public Location getCenter() {
+        int x = (chunk.getX() << 4) + 8;
+        int z = (chunk.getZ() << 4) + 8;
+        return new Location(chunk.getWorld(), x, chunk.getWorld().getHighestBlockYAt(x, z), z);
     }
+
+    // ==========================
+    // Expiry / Activity
+    // ==========================
 
     public long getLastActive() {
-        Object lastActive = meta.get("lastActive");
-        if (lastActive instanceof Long l) {
-            return l;
-        }
-        return System.currentTimeMillis();
+        return lastActive;
     }
 
-    public void updateLastActive() {
-        meta.put("lastActive", System.currentTimeMillis());
+    public void touch() {
+        this.lastActive = System.currentTimeMillis();
     }
 }

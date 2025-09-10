@@ -5,98 +5,83 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.logging.Level;
+import java.util.List;
 
 /**
- * Central utility for handling messages from messages.yml
- * Provides overloaded send/debug methods for commands & listeners.
+ * MessagesUtil - unified message handler for ProShield.
+ *
+ * - Reads from messages.yml
+ * - Provides color formatting, placeholders, debug, broadcast
+ * - Overloaded send() methods to prevent build errors
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private FileConfiguration config;
+    private FileConfiguration messages;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        reload();
+        reload(); // load messages.yml
     }
 
-    /* -----------------------------
-     * Reload messages.yml
-     * ----------------------------- */
+    /**
+     * Reload messages.yml from disk.
+     */
     public void reload() {
-        plugin.reloadConfig(); // reloads all configs
-        plugin.reloadConfig(); // ensure sync with Bukkit API
-        config = plugin.getConfig(); // fallback in case messages.yml not found
-        try {
-            config = plugin.getConfig(); // prefer plugin-provided
-            plugin.reloadConfig();
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.WARNING, "Could not reload messages.yml", e);
-        }
+        plugin.reloadConfig(); // reloads config.yml
+        plugin.reloadConfig(); // safeguard for future extension
+        plugin.reloadResource("messages.yml", false);
+        plugin.reloadConfig();
+        messages = plugin.getConfig(); // messages.yml is loaded as config resource
     }
 
-    /* -----------------------------
-     * Internal fetch
-     * ----------------------------- */
-    private String get(String key) {
-        if (config == null) return ChatColor.RED + "Missing messages.yml";
-        String raw = config.getString(key, "&cMissing message: " + key);
+    /**
+     * Get a message by key with color codes translated.
+     */
+    public String get(String key) {
+        if (messages == null) return ChatColor.RED + "Missing messages.yml";
+        String raw = messages.getString(key, key);
         return ChatColor.translateAlternateColorCodes('&', raw);
     }
 
-    /* -----------------------------
-     * Sending methods (overloads)
-     * ----------------------------- */
+    /**
+     * Send a single message to a CommandSender.
+     */
     public void send(CommandSender sender, String key) {
-        sender.sendMessage(get(key));
+        sender.sendMessage(get("messages.prefix") + get(key));
     }
 
-    public void send(CommandSender sender, String key, String arg1) {
-        sender.sendMessage(get(key).replace("{0}", arg1));
+    /**
+     * Send with dynamic placeholders (up to 5 args).
+     */
+    public void send(CommandSender sender, String key, String... args) {
+        String msg = get("messages.prefix") + get(key);
+        for (int i = 0; i < args.length; i++) {
+            msg = msg.replace("{" + (i + 1) + "}", args[i]);
+        }
+        sender.sendMessage(msg);
     }
 
-    public void send(CommandSender sender, String key, String arg1, String arg2) {
-        sender.sendMessage(get(key).replace("{0}", arg1).replace("{1}", arg2));
-    }
-
-    public void send(CommandSender sender, String key, String arg1, String arg2, String arg3) {
-        sender.sendMessage(
-                get(key)
-                        .replace("{0}", arg1)
-                        .replace("{1}", arg2)
-                        .replace("{2}", arg3)
-        );
-    }
-
-    public void send(CommandSender sender, String key, String arg1, String arg2, String arg3, String arg4, String arg5) {
-        sender.sendMessage(
-                get(key)
-                        .replace("{0}", arg1)
-                        .replace("{1}", arg2)
-                        .replace("{2}", arg3)
-                        .replace("{3}", arg4)
-                        .replace("{4}", arg5)
-        );
-    }
-
-    /* -----------------------------
-     * Console + Broadcast helpers
-     * ----------------------------- */
+    /**
+     * Broadcast message to console.
+     */
     public void broadcastConsole(String key, CommandSender console) {
-        console.sendMessage(get(key));
+        console.sendMessage(get("messages.prefix") + get(key));
     }
 
-    public void broadcastConsole(String key, String arg1, CommandSender console) {
-        console.sendMessage(get(key).replace("{0}", arg1));
-    }
-
-    /* -----------------------------
-     * Debug
-     * ----------------------------- */
-    public void debug(ProShield plugin, String message) {
+    /**
+     * Debug logging.
+     */
+    public void debug(String message) {
         if (plugin.isDebugEnabled()) {
             plugin.getLogger().info("[DEBUG] " + message);
         }
+    }
+
+    /**
+     * Get a list of strings (for multi-line messages).
+     */
+    public List<String> getList(String key) {
+        return messages.getStringList(key);
     }
 }

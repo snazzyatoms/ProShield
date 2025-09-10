@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ItemSpawnEvent;
-import org.bukkit.event.player.PlayerDeathEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 
 import java.util.Iterator;
 
@@ -16,6 +16,7 @@ import java.util.Iterator;
  * Handles persistent item drops inside claims.
  * - Prevents despawn of items when enabled globally or per-claim
  * - Optional configurable despawn delay
+ * - Now extended with PlotManager helper methods for consistency
  */
 public class KeepDropsListener implements Listener {
 
@@ -35,25 +36,19 @@ public class KeepDropsListener implements Listener {
         Item item = event.getEntity();
         Chunk chunk = item.getLocation().getChunk();
 
-        Plot plot = plotManager.getPlot(chunk);
-        boolean globalKeep = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
-
-        if (plot == null && !globalKeep) return; // no claim, no global keep
-
-        boolean perClaimKeep = plot != null && plot.getSettings().isKeepItemsEnabled();
-        if (!globalKeep && !perClaimKeep) return;
+        // Global + per-claim merged check
+        if (!plotManager.isKeepItemsEnabled(chunk)) return;
 
         // Apply despawn settings
         FileConfiguration config = plugin.getConfig();
         int despawnSeconds = config.getInt("claims.keep-items.despawn-seconds", 900);
+
         item.setUnlimitedLifetime(true);
         item.setTicksLived(0);
+        item.setCustomName(null);
         item.setCustomNameVisible(false);
 
-        // Bukkit API (1.18+): setCustomName not needed here, but safeguard
-        item.setCustomName(null);
-
-        // Schedule manual despawn
+        // Schedule manual despawn (if configured)
         if (despawnSeconds > 0) {
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 if (!item.isDead() && item.isValid()) {
@@ -70,30 +65,28 @@ public class KeepDropsListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
 
-        boolean globalKeep = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
-        boolean perClaimKeep = plot != null && plot.getSettings().isKeepItemsEnabled();
+        // Global + per-claim merged check
+        if (!plotManager.isKeepItemsEnabled(chunk)) return;
 
-        if (!globalKeep && !perClaimKeep) return;
-
-        // Prevent items from clearing on death
-        event.setKeepInventory(false); // respect Minecraft's rules
+        // Prevent default keepInventory from interfering
+        event.setKeepInventory(false);
         event.setKeepLevel(false);
 
-        // Mark items in death drops as "persistent"
+        // Respawn items with persistence
         Iterator<org.bukkit.inventory.ItemStack> it = event.getDrops().iterator();
         while (it.hasNext()) {
             org.bukkit.inventory.ItemStack stack = it.next();
             if (stack == null) continue;
 
-            // Spawn item manually with persistence
             Item drop = player.getWorld().dropItemNaturally(player.getLocation(), stack);
             drop.setUnlimitedLifetime(true);
             drop.setTicksLived(0);
         }
 
-        // Clear default drops since we re-spawned them as persistent
+        // Clear default drops since we respawned them
         event.getDrops().clear();
+
+        player.sendMessage(plugin.getPrefix() + "§aYour items were preserved inside this claim.");
     }
 }

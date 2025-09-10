@@ -11,13 +11,9 @@ import java.util.*;
 /**
  * Represents a claimed chunk of land.
  *
- * Preserves all prior logic:
- * - Owner UUID
- * - Trusted players with ClaimRole
- * - Settings object
- * - Display name safe helper
- * - Added created timestamp
- * - Added serialize/deserialize for persistence
+ * Preserves all prior logic and fixes:
+ * - Added constructor avoiding forced world/chunk load
+ * - Fixed PlotSettings.deserialize() usage
  */
 public class Plot {
 
@@ -27,60 +23,43 @@ public class Plot {
 
     private UUID owner;
     private final Map<UUID, ClaimRole> trusted = new HashMap<>();
-    private final PlotSettings settings;
+    private PlotSettings settings;
 
     private String name;
     private long created; // timestamp of creation
 
+    /** Main runtime constructor */
     public Plot(Chunk chunk, UUID owner) {
-        this.worldName = chunk.getWorld().getName();
-        this.x = chunk.getX();
-        this.z = chunk.getZ();
+        this(chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), owner,
+                System.currentTimeMillis(), "Claim@" + chunk.getX() + "," + chunk.getZ(), new PlotSettings());
+    }
+
+    /** Deserialization/utility constructor (avoids chunk load at startup) */
+    public Plot(String worldName, int x, int z, UUID owner, long created, String name, PlotSettings settings) {
+        this.worldName = worldName;
+        this.x = x;
+        this.z = z;
         this.owner = owner;
-        this.settings = new PlotSettings();
-        this.name = "Claim@" + x + "," + z;
-        this.created = System.currentTimeMillis();
+        this.created = created;
+        this.name = name != null ? name : "Claim@" + x + "," + z;
+        this.settings = (settings != null) ? settings : new PlotSettings();
     }
 
-    public String getWorldName() {
-        return worldName;
-    }
+    public String getWorldName() { return worldName; }
+    public World getWorld() { return Bukkit.getWorld(worldName); }
 
-    public World getWorld() {
-        return Bukkit.getWorld(worldName);
-    }
+    public int getX() { return x; }
+    public int getZ() { return z; }
 
-    public int getX() {
-        return x;
-    }
+    public UUID getOwner() { return owner; }
+    public void setOwner(UUID newOwner) { this.owner = newOwner; }
 
-    public int getZ() {
-        return z;
-    }
+    public Map<UUID, ClaimRole> getTrusted() { return trusted; }
 
-    public UUID getOwner() {
-        return owner;
-    }
+    public PlotSettings getSettings() { return settings; }
 
-    public void setOwner(UUID newOwner) {
-        this.owner = newOwner;
-    }
-
-    public Map<UUID, ClaimRole> getTrusted() {
-        return trusted;
-    }
-
-    public PlotSettings getSettings() {
-        return settings;
-    }
-
-    public String getName() {
-        return name != null ? name : "Claim@" + x + "," + z;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getName() { return name != null ? name : "Claim@" + x + "," + z; }
+    public void setName(String name) { this.name = name; }
 
     public String getDisplayNameSafe() {
         return (name != null && !name.isEmpty()) ? name : "Claim@" + x + "," + z;
@@ -91,20 +70,14 @@ public class Plot {
     }
 
     public void addTrusted(UUID playerId, ClaimRole role) {
-        if (playerId != null && role != null) {
-            trusted.put(playerId, role);
-        }
+        if (playerId != null && role != null) trusted.put(playerId, role);
     }
 
     public void removeTrusted(UUID playerId) {
-        if (playerId != null) {
-            trusted.remove(playerId);
-        }
+        if (playerId != null) trusted.remove(playerId);
     }
 
-    public long getCreated() {
-        return created;
-    }
+    public long getCreated() { return created; }
 
     /* -------------------------------------------------------
      * Serialization
@@ -144,10 +117,15 @@ public class Plot {
             } catch (IllegalArgumentException ignored) {}
         }
 
-        Plot plot = new Plot(Bukkit.getWorld(world).getChunkAt(x, z), owner);
+        String name = sec.getString("name", "Claim@" + x + "," + z);
+        long created = sec.getLong("created", System.currentTimeMillis());
 
-        plot.name = sec.getString("name", "Claim@" + x + "," + z);
-        plot.created = sec.getLong("created", System.currentTimeMillis());
+        // settings (fixed)
+        PlotSettings settings = sec.isConfigurationSection("settings")
+                ? PlotSettings.deserialize(sec.getConfigurationSection("settings"))
+                : new PlotSettings();
+
+        Plot plot = new Plot(world, x, z, owner, created, name, settings);
 
         // trusted
         ConfigurationSection trustedSec = sec.getConfigurationSection("trusted");
@@ -159,11 +137,6 @@ public class Plot {
                     plot.trusted.put(id, role);
                 } catch (Exception ignored) {}
             }
-        }
-
-        // settings
-        if (sec.isConfigurationSection("settings")) {
-            plot.settings.deserialize(sec.getConfigurationSection("settings"));
         }
 
         return plot;

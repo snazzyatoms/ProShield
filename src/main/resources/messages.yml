@@ -1,80 +1,94 @@
 # ==================================================
 # 🛡️ ProShield Messages (v1.2.5)
 # ==================================================
-# Centralized player/admin-facing messages
-# Supports color codes (&) and placeholders:
-# - %player% → player name
-# - %claim% → claim identifier
-# - %role% → role name
+# All messages used in ProShield plugin.
+# Placeholders:
+#   {player} = player name
+#   {role} = claim role
+#   {owner} = claim owner
+#   {days} = number of days
 # ==================================================
 
-messages:
-  # === Core ===
-  prefix: "&3[ProShield]&r "
-  no-permission: "&cNo permission."
-  reloaded: "&aProShield configs reloaded."
-  compass-given: "&aProShield compass added to your inventory."
-  bypass-on: "&eBypass &aENABLED"
-  bypass-off: "&eBypass &cDISABLED"
+prefix: "&3[ProShield]&r "
 
-  # === Protection Messages ===
-  protection:
-    block-break-denied: "&cYou cannot break blocks in this claim."
-    block-place-denied: "&cYou cannot place blocks in this claim."
-    interact-denied: "&cYou cannot interact with that here."
-    container-denied: "&cYou cannot open containers in this claim."
-    redstone-denied: "&cYou cannot use redstone devices here."
-    pvp-disabled-claim: "&cPvP is disabled in this claim."
-    pvp-disabled-wilderness: "&cPvP is disabled in the wilderness."
-    fire-denied: "&cYou cannot ignite or spread fire here."
-    bucket-denied: "&cYou cannot use buckets in this claim."
-    mob-spawn-blocked: "&7Mob spawning is blocked in this claim."
-    mob-repelled: "&7A mysterious force pushes the mob away from your claim!"
-    animal-denied: "&cYou cannot interact with animals in this claim."
+# --- General ---
+no-permission: "&cYou do not have permission."
+reloaded: "&aProShield configuration reloaded."
+compass-given: "&aYou received a ProShield compass."
+bypass-on: "&eBypass mode: &aENABLED"
+bypass-off: "&eBypass mode: &cDISABLED"
+debug-on: "&aDebug logging enabled."
+debug-off: "&cDebug logging disabled."
 
-  # === Claim Messages ===
-  claims:
-    created: "&aClaim created successfully!"
-    removed: "&eClaim unclaimed."
-    transfer-success: "&aClaim transferred to &e%player%."
-    transfer-failed: "&cClaim transfer failed."
-    preview-start: "&aShowing claim preview. Move to cancel."
-    preview-cancel: "&cClaim preview canceled."
-    trusted-add: "&a%player% is now trusted with role &e%role%."
-    trusted-remove: "&c%player% is no longer trusted."
-    trusted-list: "&7Trusted players: &f%list%"
-    expiry-removed: "&cExpired claim removed."
-    expiry-dryrun: "&eDry run: %count% expired claims would be removed."
+# --- Claim Messages ---
+claim-success: "&aYou claimed this chunk."
+claim-fail: "&cCould not claim this chunk."
+unclaim-success: "&aYou unclaimed this chunk."
+unclaim-fail: "&cYou cannot unclaim this."
+claim-info: "&3Owner: &a{owner} &7| Trusted: {players}"
+claim-preview: "&eShowing claim borders..."
 
-  # === Admin Messages ===
-  admin:
-    reload-complete: "&aProShield configuration reloaded."
-    purge-start: "&ePurging expired claims..."
-    purge-complete: "&aExpired claims purge complete. Removed %count% claims."
-    purge-none: "&7No expired claims found."
-    tp-disabled: "&cTeleporting to claims is disabled."
-    tp-no-claims: "&7No claims found."
-    debug-on: "&aDebug logging enabled."
-    debug-off: "&cDebug logging disabled."
-    flags-updated: "&aFlags updated for this claim."
+# --- Expiry & Purge ---
+claim-expired: "&cClaim by {owner} expired after {days} days."
+purge-start: "&ePurging expired claims..."
+purge-complete: "&aPurge complete."
 
-  # === GUI Messages ===
-  gui:
-    main-title: "&3ProShield Menu"
-    admin-title: "&3ProShield Admin"
-    roles-title: "&3Claim Roles"
-    trust-title: "&3Trust Players"
-    untrust-title: "&3Untrust Players"
-    transfer-title: "&3Transfer Claim"
-    flags-title: "&3Claim Flags"
-    help-title: "&3ProShield Help"
-    back: "&7Back"
-    next: "&aNext"
-    previous: "&cPrevious"
+# --- Compass & GUI ---
+compass-drop-if-full: "&cInventory full. Compass dropped on ground."
+gui-back: "&7Back"
+gui-help: "&eClick items for claim options."
+gui-admin-open: "&3Opening admin menu..."
 
-  # === Teleport Menu ===
-  teleport:
-    title: "&3Claims (click to TP)"
-    click-to-teleport: "&aClick to teleport to this claim."
-    teleport-success: "&aTeleported to claim &e%claim%."
-    teleport-failed: "&cCould not teleport to claim."
+# --- PvP ---
+pvp-disabled-wilderness: "&cPvP is disabled in the wilderness."
+pvp-disabled-claim: "&cPvP is disabled in this claim."
+pvp-enabled-claim: "&aPvP is enabled in this claim."
+
+# --- Interactions ---
+interaction-blocked: "&cYou cannot use that here."
+
+# --- Explosions & Fire ---
+explosion-blocked: "&cExplosions are disabled in this claim."
+fire-blocked: "&cFire spread/ignite is disabled here."
+
+# --- Buckets ---
+bucket-empty-blocked: "&cYou cannot empty buckets here."
+bucket-fill-blocked: "&cYou cannot fill buckets here."
+
+# --- Items & Drops ---
+item-drop-protected: "&cItem protection active in this claim."
+keep-drops-enabled: "&aDrops inside claims are now persistent."
+keep-drops-disabled: "&cDrops inside claims will despawn normally."
+
+# --- Entity/Mob ---
+entity-grief-blocked: "&cThat action is blocked by ProShield."
+mob-repelled: "&eA mob was repelled from your claim."
+mob-despawned: "&cMob despawned inside claim."
+
+# --- Spawn Guard ---
+spawn-claim-blocked: "&cYou cannot claim land within spawn radius."
+
+# --- Player Join ---
+join-compass: "&aYou received a ProShield compass."
+join-claim-reminder: "&eUse /proshield claim to protect your land!"
+
+# --- Trust & Roles Commands ---
+command-trust-usage: "&eUsage: /trust <player> [role]"
+command-trust-success: "&aYou trusted {player} as {role}."
+command-trust-already: "&c{player} is already trusted."
+command-trust-invalid-role: "&cInvalid role: {role}."
+
+command-untrust-usage: "&eUsage: /untrust <player>"
+command-untrust-success: "&c{player} was untrusted."
+command-untrust-not-found: "&c{player} is not trusted in this claim."
+
+command-roles-usage: "&eUsage: /roles <list|set <player> <role>>"
+command-roles-list-header: "&3Roles in this claim:"
+command-roles-list-entry: "&7- {player}: &a{role}"
+command-roles-change-success: "&a{player} is now {role}."
+command-roles-change-fail: "&cCould not change role for {player}."
+
+command-transfer-usage: "&eUsage: /transfer <player>"
+command-transfer-success: "&aClaim transferred to {player}."
+command-transfer-fail: "&cCould not transfer claim."
+command-transfer-not-owner: "&cOnly claim owners can transfer ownership."

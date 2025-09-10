@@ -1,55 +1,27 @@
 package com.snazzyatoms.proshield.plots;
 
 /**
- * Stores all per-claim settings for a plot.
- * - Extended to include keep-items, PvP, explosions, fire, and mob grief toggles
- * - Defaults can be overridden by global config or updated by players/admins
+ * Per-claim settings for protection and customization.
+ * 
+ * These settings override global config values when enabled.
+ * They allow claim owners to decide what happens inside their claim
+ * (e.g., PvP, explosions, fire, mob grief, item keep).
  */
 public class PlotSettings {
 
-    // === Existing settings (preserve everything you had before) ===
-    private boolean allowBuild = true;
-    private boolean allowInteract = true;
-    private boolean allowContainers = true;
+    // === Claim-specific toggles ===
+    private boolean keepItemsEnabled = false;
+    private boolean pvpEnabled = false;
+    private boolean explosionsEnabled = false;
+    private boolean fireEnabled = false;
+    private boolean mobGriefEnabled = false;
 
-    // === New extended settings (1.2.5) ===
-    private boolean keepItemsEnabled = false;   // per-claim override for item persistence
-    private boolean pvpEnabled = false;         // per-claim PvP toggle
-    private boolean explosionsEnabled = false;  // per-claim explosions toggle
-    private boolean fireEnabled = false;        // per-claim fire spread/ignite toggle
-    private boolean mobGriefEnabled = false;    // per-claim mob griefing toggle
+    // Future-proof: could add more flags here (e.g. redstone, animals, etc.)
 
-    // --- Constructors ---
     public PlotSettings() {
-        // Defaults already set above
     }
 
-    // === Getters & Setters ===
-    public boolean isAllowBuild() {
-        return allowBuild;
-    }
-
-    public void setAllowBuild(boolean allowBuild) {
-        this.allowBuild = allowBuild;
-    }
-
-    public boolean isAllowInteract() {
-        return allowInteract;
-    }
-
-    public void setAllowInteract(boolean allowInteract) {
-        this.allowInteract = allowInteract;
-    }
-
-    public boolean isAllowContainers() {
-        return allowContainers;
-    }
-
-    public void setAllowContainers(boolean allowContainers) {
-        this.allowContainers = allowContainers;
-    }
-
-    // --- Extended ---
+    // === Keep Items ===
     public boolean isKeepItemsEnabled() {
         return keepItemsEnabled;
     }
@@ -58,6 +30,7 @@ public class PlotSettings {
         this.keepItemsEnabled = keepItemsEnabled;
     }
 
+    // === PvP ===
     public boolean isPvpEnabled() {
         return pvpEnabled;
     }
@@ -66,6 +39,7 @@ public class PlotSettings {
         this.pvpEnabled = pvpEnabled;
     }
 
+    // === Explosions ===
     public boolean isExplosionsEnabled() {
         return explosionsEnabled;
     }
@@ -74,6 +48,7 @@ public class PlotSettings {
         this.explosionsEnabled = explosionsEnabled;
     }
 
+    // === Fire Spread ===
     public boolean isFireEnabled() {
         return fireEnabled;
     }
@@ -82,6 +57,7 @@ public class PlotSettings {
         this.fireEnabled = fireEnabled;
     }
 
+    // === Mob Grief (e.g. Endermen, Ravagers, Withers) ===
     public boolean isMobGriefEnabled() {
         return mobGriefEnabled;
     }
@@ -93,10 +69,7 @@ public class PlotSettings {
     @Override
     public String toString() {
         return "PlotSettings{" +
-                "allowBuild=" + allowBuild +
-                ", allowInteract=" + allowInteract +
-                ", allowContainers=" + allowContainers +
-                ", keepItemsEnabled=" + keepItemsEnabled +
+                "keepItemsEnabled=" + keepItemsEnabled +
                 ", pvpEnabled=" + pvpEnabled +
                 ", explosionsEnabled=" + explosionsEnabled +
                 ", fireEnabled=" + fireEnabled +

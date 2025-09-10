@@ -3,49 +3,72 @@ main: com.snazzyatoms.proshield.ProShield
 version: 1.2.5
 api-version: 1.18
 author: SnazzyAtoms
-description: Lightweight land & plot protection plugin for Spigot and Paper. Easy claims, trust roles, GUI menus, and admin tools.
+description: Lightweight land & plot protection plugin for Spigot and Paper servers.
+website: https://github.com/snazzyatoms/ProShield
 
 commands:
   proshield:
     description: Main ProShield command
-    usage: /<command> [args]
-    aliases: [ps]
+    usage: /<command>
+    aliases: [ps, shield]
 
 permissions:
   proshield.use:
     description: Use ProShield commands and GUI
     default: true
+
+  proshield.admin:
+    description: Full admin access to ProShield
+    default: op
+
   proshield.compass:
     description: Receive and use the ProShield compass
     default: op
-  proshield.admin:
-    description: Access ProShield admin tools
-    default: op
+
   proshield.bypass:
-    description: Toggle admin bypass
+    description: Toggle admin bypass protection
     default: op
+
   proshield.unlimited:
-    description: Ignore max claims limit
+    description: Ignore max-claims limit
     default: op
+
   proshield.admin.tp:
     description: Teleport to claims from admin menu
     default: op
+
   proshield.admin.reload:
-    description: Reload ProShield configs
+    description: Reload configs
     default: op
+
   proshield.admin.expired.purge:
     description: Purge expired claims
     default: op
-  proshield.admin.keepdrops:
-    description: Toggle item-keep inside claims
+
+  proshield.admin.keepitems:
+    description: Toggle claim item-drop protection
     default: op
+
   proshield.admin.transfer:
-    description: Transfer claim ownership
+    description: Transfer ownership of claims
     default: op
+
   proshield.admin.debug:
     description: Toggle debug logging
     default: op
 
-softdepend:
-  - Vault
-  - PlaceholderAPI
+listeners:
+  # Core claim protections
+  - com.snazzyatoms.proshield.plots.BlockProtectionListener
+  - com.snazzyatoms.proshield.plots.ItemProtectionListener
+  - com.snazzyatoms.proshield.plots.PvpProtectionListener
+  - com.snazzyatoms.proshield.plots.ClaimMessageListener
+  - com.snazzyatoms.proshield.plots.PlayerJoinListener
+  - com.snazzyatoms.proshield.plots.KeepDropsListener
+
+  # GUI handlers
+  - com.snazzyatoms.proshield.gui.GUIListener
+
+  # New mob repel + spawn guard
+  - com.snazzyatoms.proshield.plots.MobBorderRepelListener
+  - com.snazzyatoms.proshield.plots.SpawnGuardListener

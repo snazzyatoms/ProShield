@@ -1,5 +1,5 @@
 # ==================================================
-# 🛡️ ProShield Configuration (v1.2.5 FINAL)
+# 🛡️ ProShield Configuration (v1.2.5)
 # ==================================================
 # All claim, GUI, and protection settings for ProShield.
 # ==================================================
@@ -36,11 +36,11 @@ protection:
     poison-wither: true
 
   wilderness:
-    allow-block-break: true   # If false, prevents breaking in wilderness
-    allow-block-place: true   # If false, prevents placing in wilderness
-    allow-pvp: true           # PvP in wilderness
+    allow-block-break: true
+    allow-block-place: true
+    allow-pvp: true
 
-  # PvP inside claims (global default, players can override per-claim)
+  # PvP inside claims (global default — can be overridden per-claim)
   pvp-in-claims: false
 
   interactions:
@@ -95,28 +95,29 @@ protection:
     allow-spawner-spawn: true    # Allow mobs from spawners
     border-repel:
       enabled: true
-      radius: 6.0                # How far mobs are pushed away from claim edges
-      horizontal-push: 1.5       # Pushback force (X/Z)
+      radius: 3.0                # How far mobs are pushed away from claim edges
+      horizontal-push: 1.0       # Pushback force (X/Z)
       vertical-push: 0.3         # Pushback force (Y)
       interval-ticks: 20
       despawn-inside: true       # Instantly remove mobs that spawn inside claims
 
+# === CLAIM FLAGS (Global Defaults) ===
 claims:
   keep-items:
     enabled: false
     despawn-seconds: 900   # 300–900 allowed (default 15 minutes)
-    per-claim-toggle: true # Allow claim owners to override keep-items inside their claim
 
   flags:
-    enabled: true
-    defaults:
-      pvp: false
-      explosions: false
-      fire: false
-      containers: true
-      redstone: true
-      animals: true
-      keep-items: false
+    pvp: false
+    explosions: true
+    fire: true
+    containers: true
+    redstone: true
+    animals: true
+    keep-items: false
+
+  # Runtime storage (DO NOT EDIT manually)
+  data: {}
 
 proshield:
   debug: false
@@ -150,9 +151,6 @@ gui:
       entity-grief: 12
       interactions: 13
       pvp: 14
-      containers: 15
-      redstone: 16
-      animals: 19
       keep-items: 20
       purge-expired: 21
       debug: 22
@@ -172,8 +170,3 @@ gui:
 #     protection:
 #       pvp-in-claims: true
 per-world: {}
-
-# ==================================================
-# CLAIM STORAGE (runtime - DO NOT EDIT MANUALLY)
-# ==================================================
-claims: {}

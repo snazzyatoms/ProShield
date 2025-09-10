@@ -1,86 +1,105 @@
 package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.roles.ClaimRole;
+
+import org.bukkit.Chunk;
+import org.bukkit.OfflinePlayer;
+
 import java.util.*;
 
 /**
- * Represents a single claimed plot (one chunk).
- * Preserves owner, trusted players, and plot settings.
- * Extended with safe helpers and convenience methods.
+ * Represents a claimed plot (one chunk).
+ * - Stores ownership and trusted players
+ * - Delegates protection flags to PlotSettings
+ * - Exposes helpers for commands/listeners
  */
 public class Plot {
 
-    private final UUID owner;
-    private final Set<UUID> trusted;
-    private final PlotSettings settings;
+    private UUID owner;
+    private final Chunk chunk;
+    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
+    private PlotSettings settings;
 
-    public Plot(UUID owner) {
+    public Plot(UUID owner, Chunk chunk) {
         this.owner = owner;
-        this.trusted = new HashSet<>();
-        this.settings = new PlotSettings(); // always initialize defaults
+        this.chunk = chunk;
+        this.settings = new PlotSettings(); // defaults synced with config
     }
 
     /* ---------------------------------------------------------
-     * Core Ownership
+     * Core accessors
      * --------------------------------------------------------- */
 
     public UUID getOwner() {
         return owner;
     }
 
-    public boolean isOwner(UUID playerId) {
-        return playerId != null && owner.equals(playerId);
+    public void setOwner(UUID owner) {
+        this.owner = owner;
     }
 
-    /* ---------------------------------------------------------
-     * Trusted Players
-     * --------------------------------------------------------- */
-
-    public Set<UUID> getTrusted() {
-        return Collections.unmodifiableSet(trusted);
+    public Chunk getChunk() {
+        return chunk;
     }
-
-    public void addTrusted(UUID playerId) {
-        if (playerId != null) {
-            trusted.add(playerId);
-        }
-    }
-
-    public void removeTrusted(UUID playerId) {
-        if (playerId != null) {
-            trusted.remove(playerId);
-        }
-    }
-
-    public boolean isTrusted(UUID playerId) {
-        return playerId != null && (owner.equals(playerId) || trusted.contains(playerId));
-    }
-
-    /* ---------------------------------------------------------
-     * Plot Settings (flags)
-     * --------------------------------------------------------- */
 
     public PlotSettings getSettings() {
         return settings;
     }
 
-    /* ---------------------------------------------------------
-     * Display & Debug Helpers
-     * --------------------------------------------------------- */
-
-    /**
-     * Returns a safe display name for the claim.
-     * Used in messages to avoid "getName() missing" errors.
-     */
-    public String getDisplayNameSafe() {
-        return owner != null ? owner.toString().substring(0, 8) : "Unnamed Claim";
+    public void setSettings(PlotSettings settings) {
+        this.settings = settings;
     }
 
-    @Override
-    public String toString() {
-        return "Plot{" +
-                "owner=" + owner +
-                ", trusted=" + trusted +
-                ", settings=" + settings +
-                '}';
+    /**
+     * Human-readable name for messages.
+     */
+    public String getName() {
+        OfflinePlayer player = chunk.getWorld().getServer().getOfflinePlayer(owner);
+        return player != null && player.getName() != null ? player.getName() + "'s Claim" : "Unowned Claim";
+    }
+
+    /* ---------------------------------------------------------
+     * Trusted roles
+     * --------------------------------------------------------- */
+
+    public Map<UUID, ClaimRole> getTrusted() {
+        return Collections.unmodifiableMap(trusted);
+    }
+
+    public void trustPlayer(UUID uuid, ClaimRole role) {
+        if (uuid == null || role == null) return;
+        trusted.put(uuid, role);
+    }
+
+    public void removeTrusted(UUID uuid) {
+        trusted.remove(uuid);
+    }
+
+    public boolean isTrusted(UUID uuid) {
+        return trusted.containsKey(uuid);
+    }
+
+    public ClaimRole getRole(UUID uuid) {
+        return trusted.getOrDefault(uuid, ClaimRole.VISITOR);
+    }
+
+    /* ---------------------------------------------------------
+     * Ownership helpers
+     * --------------------------------------------------------- */
+
+    public boolean isOwner(UUID uuid) {
+        return owner != null && owner.equals(uuid);
+    }
+
+    public boolean isTrustedOrOwner(UUID uuid) {
+        return isOwner(uuid) || isTrusted(uuid);
+    }
+
+    /* ---------------------------------------------------------
+     * Convenience for persistence
+     * --------------------------------------------------------- */
+
+    public String serializeKey() {
+        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
     }
 }

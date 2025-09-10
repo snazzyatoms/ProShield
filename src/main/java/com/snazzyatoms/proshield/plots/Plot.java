@@ -3,61 +3,84 @@ package com.snazzyatoms.proshield.plots;
 import java.util.*;
 
 /**
- * Represents a single claimed plot of land (one chunk).
- * Stores owner, trusted players, settings, and human-readable name.
+ * Represents a single claimed plot (one chunk).
+ * Preserves owner, trusted players, and plot settings.
+ * Extended with safe helpers and convenience methods.
  */
 public class Plot {
 
     private final UUID owner;
-    private final String name;
     private final Set<UUID> trusted;
     private final PlotSettings settings;
 
-    public Plot(UUID owner, String name) {
+    public Plot(UUID owner) {
         this.owner = owner;
-        this.name = (name != null && !name.isEmpty()) ? name : "Unnamed Plot";
         this.trusted = new HashSet<>();
-        this.settings = new PlotSettings();
+        this.settings = new PlotSettings(); // always initialize defaults
     }
+
+    /* ---------------------------------------------------------
+     * Core Ownership
+     * --------------------------------------------------------- */
 
     public UUID getOwner() {
         return owner;
     }
 
-    public String getName() {
-        return name;
+    public boolean isOwner(UUID playerId) {
+        return playerId != null && owner.equals(playerId);
     }
 
-    public PlotSettings getSettings() {
-        return settings;
-    }
+    /* ---------------------------------------------------------
+     * Trusted Players
+     * --------------------------------------------------------- */
 
     public Set<UUID> getTrusted() {
         return Collections.unmodifiableSet(trusted);
     }
 
-    public void addTrusted(UUID uuid) {
-        trusted.add(uuid);
+    public void addTrusted(UUID playerId) {
+        if (playerId != null) {
+            trusted.add(playerId);
+        }
     }
 
-    public void removeTrusted(UUID uuid) {
-        trusted.remove(uuid);
+    public void removeTrusted(UUID playerId) {
+        if (playerId != null) {
+            trusted.remove(playerId);
+        }
     }
 
-    public boolean isOwner(UUID uuid) {
-        return owner.equals(uuid);
+    public boolean isTrusted(UUID playerId) {
+        return playerId != null && (owner.equals(playerId) || trusted.contains(playerId));
     }
 
-    public boolean isTrusted(UUID uuid) {
-        return trusted.contains(uuid);
+    /* ---------------------------------------------------------
+     * Plot Settings (flags)
+     * --------------------------------------------------------- */
+
+    public PlotSettings getSettings() {
+        return settings;
     }
 
-    // Flag helpers (delegate to settings)
-    public boolean isFlagEnabled(String flag) {
-        return settings.isFlagEnabled(flag);
+    /* ---------------------------------------------------------
+     * Display & Debug Helpers
+     * --------------------------------------------------------- */
+
+    /**
+     * Returns a safe display name for the claim.
+     * Used in messages to avoid "getName() missing" errors.
+     */
+    public String getDisplayNameSafe() {
+        return owner != null ? owner.toString().substring(0, 8) : "Unnamed Claim";
     }
 
-    public void setFlag(String flag, boolean value) {
-        settings.setFlag(flag, value);
+    @Override
+    public String toString() {
+        return "Plot{" +
+                "owner=" + owner +
+                ", trusted=" + trusted +
+                ", settings=" + settings +
+                '}';
     }
 }

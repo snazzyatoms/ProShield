@@ -1,11 +1,9 @@
 package com.snazzyatoms.proshield.gui;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.plots.PlotManager.Claim;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -28,13 +26,11 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         Inventory inv = event.getInventory();
         ItemStack clicked = event.getCurrentItem();
-
         if (clicked == null || !clicked.hasItemMeta()) return;
 
         String title = ChatColor.stripColor(inv.getTitle());
         String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-
-        event.setCancelled(true); // prevent item movement in GUI
+        event.setCancelled(true);
 
         // === MAIN MENU ===
         if (title.equalsIgnoreCase("ProShield Menu")) {
@@ -44,18 +40,18 @@ public class GUIListener implements Listener {
                 case "unclaim chunk" -> plotManager.unclaimChunk(player);
                 case "trust player" -> {
                     player.closeInventory();
-                    player.sendMessage(ChatColor.YELLOW + "Type /proshield trust <player> in chat.");
+                    player.sendMessage(ChatColor.YELLOW + "Type /proshield trust <player>");
                 }
                 case "untrust player" -> {
                     player.closeInventory();
-                    player.sendMessage(ChatColor.YELLOW + "Type /proshield untrust <player> in chat.");
+                    player.sendMessage(ChatColor.YELLOW + "Type /proshield untrust <player>");
                 }
                 case "manage roles" -> {
                     Claim claim = plotManager.getClaimAt(player.getLocation());
                     if (claim != null && claim.isOwner(player.getUniqueId())) {
                         gui.openRoleMenu(player, claim);
                     } else {
-                        player.sendMessage(ChatColor.RED + "You must be the claim owner to manage roles.");
+                        player.sendMessage(ChatColor.RED + "You must be the claim owner.");
                     }
                 }
                 case "toggle claim flags" -> {
@@ -63,12 +59,12 @@ public class GUIListener implements Listener {
                     if (claim != null && claim.isOwner(player.getUniqueId())) {
                         gui.openFlagMenu(player, claim);
                     } else {
-                        player.sendMessage(ChatColor.RED + "You must be the claim owner to toggle flags.");
+                        player.sendMessage(ChatColor.RED + "You must be the claim owner.");
                     }
                 }
                 case "transfer ownership" -> {
                     player.closeInventory();
-                    player.sendMessage(ChatColor.YELLOW + "Type /proshield transfer <player> in chat.");
+                    player.sendMessage(ChatColor.YELLOW + "Type /proshield transfer <player>");
                 }
                 case "help" -> player.performCommand("proshield help");
                 case "admin tools" -> gui.openAdmin(player);
@@ -85,12 +81,10 @@ public class GUIListener implements Listener {
                 case "pvp toggle" -> plotManager.togglePvP(player);
                 case "keep items toggle" -> plotManager.toggleKeepItems(player);
                 case "purge expired claims" -> player.performCommand("proshield purgeexpired 30 dryrun");
-                case "reload config" -> {
-                    Bukkit.getScheduler().runTask(gui.getPlugin(), () -> {
-                        gui.getPlugin().reloadConfig();
-                        player.sendMessage(ChatColor.GREEN + "ProShield config reloaded!");
-                    });
-                }
+                case "reload config" -> Bukkit.getScheduler().runTask(gui.getPlugin(), () -> {
+                    gui.getPlugin().reloadConfig();
+                    player.sendMessage(ChatColor.GREEN + "ProShield config reloaded!");
+                });
                 case "debug mode" -> player.performCommand("proshield debug toggle");
                 case "teleport tools" -> player.performCommand("proshield tp");
                 case "back" -> gui.openMain(player, true);
@@ -102,10 +96,9 @@ public class GUIListener implements Listener {
         else if (title.equalsIgnoreCase("Manage Roles")) {
             Claim claim = plotManager.getClaimAt(player.getLocation());
             if (claim == null) {
-                player.sendMessage(ChatColor.RED + "You are not inside a claim.");
+                player.sendMessage(ChatColor.RED + "Not inside a claim.");
                 return;
             }
-
             switch (name.toLowerCase()) {
                 case "visitor" -> plotManager.setRole(player, "Visitor");
                 case "member" -> plotManager.setRole(player, "Member");
@@ -120,10 +113,9 @@ public class GUIListener implements Listener {
         else if (title.equalsIgnoreCase("Claim Flags")) {
             Claim claim = plotManager.getClaimAt(player.getLocation());
             if (claim == null) {
-                player.sendMessage(ChatColor.RED + "You are not inside a claim.");
+                player.sendMessage(ChatColor.RED + "Not inside a claim.");
                 return;
             }
-
             switch (name.toLowerCase()) {
                 case "pvp" -> plotManager.toggleFlag(player, claim, "pvp");
                 case "explosions" -> plotManager.toggleFlag(player, claim, "explosions");

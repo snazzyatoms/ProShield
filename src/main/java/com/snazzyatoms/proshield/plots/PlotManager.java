@@ -1,195 +1,167 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.entity.Monster;
 
 import java.util.*;
 
 public class PlotManager {
-
     private final ProShield plugin;
-    private final Map<UUID, Boolean> bypass = new HashMap<>();
-    private final Map<UUID, Boolean> debug = new HashMap<>();
-    private final Map<String, Claim> claims = new HashMap<>();
+    private final Map<UUID, List<Claim>> playerClaims = new HashMap<>();
+    private final Map<String, Claim> claimsByChunk = new HashMap<>();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
-    // === Claim Management ===
-
-    public void claim(Player player) {
-        String key = getChunkKey(player.getLocation());
-        if (claims.containsKey(key)) {
-            msg(player, "&cThis chunk is already claimed.");
-            return;
-        }
-        claims.put(key, new Claim(player.getUniqueId(), key));
-        msg(player, "&aYou claimed this chunk!");
+    public ProShield getPlugin() {
+        return plugin;
     }
 
-    public void unclaim(Player player) {
-        String key = getChunkKey(player.getLocation());
-        Claim claim = claims.get(key);
-        if (claim == null) {
-            msg(player, "&cThis chunk is not claimed.");
-            return;
-        }
-        if (!claim.getOwner().equals(player.getUniqueId()) && !isBypassing(player)) {
-            msg(player, "&cYou don’t own this claim.");
-            return;
-        }
-        claims.remove(key);
-        msg(player, "&aChunk unclaimed.");
+    public FileConfiguration getConfig() {
+        return plugin.getConfig();
     }
 
-    public void sendInfo(Player player) {
-        String key = getChunkKey(player.getLocation());
-        Claim claim = claims.get(key);
-        if (claim == null) {
-            msg(player, "&eThis chunk is unclaimed.");
-            return;
-        }
-        OfflinePlayer owner = Bukkit.getOfflinePlayer(claim.getOwner());
-        msg(player, "&7Owner: &b" + owner.getName());
-        msg(player, "&7Trusted: &b" + claim.getTrusted().size());
+    // ==========================
+    // Claim Management
+    // ==========================
+
+    public boolean isInsideClaim(Location loc) {
+        String key = key(loc);
+        return claimsByChunk.containsKey(key);
     }
 
-    // === Trust Management ===
-
-    public void trust(Player player, String targetName, String role) {
-        String key = getChunkKey(player.getLocation());
-        Claim claim = claims.get(key);
-        if (claim == null || !claim.getOwner().equals(player.getUniqueId())) {
-            msg(player, "&cYou don’t own this claim.");
-            return;
-        }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-        claim.getTrusted().put(target.getUniqueId(), role.toLowerCase(Locale.ROOT));
-        msg(player, "&aTrusted &e" + targetName + " &7as role &b" + role);
+    public Claim getClaim(Location loc) {
+        return claimsByChunk.get(key(loc));
     }
 
-    public void untrust(Player player, String targetName) {
-        String key = getChunkKey(player.getLocation());
-        Claim claim = claims.get(key);
-        if (claim == null || !claim.getOwner().equals(player.getUniqueId())) {
-            msg(player, "&cYou don’t own this claim.");
-            return;
-        }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-        claim.getTrusted().remove(target.getUniqueId());
-        msg(player, "&cRemoved trust from &e" + targetName);
+    public String getClaimName(Location loc) {
+        Claim claim = getClaim(loc);
+        return claim == null ? "Wilderness" : claim.getOwnerName() + "'s Claim";
     }
 
-    public void listTrusted(Player player) {
-        String key = getChunkKey(player.getLocation());
-        Claim claim = claims.get(key);
-        if (claim == null) {
-            msg(player, "&cThis chunk is unclaimed.");
-            return;
-        }
-        if (claim.getTrusted().isEmpty()) {
-            msg(player, "&7No trusted players.");
-            return;
-        }
-        msg(player, "&7Trusted players:");
-        claim.getTrusted().forEach((uuid, role) -> {
-            OfflinePlayer p = Bukkit.getOfflinePlayer(uuid);
-            msg(player, " - &e" + p.getName() + " &7(" + role + ")");
-        });
+    public void addClaim(Player owner, Location loc) {
+        Claim claim = new Claim(owner.getUniqueId(), owner.getName(), loc.getChunk());
+        claimsByChunk.put(key(loc), claim);
+        playerClaims.computeIfAbsent(owner.getUniqueId(), k -> new ArrayList<>()).add(claim);
     }
 
-    public void transferClaim(Player player, String targetName) {
-        String key = getChunkKey(player.getLocation());
-        Claim claim = claims.get(key);
-        if (claim == null || !claim.getOwner().equals(player.getUniqueId())) {
-            msg(player, "&cYou don’t own this claim.");
-            return;
+    public void removeClaim(Location loc) {
+        Claim claim = claimsByChunk.remove(key(loc));
+        if (claim != null) {
+            playerClaims.getOrDefault(claim.getOwner(), new ArrayList<>()).remove(claim);
         }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-        claim.setOwner(target.getUniqueId());
-        msg(player, "&aTransferred claim to &e" + targetName);
     }
 
-    // === Claim Preview ===
+    private String key(Location loc) {
+        return loc.getWorld().getName() + ":" + loc.getChunk().getX() + "," + loc.getChunk().getZ();
+    }
 
-    public void previewClaim(Player player) {
-        Location loc = player.getLocation();
-        World world = player.getWorld();
-        int cx = loc.getChunk().getX() << 4;
-        int cz = loc.getChunk().getZ() << 4;
-        int y = loc.getBlockY();
+    // ==========================
+    // Build / Interact Permissions
+    // ==========================
 
-        new BukkitRunnable() {
-            int ticks = 0;
+    public boolean canBuild(Player p, Location loc) {
+        Claim claim = getClaim(loc);
+        if (claim == null) return true;
+        return claim.isTrusted(p.getUniqueId(), "builder") || claim.isOwner(p);
+    }
 
-            @Override
-            public void run() {
-                if (ticks++ > 100) cancel();
-                for (int dx = 0; dx < 16; dx++) {
-                    world.spawnParticle(Particle.VILLAGER_HAPPY, cx + dx, y, cz, 1);
-                    world.spawnParticle(Particle.VILLAGER_HAPPY, cx + dx, y, cz + 15, 1);
-                    world.spawnParticle(Particle.VILLAGER_HAPPY, cx, y, cz + dx, 1);
-                    world.spawnParticle(Particle.VILLAGER_HAPPY, cx + 15, y, cz + dx, 1);
-                }
+    public boolean canInteract(Player p, org.bukkit.block.Block block) {
+        if (block == null) return true;
+        Claim claim = getClaim(block.getLocation());
+        if (claim == null) return true;
+        return claim.isTrusted(p.getUniqueId(), "member") || claim.isOwner(p);
+    }
+
+    // ==========================
+    // PvP
+    // ==========================
+
+    public boolean canPvp(Player attacker, Player victim) {
+        Claim claim = getClaim(victim.getLocation());
+        if (claim == null) return true;
+        boolean globalPvp = getConfig().getBoolean("protection.pvp-in-claims", false);
+        if (!globalPvp) return false;
+        return claim.getFlags().getOrDefault("pvp", false);
+    }
+
+    // ==========================
+    // Fire
+    // ==========================
+
+    public boolean canIgnite(Location loc, BlockIgniteEvent.IgniteCause cause) {
+        Claim claim = getClaim(loc);
+        if (claim == null) return true;
+        return claim.getFlags().getOrDefault("fire", false);
+    }
+
+    // ==========================
+    // Explosions
+    // ==========================
+
+    public boolean canExplode(Location loc, Entity source) {
+        Claim claim = getClaim(loc);
+        if (claim == null) return true;
+        return claim.getFlags().getOrDefault("explosions", false);
+    }
+
+    // ==========================
+    // Entity Grief
+    // ==========================
+
+    public boolean canEntityGrief(Location loc, Entity entity) {
+        Claim claim = getClaim(loc);
+        if (claim == null) return true;
+        return claim.getFlags().getOrDefault("entity-grief", false);
+    }
+
+    // ==========================
+    // Spawn Guard
+    // ==========================
+
+    public boolean canClaimHere(Location loc) {
+        int radius = getConfig().getInt("spawn.radius", 32);
+        Location spawn = loc.getWorld().getSpawnLocation();
+        return loc.distance(spawn) > radius || plugin.hasAdminBypass(loc.getWorld());
+    }
+
+    // ==========================
+    // Mob Control
+    // ==========================
+
+    public boolean isAllowedMob(LivingEntity mob) {
+        if (mob instanceof Player) return true;
+        return !(mob instanceof Monster);
+    }
+
+    public Location getNearbyClaimBorder(Location loc) {
+        Claim claim = getClaim(loc);
+        if (claim == null) return null;
+        return claim.getCenter();
+    }
+
+    // ==========================
+    // Debug & Admin
+    // ==========================
+
+    public void purgeExpired(int days) {
+        long cutoff = System.currentTimeMillis() - (days * 86400000L);
+        Iterator<Map.Entry<String, Claim>> it = claimsByChunk.entrySet().iterator();
+        while (it.hasNext()) {
+            Claim claim = it.next().getValue();
+            if (claim.getLastActive() < cutoff) {
+                it.remove();
+                playerClaims.getOrDefault(claim.getOwner(), new ArrayList<>()).remove(claim);
+                Bukkit.getLogger().info("[ProShield] Purged expired claim: " + claim.getOwnerName());
             }
-        }.runTaskTimer(plugin, 0L, 10L);
-
-        msg(player, "&7Showing claim preview...");
-    }
-
-    // === Admin Tools ===
-
-    public void toggleBypass(Player player, String[] args) {
-        boolean state = bypass.getOrDefault(player.getUniqueId(), false);
-        if (args.length > 0) {
-            switch (args[0].toLowerCase()) {
-                case "on" -> state = true;
-                case "off" -> state = false;
-                case "toggle" -> state = !state;
-            }
-        } else state = !state;
-        bypass.put(player.getUniqueId(), state);
-        msg(player, "&7Bypass mode: " + (state ? "&aON" : "&cOFF"));
-    }
-
-    public boolean isBypassing(Player player) {
-        return bypass.getOrDefault(player.getUniqueId(), false);
-    }
-
-    public void purgeExpired(Player player, String[] args) {
-        if (!player.hasPermission("proshield.admin.expired.purge")) {
-            msg(player, "&cNo permission.");
-            return;
         }
-        int days = args.length > 0 ? Integer.parseInt(args[0]) : 30;
-        msg(player, "&7Purging claims older than &e" + days + " days...");
-        // TODO: Expiry logic
-    }
-
-    public void toggleDebug(Player player, String[] args) {
-        boolean state = debug.getOrDefault(player.getUniqueId(), false);
-        if (args.length > 0) {
-            switch (args[0].toLowerCase()) {
-                case "on" -> state = true;
-                case "off" -> state = false;
-                case "toggle" -> state = !state;
-            }
-        } else state = !state;
-        debug.put(player.getUniqueId(), state);
-        msg(player, "&7Debug mode: " + (state ? "&aON" : "&cOFF"));
-    }
-
-    // === Utilities ===
-
-    private String getChunkKey(Location loc) {
-        return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
-    }
-
-    private void msg(Player player, String msg) {
-        player.sendMessage(ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r ") + msg));
     }
 }

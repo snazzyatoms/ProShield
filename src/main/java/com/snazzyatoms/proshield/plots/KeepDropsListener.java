@@ -10,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Iterator;
 
@@ -17,7 +18,6 @@ import java.util.Iterator;
  * Handles persistent item drops inside claims.
  * - Prevents despawn of items when enabled globally or per-claim
  * - Optional configurable despawn delay
- * - Integrates with MessagesUtil
  */
 public class KeepDropsListener implements Listener {
 
@@ -47,28 +47,22 @@ public class KeepDropsListener implements Listener {
 
         if (!globalKeep && !perClaimKeep) return;
 
+        // Apply despawn settings
         int despawnSeconds = config.getInt("claims.keep-items.despawn-seconds", 900);
-
-        // Mark item as persistent
         item.setUnlimitedLifetime(true);
         item.setTicksLived(0);
 
-        // Optional manual despawn
+        messages.debug(plugin, "&aKeepDrops applied to item spawn in "
+                + (plot != null ? "claim: " + plot.getName() : "wilderness"));
+
+        // Schedule manual despawn if configured
         if (despawnSeconds > 0) {
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 if (!item.isDead() && item.isValid()) {
                     item.remove();
+                    messages.debug(plugin, "&cForced item despawn after " + despawnSeconds + "s");
                 }
             }, despawnSeconds * 20L);
-        }
-
-        // Notify nearby players (debug/feedback)
-        if (plot != null) {
-            for (Player p : chunk.getWorld().getPlayers()) {
-                if (p.getLocation().distance(item.getLocation()) < 8) {
-                    messages.send(p, "keepdrops.item-persistent");
-                }
-            }
         }
     }
 
@@ -81,18 +75,19 @@ public class KeepDropsListener implements Listener {
         Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        boolean globalKeep = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
+        FileConfiguration config = plugin.getConfig();
+        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
         boolean perClaimKeep = plot != null && plot.getSettings().isKeepItemsEnabled();
 
         if (!globalKeep && !perClaimKeep) return;
 
-        // Respect vanilla keep rules but re-spawn items with persistence
+        // Preserve XP rules, but override item handling
         event.setKeepInventory(false);
         event.setKeepLevel(false);
 
-        Iterator<org.bukkit.inventory.ItemStack> it = event.getDrops().iterator();
+        Iterator<ItemStack> it = event.getDrops().iterator();
         while (it.hasNext()) {
-            org.bukkit.inventory.ItemStack stack = it.next();
+            ItemStack stack = it.next();
             if (stack == null) continue;
 
             Item drop = player.getWorld().dropItemNaturally(player.getLocation(), stack);
@@ -100,9 +95,10 @@ public class KeepDropsListener implements Listener {
             drop.setTicksLived(0);
         }
 
+        // Clear default drops to avoid duplicates
         event.getDrops().clear();
 
-        // Send confirmation message
-        messages.send(player, "keepdrops.death-items-persistent");
+        messages.debug(plugin, "&aKeepDrops applied to death items for " + player.getName()
+                + (plot != null ? " in claim: " + plot.getName() : " (wilderness)"));
     }
 }

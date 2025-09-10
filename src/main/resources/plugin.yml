@@ -12,7 +12,7 @@ website: https://github.com/snazzyatoms/ProShield
 
 commands:
   proshield:
-    description: Main ProShield command
+    description: Main ProShield command (admin + help dispatcher)
     usage: /<command> [args]
     aliases: [ps, shield]
     permission: proshield.use
@@ -45,7 +45,7 @@ commands:
 
   # 🔹 Trust & Roles
   trust:
-    description: Trust a player with an optional role
+    description: Trust a player with optional role
     usage: /<command> <player> [role]
     permission: proshield.use
 
@@ -60,8 +60,8 @@ commands:
     permission: proshield.use
 
   roles:
-    description: Manage claim roles (list/set) via command or GUI
-    usage: /<command> [list|set <player> <role>]
+    description: Manage claim roles via GUI
+    usage: /<command>
     permission: proshield.use
 
   transfer:
@@ -91,12 +91,12 @@ commands:
     permission: proshield.admin.debug
 
 permissions:
-  # --- General Use ---
+  # General Use
   proshield.use:
     description: Use ProShield commands & GUI
     default: true
 
-  # --- Compass & Tools ---
+  # Compass & Tools
   proshield.compass:
     description: Receive/use ProShield compass
     default: op
@@ -109,7 +109,7 @@ permissions:
     description: Ignore max-claims limit
     default: op
 
-  # --- Admin Core ---
+  # Admin Core
   proshield.admin:
     description: Access admin tools (compass, bypass, force unclaim, purge)
     default: op
@@ -139,5 +139,5 @@ permissions:
     default: op
 
   proshield.admin.flags:
-    description: Manage claim flags (PvP, explosions, fire, etc.)
+    description: Manage claim flags (PvP, explosions, fire, redstone, etc.)
     default: op

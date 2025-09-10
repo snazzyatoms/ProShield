@@ -1,7 +1,6 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -9,154 +8,178 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class GUIManager {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
     private final GUICache cache;
 
-    public GUIManager(ProShield plugin, PlotManager plotManager, GUICache cache) {
+    public GUIManager(ProShield plugin, GUICache cache) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
         this.cache = cache;
-
-        // Preload GUIs into cache
-        reloadGUIs();
     }
 
-    // === UTILITY: Item creation ===
-    private ItemStack makeItem(Material mat, String name, List<String> lore) {
+    /* ========================
+       UTILS
+    ======================== */
+
+    private ItemStack createItem(Material mat, String name, String... lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(name);
-            if (lore != null) {
-                meta.setLore(lore);
+            List<String> loreList = new ArrayList<>();
+            for (String line : lore) {
+                loreList.add(line);
             }
+            meta.setLore(loreList);
             item.setItemMeta(meta);
         }
         return item;
     }
 
-    // === BUILD MAIN MENU ===
-    private Inventory buildMainGUI() {
-        Inventory inv = Bukkit.createInventory(null, 54, "§3ProShield Menu");
-
-        inv.setItem(11, makeItem(Material.GRASS_BLOCK, "§aClaim Land", List.of("§7Claim your current chunk")));
-        inv.setItem(13, makeItem(Material.PAPER, "§eClaim Info", List.of("§7View details about this claim")));
-        inv.setItem(15, makeItem(Material.BARRIER, "§cUnclaim Land", List.of("§7Remove your current claim")));
-
-        inv.setItem(31, makeItem(Material.BOOK, "§bHelp", List.of("§7Show available commands")));
-        inv.setItem(33, makeItem(Material.COMPASS, "§6Admin Menu", List.of("§7Requires permission: proshield.admin")));
-
-        return inv;
-    }
-
-    // === BUILD PLAYER MENU (NEW IN 1.2.5) ===
-    private Inventory buildPlayerGUI() {
-        Inventory inv = Bukkit.createInventory(null, 54, "§aPlayer Tools");
-
-        inv.setItem(10, makeItem(Material.PLAYER_HEAD, "§aTrust Player", List.of("§7Trust a player into your claim")));
-        inv.setItem(12, makeItem(Material.REDSTONE, "§cUntrust Player", List.of("§7Remove trust from a player")));
-        inv.setItem(14, makeItem(Material.IRON_SWORD, "§eManage Roles", List.of("§7Assign claim roles to players")));
-        inv.setItem(16, makeItem(Material.PAINTING, "§dClaim Flags", List.of("§7Toggle claim settings")));
-
-        inv.setItem(20, makeItem(Material.ENDER_EYE, "§bTransfer Ownership", List.of("§7Transfer claim to another player")));
-        inv.setItem(22, makeItem(Material.MAP, "§6Preview Claim", List.of("§7Preview your claim boundaries")));
-        inv.setItem(24, makeItem(Material.CHEST, "§eKeep Items Toggle", List.of("§7Toggle keep-drops inside claims")));
-
-        inv.setItem(48, makeItem(Material.ARROW, "§fBack", List.of("§7Return to Main Menu")));
-
-        return inv;
-    }
-
-    // === BUILD ADMIN MENU ===
-    private Inventory buildAdminGUI() {
-        Inventory inv = Bukkit.createInventory(null, 54, "§cAdmin Tools");
-
-        inv.setItem(10, makeItem(Material.FLINT_AND_STEEL, "§cFire Toggle", List.of("§7Toggle fire spread/ignite")));
-        inv.setItem(11, makeItem(Material.TNT, "§cExplosion Toggle", List.of("§7Toggle TNT, creepers, withers")));
-        inv.setItem(12, makeItem(Material.ENDER_PEARL, "§cEntity Grief Toggle", List.of("§7Prevent mob griefing")));
-        inv.setItem(13, makeItem(Material.REDSTONE_TORCH, "§cInteraction Toggle", List.of("§7Block/allow container use")));
-        inv.setItem(14, makeItem(Material.DIAMOND_SWORD, "§cPvP Toggle", List.of("§7Enable/disable PvP")));
-
-        inv.setItem(20, makeItem(Material.CHEST, "§eKeep Items Toggle", List.of("§7Admin toggle keep-drops")));
-        inv.setItem(21, makeItem(Material.BARRIER, "§cPurge Expired", List.of("§7Force expiry cleanup")));
-        inv.setItem(22, makeItem(Material.BOOK, "§bHelp", List.of("§7Admin help menu")));
-        inv.setItem(23, makeItem(Material.REDSTONE, "§cDebug Mode", List.of("§7Toggle debug logs")));
-        inv.setItem(24, makeItem(Material.COMPASS, "§6Compass Drop", List.of("§7Toggle compass auto-drop")));
-        inv.setItem(25, makeItem(Material.REPEATER, "§dReload Configs", List.of("§7Reload ProShield configs live")));
-
-        inv.setItem(30, makeItem(Material.ENDER_EYE, "§aTeleport Tools", List.of("§7Teleport to claims")));
-        inv.setItem(31, makeItem(Material.ARROW, "§fBack", List.of("§7Return to Main Menu")));
-
-        return inv;
-    }
-
-    // === PUBLIC OPEN METHODS ===
-    public void openMain(Player player) {
-        cache.open(player, GUICache.GUIType.MAIN);
-    }
-
-    public void openPlayer(Player player) {
-        cache.open(player, GUICache.GUIType.PLAYER);
-    }
-
-    public void openAdmin(Player player) {
-        if (player.hasPermission("proshield.admin")) {
-            cache.open(player, GUICache.GUIType.ADMIN);
-        } else {
-            player.sendMessage("§cYou do not have permission to access Admin Tools.");
+    private void fill(Inventory inv, ItemStack item) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            if (inv.getItem(i) == null) {
+                inv.setItem(i, item);
+            }
         }
     }
 
-    // === HANDLE BUTTON CLICKS (centralized) ===
+    /* ========================
+       PLAYER GUI
+    ======================== */
+
+    public Inventory createPlayerMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, "ProShield Menu");
+
+        inv.setItem(11, createItem(Material.GRASS_BLOCK, "§aClaim Land", "Claim this chunk"));
+        inv.setItem(13, createItem(Material.BOOK, "§eClaim Info", "View claim details"));
+        inv.setItem(15, createItem(Material.BARRIER, "§cUnclaim Land", "Unclaim this chunk"));
+
+        inv.setItem(20, createItem(Material.PLAYER_HEAD, "§bTrust Player", "Grant access to a player"));
+        inv.setItem(21, createItem(Material.SKELETON_SKULL, "§cUntrust Player", "Remove a player from claim"));
+        inv.setItem(22, createItem(Material.NAME_TAG, "§eManage Roles", "Edit roles for trusted players"));
+        inv.setItem(23, createItem(Material.PAPER, "§dTransfer Claim", "Transfer ownership of this claim"));
+        inv.setItem(24, createItem(Material.REDSTONE, "§6Claim Flags", "Toggle PvP, fire, explosions, etc."));
+
+        inv.setItem(31, createItem(Material.BOOKSHELF, "§9Help", "List commands and usage"));
+        inv.setItem(48, createItem(Material.ARROW, "§7Back", "Return to previous menu"));
+
+        fill(inv, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
+        return inv;
+    }
+
+    /* ========================
+       ADMIN GUI
+    ======================== */
+
+    public Inventory createAdminMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, "ProShield Admin Menu");
+
+        inv.setItem(10, createItem(Material.FIRE_CHARGE, "§cToggle Fire"));
+        inv.setItem(11, createItem(Material.TNT, "§cToggle Explosions"));
+        inv.setItem(12, createItem(Material.ENDER_PEARL, "§cToggle Entity Grief"));
+        inv.setItem(13, createItem(Material.DIAMOND_SWORD, "§cToggle PvP"));
+        inv.setItem(14, createItem(Material.CHEST, "§cToggle Keep Items"));
+
+        inv.setItem(20, createItem(Material.BUCKET, "§ePurge Expired Claims"));
+        inv.setItem(21, createItem(Material.BOOK, "§eReload Config"));
+        inv.setItem(22, createItem(Material.COMPASS, "§eCompass Settings"));
+        inv.setItem(23, createItem(Material.REDSTONE_TORCH, "§eDebug Mode"));
+        inv.setItem(24, createItem(Material.BARRIER, "§eSpawn Guard"));
+
+        // NEW mob controls
+        boolean repelEnabled = plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
+        boolean despawnEnabled = plugin.getConfig().getBoolean("protection.mobs.despawn-inside-claims", true);
+
+        inv.setItem(28, createItem(
+                repelEnabled ? Material.SHIELD : Material.GRAY_DYE,
+                "§bMob Repel",
+                repelEnabled ? "§aEnabled - mobs are pushed back" : "§cDisabled - mobs can walk in"
+        ));
+
+        inv.setItem(29, createItem(
+                despawnEnabled ? Material.ENDER_EYE : Material.ENDER_PEARL,
+                "§bMob Despawn Inside",
+                despawnEnabled ? "§aEnabled - mobs despawn inside claims" : "§cDisabled - mobs can exist inside"
+        ));
+
+        inv.setItem(30, createItem(Material.ENDER_CHEST, "§eTeleport Tools"));
+        inv.setItem(31, createItem(Material.ARROW, "§7Back"));
+        inv.setItem(32, createItem(Material.BOOKSHELF, "§9Help"));
+
+        fill(inv, createItem(Material.GRAY_STAINED_GLASS_PANE, " "));
+        return inv;
+    }
+
+    /* ========================
+       EVENT HOOK
+    ======================== */
+
     public void handleButtonClick(Player player, String title, int slot) {
-        if (title.contains("ProShield Menu")) {
+        if (title.contains("Admin")) {
             switch (slot) {
-                case 11 -> player.performCommand("proshield claim");
-                case 13 -> player.performCommand("proshield info");
-                case 15 -> player.performCommand("proshield unclaim");
-                case 31 -> player.performCommand("proshield help");
-                case 33 -> openAdmin(player);
+                case 10: player.performCommand("proshield admin toggle fire"); break;
+                case 11: player.performCommand("proshield admin toggle explosions"); break;
+                case 12: player.performCommand("proshield admin toggle entitygrief"); break;
+                case 13: player.performCommand("proshield admin toggle pvp"); break;
+                case 14: player.performCommand("proshield admin toggle keepitems"); break;
+                case 20: player.performCommand("proshield purgeexpired"); break;
+                case 21: player.performCommand("proshield reload"); break;
+                case 22: player.performCommand("proshield admin compass"); break;
+                case 23: player.performCommand("proshield debug toggle"); break;
+                case 24: player.performCommand("proshield admin spawnguard"); break;
+
+                case 28: // Toggle Mob Repel
+                    boolean repel = !plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
+                    plugin.getConfig().set("protection.mobs.border-repel.enabled", repel);
+                    plugin.saveConfig();
+                    plugin.reloadAllConfigs();
+                    player.sendMessage("§3[ProShield]§r Mob Repel is now " + (repel ? "§aENABLED" : "§cDISABLED"));
+                    openAdminMenu(player);
+                    break;
+
+                case 29: // Toggle Mob Despawn Inside
+                    boolean despawn = !plugin.getConfig().getBoolean("protection.mobs.despawn-inside-claims", true);
+                    plugin.getConfig().set("protection.mobs.despawn-inside-claims", despawn);
+                    plugin.saveConfig();
+                    plugin.reloadAllConfigs();
+                    player.sendMessage("§3[ProShield]§r Mob Despawn Inside Claims is now " + (despawn ? "§aENABLED" : "§cDISABLED"));
+                    openAdminMenu(player);
+                    break;
+
+                case 30: player.performCommand("proshield admin tp-tools"); break;
+                case 31: openPlayerMenu(player); break;
+                case 32: player.performCommand("proshield help"); break;
             }
-        } else if (title.contains("Player Tools")) {
+        } else { // Player menu
             switch (slot) {
-                case 10 -> player.performCommand("proshield trustmenu");
-                case 12 -> player.performCommand("proshield untrustmenu");
-                case 14 -> player.performCommand("proshield roles");
-                case 16 -> player.performCommand("proshield flags");
-                case 20 -> player.performCommand("proshield transfer");
-                case 22 -> player.performCommand("proshield preview");
-                case 24 -> player.performCommand("proshield keepitems toggle");
-                case 48 -> openMain(player);
-            }
-        } else if (title.contains("Admin Tools")) {
-            switch (slot) {
-                case 10 -> player.performCommand("proshield admin fire");
-                case 11 -> player.performCommand("proshield admin explosions");
-                case 12 -> player.performCommand("proshield admin entitygrief");
-                case 13 -> player.performCommand("proshield admin interactions");
-                case 14 -> player.performCommand("proshield admin pvp");
-                case 20 -> player.performCommand("proshield admin keepitems");
-                case 21 -> player.performCommand("proshield purgeexpired");
-                case 22 -> player.performCommand("proshield help");
-                case 23 -> player.performCommand("proshield debug toggle");
-                case 24 -> player.performCommand("proshield admin compassdrop");
-                case 25 -> player.performCommand("proshield reload");
-                case 30 -> player.performCommand("proshield admin tp");
-                case 31 -> openMain(player);
+                case 11: player.performCommand("proshield claim"); break;
+                case 13: player.performCommand("proshield info"); break;
+                case 15: player.performCommand("proshield unclaim"); break;
+                case 20: player.performCommand("proshield trustmenu"); break;
+                case 21: player.performCommand("proshield untrustmenu"); break;
+                case 22: player.performCommand("proshield rolemenu"); break;
+                case 23: player.performCommand("proshield transfermenu"); break;
+                case 24: player.performCommand("proshield flagmenu"); break;
+                case 31: player.performCommand("proshield help"); break;
+                case 48: player.closeInventory(); break;
             }
         }
     }
 
-    // === RELOAD SUPPORT ===
-    public void reloadGUIs() {
-        cache.clear();
-        cache.put(GUICache.GUIType.MAIN, buildMainGUI());
-        cache.put(GUICache.GUIType.PLAYER, buildPlayerGUI());
-        cache.put(GUICache.GUIType.ADMIN, buildAdminGUI());
+    /* ========================
+       OPENERS
+    ======================== */
+
+    public void openPlayerMenu(Player player) {
+        player.openInventory(createPlayerMenu(player));
+    }
+
+    public void openAdminMenu(Player player) {
+        player.openInventory(createAdminMenu(player));
     }
 }

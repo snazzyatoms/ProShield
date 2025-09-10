@@ -1,11 +1,9 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -18,10 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * PlotManager handles all claim storage, lookup, and persistence.
  *
  * Preserves prior logic and enhances:
- * - Adds saveAsync(plot) + saveAsync() overloads
- * - Restores getX(), getZ() usage from Plot
- * - Fixes world lookups (use names/UUID, not Optional)
- * - Adds purgeExpired for /proshield purge
+ * - Uses world name (String) not World object for keys
+ * - Provides saveAsync(plot) and saveAsync() overloads
+ * - Adds purgeExpired and getClaimName
+ * - Ensures Plot.getX()/getZ() are available
  */
 public class PlotManager {
 
@@ -54,16 +52,12 @@ public class PlotManager {
     }
 
     public Plot getClaim(Location loc) {
-        if (loc == null) return null;
+        if (loc == null || loc.getWorld() == null) return null;
         return getPlot(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ());
     }
 
     public boolean isClaimed(Location loc) {
         return getClaim(loc) != null;
-    }
-
-    public boolean isOwner(UUID playerId, Plot plot) {
-        return plot != null && playerId != null && playerId.equals(plot.getOwner());
     }
 
     public Collection<Plot> getClaims() {
@@ -75,13 +69,13 @@ public class PlotManager {
     }
 
     public void addPlot(Plot plot) {
-        claims.computeIfAbsent(plot.getWorld(), w -> new ConcurrentHashMap<>())
+        claims.computeIfAbsent(plot.getWorldName(), w -> new ConcurrentHashMap<>())
                 .put(key(plot.getX(), plot.getZ()), plot);
         saveAsync(plot);
     }
 
     public void removePlot(Plot plot) {
-        Map<String, Plot> worldClaims = claims.get(plot.getWorld());
+        Map<String, Plot> worldClaims = claims.get(plot.getWorldName());
         if (worldClaims != null) {
             worldClaims.remove(key(plot.getX(), plot.getZ()));
         }
@@ -127,7 +121,8 @@ public class PlotManager {
     }
 
     private synchronized void saveAll() {
-        yaml.getKeys(false).forEach(yaml::set); // wipe
+        // clear file then write
+        yaml.getKeys(false).forEach(yaml::set);
         for (Map.Entry<String, Map<String, Plot>> worldEntry : claims.entrySet()) {
             String world = worldEntry.getKey();
             for (Plot plot : worldEntry.getValue().values()) {
@@ -142,7 +137,7 @@ public class PlotManager {
     }
 
     private synchronized void savePlot(Plot plot) {
-        String path = plot.getWorld() + "." + key(plot.getX(), plot.getZ());
+        String path = plot.getWorldName() + "." + key(plot.getX(), plot.getZ());
         yaml.createSection(path, plot.serialize());
         try {
             yaml.save(dataFile);
@@ -156,16 +151,11 @@ public class PlotManager {
      * ------------------------------------------------------- */
 
     public void reloadFromConfig() {
-        // Currently no dynamic values per claim, placeholder for future
         plugin.getLogger().info("[ProShield] PlotManager reloaded settings.");
     }
 
     /**
      * Purge expired claims.
-     *
-     * @param daysOld   claims older than this (unused if <= 0)
-     * @param unowned   whether to purge unowned claims
-     * @return number purged
      */
     public int purgeExpired(int daysOld, boolean unowned) {
         int purged = 0;
@@ -200,5 +190,10 @@ public class PlotManager {
 
     private String key(int x, int z) {
         return x + "," + z;
+    }
+
+    public String getClaimName(Location loc) {
+        Plot plot = getClaim(loc);
+        return (plot != null) ? plot.getDisplayNameSafe() : null;
     }
 }

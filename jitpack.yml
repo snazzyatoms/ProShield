@@ -2,7 +2,7 @@ jdk:
   - openjdk17
 
 before_install:
-  - echo "Using Java 17 for Minecraft 1.18+"
+  - echo "Using Java 17 for Minecraft 1.18+ builds"
 
 install:
   - mvn -B install -DskipTests

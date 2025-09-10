@@ -2,11 +2,11 @@ name: ProShield
 main: com.snazzyatoms.proshield.ProShield
 version: 1.2.5
 api-version: 1.18
-author: SnazzyAtoms
+author: snazzyatoms
 description: >
   ProShield is a lightweight yet powerful land & plot protection plugin 
-  for Spigot and Paper servers. Protects claims, manages roles, provides 
-  intuitive GUIs for players and admins, and includes per-claim flags.
+  for Spigot and Paper servers. Protects claims, manages roles, and 
+  provides intuitive GUIs for players and admins.
 
 website: https://github.com/snazzyatoms/ProShield
 
@@ -33,9 +33,19 @@ commands:
     usage: /<command>
     permission: proshield.use
 
+  preview:
+    description: Preview claim borders with particles
+    usage: /<command>
+    permission: proshield.use
+
+  compass:
+    description: Get the ProShield compass
+    usage: /<command>
+    permission: proshield.compass
+
   # 🔹 Trust & Roles
   trust:
-    description: Trust a player with optional role
+    description: Trust a player with an optional role
     usage: /<command> <player> [role]
     permission: proshield.use
 
@@ -50,30 +60,13 @@ commands:
     permission: proshield.use
 
   roles:
-    description: Manage claim roles via GUI
-    usage: /<command>
+    description: Manage claim roles (list/set) via command or GUI
+    usage: /<command> [list|set <player> <role>]
     permission: proshield.use
 
-  # 🔹 Claim Tools
   transfer:
     description: Transfer claim ownership to another player
     usage: /<command> <player>
-    permission: proshield.use
-
-  preview:
-    description: Preview claim borders with particles
-    usage: /<command>
-    permission: proshield.use
-
-  compass:
-    description: Get the ProShield compass
-    usage: /<command>
-    permission: proshield.compass
-
-  # 🔹 Claim Flags
-  flags:
-    description: Manage claim flags (PvP, explosions, fire, containers, redstone, animals, keep-items)
-    usage: /<command>
     permission: proshield.use
 
   # 🔹 Admin & Maintenance
@@ -98,12 +91,12 @@ commands:
     permission: proshield.admin.debug
 
 permissions:
-  # General Use
+  # --- General Use ---
   proshield.use:
     description: Use ProShield commands & GUI
     default: true
 
-  # Compass & Tools
+  # --- Compass & Tools ---
   proshield.compass:
     description: Receive/use ProShield compass
     default: op
@@ -116,7 +109,7 @@ permissions:
     description: Ignore max-claims limit
     default: op
 
-  # Admin Core
+  # --- Admin Core ---
   proshield.admin:
     description: Access admin tools (compass, bypass, force unclaim, purge)
     default: op
@@ -146,5 +139,5 @@ permissions:
     default: op
 
   proshield.admin.flags:
-    description: Manage claim flags (PvP, explosions, fire, containers, redstone, animals, keep-items)
+    description: Manage claim flags (PvP, explosions, fire, etc.)
     default: op

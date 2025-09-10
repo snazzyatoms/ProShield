@@ -2,7 +2,7 @@ jdk:
   - openjdk17
 
 before_install:
-  - echo "Using JDK 17 for ProShield build"
+  - echo "Using Java 17 for Minecraft 1.18+"
 
 install:
-  - mvn -B clean install -DskipTests
+  - mvn -B install -DskipTests

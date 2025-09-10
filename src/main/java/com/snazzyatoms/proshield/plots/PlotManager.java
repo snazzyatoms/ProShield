@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -8,7 +9,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import java.util.*;
 
 /**
- * Handles creation, lookup, saving, and loading of plots.
+ * Handles creation, storage, and lookup of plots (claims).
+ * Now supports per-claim settings (PvP, keep-drops, item rules).
  */
 public class PlotManager {
 
@@ -17,135 +19,127 @@ public class PlotManager {
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+        loadClaims();
     }
 
-    // === Utility ===
-    private String getKey(String world, int x, int z) {
-        return world + ":" + x + "," + z;
-    }
-
-    private String getKey(Chunk chunk) {
-        return getKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
-    }
-
-    // === CRUD ===
-    public Plot getPlot(Chunk chunk) {
-        return plots.get(getKey(chunk));
-    }
-
-    public Plot getPlot(String world, int x, int z) {
-        return plots.get(getKey(world, x, z));
-    }
-
-    public Plot createPlot(UUID owner, Chunk chunk) {
-        String key = getKey(chunk);
-        Plot plot = new Plot(owner, chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+    /**
+     * Create a claim at the given chunk.
+     */
+    public Plot createPlot(Chunk chunk, UUID owner) {
+        String key = serializeChunk(chunk);
+        Plot plot = new Plot(chunk, owner, plugin);
         plots.put(key, plot);
+        saveClaims();
         return plot;
     }
 
+    /**
+     * Remove a claim at the given chunk.
+     */
     public void removePlot(Chunk chunk) {
-        plots.remove(getKey(chunk));
+        String key = serializeChunk(chunk);
+        plots.remove(key);
+        saveClaims();
     }
 
-    public Collection<Plot> getAllPlots() {
-        return plots.values();
+    /**
+     * Lookup claim at chunk.
+     */
+    public Plot getPlot(Chunk chunk) {
+        return plots.get(serializeChunk(chunk));
     }
 
-    public boolean isClaimed(Chunk chunk) {
-        return plots.containsKey(getKey(chunk));
-    }
-
-    // === Persistence ===
-    public void savePlots() {
-        FileConfiguration config = plugin.getConfig();
-        config.set("claims", null); // clear old section
-
+    /**
+     * Get all plots owned by a player.
+     */
+    public List<Plot> getPlots(UUID owner) {
+        List<Plot> result = new ArrayList<>();
         for (Plot plot : plots.values()) {
-            String key = plot.getKey();
-            String base = "claims." + key;
-
-            config.set(base + ".owner", plot.getOwner().toString());
-
-            // Trusted players
-            List<String> trustedList = new ArrayList<>();
-            for (UUID uuid : plot.getTrusted()) {
-                trustedList.add(uuid.toString());
+            if (plot.getOwner().equals(owner)) {
+                result.add(plot);
             }
-            config.set(base + ".trusted", trustedList);
+        }
+        return result;
+    }
 
-            // === Plot Settings ===
-            PlotSettings s = plot.getSettings();
-            config.set(base + ".settings.pvp", s.isPvpEnabled());
-            config.set(base + ".settings.keep-drops", s.isKeepDropsEnabled());
+    /**
+     * Check if chunk is claimed.
+     */
+    public boolean isClaimed(Chunk chunk) {
+        return plots.containsKey(serializeChunk(chunk));
+    }
 
-            Map<String, Boolean> itemRules = s.getItemRules();
-            for (Map.Entry<String, Boolean> entry : itemRules.entrySet()) {
-                config.set(base + ".settings.item-rules." + entry.getKey(), entry.getValue());
-            }
+    /**
+     * Serialize chunk location.
+     */
+    private String serializeChunk(Chunk chunk) {
+        return chunk.getWorld().getName() + ":" + chunk.getX() + "," + chunk.getZ();
+    }
+
+    // ==================================================
+    // Persistence
+    // ==================================================
+
+    public void saveClaims() {
+        FileConfiguration config = plugin.getConfig();
+        config.set("claims", null); // clear
+
+        for (Map.Entry<String, Plot> entry : plots.entrySet()) {
+            String key = entry.getKey();
+            Plot plot = entry.getValue();
+
+            String path = "claims." + key;
+            config.set(path + ".owner", plot.getOwner().toString());
+            config.set(path + ".trusted", serializeTrusted(plot.getTrusted()));
+
+            // Save per-claim settings
+            plot.getSettings().saveToConfig(config, path + ".settings");
         }
 
         plugin.saveConfig();
     }
 
-    public void loadPlots() {
+    public void loadClaims() {
         plots.clear();
         FileConfiguration config = plugin.getConfig();
+        ConfigurationSection section = config.getConfigurationSection("claims");
+        if (section == null) return;
 
-        ConfigurationSection claims = config.getConfigurationSection("claims");
-        if (claims == null) return;
+        for (String key : section.getKeys(false)) {
+            String path = "claims." + key;
+            String[] parts = key.split(":");
+            if (parts.length != 2) continue;
 
-        for (String key : claims.getKeys(false)) {
-            ConfigurationSection section = claims.getConfigurationSection(key);
-            if (section == null) continue;
-
-            UUID owner = UUID.fromString(section.getString("owner", ""));
-            String[] split = key.split(":");
-            if (split.length != 2) continue;
-
-            String world = split[0];
-            String[] coords = split[1].split(",");
+            String world = parts[0];
+            String[] coords = parts[1].split(",");
             if (coords.length != 2) continue;
 
-            int x, z;
-            try {
-                x = Integer.parseInt(coords[0]);
-                z = Integer.parseInt(coords[1]);
-            } catch (NumberFormatException e) {
-                continue;
+            Chunk chunk = Bukkit.getWorld(world).getChunkAt(
+                    Integer.parseInt(coords[0]),
+                    Integer.parseInt(coords[1])
+            );
+            UUID owner = UUID.fromString(config.getString(path + ".owner"));
+
+            Plot plot = new Plot(chunk, owner, plugin);
+
+            // Load trusted players
+            List<String> trustedList = config.getStringList(path + ".trusted");
+            for (String uuid : trustedList) {
+                plot.addTrusted(UUID.fromString(uuid));
             }
 
-            Plot plot = new Plot(owner, world, x, z);
-
-            // Trusted
-            List<String> trustedList = section.getStringList("trusted");
-            for (String uuidStr : trustedList) {
-                try {
-                    plot.addTrusted(UUID.fromString(uuidStr));
-                } catch (IllegalArgumentException ignored) {}
-            }
-
-            // === Plot Settings ===
-            ConfigurationSection settings = section.getConfigurationSection("settings");
-            if (settings != null) {
-                PlotSettings s = plot.getSettings();
-                s.setPvpEnabled(settings.getBoolean("pvp", false));
-                s.setKeepDropsEnabled(settings.getBoolean("keep-drops", false));
-
-                ConfigurationSection itemRules = settings.getConfigurationSection("item-rules");
-                if (itemRules != null) {
-                    for (String ruleKey : itemRules.getKeys(false)) {
-                        s.setItemRule(ruleKey, itemRules.getBoolean(ruleKey, false));
-                    }
-                }
-            }
+            // Load per-claim settings
+            plot.getSettings().loadFromConfig(config, path + ".settings");
 
             plots.put(key, plot);
         }
     }
 
-    // === Access ===
-    public ProShield getPlugin() {
-        return plugin;
+    private List<String> serializeTrusted(Set<UUID> trusted) {
+        List<String> list = new ArrayList<>();
+        for (UUID uuid : trusted) {
+            list.add(uuid.toString());
+        }
+        return list;
     }
 }

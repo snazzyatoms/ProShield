@@ -1,110 +1,110 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.gui.GUICache;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import org.bukkit.ChatColor;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
-
-import java.util.Map;
+import org.bukkit.inventory.ItemStack;
 
 /**
- * Handles toggles in the Claim Flags submenu (per-claim overrides).
+ * Handles GUI flag toggling for claims.
+ * Uses PlotSettings explicit booleans instead of generic setFlag.
  */
 public class FlagsListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
-    private final GUICache guiCache;
+    private final MessagesUtil messages;
 
-    public FlagsListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, GUICache guiCache) {
+    public FlagsListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
-        this.guiCache = guiCache;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onFlagMenuClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
+    public void onFlagToggle(InventoryClickEvent event) {
         Inventory inv = event.getInventory();
+        if (inv == null || inv.getTitle() == null) return;
 
-        // Only handle ProShield GUIs
-        if (!guiCache.isProShieldGUI(inv)) return;
-
-        String title = ChatColor.stripColor(inv.getTitle());
-        if (!"Claim Flags".equalsIgnoreCase(title)) return; // Only handle flags GUI
+        if (!inv.getTitle().equalsIgnoreCase("§dClaim Flags")) return;
 
         event.setCancelled(true);
 
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
+
         Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
+
         if (plot == null) {
-            player.sendMessage(plugin.getPrefix() + "§cYou must be inside your claim to edit flags.");
+            messages.send(player, "general.claim-required");
             return;
         }
 
-        // Only owners and co-owners can toggle flags
         ClaimRole role = roleManager.getRole(plot, player);
-        if (!(role == ClaimRole.OWNER || role == ClaimRole.COOWNER)) {
-            player.sendMessage(plugin.getPrefix() + "§cYou do not have permission to edit flags here.");
+        if (!roleManager.isOwnerOrCoOwner(role)) {
+            messages.send(player, "claims.not-owner");
             return;
         }
 
-        int slot = event.getRawSlot();
-        Map<String, Integer> slots = plugin.getConfig().getConfigurationSection("gui.slots.flags").getValues(false)
-                .entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> (Integer) e.getValue()));
+        PlotSettings settings = plot.getSettings();
+        Material type = clicked.getType();
 
-        // PvP toggle
-        if (slot == slots.get("pvp")) {
-            boolean newValue = !plot.isFlagEnabled("pvp");
-            plot.setFlag("pvp", newValue);
-            player.sendMessage(plugin.getPrefix() + "§ePvP inside this claim is now: " +
-                    (newValue ? "§aENABLED" : "§cDISABLED"));
-            return;
-        }
-
-        // Explosions toggle
-        if (slot == slots.get("explosions")) {
-            boolean newValue = !plot.isFlagEnabled("explosions");
-            plot.setFlag("explosions", newValue);
-            player.sendMessage(plugin.getPrefix() + "§eExplosions inside this claim are now: " +
-                    (newValue ? "§aALLOWED" : "§cBLOCKED"));
-            return;
-        }
-
-        // Fire toggle
-        if (slot == slots.get("fire")) {
-            boolean newValue = !plot.isFlagEnabled("fire");
-            plot.setFlag("fire", newValue);
-            player.sendMessage(plugin.getPrefix() + "§eFire spread inside this claim is now: " +
-                    (newValue ? "§aALLOWED" : "§cBLOCKED"));
-            return;
-        }
-
-        // Keep Items toggle
-        if (slot == slots.get("keep-items")) {
-            if (!plugin.getConfig().getBoolean("claims.keep-items.allow-per-claim-toggle", true)) {
-                player.sendMessage(plugin.getPrefix() + "§cPer-claim item persistence is disabled globally.");
-                return;
+        switch (type) {
+            case DIAMOND_SWORD -> {
+                settings.setPvpEnabled(!settings.isPvpEnabled());
+                messages.send(player, "protection.pvp-disabled");
             }
-            boolean newValue = !plot.isFlagEnabled("keep-items");
-            plot.setFlag("keep-items", newValue);
-            player.sendMessage(plugin.getPrefix() + "§eKeep-drops inside this claim is now: " +
-                    (newValue ? "§aENABLED" : "§cDISABLED"));
+            case TNT -> {
+                settings.setExplosionsEnabled(!settings.isExplosionsEnabled());
+                messages.send(player, "protection.explosion-denied");
+            }
+            case FLINT_AND_STEEL -> {
+                settings.setFireEnabled(!settings.isFireEnabled());
+                messages.send(player, "protection.fire-denied");
+            }
+            case ENDERMAN_SPAWN_EGG -> {
+                settings.setEntityGriefingAllowed(!settings.isEntityGriefingAllowed());
+                messages.send(player, "protection.entity-grief-denied");
+            }
+            case REDSTONE -> {
+                settings.setRedstoneEnabled(!settings.isRedstoneEnabled());
+                messages.send(player, "protection.redstone-denied");
+            }
+            case CHEST -> {
+                settings.setContainersEnabled(!settings.isContainersEnabled());
+                messages.send(player, "protection.container-denied");
+            }
+            case ITEM_FRAME -> {
+                settings.setItemFramesAllowed(!settings.isItemFramesAllowed());
+                messages.send(player, "protection.item-frame-denied");
+            }
+            case ARMOR_STAND -> {
+                settings.setArmorStandsAllowed(!settings.isArmorStandsAllowed());
+                messages.send(player, "protection.armor-stand-denied");
+            }
+            case MINECART -> {
+                settings.setVehiclesAllowed(!settings.isVehiclesAllowed());
+                messages.send(player, "protection.vehicle-denied");
+            }
+            default -> {
+                // Do nothing
+            }
         }
 
-        // Back button
-        if (slot == slots.get("back")) {
-            guiCache.openMainMenu(player, false);
-        }
+        // Persist change
+        plotManager.savePlot(plot);
+        player.closeInventory();
     }
 }

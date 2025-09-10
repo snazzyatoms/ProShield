@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
@@ -22,11 +23,13 @@ public class PvpProtectionListener implements Listener {
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
+    private final MessagesUtil messages;
 
     public PvpProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -39,7 +42,6 @@ public class PvpProtectionListener implements Listener {
         if (attacker.hasPermission("proshield.bypass")) return; // admins bypass
 
         FileConfiguration config = plugin.getConfig();
-
         Chunk chunk = target.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
@@ -48,23 +50,16 @@ public class PvpProtectionListener implements Listener {
             boolean allowWildernessPvP = config.getBoolean("protection.wilderness.allow-pvp", true);
             if (!allowWildernessPvP) {
                 event.setCancelled(true);
-                attacker.sendMessage(plugin.getPrefix() + "§cPvP is disabled in the wilderness.");
+                messages.send(attacker, "protection.pvp-wilderness-denied");
             }
             return;
         }
 
         // === Inside a claim ===
-        PlotSettings settings = plot.getSettings();
-        boolean globalClaimPvP = config.getBoolean("protection.pvp-in-claims", false);
-
-        // Use per-claim override if set, otherwise fall back to global
-        boolean allowClaimPvP = (settings.isPvpEnabled() != null)
-                ? settings.isPvpEnabled()
-                : globalClaimPvP;
-
+        boolean allowClaimPvP = plot.getSettings().isPvpEnabled(); // per-claim setting
         if (!allowClaimPvP) {
             event.setCancelled(true);
-            attacker.sendMessage(plugin.getPrefix() + "§cPvP is disabled in this claim.");
+            messages.send(attacker, "protection.pvp-claim-denied");
             return;
         }
 
@@ -72,15 +67,16 @@ public class PvpProtectionListener implements Listener {
         ClaimRole attackerRole = roleManager.getRole(plot, attacker);
         ClaimRole victimRole = roleManager.getRole(plot, target);
 
-        // Example: Owners & Co-Owners can always fight each other if PvP is enabled
+        // Example rule: Owners & Co-Owners can always fight each other if claim PvP is enabled
         if (roleManager.isOwnerOrCoOwner(attackerRole) && roleManager.isOwnerOrCoOwner(victimRole)) {
             return; // allow
         }
 
-        // Otherwise, rely on claim/global PvP state
-        if (!allowClaimPvP) {
+        // Default: follow config
+        boolean globalClaimPvP = config.getBoolean("protection.pvp-in-claims", false);
+        if (!globalClaimPvP) {
             event.setCancelled(true);
-            attacker.sendMessage(plugin.getPrefix() + "§cPvP is not allowed here.");
+            messages.send(attacker, "protection.pvp-claim-global-denied");
         }
     }
 }

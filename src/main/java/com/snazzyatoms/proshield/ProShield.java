@@ -3,10 +3,10 @@ package com.snazzyatoms.proshield;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.gui.GUICache;
 import com.snazzyatoms.proshield.plots.*;
-import com.snazzyatoms.proshield.tasks.MobBorderRepelListener;
-import com.snazzyatoms.proshield.tasks.ClaimExpiryTask;
 import org.bukkit.Bukkit;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
@@ -16,14 +16,9 @@ public class ProShield extends JavaPlugin {
     private PlotManager plotManager;
     private ClaimRoleManager roleManager;
     private GUIManager guiManager;
+    private GUICache guiCache;
 
-    // Listeners & tasks
     private MobBorderRepelListener mobBorderRepelListener;
-    private ClaimExpiryTask claimExpiryTask;
-
-    public static ProShield getInstance() {
-        return instance;
-    }
 
     @Override
     public void onEnable() {
@@ -33,83 +28,57 @@ public class ProShield extends JavaPlugin {
         reloadConfig();
 
         // Core managers
-        this.plotManager = new PlotManager(this);
-        this.roleManager = new ClaimRoleManager(this);
-        this.guiManager = new GUIManager(this);
-
-        // Register command
-        ProShieldCommand command = new ProShieldCommand(this, plotManager, guiManager);
-        getCommand("proshield").setExecutor(command);
-        getCommand("proshield").setTabCompleter(command);
+        plotManager = new PlotManager(this);
+        roleManager = new ClaimRoleManager(this);
+        guiCache = new GUICache();
+        guiManager = new GUIManager(this, plotManager, roleManager, guiCache);
 
         // Register listeners
-        Bukkit.getPluginManager().registerEvents(new GUIListener(guiManager), this);
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(plotManager, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(guiManager, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new GUIListener(guiManager), this);
         Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(plotManager), this);
 
-        // Start tasks
-        startClaimExpiryTask();
-        startMobBorderRepelTask();
+        // Register Mob Repel Listener
+        mobBorderRepelListener = new MobBorderRepelListener(this, plotManager);
+        Bukkit.getPluginManager().registerEvents(mobBorderRepelListener, this);
 
-        getLogger().info("✅ ProShield enabled!");
+        // Commands
+        ProShieldCommand commandExecutor = new ProShieldCommand(this, plotManager, guiManager);
+        PluginCommand mainCommand = getCommand("proshield");
+        if (mainCommand != null) {
+            mainCommand.setExecutor(commandExecutor);
+            mainCommand.setTabCompleter(commandExecutor);
+        }
+
+        getLogger().info("✅ ProShield enabled (v" + getDescription().getVersion() + ")");
     }
 
     @Override
     public void onDisable() {
-        stopMobBorderRepelTask();
-        stopClaimExpiryTask();
-        getLogger().info("🛑 ProShield disabled!");
+        getLogger().info("⛔ ProShield disabled");
     }
 
-    // === Task Management ===
-
-    private void startClaimExpiryTask() {
-        this.claimExpiryTask = new ClaimExpiryTask(plotManager);
-        this.claimExpiryTask.runTaskTimer(this, 20L * 60L, 20L * 60L * 60L); // hourly
-    }
-
-    private void stopClaimExpiryTask() {
-        if (this.claimExpiryTask != null) {
-            this.claimExpiryTask.cancel();
-            this.claimExpiryTask = null;
-        }
-    }
-
-    private void startMobBorderRepelTask() {
-        this.mobBorderRepelListener = new MobBorderRepelListener(this, plotManager);
-        this.mobBorderRepelListener.start();
-    }
-
-    private void stopMobBorderRepelTask() {
-        if (this.mobBorderRepelListener != null) {
-            this.mobBorderRepelListener.stop();
-            this.mobBorderRepelListener = null;
-        }
-    }
-
-    // === Reload ===
-
+    /**
+     * Reload configs, GUIs, roles, and mob repel settings
+     */
     public void reloadAllConfigs() {
         reloadConfig();
-        roleManager.reloadFromConfigSafe();
-        guiManager.onConfigReload();
-
-        // Restart tasks so config changes apply immediately
-        stopClaimExpiryTask();
-        startClaimExpiryTask();
-
-        stopMobBorderRepelTask();
-        startMobBorderRepelTask();
-
-        getLogger().info("🔄 ProShield configs reloaded successfully!");
+        roleManager.reloadFromConfig();
+        guiManager.reloadFromConfig();
+        if (mobBorderRepelListener != null) {
+            mobBorderRepelListener.reloadFromConfig();
+        }
+        getLogger().info("♻️ ProShield config reloaded successfully");
     }
 
-    // === Getters ===
+    public static ProShield getInstance() {
+        return instance;
+    }
+
     public PlotManager getPlotManager() {
         return plotManager;
     }
@@ -120,5 +89,9 @@ public class ProShield extends JavaPlugin {
 
     public GUIManager getGuiManager() {
         return guiManager;
+    }
+
+    public GUICache getGuiCache() {
+        return guiCache;
     }
 }

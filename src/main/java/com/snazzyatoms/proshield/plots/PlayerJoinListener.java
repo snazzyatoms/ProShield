@@ -2,19 +2,13 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 
-/**
- * Handles player join events:
- * - Auto-gives compass if enabled in config.
- * - Differentiates between Player Compass and Admin Compass.
- */
 public class PlayerJoinListener implements Listener {
 
     private final ProShield plugin;
@@ -28,32 +22,40 @@ public class PlayerJoinListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        FileConfiguration config = plugin.getConfig();
 
-        if (!plugin.getConfig().getBoolean("autogive.compass-on-join", true)) {
-            return; // Disabled in config
-        }
+        boolean giveOnJoin = config.getBoolean("autogive.compass-on-join", true);
+        if (!giveOnJoin) return;
 
         boolean isAdmin = player.isOp() || player.hasPermission("proshield.admin");
 
-        // Get correct compass
+        // Prevent duplication: check if player already has the compass
+        if (alreadyHasCompass(player, isAdmin)) return;
+
         ItemStack compass = gui.createCompass(isAdmin);
-
-        // Check if player already has one
-        boolean hasCompass = player.getInventory().containsAtLeast(compass, 1);
-        if (hasCompass) {
-            return; // Already has compass
-        }
-
-        // Give compass (drop if inventory full, based on config)
-        if (player.getInventory().firstEmpty() == -1) {
-            if (plugin.getConfig().getBoolean("compass.drop-if-full", true)) {
-                player.getWorld().dropItemNaturally(player.getLocation(), compass);
-                player.sendMessage(ChatColor.YELLOW + "Your ProShield compass was dropped because your inventory was full.");
-            }
-        } else {
+        if (player.getInventory().firstEmpty() != -1) {
             player.getInventory().addItem(compass);
+        } else {
+            boolean dropIfFull = config.getBoolean("compass.drop-if-full", true);
+            if (dropIfFull) {
+                player.getWorld().dropItemNaturally(player.getLocation(), compass);
+            }
         }
+    }
 
-        Bukkit.getScheduler().runTaskLater(plugin, player::updateInventory, 2L);
+    private boolean alreadyHasCompass(Player player, boolean isAdmin) {
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item == null) continue;
+            if (gui.isProShieldCompass(item)) {
+                // If player has the wrong type (admin vs player), replace it
+                boolean itemIsAdmin = gui.isAdminCompass(item);
+                if (itemIsAdmin != isAdmin) {
+                    player.getInventory().remove(item);
+                    return false; // force re-give
+                }
+                return true; // already correct compass
+            }
+        }
+        return false;
     }
 }

@@ -37,14 +37,14 @@ public class FireProtectionListener implements Listener {
         if (plot == null) {
             if (!plugin.getConfig().getBoolean("protection.fire.burn", true)) {
                 event.setCancelled(true);
-                messages.debug(plugin, "&cFire burn prevented in wilderness at " + block.getLocation());
+                messages.debug("&cFire burn prevented in wilderness at " + block.getLocation());
             }
             return;
         }
 
         if (!plot.getSettings().isFireAllowed()) {
             event.setCancelled(true);
-            messages.debug(plugin, "&cFire burn prevented in claim: " + plot.getName());
+            messages.debug("&cFire burn prevented in claim: " + plot.getDisplayNameSafe());
         }
     }
 
@@ -57,14 +57,14 @@ public class FireProtectionListener implements Listener {
         if (plot == null) {
             if (!plugin.getConfig().getBoolean("protection.fire.spread", true)) {
                 event.setCancelled(true);
-                messages.debug(plugin, "&cFire spread prevented in wilderness at " + block.getLocation());
+                messages.debug("&cFire spread prevented in wilderness at " + block.getLocation());
             }
             return;
         }
 
         if (!plot.getSettings().isFireAllowed()) {
             event.setCancelled(true);
-            messages.debug(plugin, "&cFire spread prevented in claim: " + plot.getName());
+            messages.debug("&cFire spread prevented in claim: " + plot.getDisplayNameSafe());
         }
     }
 
@@ -77,22 +77,22 @@ public class FireProtectionListener implements Listener {
         if (plot == null) {
             if (!plugin.getConfig().getBoolean("protection.fire.ignite.flint_and_steel", true) && event.getCause() == BlockIgniteEvent.IgniteCause.FLINT_AND_STEEL) {
                 event.setCancelled(true);
-                messages.debug(plugin, "&cIgnite by Flint & Steel prevented in wilderness.");
+                messages.debug("&cIgnite by Flint & Steel prevented in wilderness.");
             }
             if (!plugin.getConfig().getBoolean("protection.fire.ignite.lava", true) && event.getCause() == BlockIgniteEvent.IgniteCause.LAVA) {
                 event.setCancelled(true);
-                messages.debug(plugin, "&cIgnite by Lava prevented in wilderness.");
+                messages.debug("&cIgnite by Lava prevented in wilderness.");
             }
             if (!plugin.getConfig().getBoolean("protection.fire.ignite.lightning", true) && event.getCause() == BlockIgniteEvent.IgniteCause.LIGHTNING) {
                 event.setCancelled(true);
-                messages.debug(plugin, "&cIgnite by Lightning prevented in wilderness.");
+                messages.debug("&cIgnite by Lightning prevented in wilderness.");
             }
             return;
         }
 
         if (!plot.getSettings().isFireAllowed()) {
             event.setCancelled(true);
-            messages.debug(plugin, "&cIgnite prevented in claim: " + plot.getName() + " (Cause: " + event.getCause() + ")");
+            messages.debug("&cIgnite prevented in claim: " + plot.getDisplayNameSafe() + " (Cause: " + event.getCause() + ")");
         }
     }
 }

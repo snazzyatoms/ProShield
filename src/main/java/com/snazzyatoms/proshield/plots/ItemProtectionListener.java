@@ -58,7 +58,7 @@ public class ItemProtectionListener implements Listener {
         if (!plot.getSettings().isItemFramesAllowed()) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
-            messages.debug(plugin, "&cPrevented item frame break inside claim: " + plot.getName());
+            messages.debug("&cPrevented item frame break inside claim: " + plot.getDisplayNameSafe());
         }
     }
 
@@ -86,11 +86,10 @@ public class ItemProtectionListener implements Listener {
         Chunk chunk = entity.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        if (plot == null) {
-            return; // wilderness - handled by config elsewhere
-        }
+        if (plot == null) return; // wilderness - handled by config elsewhere
 
-        ClaimRole role = roleManager.getRole(plot, player);
+        // Role currently unused, but left for expansion (e.g., allow builders to access containers)
+        ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
 
         // Armor stands
         if (entity instanceof ArmorStand && !plot.getSettings().isArmorStandsAllowed()) {
@@ -141,7 +140,7 @@ public class ItemProtectionListener implements Listener {
         if (!plot.getSettings().isVehiclesAllowed()) {
             event.setCancelled(true);
             messages.send(player, "vehicles-deny");
-            messages.debug(plugin, "&cPrevented vehicle destroy in claim: " + plot.getName());
+            messages.debug("&cPrevented vehicle destroy in claim: " + plot.getDisplayNameSafe());
         }
     }
 }

@@ -1,120 +1,140 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotManager;
+
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-/**
- * GUIListener routes inventory interactions to GUIManager via GUICache.
- */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager guiManager;
+    private final GUIManager gui;
+    private final PlotManager plots;
 
-    public GUIListener(ProShield plugin, GUIManager guiManager) {
+    public GUIListener(ProShield plugin, GUIManager gui, PlotManager plots) {
         this.plugin = plugin;
-        this.guiManager = guiManager;
+        this.gui = gui;
+        this.plots = plots;
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
+    public void onInventoryClick(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player player)) return;
+        Inventory inv = e.getInventory();
+        ItemStack clicked = e.getCurrentItem();
 
-        Player player = (Player) event.getWhoClicked();
-        Inventory clickedInv = event.getClickedInventory();
-        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
 
-        if (clickedInv == null || clicked == null) return;
+        String title = e.getView().getTitle();
+        e.setCancelled(true); // Prevent item dragging
 
-        // Check if this item is registered in GUICache
-        String action = GUICache.getAction(clicked);
-        if (action == null) return; // Not a ProShield GUI button
+        Plot plot = plots.getPlotAt(player.getLocation());
 
-        event.setCancelled(true); // Prevent item movement
+        // === Main Menu ===
+        if (title.equals("🛡️ ProShield Menu")) {
+            switch (clicked.getItemMeta().getDisplayName()) {
+                case "§aClaim Chunk" -> plots.claimPlot(player);
+                case "§cUnclaim" -> plots.unclaimPlot(player);
+                case "§bClaim Info" -> plots.sendClaimInfo(player);
+                case "§eTrust Player" -> gui.openTrustMenu(player, plot);
+                case "§eUntrust Player" -> gui.openUntrustMenu(player, plot);
+                case "§6Role Manager" -> gui.openRoleMenu(player, plot);
+                case "§6Flags" -> gui.openFlagMenu(player, plot);
+                case "§dTransfer Claim" -> gui.openTransferMenu(player, plot);
+                case "§bHelp" -> player.performCommand("proshield help");
+                case "§cAdmin Menu" -> gui.openAdmin(player);
+            }
+            return;
+        }
 
-        // Handle GUI actions
-        handleButtonClick(player, action);
+        // === Trust Menu ===
+        if (title.equals("👥 Trust Players")) {
+            if (clicked.getItemMeta().getDisplayName().equals("§7Back")) {
+                gui.openMain(player);
+            }
+            // Future: player selection GUI integration
+            return;
+        }
+
+        // === Untrust Menu ===
+        if (title.equals("🚫 Untrust Players")) {
+            if (clicked.getItemMeta().getDisplayName().equals("§7Back")) {
+                gui.openMain(player);
+            }
+            return;
+        }
+
+        // === Role Menu ===
+        if (title.equals("⚙️ Role Manager")) {
+            switch (clicked.getItemMeta().getDisplayName()) {
+                case "§7Visitor" -> plugin.getRoleManager().setRole(player, plot, "Visitor");
+                case "§aMember" -> plugin.getRoleManager().setRole(player, plot, "Member");
+                case "§6Container" -> plugin.getRoleManager().setRole(player, plot, "Container");
+                case "§bBuilder" -> plugin.getRoleManager().setRole(player, plot, "Builder");
+                case "§dCo-Owner" -> plugin.getRoleManager().setRole(player, plot, "Co-Owner");
+                case "§7Back" -> gui.openMain(player);
+            }
+            return;
+        }
+
+        // === Flag Menu ===
+        if (title.equals("🚩 Claim Flags")) {
+            switch (clicked.getItemMeta().getDisplayName()) {
+                case "§cPvP" -> plots.toggleFlag(plot, "pvp");
+                case "§cExplosions" -> plots.toggleFlag(plot, "explosions");
+                case "§cFire" -> plots.toggleFlag(plot, "fire");
+                case "§cMob Grief" -> plots.toggleFlag(plot, "mob-grief");
+                case "§7Back" -> gui.openMain(player);
+            }
+            return;
+        }
+
+        // === Transfer Menu ===
+        if (title.equals("📦 Transfer Ownership")) {
+            if (clicked.getItemMeta().getDisplayName().equals("§dTransfer")) {
+                player.sendMessage("§eUse /proshield transfer <player> to complete ownership transfer.");
+            } else if (clicked.getItemMeta().getDisplayName().equals("§7Back")) {
+                gui.openMain(player);
+            }
+            return;
+        }
+
+        // === Admin Menu ===
+        if (title.equals("⚙️ ProShield Admin")) {
+            switch (clicked.getItemMeta().getDisplayName()) {
+                case "§cToggle Fire" -> plots.toggleGlobal("fire");
+                case "§cToggle Explosions" -> plots.toggleGlobal("explosions");
+                case "§cToggle Entity Grief" -> plots.toggleGlobal("entity-grief");
+                case "§cToggle Interactions" -> plots.toggleGlobal("interactions");
+                case "§cToggle PvP" -> plots.toggleGlobal("pvp");
+                case "§6Keep Items" -> plots.toggleGlobal("keep-items");
+                case "§cPurge Expired" -> player.performCommand("proshield purgeexpired 30");
+                case "§eHelp" -> player.performCommand("proshield help");
+                case "§cDebug Mode" -> player.performCommand("proshield debug toggle");
+                case "§aCompass Drop" -> plots.toggleGlobal("compass-drop");
+                case "§bReload Config" -> player.performCommand("proshield reload");
+                case "§dTeleport Tools" -> player.performCommand("proshield tp tools");
+                case "§7Back" -> gui.openMain(player);
+            }
+        }
     }
 
-    private void handleButtonClick(Player player, String action) {
-        switch (action.toLowerCase()) {
-            // ==== Player Actions ====
-            case "claim":
-                player.performCommand("proshield claim");
-                break;
-            case "info":
-                player.performCommand("proshield info");
-                break;
-            case "unclaim":
-                player.performCommand("proshield unclaim");
-                break;
-            case "trust":
-                player.performCommand("proshield trustmenu");
-                break;
-            case "untrust":
-                player.performCommand("proshield untrustmenu");
-                break;
-            case "roles":
-                player.performCommand("proshield rolemenu");
-                break;
-            case "flags":
-                player.performCommand("proshield flagmenu");
-                break;
-            case "transfer":
-                player.performCommand("proshield transfermenu");
-                break;
-            case "help":
-                player.performCommand("proshield help");
-                break;
-            case "back":
-                guiManager.openMain(player, player.hasPermission("proshield.admin"));
-                break;
-
-            // ==== Admin Actions ====
-            case "admin":
-                guiManager.openAdmin(player);
-                break;
-            case "toggle_fire":
-                player.performCommand("proshield toggle fire");
-                break;
-            case "toggle_explosions":
-                player.performCommand("proshield toggle explosions");
-                break;
-            case "toggle_entity_grief":
-                player.performCommand("proshield toggle entitygrief");
-                break;
-            case "toggle_interactions":
-                player.performCommand("proshield toggle interactions");
-                break;
-            case "toggle_pvp":
-                player.performCommand("proshield toggle pvp");
-                break;
-            case "toggle_keepitems":
-                player.performCommand("proshield toggle keepitems");
-                break;
-            case "purge_expired":
-                player.performCommand("proshield purgeexpired 30 dryrun");
-                break;
-            case "toggle_debug":
-                player.performCommand("proshield debug toggle");
-                break;
-            case "reload":
-                player.performCommand("proshield reload");
-                break;
-            case "tp_tools":
-                player.performCommand("proshield tpmenu");
-                break;
-            case "toggle_spawnguard":
-                player.performCommand("proshield toggle spawnguard");
-                break;
-            default:
-                player.sendMessage("§c[ProShield] Unknown action: " + action);
-                break;
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent e) {
+        // Optional: cleanup or refresh GUICache per-player
+        if (e.getPlayer() instanceof Player player) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!player.isOnline()) return;
+                gui.onConfigReload(); // ensures menus refresh after config reloads
+            }, 1L);
         }
     }
 }

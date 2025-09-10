@@ -1,184 +1,179 @@
 package com.snazzyatoms.proshield.plots;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.bukkit.configuration.ConfigurationSection;
+
+import java.util.Objects;
 
 /**
- * Stores per-claim protection flags.
- * - Defaults come from config.yml
- * - Can be toggled per-claim via GUI or commands
+ * PlotSettings — per-claim flags & toggles.
+ * Includes all flags referenced in listeners, plus damage sub-toggles.
  */
 public class PlotSettings {
 
-    private boolean pvpEnabled;
-    private boolean explosionsAllowed;
-    private boolean fireSpreadAllowed;
-    private boolean entityGriefingAllowed;
-    private boolean keepItemsEnabled;
-    private boolean damageEnabled;
-    private boolean pveEnabled;
-    private boolean bucketsAllowed;
-    private boolean itemFramesAllowed;
-    private boolean vehiclesAllowed;
-    private boolean redstoneAllowed;
-    private boolean containerAccessAllowed;
-    private boolean animalAccessAllowed;
+    /* High-level toggles */
+    private boolean pvpEnabled = false;
+    private boolean explosionsAllowed = true;
+    private boolean fireAllowed = true;
+    private boolean entityGriefingAllowed = true;
+    private boolean interactionsAllowed = true;
 
-    /** Flexible storage for future flags */
-    private final Map<String, Boolean> customFlags = new HashMap<>();
+    /* Finer-grain access flags */
+    private boolean containersAllowed = true;
+    private boolean animalInteractAllowed = true;
+    private boolean armorStandsAllowed = true;
+    private boolean petAccessAllowed = true;
+    private boolean vehiclesAllowed = true;
 
-    public PlotSettings() {
-        // Default values (synced with config.yml global defaults)
-        this.pvpEnabled = false;
-        this.explosionsAllowed = false;
-        this.fireSpreadAllowed = false;
-        this.entityGriefingAllowed = false;
-        this.keepItemsEnabled = false;
-        this.damageEnabled = true;
-        this.pveEnabled = true;
-        this.bucketsAllowed = false;
-        this.itemFramesAllowed = false;
-        this.vehiclesAllowed = false;
-        this.redstoneAllowed = true;
-        this.containerAccessAllowed = false;
-        this.animalAccessAllowed = false;
+    /* Keep-drops per claim */
+    private boolean keepItemsEnabled = false;
+
+    /* Damage micro-toggles (used by DamageProtectionListener) */
+    private boolean damageProtectOwnerAndTrusted = true;
+    private boolean damageCancelAll = false;
+    private boolean damagePveEnabled = true;
+    private boolean damageProjectilesEnabled = true;
+    private boolean damageEnvironmentEnabled = true;
+    private boolean damageFireLavaEnabled = true;
+    private boolean damageFallEnabled = true;
+    private boolean damageExplosionsEnabled = true;
+    private boolean damageDrownVoidSuffocateEnabled = true;
+    private boolean damagePoisonWitherEnabled = true;
+
+    public PlotSettings() {}
+
+    /* ---------- Load/Save Helpers (optional) ---------- */
+
+    public static PlotSettings fromConfig(ConfigurationSection sec) {
+        PlotSettings s = new PlotSettings();
+        if (sec == null) return s;
+
+        s.pvpEnabled = sec.getBoolean("pvp", s.pvpEnabled);
+        s.explosionsAllowed = sec.getBoolean("explosions", s.explosionsAllowed);
+        s.fireAllowed = sec.getBoolean("fire", s.fireAllowed);
+        s.entityGriefingAllowed = sec.getBoolean("entity-grief", s.entityGriefingAllowed);
+        s.interactionsAllowed = sec.getBoolean("interactions", s.interactionsAllowed);
+
+        s.containersAllowed = sec.getBoolean("containers", s.containersAllowed);
+        s.animalInteractAllowed = sec.getBoolean("animal-interact", s.animalInteractAllowed);
+        s.armorStandsAllowed = sec.getBoolean("armor-stands", s.armorStandsAllowed);
+        s.petAccessAllowed = sec.getBoolean("pets", s.petAccessAllowed);
+        s.vehiclesAllowed = sec.getBoolean("vehicles", s.vehiclesAllowed);
+
+        s.keepItemsEnabled = sec.getBoolean("keep-items", s.keepItemsEnabled);
+
+        ConfigurationSection dmg = sec.getConfigurationSection("damage");
+        if (dmg != null) {
+            s.damageProtectOwnerAndTrusted = dmg.getBoolean("protect-owner-and-trusted", s.damageProtectOwnerAndTrusted);
+            s.damageCancelAll = dmg.getBoolean("cancel-all", s.damageCancelAll);
+            s.damagePveEnabled = dmg.getBoolean("pve", s.damagePveEnabled);
+            s.damageProjectilesEnabled = dmg.getBoolean("projectiles", s.damageProjectilesEnabled);
+            s.damageEnvironmentEnabled = dmg.getBoolean("environment", s.damageEnvironmentEnabled);
+            s.damageFireLavaEnabled = dmg.getBoolean("fire-lava", s.damageFireLavaEnabled);
+            s.damageFallEnabled = dmg.getBoolean("fall", s.damageFallEnabled);
+            s.damageExplosionsEnabled = dmg.getBoolean("explosions", s.damageExplosionsEnabled);
+            s.damageDrownVoidSuffocateEnabled = dmg.getBoolean("drown-void-suffocate", s.damageDrownVoidSuffocateEnabled);
+            s.damagePoisonWitherEnabled = dmg.getBoolean("poison-wither", s.damagePoisonWitherEnabled);
+        }
+
+        return s;
     }
 
-    /* ---------------------------------------------------------
-     * Standard getters / setters
-     * --------------------------------------------------------- */
+    public void toConfig(ConfigurationSection sec) {
+        if (sec == null) return;
 
-    public boolean isPvpEnabled() {
-        return pvpEnabled;
+        sec.set("pvp", pvpEnabled);
+        sec.set("explosions", explosionsAllowed);
+        sec.set("fire", fireAllowed);
+        sec.set("entity-grief", entityGriefingAllowed);
+        sec.set("interactions", interactionsAllowed);
+
+        sec.set("containers", containersAllowed);
+        sec.set("animal-interact", animalInteractAllowed);
+        sec.set("armor-stands", armorStandsAllowed);
+        sec.set("pets", petAccessAllowed);
+        sec.set("vehicles", vehiclesAllowed);
+
+        sec.set("keep-items", keepItemsEnabled);
+
+        ConfigurationSection dmg = sec.getConfigurationSection("damage");
+        if (dmg == null) dmg = sec.createSection("damage");
+        dmg.set("protect-owner-and-trusted", damageProtectOwnerAndTrusted);
+        dmg.set("cancel-all", damageCancelAll);
+        dmg.set("pve", damagePveEnabled);
+        dmg.set("projectiles", damageProjectilesEnabled);
+        dmg.set("environment", damageEnvironmentEnabled);
+        dmg.set("fire-lava", damageFireLavaEnabled);
+        dmg.set("fall", damageFallEnabled);
+        dmg.set("explosions", damageExplosionsEnabled);
+        dmg.set("drown-void-suffocate", damageDrownVoidSuffocateEnabled);
+        dmg.set("poison-wither", damagePoisonWitherEnabled);
     }
 
-    public void setPvpEnabled(boolean pvpEnabled) {
-        this.pvpEnabled = pvpEnabled;
+    /* ---------- Getters/Setters used by listeners ---------- */
+
+    public boolean isPvpEnabled() { return pvpEnabled; }
+    public void setPvpEnabled(boolean pvpEnabled) { this.pvpEnabled = pvpEnabled; }
+
+    public boolean isExplosionsAllowed() { return explosionsAllowed; }
+    public void setExplosionsAllowed(boolean explosionsAllowed) { this.explosionsAllowed = explosionsAllowed; }
+
+    public boolean isFireAllowed() { return fireAllowed; }
+    public void setFireAllowed(boolean fireAllowed) { this.fireAllowed = fireAllowed; }
+
+    public boolean isEntityGriefingAllowed() { return entityGriefingAllowed; }
+    public void setEntityGriefingAllowed(boolean entityGriefingAllowed) { this.entityGriefingAllowed = entityGriefingAllowed; }
+
+    public boolean isInteractionsAllowed() { return interactionsAllowed; }
+    public void setInteractionsAllowed(boolean interactionsAllowed) { this.interactionsAllowed = interactionsAllowed; }
+
+    public boolean isContainersAllowed() { return containersAllowed; }
+    public void setContainersAllowed(boolean containersAllowed) { this.containersAllowed = containersAllowed; }
+
+    public boolean isAnimalInteractAllowed() { return animalInteractAllowed; }
+    public void setAnimalInteractAllowed(boolean animalInteractAllowed) { this.animalInteractAllowed = animalInteractAllowed; }
+
+    public boolean isArmorStandsAllowed() { return armorStandsAllowed; }
+    public void setArmorStandsAllowed(boolean armorStandsAllowed) { this.armorStandsAllowed = armorStandsAllowed; }
+
+    public boolean isPetAccessAllowed() { return petAccessAllowed; }
+    public void setPetAccessAllowed(boolean petAccessAllowed) { this.petAccessAllowed = petAccessAllowed; }
+
+    public boolean isVehiclesAllowed() { return vehiclesAllowed; }
+    public void setVehiclesAllowed(boolean vehiclesAllowed) { this.vehiclesAllowed = vehiclesAllowed; }
+
+    public boolean isKeepItemsEnabled() { return keepItemsEnabled; }
+    public void setKeepItemsEnabled(boolean keepItemsEnabled) { this.keepItemsEnabled = keepItemsEnabled; }
+
+    public boolean isDamageProtectOwnerAndTrusted() { return damageProtectOwnerAndTrusted; }
+    public boolean isDamageCancelAll() { return damageCancelAll; }
+    public boolean isDamagePveEnabled() { return damagePveEnabled; }
+    public boolean isDamageProjectilesEnabled() { return damageProjectilesEnabled; }
+    public boolean isDamageEnvironmentEnabled() { return damageEnvironmentEnabled; }
+    public boolean isDamageFireLavaEnabled() { return damageFireLavaEnabled; }
+    public boolean isDamageFallEnabled() { return damageFallEnabled; }
+    public boolean isDamageExplosionsEnabled() { return damageExplosionsEnabled; }
+    public boolean isDamageDrownVoidSuffocateEnabled() { return damageDrownVoidSuffocateEnabled; }
+    public boolean isDamagePoisonWitherEnabled() { return damagePoisonWitherEnabled; }
+
+    /* Equality by location */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Plot)) return false;
+        PlotSettings that = (PlotSettings) o;
+        return hashCode() == that.hashCode();
     }
 
-    public boolean isExplosionsAllowed() {
-        return explosionsAllowed;
-    }
-
-    public void setExplosionsAllowed(boolean explosionsAllowed) {
-        this.explosionsAllowed = explosionsAllowed;
-    }
-
-    public boolean isFireSpreadAllowed() {
-        return fireSpreadAllowed;
-    }
-
-    public void setFireSpreadAllowed(boolean fireSpreadAllowed) {
-        this.fireSpreadAllowed = fireSpreadAllowed;
-    }
-
-    public boolean isEntityGriefingAllowed() {
-        return entityGriefingAllowed;
-    }
-
-    public void setEntityGriefingAllowed(boolean entityGriefingAllowed) {
-        this.entityGriefingAllowed = entityGriefingAllowed;
-    }
-
-    public boolean isKeepItemsEnabled() {
-        return keepItemsEnabled;
-    }
-
-    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
-        this.keepItemsEnabled = keepItemsEnabled;
-    }
-
-    public boolean isDamageEnabled() {
-        return damageEnabled;
-    }
-
-    public void setDamageEnabled(boolean damageEnabled) {
-        this.damageEnabled = damageEnabled;
-    }
-
-    public boolean isPveEnabled() {
-        return pveEnabled;
-    }
-
-    public void setPveEnabled(boolean pveEnabled) {
-        this.pveEnabled = pveEnabled;
-    }
-
-    public boolean isBucketsAllowed() {
-        return bucketsAllowed;
-    }
-
-    public void setBucketsAllowed(boolean bucketsAllowed) {
-        this.bucketsAllowed = bucketsAllowed;
-    }
-
-    public boolean isItemFramesAllowed() {
-        return itemFramesAllowed;
-    }
-
-    public void setItemFramesAllowed(boolean itemFramesAllowed) {
-        this.itemFramesAllowed = itemFramesAllowed;
-    }
-
-    public boolean isVehiclesAllowed() {
-        return vehiclesAllowed;
-    }
-
-    public void setVehiclesAllowed(boolean vehiclesAllowed) {
-        this.vehiclesAllowed = vehiclesAllowed;
-    }
-
-    public boolean isRedstoneAllowed() {
-        return redstoneAllowed;
-    }
-
-    public void setRedstoneAllowed(boolean redstoneAllowed) {
-        this.redstoneAllowed = redstoneAllowed;
-    }
-
-    public boolean isContainerAccessAllowed() {
-        return containerAccessAllowed;
-    }
-
-    public void setContainerAccessAllowed(boolean containerAccessAllowed) {
-        this.containerAccessAllowed = containerAccessAllowed;
-    }
-
-    public boolean isAnimalAccessAllowed() {
-        return animalAccessAllowed;
-    }
-
-    public void setAnimalAccessAllowed(boolean animalAccessAllowed) {
-        this.animalAccessAllowed = animalAccessAllowed;
-    }
-
-    /* ---------------------------------------------------------
-     * Custom flags (future proofing)
-     * --------------------------------------------------------- */
-
-    public boolean isFlagEnabled(String key) {
-        return customFlags.getOrDefault(key.toLowerCase(), false);
-    }
-
-    public void setFlag(String key, boolean value) {
-        customFlags.put(key.toLowerCase(), value);
-    }
-
-    public Map<String, Boolean> getAllFlags() {
-        Map<String, Boolean> all = new HashMap<>(customFlags);
-        all.put("pvp", pvpEnabled);
-        all.put("explosions", explosionsAllowed);
-        all.put("fire", fireSpreadAllowed);
-        all.put("entitygrief", entityGriefingAllowed);
-        all.put("keepitems", keepItemsEnabled);
-        all.put("damage", damageEnabled);
-        all.put("pve", pveEnabled);
-        all.put("buckets", bucketsAllowed);
-        all.put("itemframes", itemFramesAllowed);
-        all.put("vehicles", vehiclesAllowed);
-        all.put("redstone", redstoneAllowed);
-        all.put("containers", containerAccessAllowed);
-        all.put("animals", animalAccessAllowed);
-        return all;
+    @Override
+    public int hashCode() {
+        // not important here; plot equality is handled in Plot, not settings.
+        return Objects.hash(
+                pvpEnabled, explosionsAllowed, fireAllowed, entityGriefingAllowed, interactionsAllowed,
+                containersAllowed, animalInteractAllowed, armorStandsAllowed, petAccessAllowed, vehiclesAllowed,
+                keepItemsEnabled,
+                damageProtectOwnerAndTrusted, damageCancelAll, damagePveEnabled, damageProjectilesEnabled,
+                damageEnvironmentEnabled, damageFireLavaEnabled, damageFallEnabled, damageExplosionsEnabled,
+                damageDrownVoidSuffocateEnabled, damagePoisonWitherEnabled
+        );
     }
 }

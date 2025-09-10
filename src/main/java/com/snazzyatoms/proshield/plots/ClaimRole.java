@@ -1,18 +1,23 @@
+// path: src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
 /**
- * Enum representing different claim roles in ProShield.
- * Controls player access inside claims.
+ * Roles for claim access. Keep names stable for YAML/back-compat.
  */
 public enum ClaimRole {
-    VISITOR,     // Can enter claim but no interactions
-    MEMBER,      // Can use doors, buttons, levers, etc.
-    CONTAINER,   // Can access chests, barrels, furnaces
-    BUILDER,     // Can break/place blocks
-    CO_OWNER,    // Near full permissions
-    OWNER;       // Claim creator
+    VISITOR,      // walk only
+    MEMBER,       // basic interactions (doors/buttons)
+    CONTAINER,    // can use containers
+    BUILDER,      // can build/break
+    CO_OWNER,     // almost full access
+    OWNER;        // the claim owner
 
-    public boolean isAtLeast(ClaimRole other) {
-        return this.ordinal() >= other.ordinal();
+    public static ClaimRole fromString(String s, ClaimRole def) {
+        if (s == null) return def;
+        try {
+            return ClaimRole.valueOf(s.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return def;
+        }
     }
 }

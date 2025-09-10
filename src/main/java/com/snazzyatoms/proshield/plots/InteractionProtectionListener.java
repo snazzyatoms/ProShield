@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -10,94 +11,81 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
- * Handles block & container interactions inside claims with:
- * - Wilderness rules (toggleable in config)
- * - Claim rules (owner & trusted roles)
- * - Global blacklist/whitelist
+ * Handles container & interaction protection inside claims.
+ * - Role-based checks for doors, trapdoors, buttons, levers, etc.
+ * - Configurable blacklist/whitelist for interactions
  */
 public class InteractionProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
-    private final Set<Material> blacklistedInteractions = new HashSet<>();
+    private final MessagesUtil messages;
 
     public InteractionProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
-        loadConfigBlacklist();
-    }
-
-    private void loadConfigBlacklist() {
-        FileConfiguration config = plugin.getConfig();
-        blacklistedInteractions.clear();
-        if (config.getBoolean("protection.interactions.enabled", true)) {
-            List<String> list = config.getStringList("protection.interactions.list");
-            for (String mat : list) {
-                try {
-                    blacklistedInteractions.add(Material.valueOf(mat.toUpperCase()));
-                } catch (IllegalArgumentException ignored) {
-                    plugin.getLogger().warning("[ProShield] Unknown material in interaction list: " + mat);
-                }
-            }
-        }
+        this.messages = plugin.getMessagesUtil();
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getClickedBlock() == null) return;
-
         Player player = event.getPlayer();
-        Block block = event.getClickedBlock();
-        Material type = block.getType();
+        if (player.hasPermission("proshield.bypass")) return; // admins bypass
 
-        FileConfiguration config = plugin.getConfig();
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        Block block = event.getClickedBlock();
+        if (block == null) return;
+
         Chunk chunk = block.getChunk();
         Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) return; // wilderness, allow unless disabled globally
 
-        // === Wilderness interactions ===
-        if (plot == null) {
-            if (!config.getBoolean("protection.wilderness.allow-interactions", true)) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with blocks in the wilderness.");
-            }
-            return;
-        }
-
-        // === Claim role check ===
         ClaimRole role = roleManager.getRole(plot, player);
-        if (roleManager.canInteract(role)) {
-            return; // trusted, allow
+
+        FileConfiguration config = plugin.getConfig();
+        boolean enabled = config.getBoolean("protection.interactions.enabled", true);
+        if (!enabled) return;
+
+        // Determine interaction protection mode
+        String mode = config.getString("protection.interactions.mode", "blacklist");
+        Set<String> categories = Set.copyOf(config.getStringList("protection.interactions.categories"));
+        Set<String> list = Set.copyOf(config.getStringList("protection.interactions.list"));
+
+        Material type = block.getType();
+        String materialName = type.name().toLowerCase();
+
+        boolean restricted;
+        if (mode.equalsIgnoreCase("blacklist")) {
+            restricted = list.contains(materialName) || categories.contains(getCategory(type));
+        } else {
+            restricted = !(list.contains(materialName) || categories.contains(getCategory(type)));
         }
 
-        // === Global interaction blacklist ===
-        boolean useBlacklist = config.getString("protection.interactions.mode", "blacklist")
-                .equalsIgnoreCase("blacklist");
-
-        if (useBlacklist) {
-            // deny if material is blacklisted
-            if (blacklistedInteractions.contains(type)) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot use that inside this claim.");
-            }
-        } else {
-            // whitelist mode: deny everything not listed
-            if (!blacklistedInteractions.contains(type)) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot use that inside this claim.");
-            }
+        if (restricted && !roleManager.canInteract(role)) {
+            event.setCancelled(true);
+            messages.send(player, "protection.interact-denied", "%block%", type.name());
         }
     }
 
-    public void reload() {
-        loadConfigBlacklist();
+    /**
+     * Maps block types into configured categories (e.g., doors, buttons, etc.)
+     */
+    private String getCategory(Material type) {
+        String name = type.name().toLowerCase();
+        if (name.contains("door")) return "doors";
+        if (name.contains("trapdoor")) return "trapdoors";
+        if (name.contains("gate")) return "fence_gates";
+        if (name.contains("button")) return "buttons";
+        if (name.contains("lever")) return "levers";
+        if (name.contains("pressure_plate")) return "pressure_plates";
+        return "other";
     }
 }

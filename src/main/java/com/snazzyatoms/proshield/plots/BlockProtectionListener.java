@@ -13,6 +13,8 @@ import org.bukkit.event.block.BlockPlaceEvent;
 
 /**
  * Handles block breaking & placing inside claims with role-based checks.
+ * - Uses MessagesUtil for feedback
+ * - Global + per-claim enforcement
  */
 public class BlockProtectionListener implements Listener {
 
@@ -40,7 +42,8 @@ public class BlockProtectionListener implements Listener {
 
         if (!roleManager.canBuild(role)) {
             event.setCancelled(true);
-            messages.send(player, "protection.block-break-denied");
+            messages.send(player, "protection.block.break-denied",
+                    messages.buildPlaceholders("player", player.getName(), "claim", plot.getName()));
         }
     }
 
@@ -56,7 +59,8 @@ public class BlockProtectionListener implements Listener {
 
         if (!roleManager.canBuild(role)) {
             event.setCancelled(true);
-            messages.send(player, "protection.block-place-denied");
+            messages.send(player, "protection.block.place-denied",
+                    messages.buildPlaceholders("player", player.getName(), "claim", plot.getName()));
         }
     }
 }

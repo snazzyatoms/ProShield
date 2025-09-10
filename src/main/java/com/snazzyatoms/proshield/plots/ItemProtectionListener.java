@@ -2,17 +2,18 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Chunk;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Item;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.ItemDespawnEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
 
 /**
- * Handles item protection inside claims.
- * - Prevents unauthorized players from picking up or dropping items if disabled
- * - Reads from global + per-claim settings
+ * Handles item spawn/despawn protection inside claims.
+ * - Prevents item despawn if enabled (globally or per-claim)
+ * - Prevents unwanted drops in claims if configured
+ * - Works alongside KeepDropsListener for death-drops
  */
 public class ItemProtectionListener implements Listener {
 
@@ -24,40 +25,51 @@ public class ItemProtectionListener implements Listener {
         this.plotManager = plotManager;
     }
 
+    /**
+     * Cancel despawn of items if keep-items is enabled (globally or per-claim).
+     */
     @EventHandler(ignoreCancelled = true)
-    public void onItemDrop(PlayerDropItemEvent event) {
-        Player player = event.getPlayer();
-        Chunk chunk = player.getLocation().getChunk();
+    public void onItemDespawn(ItemDespawnEvent event) {
+        Item item = event.getEntity();
+        Chunk chunk = item.getLocation().getChunk();
 
-        if (!plotManager.isItemProtectionEnabled(chunk)) {
-            return; // globally/per-claim allowed
-        }
-
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness, allow
-
-        if (!plot.getSettings().isTrusted(player.getUniqueId())) {
+        if (plotManager.isKeepItemsEnabled(chunk)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items here.");
+            item.setTicksLived(0); // reset lifetime
         }
     }
 
+    /**
+     * Apply optional protection to item spawns (prevent unwanted spawns in claims).
+     */
     @EventHandler(ignoreCancelled = true)
     public void onItemSpawn(ItemSpawnEvent event) {
         Item item = event.getEntity();
         Chunk chunk = item.getLocation().getChunk();
 
-        if (!plotManager.isItemProtectionEnabled(chunk)) {
-            return; // globally/per-claim allowed
-        }
-
         Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness, allow
+        FileConfiguration config = plugin.getConfig();
 
-        // Respect keep-items toggle (global + per-claim)
-        if (plotManager.isKeepItemsEnabled(chunk)) {
-            item.setTicksLived(1); // prevent despawn
-            item.setUnlimitedLifetime(true);
+        // === Global keep-items check ===
+        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
+
+        // === Per-claim keep-items check ===
+        boolean perClaimKeep = plot != null && plot.getSettings().isKeepItemsEnabled();
+
+        // If neither enabled, allow normal item behavior
+        if (!globalKeep && !perClaimKeep) return;
+
+        // Reset despawn timer and make persistent
+        int despawnSeconds = config.getInt("claims.keep-items.despawn-seconds", 900);
+        item.setTicksLived(0);
+        item.setUnlimitedLifetime(true);
+
+        if (despawnSeconds > 0) {
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (!item.isDead() && item.isValid()) {
+                    item.remove();
+                }
+            }, despawnSeconds * 20L);
         }
     }
 }

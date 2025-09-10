@@ -4,109 +4,89 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Chunk;
-import org.bukkit.entity.Item;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.ItemDespawnEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 /**
- * Handles item protection inside claims:
- * - Role-based pickup/drop rules
- * - Keep-items (prevent despawn inside claims if enabled)
- * - Wilderness toggle (optional restrictions outside claims)
+ * Handles item dropping & picking up inside claims and wilderness
+ * with role-based checks and configurable wilderness toggles.
  */
-@SuppressWarnings("deprecation") // PlayerPickupItemEvent is deprecated, but still works for 1.18–1.20
+@SuppressWarnings("deprecation") // PlayerPickupItemEvent is deprecated but works up to 1.19
 public class ItemProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
-    private final Map<UUID, Long> protectedItems = new HashMap<>();
+
+    // Cached wilderness config values
+    private boolean wildernessDropAllowed;
+    private boolean wildernessPickupAllowed;
 
     public ItemProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
+        reloadConfigValues();
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onItemPickup(PlayerPickupItemEvent event) {
-        Player player = event.getPlayer();
-        Item item = event.getItem();
-        Chunk chunk = item.getLocation().getChunk();
-
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) {
-            // Wilderness check
-            boolean allowPickup = plugin.getConfig().getBoolean("protection.wilderness.allow-item-pickup", true);
-            if (!allowPickup) {
-                event.setCancelled(true);
-                player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in the wilderness.");
-            }
-            return;
-        }
-
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canContainer(role)) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in this claim.");
-        }
+    /**
+     * Reloads wilderness config values from config.yml
+     */
+    public void reloadConfigValues() {
+        FileConfiguration config = plugin.getConfig();
+        this.wildernessDropAllowed = config.getBoolean("protection.wilderness.allow-item-drop", true);
+        this.wildernessPickupAllowed = config.getBoolean("protection.wilderness.allow-item-pickup", true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
-        Item item = event.getItemDrop();
-        Chunk chunk = item.getLocation().getChunk();
+        Chunk chunk = player.getLocation().getChunk();
 
         Plot plot = plotManager.getPlot(chunk);
+
         if (plot == null) {
-            // Wilderness check
-            boolean allowDrop = plugin.getConfig().getBoolean("protection.wilderness.allow-item-drop", true);
-            if (!allowDrop) {
+            // Wilderness
+            if (!wildernessDropAllowed && !player.hasPermission("proshield.bypass")) {
                 event.setCancelled(true);
                 player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items in the wilderness.");
             }
             return;
         }
 
+        // Inside claim
         ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canContainer(role)) {
+        if (!roleManager.canDropItems(role)) {
             event.setCancelled(true);
             player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items in this claim.");
         }
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onItemDespawn(ItemDespawnEvent event) {
-        Item item = event.getEntity();
-        Chunk chunk = item.getLocation().getChunk();
+    public void onItemPickup(PlayerPickupItemEvent event) {
+        Player player = event.getPlayer();
+        Chunk chunk = player.getLocation().getChunk();
 
         Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // Wilderness: normal despawn
 
-        boolean keepEnabled = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
-        if (!keepEnabled) return;
+        if (plot == null) {
+            // Wilderness
+            if (!wildernessPickupAllowed && !player.hasPermission("proshield.bypass")) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in the wilderness.");
+            }
+            return;
+        }
 
-        int despawnSeconds = plugin.getConfig().getInt("claims.keep-items.despawn-seconds", 900);
-
-        // Cancel despawn & track item as "protected"
-        event.setCancelled(true);
-        protectedItems.put(item.getUniqueId(), System.currentTimeMillis() + (despawnSeconds * 1000L));
-    }
-
-    /**
-     * Cleanup expired protected items.
-     */
-    public void cleanupProtectedItems() {
-        long now = System.currentTimeMillis();
-        protectedItems.entrySet().removeIf(entry -> now > entry.getValue());
+        // Inside claim
+        ClaimRole role = roleManager.getRole(plot, player);
+        if (!roleManager.canPickupItems(role)) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in this claim.");
+        }
     }
 }

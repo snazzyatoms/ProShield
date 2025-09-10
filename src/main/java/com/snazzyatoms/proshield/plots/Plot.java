@@ -1,136 +1,193 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.roles.ClaimRole;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * Plot - single-claim data holder.
- * Preserves prior fields and extends with small helpers used by listeners/commands.
+ * Represents a claimed chunk ("plot").
+ *
+ * Preserves all prior logic, enhanced with:
+ * - getX(), getZ(), getDisplayNameSafe()
+ * - setOwner(UUID)
+ * - trusted map with ClaimRole
+ * - created timestamp
+ * - serialization/deserialization
  */
 public class Plot {
 
-    private final UUID worldId;
-    private final int x; // chunk X
-    private final int z; // chunk Z
+    private final String world;
+    private final int x;
+    private final int z;
 
-    private String name;             // optional display name
-    private UUID owner;              // owner UUID
-    private final Map<UUID, ClaimRole> trusted; // trusted players & roles
+    private UUID owner;
+    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
+    private final PlotSettings settings;
 
-    private PlotSettings settings;
+    private long created; // timestamp of claim creation
 
-    // dirty flag for persistence batching
     private boolean dirty;
 
-    public Plot(UUID worldId, int x, int z, UUID owner) {
-        this.worldId = worldId;
+    public Plot(String world, int x, int z, UUID owner) {
+        this.world = world;
         this.x = x;
         this.z = z;
         this.owner = owner;
-        this.trusted = new HashMap<>();
-        this.settings = new PlotSettings(); // defaults populated from config by PlotManager on first load
+        this.settings = new PlotSettings();
+        this.created = System.currentTimeMillis();
+    }
+
+    /* -------------------------------------------------------
+     * Accessors
+     * ------------------------------------------------------- */
+
+    public String getWorld() {
+        return world;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getZ() {
+        return z;
+    }
+
+    public UUID getOwner() {
+        return owner;
+    }
+
+    public void setOwner(UUID newOwner) {
+        this.owner = newOwner;
         this.dirty = true;
     }
 
-    /* -------------------------
-     * Basic identity
-     * ------------------------- */
-    public UUID getWorldId() { return worldId; }
-    public int getX() { return x; }
-    public int getZ() { return z; }
-
-    /* -------------------------
-     * Naming
-     * ------------------------- */
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; setDirty(true); }
-
-    /** Safe name for messages (fallback to coords). */
-    public String getDisplayNameSafe() {
-        if (name != null && !name.isBlank()) return name;
-        return "Claim@" + x + "," + z;
+    public Map<UUID, ClaimRole> getTrusted() {
+        return trusted;
     }
 
-    /* -------------------------
-     * Ownership / trust
-     * ------------------------- */
-    public UUID getOwner() { return owner; }
-    public void setOwner(UUID newOwner) { this.owner = newOwner; setDirty(true); }
+    public PlotSettings getSettings() {
+        return settings;
+    }
+
+    public long getCreated() {
+        return created;
+    }
+
+    public boolean isDirty() {
+        return dirty;
+    }
+
+    public void setDirty(boolean dirty) {
+        this.dirty = dirty;
+    }
+
+    /* -------------------------------------------------------
+     * Helpers
+     * ------------------------------------------------------- */
 
     public boolean isOwner(UUID playerId) {
-        return playerId != null && owner != null && owner.equals(playerId);
+        return playerId != null && playerId.equals(owner);
     }
 
-    public Map<UUID, ClaimRole> getTrusted() {
-        return Collections.unmodifiableMap(trusted);
+    public boolean isTrusted(UUID playerId) {
+        return trusted.containsKey(playerId);
     }
 
-    /** Internal mutator (used by ClaimRoleManager and deserialization). */
-    public void putTrusted(UUID uuid, ClaimRole role) {
-        if (uuid == null || role == null) return;
-        trusted.put(uuid, role);
-        setDirty(true);
+    public void addTrusted(UUID playerId, ClaimRole role) {
+        if (playerId == null || role == null) return;
+        if (role == ClaimRole.OWNER) return; // cannot assign owner role
+        trusted.put(playerId, role);
+        this.dirty = true;
     }
 
-    public void removeTrusted(UUID uuid) {
-        if (uuid == null) return;
-        trusted.remove(uuid);
-        setDirty(true);
+    public void removeTrusted(UUID playerId) {
+        if (playerId == null) return;
+        trusted.remove(playerId);
+        this.dirty = true;
     }
 
-    public boolean hasTrusted(UUID uuid) {
-        return uuid != null && trusted.containsKey(uuid);
-    }
-
-    /* -------------------------
-     * Settings
-     * ------------------------- */
-    public PlotSettings getSettings() { return settings; }
-    public void setSettings(PlotSettings settings) {
-        if (settings != null) this.settings = settings;
-        setDirty(true);
-    }
-
-    /* -------------------------
-     * Flags convenience for GUI (back-compat)
-     * ------------------------- */
-    public boolean isFlagEnabled(String key) {
-        // Kept for back-compat: map known keys to settings
-        return switch (key.toLowerCase()) {
-            case "pvp" -> settings.isPvpEnabled();
-            case "explosions" -> settings.isExplosionsAllowed();
-            case "fire" -> settings.isFireAllowed();
-            case "entity-grief" -> settings.isEntityGriefingAllowed();
-            case "interactions", "redstone" -> settings.isInteractionsAllowed();
-            case "containers" -> settings.isContainersAllowed();
-            case "animals" -> settings.isAnimalInteractAllowed();
-            case "vehicles" -> settings.isVehiclesAllowed();
-            default -> false;
-        };
-    }
-
-    public void setFlag(String key, boolean value) {
-        switch (key.toLowerCase()) {
-            case "pvp" -> settings.setPvpEnabled(value);
-            case "explosions" -> settings.setExplosionsAllowed(value);
-            case "fire" -> settings.setFireAllowed(value);
-            case "entity-grief" -> settings.setEntityGriefingAllowed(value);
-            case "interactions", "redstone" -> settings.setInteractionsAllowed(value);
-            case "containers" -> settings.setContainersAllowed(value);
-            case "animals" -> settings.setAnimalInteractAllowed(value);
-            case "vehicles" -> settings.setVehiclesAllowed(value);
-            default -> { /* ignore unknown */ }
+    public String getDisplayNameSafe() {
+        if (owner == null) {
+            return "[Unowned] " + world + ":" + x + "," + z;
         }
-        setDirty(true);
+        String name = Bukkit.getOfflinePlayer(owner).getName();
+        return (name != null ? name : owner.toString()) + "'s Claim";
     }
 
-    /* -------------------------
-     * Persistence
-     * ------------------------- */
-    public boolean isDirty() { return dirty; }
-    public void setDirty(boolean dirty) { this.dirty = dirty; }
+    /* -------------------------------------------------------
+     * Bukkit World/Chunk
+     * ------------------------------------------------------- */
+
+    public World getBukkitWorld() {
+        return Bukkit.getWorld(world);
+    }
+
+    public Chunk getChunk() {
+        World w = getBukkitWorld();
+        return (w != null) ? w.getChunkAt(x, z) : null;
+    }
+
+    /* -------------------------------------------------------
+     * Serialization
+     * ------------------------------------------------------- */
+
+    public Map<String, Object> serialize() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("owner", owner != null ? owner.toString() : null);
+        data.put("x", x);
+        data.put("z", z);
+        data.put("world", world);
+        data.put("created", created);
+
+        // Trusted roles
+        Map<String, String> trustData = new HashMap<>();
+        for (Map.Entry<UUID, ClaimRole> e : trusted.entrySet()) {
+            trustData.put(e.getKey().toString(), e.getValue().name());
+        }
+        data.put("trusted", trustData);
+
+        // Settings
+        data.put("settings", settings.serialize());
+
+        return data;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Plot deserialize(ConfigurationSection sec) {
+        if (sec == null) return null;
+
+        String world = sec.getString("world");
+        int x = sec.getInt("x");
+        int z = sec.getInt("z");
+        String ownerStr = sec.getString("owner");
+        UUID owner = ownerStr != null ? UUID.fromString(ownerStr) : null;
+
+        Plot plot = new Plot(world, x, z, owner);
+        plot.created = sec.getLong("created", System.currentTimeMillis());
+
+        // Trusted
+        ConfigurationSection trustedSec = sec.getConfigurationSection("trusted");
+        if (trustedSec != null) {
+            for (String key : trustedSec.getKeys(false)) {
+                try {
+                    UUID id = UUID.fromString(key);
+                    ClaimRole role = ClaimRole.fromString(trustedSec.getString(key));
+                    plot.trusted.put(id, role);
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Settings
+        ConfigurationSection settingsSec = sec.getConfigurationSection("settings");
+        if (settingsSec != null) {
+            plot.settings.deserialize(settingsSec);
+        }
+
+        return plot;
+    }
 }

@@ -34,10 +34,10 @@ public class BucketProtectionListener implements Listener {
         Plot plot = plotManager.getPlot(chunk);
 
         if (plot == null) {
-            if (!plugin.getConfig().getBoolean("protection.buckets.block-empty", true)) {
+            if (!plugin.getConfig().getBoolean("protection.buckets.wilderness.empty", true)) {
                 event.setCancelled(true);
                 messages.send(player, "bucket-empty-deny");
-                messages.debug(plugin, "&cBucket empty prevented in wilderness by " + player.getName());
+                messages.debug("&cBucket empty prevented in wilderness by " + player.getName());
             }
             return;
         }
@@ -45,7 +45,7 @@ public class BucketProtectionListener implements Listener {
         if (!plot.getSettings().isBucketsAllowed()) {
             event.setCancelled(true);
             messages.send(player, "bucket-empty-deny");
-            messages.debug(plugin, "&cBucket empty prevented in claim: " + plot.getName() + " by " + player.getName());
+            messages.debug("&cBucket empty prevented in claim: " + plot.getDisplayNameSafe() + " by " + player.getName());
         }
     }
 
@@ -56,10 +56,10 @@ public class BucketProtectionListener implements Listener {
         Plot plot = plotManager.getPlot(chunk);
 
         if (plot == null) {
-            if (!plugin.getConfig().getBoolean("protection.buckets.block-fill", true)) {
+            if (!plugin.getConfig().getBoolean("protection.buckets.wilderness.fill", true)) {
                 event.setCancelled(true);
                 messages.send(player, "bucket-fill-deny");
-                messages.debug(plugin, "&cBucket fill prevented in wilderness by " + player.getName());
+                messages.debug("&cBucket fill prevented in wilderness by " + player.getName());
             }
             return;
         }
@@ -67,7 +67,7 @@ public class BucketProtectionListener implements Listener {
         if (!plot.getSettings().isBucketsAllowed()) {
             event.setCancelled(true);
             messages.send(player, "bucket-fill-deny");
-            messages.debug(plugin, "&cBucket fill prevented in claim: " + plot.getName() + " by " + player.getName());
+            messages.debug("&cBucket fill prevented in claim: " + plot.getDisplayNameSafe() + " by " + player.getName());
         }
     }
 }

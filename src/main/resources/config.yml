@@ -92,13 +92,13 @@ protection:
   mobs:
     block-spawn: true            # cancel spawns inside claims (natural)
     allow-spawner-spawn: true    # allow if origin is SPAWNER
-    despawn-in-claims: true      # remove mobs that spawn inside claims
     border-repel:
       enabled: true
-      radius: 5.0               # default repel radius (increased from 1.5)
-      horizontal-push: 1.2      # stronger knockback
-      vertical-push: 0.3        # lift mobs slightly when pushed
-      interval-ticks: 20        # how often repel runs (20 = 1 second)
+      radius: 4.0               # bigger radius for pushing mobs back
+      horizontal-push: 1.2      # stronger push
+      vertical-push: 0.4
+      interval-ticks: 20
+    despawn-inside-claims: true  # mobs inside claims despawn instantly if not tamed
 
 claims:
   keep-items:
@@ -127,6 +127,14 @@ gui:
       help: 31
       admin: 33
       back: 48
+    player:
+      trust: 10
+      untrust: 11
+      roles: 12
+      transfer: 13
+      flags: 14
+      back: 31
+      help: 22
     admin:
       fire: 10
       explosions: 11
@@ -141,13 +149,7 @@ gui:
       spawn-guard: 25
       tp-tools: 30
       back: 31
-      help: 32
-    player:
-      trust: 10
-      untrust: 11
-      roles: 12
-      transfer: 13
-      flags: 14
-      preview: 15
-      back: 31
-      help: 32
+      help: 22
+
+# Claims storage (runtime)
+claims: {}

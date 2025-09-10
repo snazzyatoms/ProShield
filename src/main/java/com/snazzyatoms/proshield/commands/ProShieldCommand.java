@@ -3,7 +3,6 @@ package com.snazzyatoms.proshield.commands;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -11,19 +10,17 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * ProShieldCommand - Handles all /proshield commands.
- * Commands either run directly or open GUIs (player/admin).
- */
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
     private final PlotManager plots;
     private final GUIManager gui;
+
+    // Chat-await states for trust/untrust/transfer input
+    private final Map<UUID, String> chatAwaitState = new ConcurrentHashMap<>();
 
     public ProShieldCommand(ProShield plugin, PlotManager plots, GUIManager gui) {
         this.plugin = plugin;
@@ -31,14 +28,15 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         this.gui = gui;
     }
 
+    /* -----------------------------------------------------
+     * Core Command Handler
+     * --------------------------------------------------- */
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Players only.");
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Players only.");
             return true;
         }
-
-        Player player = (Player) sender;
 
         if (args.length == 0) {
             gui.openMain(player);
@@ -46,130 +44,143 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         }
 
         switch (args[0].toLowerCase()) {
-            case "claim":
-                plots.claimChunk(player);
-                break;
-
-            case "unclaim":
-                plots.unclaimChunk(player);
-                break;
-
-            case "info":
-                plots.showClaimInfo(player);
-                break;
-
-            case "trust":
-                if (args.length < 2) {
-                    player.sendMessage(ChatColor.YELLOW + "Usage: /proshield trust <player> [role]");
-                    return true;
+            case "claim" -> claim(player);
+            case "unclaim" -> unclaim(player);
+            case "info" -> info(player);
+            case "trust" -> {
+                if (args.length >= 2) {
+                    trust(player, args[1]);
+                } else {
+                    player.sendMessage(ChatColor.YELLOW + "Usage: /proshield trust <player>");
                 }
-                String targetTrust = args[1];
-                String role = args.length >= 3 ? args[2] : "member";
-                plots.trustPlayer(player, targetTrust, role);
-                break;
-
-            case "untrust":
-                if (args.length < 2) {
+            }
+            case "untrust" -> {
+                if (args.length >= 2) {
+                    untrust(player, args[1]);
+                } else {
                     player.sendMessage(ChatColor.YELLOW + "Usage: /proshield untrust <player>");
-                    return true;
                 }
-                String targetUntrust = args[1];
-                plots.untrustPlayer(player, targetUntrust);
-                break;
-
-            case "trusted":
-                plots.listTrusted(player);
-                break;
-
-            case "transfer":
-                if (args.length < 2) {
+            }
+            case "trusted" -> listTrusted(player);
+            case "transfer" -> {
+                if (args.length >= 2) {
+                    transfer(player, args[1]);
+                } else {
                     player.sendMessage(ChatColor.YELLOW + "Usage: /proshield transfer <player>");
-                    return true;
                 }
-                String newOwner = args[1];
-                plots.transferOwnership(player, newOwner);
-                break;
-
-            case "flags":
-                gui.openPlayerFlags(player);
-                break;
-
-            case "roles":
-                gui.openPlayerRoles(player);
-                break;
-
-            case "gui":
-            case "menu":
-                gui.openMain(player);
-                break;
-
-            case "compass":
-                gui.giveCompass(player, player.isOp());
-                break;
-
-            case "bypass":
-                if (!player.hasPermission("proshield.bypass")) {
-                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.bypass");
-                    return true;
-                }
-                plots.toggleBypass(player);
-                break;
-
-            case "reload":
-                if (!player.hasPermission("proshield.admin.reload")) {
-                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.admin.reload");
-                    return true;
-                }
-                plugin.reloadAllConfigs();
-                player.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
-                break;
-
-            case "purgeexpired":
-                if (!player.hasPermission("proshield.admin.expired.purge")) {
-                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.admin.expired.purge");
-                    return true;
-                }
-                int days = args.length >= 2 ? Integer.parseInt(args[1]) : plugin.getConfig().getInt("expiry.days", 30);
-                boolean dryrun = args.length >= 3 && args[2].equalsIgnoreCase("dryrun");
-                plots.purgeExpiredClaims(player, days, dryrun);
-                break;
-
-            case "debug":
-                if (!player.hasPermission("proshield.admin.debug")) {
-                    player.sendMessage(ChatColor.RED + "You lack permission: proshield.admin.debug");
-                    return true;
-                }
-                plots.toggleDebug(player);
-                break;
-
-            default:
-                player.sendMessage(ChatColor.YELLOW + "Unknown subcommand. Use /proshield for menu.");
-                break;
+            }
+            case "preview" -> preview(player);
+            case "compass" -> gui.giveCompass(player, player.isOp());
+            case "bypass" -> toggleBypass(player, args);
+            case "reload" -> plugin.reloadAllConfigs();
+            case "purgeexpired" -> purgeExpired(player);
+            case "debug" -> toggleDebug(player);
+            default -> gui.openMain(player);
         }
-
         return true;
     }
 
+    /* -----------------------------------------------------
+     * Player Command Logic
+     * --------------------------------------------------- */
+    public void claim(Player player) {
+        plots.claim(player);
+    }
+
+    public void unclaim(Player player) {
+        plots.unclaim(player);
+    }
+
+    public void info(Player player) {
+        plots.showInfo(player);
+    }
+
+    public void trust(Player player, String target) {
+        plots.trust(player, target);
+    }
+
+    public void untrust(Player player, String target) {
+        plots.untrust(player, target);
+    }
+
+    public void listTrusted(Player player) {
+        plots.listTrusted(player);
+    }
+
+    public void transfer(Player player, String target) {
+        plots.transfer(player, target);
+    }
+
+    public void preview(Player player) {
+        plots.preview(player);
+    }
+
+    /* -----------------------------------------------------
+     * GUI → Command Handler Hooks
+     * --------------------------------------------------- */
+    public void awaitTrust(Player player) {
+        chatAwaitState.put(player.getUniqueId(), "trust");
+    }
+
+    public void awaitUntrust(Player player) {
+        chatAwaitState.put(player.getUniqueId(), "untrust");
+    }
+
+    public void awaitTransfer(Player player) {
+        chatAwaitState.put(player.getUniqueId(), "transfer");
+    }
+
+    public void setRole(Player player, String role) {
+        plots.assignRole(player, role);
+    }
+
+    public void toggleFlag(Player player, String flag) {
+        plots.toggleFlag(player, flag);
+    }
+
+    /* -----------------------------------------------------
+     * Admin Tools
+     * --------------------------------------------------- */
+    public void purgeExpired(Player player) {
+        if (!player.hasPermission("proshield.admin.expired.purge")) {
+            player.sendMessage(ChatColor.RED + "No permission.");
+            return;
+        }
+        plots.purgeExpired(player);
+    }
+
+    public void toggleBypass(Player player, String[] args) {
+        boolean state = plugin.toggleBypass(player);
+        player.sendMessage(ChatColor.GREEN + "Bypass: " + state);
+    }
+
+    public void toggleDebug(Player player) {
+        plugin.toggleDebug(player);
+    }
+
+    /* -----------------------------------------------------
+     * Tab Completion
+     * --------------------------------------------------- */
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!(sender instanceof Player)) return null;
-
-        List<String> subs = Arrays.asList(
-                "claim", "unclaim", "info", "trust", "untrust",
-                "trusted", "transfer", "flags", "roles", "menu",
-                "compass", "bypass", "reload", "purgeexpired", "debug"
-        );
-
         if (args.length == 1) {
-            List<String> matches = new ArrayList<>();
-            for (String sub : subs) {
-                if (sub.startsWith(args[0].toLowerCase())) {
-                    matches.add(sub);
-                }
-            }
-            return matches;
+            return Arrays.asList("claim", "unclaim", "info", "trust", "untrust", "trusted", "transfer", "preview", "compass", "bypass", "reload", "purgeexpired", "debug");
         }
+        return Collections.emptyList();
+    }
 
-        return null;
+    /* -----------------------------------------------------
+     * Chat Input Handling (Trust/Untrust/Transfer)
+     * --------------------------------------------------- */
+    public boolean handleChatInput(Player player, String message) {
+        String state = chatAwaitState.remove(player.getUniqueId());
+        if (state == null) return false;
+
+        switch (state) {
+            case "trust" -> trust(player, message);
+            case "untrust" -> untrust(player, message);
+            case "transfer" -> transfer(player, message);
+        }
+        return true;
     }
 }

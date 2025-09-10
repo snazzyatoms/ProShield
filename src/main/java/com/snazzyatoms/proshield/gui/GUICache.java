@@ -1,94 +1,60 @@
 package com.snazzyatoms.proshield.gui;
 
-import org.bukkit.Material;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * GUICache holds lightweight mappings between GUI buttons (ItemStacks)
- * and their corresponding actions. This prevents heavy config lookups
- * or meta parsing on every click.
+ * GUICache is responsible for storing and reusing inventories
+ * so menus don't have to be rebuilt every time a player opens them.
  *
- * All menus (Player & Admin) register their buttons here.
+ * Supports per-player caching for all GUI types.
  */
 public class GUICache {
 
-    // Cache of Item → action string
-    private static final Map<String, String> itemActionCache = new HashMap<>();
+    public enum MenuType {
+        MAIN,
+        TRUST,
+        UNTRUST,
+        ROLES,
+        FLAGS,
+        TRANSFER,
+        ADMIN
+    }
 
-    // =========================================================
-    // REGISTRATION
-    // =========================================================
+    // Map<PlayerUUID, Map<MenuType, Inventory>>
+    private final Map<UUID, Map<MenuType, Inventory>> cache = new HashMap<>();
 
     /**
-     * Registers a mapping between an ItemStack and an action string.
+     * Store an inventory in cache.
      */
-    public static void register(ItemStack item, String action) {
-        if (item == null || action == null) return;
-
-        String key = makeKey(item);
-        itemActionCache.put(key, action.toLowerCase());
+    public void put(Player player, MenuType type, Inventory inv) {
+        cache.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).put(type, inv);
     }
 
     /**
-     * Bulk registration for convenience.
+     * Retrieve a cached inventory if it exists.
      */
-    public static void registerAll(Map<ItemStack, String> items) {
-        for (Map.Entry<ItemStack, String> entry : items.entrySet()) {
-            register(entry.getKey(), entry.getValue());
-        }
-    }
-
-    // =========================================================
-    // LOOKUP
-    // =========================================================
-
-    /**
-     * Gets the action string for a clicked item.
-     *
-     * @param clicked ItemStack clicked
-     * @return action string, or null if not recognized
-     */
-    public static String getAction(ItemStack clicked) {
-        if (clicked == null) return null;
-
-        String key = makeKey(clicked);
-        return itemActionCache.getOrDefault(key, null);
+    public Inventory get(Player player, MenuType type) {
+        Map<MenuType, Inventory> menus = cache.get(player.getUniqueId());
+        if (menus == null) return null;
+        return menus.get(type);
     }
 
     /**
-     * Debugging utility to see all registered mappings.
+     * Clear cache for a specific player (e.g., on quit).
      */
-    public static Map<String, String> dumpCache() {
-        return Collections.unmodifiableMap(itemActionCache);
-    }
-
-    // =========================================================
-    // UTIL
-    // =========================================================
-
-    /**
-     * Generates a stable key for caching.
-     * Uses Material + DisplayName if present.
-     */
-    private static String makeKey(ItemStack item) {
-        Material type = item.getType();
-        ItemMeta meta = item.getItemMeta();
-
-        if (meta != null && meta.hasDisplayName()) {
-            return type.name() + "|" + meta.getDisplayName().toLowerCase();
-        }
-        return type.name();
+    public void clear(Player player) {
+        cache.remove(player.getUniqueId());
     }
 
     /**
-     * Clears all cache entries (e.g., on reload).
+     * Clear everything (e.g., on config reload).
      */
-    public static void clear() {
-        itemActionCache.clear();
+    public void clearAll() {
+        cache.clear();
     }
 }

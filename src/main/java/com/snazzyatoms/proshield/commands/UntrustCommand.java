@@ -3,7 +3,6 @@ package com.snazzyatoms.proshield.commands;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.command.Command;
@@ -15,24 +14,18 @@ public class UntrustCommand implements CommandExecutor {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
-    private final MessagesUtil messages;
 
-    public UntrustCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
+    public UntrustCommand(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        this.roleManager = roleManager;
-        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            messages.send(sender, "general.players-only");
-            return true;
-        }
+        if (!(sender instanceof Player player)) return true;
+
         if (args.length < 1) {
-            messages.send(player, "untrust.usage");
+            MessagesUtil.sendMessage(player, "command-untrust-usage");
             return true;
         }
 
@@ -41,12 +34,17 @@ public class UntrustCommand implements CommandExecutor {
         Plot plot = plotManager.getPlot(chunk);
 
         if (plot == null || !plot.isOwner(player.getUniqueId())) {
-            messages.send(player, "untrust.not-owner");
+            MessagesUtil.sendMessage(player, "no-permission");
             return true;
         }
 
-        roleManager.removeTrusted(plot, targetName);
-        messages.send(player, "untrust.success", "%player%", targetName);
+        if (!plot.isTrusted(targetName)) {
+            MessagesUtil.sendMessage(player, "command-untrust-not-found", "{player}", targetName);
+            return true;
+        }
+
+        plot.removeTrusted(targetName);
+        MessagesUtil.sendMessage(player, "command-untrust-success", "{player}", targetName);
         return true;
     }
 }

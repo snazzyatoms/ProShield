@@ -7,19 +7,16 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 
-import java.util.Set;
-
 /**
- * Handles container & interaction protection inside claims.
- * - Role-based checks for doors, trapdoors, buttons, levers, etc.
- * - Configurable blacklist/whitelist for interactions
+ * Handles player interactions with blocks/entities inside claims.
+ * - Role-based interaction checks
+ * - Config-driven categories
+ * - Uses MessagesUtil for feedback
  */
 public class InteractionProtectionListener implements Listener {
 
@@ -38,54 +35,29 @@ public class InteractionProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
-        if (player.hasPermission("proshield.bypass")) return; // admins bypass
-
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         Block block = event.getClickedBlock();
         if (block == null) return;
 
         Chunk chunk = block.getChunk();
         Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness, allow unless disabled globally
 
+        // Wilderness → follow global config (allow/deny)
+        if (plot == null) {
+            boolean wildernessAllowed = plugin.getConfig().getBoolean("protection.wilderness.allow-interact", true);
+            if (!wildernessAllowed) {
+                event.setCancelled(true);
+                messages.send(player, "protection.interact.wilderness-denied",
+                        messages.buildPlaceholders("player", player.getName(), "block", block.getType().name()));
+            }
+            return;
+        }
+
+        // Inside claim → role-based check
         ClaimRole role = roleManager.getRole(plot, player);
-
-        FileConfiguration config = plugin.getConfig();
-        boolean enabled = config.getBoolean("protection.interactions.enabled", true);
-        if (!enabled) return;
-
-        // Determine interaction protection mode
-        String mode = config.getString("protection.interactions.mode", "blacklist");
-        Set<String> categories = Set.copyOf(config.getStringList("protection.interactions.categories"));
-        Set<String> list = Set.copyOf(config.getStringList("protection.interactions.list"));
-
-        Material type = block.getType();
-        String materialName = type.name().toLowerCase();
-
-        boolean restricted;
-        if (mode.equalsIgnoreCase("blacklist")) {
-            restricted = list.contains(materialName) || categories.contains(getCategory(type));
-        } else {
-            restricted = !(list.contains(materialName) || categories.contains(getCategory(type)));
-        }
-
-        if (restricted && !roleManager.canInteract(role)) {
+        if (!roleManager.canInteract(role)) {
             event.setCancelled(true);
-            messages.send(player, "protection.interact-denied", "%block%", type.name());
+            messages.send(player, "protection.interact.claim-denied",
+                    messages.buildPlaceholders("player", player.getName(), "claim", plot.getName(), "block", block.getType().name()));
         }
-    }
-
-    /**
-     * Maps block types into configured categories (e.g., doors, buttons, etc.)
-     */
-    private String getCategory(Material type) {
-        String name = type.name().toLowerCase();
-        if (name.contains("door")) return "doors";
-        if (name.contains("trapdoor")) return "trapdoors";
-        if (name.contains("gate")) return "fence_gates";
-        if (name.contains("button")) return "buttons";
-        if (name.contains("lever")) return "levers";
-        if (name.contains("pressure_plate")) return "pressure_plates";
-        return "other";
     }
 }

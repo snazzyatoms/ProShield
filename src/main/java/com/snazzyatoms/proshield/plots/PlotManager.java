@@ -1,265 +1,87 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Claim storage + logic.
- * Loads/saves claims from config and exposes helpers used by listeners, GUI, and commands.
- */
 public class PlotManager {
 
     private final ProShield plugin;
-    private ClaimRoleManager roleManager;
-
-    private final Map<String, Claim> claims = new HashMap<>();
-    private final Map<UUID, Integer> ownerCounts = new HashMap<>();
+    private final Map<Chunk, Claim> claims = new ConcurrentHashMap<>();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-        loadAll();
     }
 
-    /** Allow other components to reach the plugin through PlotManager (used by listeners). */
-    public ProShield getPlugin() {
-        return this.plugin;
+    /* -----------------------------------------------------
+     * Claim Operations
+     * --------------------------------------------------- */
+    public void claim(Player player) {
+        Chunk chunk = player.getLocation().getChunk();
+        if (claims.containsKey(chunk)) {
+            player.sendMessage(ChatColor.RED + "This chunk is already claimed.");
+            return;
+        }
+        Claim claim = new Claim(player.getUniqueId(), chunk);
+        claims.put(chunk, claim);
+        player.sendMessage(ChatColor.GREEN + "You claimed this chunk.");
     }
 
-    public void setRoleManager(ClaimRoleManager roleManager) {
-        this.roleManager = roleManager;
+    public void unclaim(Player player) {
+        Chunk chunk = player.getLocation().getChunk();
+        Claim claim = claims.get(chunk);
+        if (claim == null) {
+            player.sendMessage(ChatColor.RED + "This chunk is not claimed.");
+            return;
+        }
+        if (!claim.isOwner(player)) {
+            player.sendMessage(ChatColor.RED + "You do not own this claim.");
+            return;
+        }
+        claims.remove(chunk);
+        player.sendMessage(ChatColor.YELLOW + "You unclaimed this chunk.");
     }
 
-    private String key(Location loc) {
-        return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
+    public void showInfo(Player player) {
+        Chunk chunk = player.getLocation().getChunk();
+        Claim claim = claims.get(chunk);
+        if (claim == null) {
+            player.sendMessage(ChatColor.YELLOW + "This chunk is unclaimed.");
+            return;
+        }
+        player.sendMessage(ChatColor.AQUA + "Owner: " + Bukkit.getOfflinePlayer(claim.getOwner()).getName());
+        player.sendMessage(ChatColor.AQUA + "Trusted: " + claim.getTrusted().size());
     }
 
-    /** Create a claim in the player's current chunk, respecting max-claims unless bypassed. */
-    public boolean createClaim(UUID owner, Location loc) {
-        String k = key(loc);
-        if (claims.containsKey(k)) return false;
-
-        int max = plugin.getConfig().getInt("limits.max-claims", -1);
-        if (max >= 0) {
-            var player = plugin.getServer().getPlayer(owner);
-            boolean bypass = player != null && player.hasPermission("proshield.unlimited");
-            if (!bypass) {
-                int used = ownerCounts.getOrDefault(owner, 0);
-                if (used >= max) return false;
-            }
+    /* -----------------------------------------------------
+     * Trust System
+     * --------------------------------------------------- */
+    public void trust(Player player, String targetName) {
+        Chunk chunk = player.getLocation().getChunk();
+        Claim claim = claims.get(chunk);
+        if (claim == null || !claim.isOwner(player)) {
+            player.sendMessage(ChatColor.RED + "You must own this claim.");
+            return;
         }
 
-        Claim c = new Claim(
-                owner,
-                loc.getWorld().getName(),
-                loc.getChunk().getX(),
-                loc.getChunk().getZ(),
-                System.currentTimeMillis()
-        );
-
-        claims.put(k, c);
-        ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
-        saveClaim(c);
-        return true;
-    }
-
-    /** Remove a claim; only owner can remove unless adminForce=true. */
-    public boolean removeClaim(UUID requester, Location loc, boolean adminForce) {
-        String k = key(loc);
-        Claim c = claims.get(k);
-        if (c == null) return false;
-        if (!adminForce && !Objects.equals(c.getOwner(), requester)) return false;
-
-        claims.remove(k);
-        ownerCounts.put(c.getOwner(), Math.max(0, ownerCounts.getOrDefault(c.getOwner(), 1) - 1));
-        removeClaimFromConfig(k);
-        return true;
-    }
-
-    public boolean isClaimed(Location loc) { return claims.containsKey(key(loc)); }
-
-    public boolean isOwner(UUID uuid, Location loc) {
-        Claim c = claims.get(key(loc));
-        return c != null && c.getOwner().equals(uuid);
-    }
-
-    public boolean isTrustedOrOwner(UUID uuid, Location loc) {
-        Claim c = claims.get(key(loc));
-        if (c == null) return false;
-        return c.getOwner().equals(uuid) || c.getTrusted().contains(uuid);
-    }
-
-    // ===== Roles helpers =====
-
-    public ClaimRole getRoleAt(Location loc, UUID player) {
-        if (isOwner(player, loc)) return ClaimRole.CO_OWNER; // treat owner as highest equivalent
-        if (roleManager == null) return ClaimRole.VISITOR;
-        return roleManager.getRole(loc, player);
-    }
-
-    public boolean hasRoleAtLeast(Location loc, UUID player, ClaimRole required) {
-        if (isOwner(player, loc)) return true;
-        return getRoleAt(loc, player).atLeast(required);
-    }
-
-    // ===== Basic accessors =====
-
-    public Optional<Claim> getClaim(Location loc) {
-        return Optional.ofNullable(claims.get(key(loc)));
-    }
-
-    public boolean trust(UUID owner, Location loc, UUID target) {
-        Claim c = claims.get(key(loc));
-        if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().add(target)) { saveClaim(c); return true; }
-        return false;
-    }
-
-    public boolean untrust(UUID owner, Location loc, UUID target) {
-        Claim c = claims.get(key(loc));
-        if (c == null || !c.getOwner().equals(owner)) return false;
-        if (c.getTrusted().remove(target)) { saveClaim(c); return true; }
-        return false;
-    }
-
-    public List<String> listTrusted(Location loc) {
-        Claim c = claims.get(key(loc));
-        if (c == null) return Collections.emptyList();
-        return c.getTrusted().stream()
-                .map(uuid -> {
-                    OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
-                    return (op.getName() != null ? op.getName() : uuid.toString());
-                })
-                .collect(Collectors.toList());
-    }
-
-    public String ownerName(UUID uuid) {
-        var op = Bukkit.getOfflinePlayer(uuid);
-        return op.getName() != null ? op.getName() : uuid.toString();
-    }
-
-    // ===== Persistence =====
-
-    private void loadAll() {
-        claims.clear();
-        ownerCounts.clear();
-
-        ConfigurationSection root = plugin.getConfig().getConfigurationSection("claims");
-        if (root == null) return;
-
-        for (String k : root.getKeys(false)) {
-            ConfigurationSection sec = root.getConfigurationSection(k);
-            if (sec == null) continue;
-            try {
-                UUID owner = UUID.fromString(sec.getString("owner"));
-                String world = sec.getString("world");
-                int cx = sec.getInt("chunkX");
-                int cz = sec.getInt("chunkZ");
-                long created = sec.getLong("createdAt", System.currentTimeMillis());
-
-                Claim c = new Claim(owner, world, cx, cz, created);
-
-                List<String> t = sec.getStringList("trusted");
-                if (t != null) for (String s : t) c.getTrusted().add(UUID.fromString(s));
-
-                claims.put(k, c);
-                ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load claim: " + k + " -> " + e.getMessage());
-            }
+        Player target = Bukkit.getPlayerExact(targetName);
+        if (target == null) {
+            player.sendMessage(ChatColor.RED + "Player not found.");
+            return;
         }
+
+        claim.getTrusted().put(target.getUniqueId(), "Member");
+        player.sendMessage(ChatColor.GREEN + "Trusted " + target.getName() + " as Member.");
     }
 
-    public void saveAll() {
-        plugin.getConfig().set("claims", null);
-        for (Claim c : claims.values()) saveClaim(c);
-        plugin.saveConfig();
-    }
-
-    private void saveClaim(Claim c) {
-        String k = c.key();
-        String path = "claims." + k + ".";
-        plugin.getConfig().set(path + "owner", c.getOwner().toString());
-        plugin.getConfig().set(path + "world", c.getWorld());
-        plugin.getConfig().set(path + "chunkX", c.getChunkX());
-        plugin.getConfig().set(path + "chunkZ", c.getChunkZ());
-        plugin.getConfig().set(path + "createdAt", c.getCreatedAt());
-
-        List<String> t = c.getTrusted().stream().map(UUID::toString).collect(Collectors.toList());
-        plugin.getConfig().set(path + "trusted", t);
-        plugin.saveConfig();
-    }
-
-    private void removeClaimFromConfig(String key) {
-        plugin.getConfig().set("claims." + key, null);
-        plugin.saveConfig();
-    }
-
-    // ===== Stats & helpers =====
-
-    public int getClaimCount() { return claims.size(); }
-
-    public int getOwnerCount(UUID uuid) { return ownerCounts.getOrDefault(uuid, 0); }
-
-    public Set<String> getAllClaimKeys() { return Collections.unmodifiableSet(claims.keySet()); }
-
-    public Location keyToCenter(String key) {
-        try {
-            String[] parts = key.split(":");
-            String world = parts[0];
-            int cx = Integer.parseInt(parts[1]);
-            int cz = Integer.parseInt(parts[2]);
-            var w = Bukkit.getWorld(world);
-            if (w == null) return null;
-            int x = (cx << 4) + 8;
-            int z = (cz << 4) + 8;
-            int y = Math.max(w.getHighestBlockYAt(x, z), 64);
-            return new Location(w, x, y, z);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    // ===== Lifecycle =====
-
-    /** Reload claims from config. */
-    public void reloadFromConfig() {
-        loadAll();
-    }
-
-    /**
-     * Expiry: removes claims whose owners haven't joined in N days.
-     *
-     * @param days   inactivity days
-     * @param dryRun if true, only counts, doesn't remove
-     * @return number of claims matched (or removed if dryRun=false)
-     */
-    public int cleanupExpiredClaims(int days, boolean dryRun) {
-        long cutoff = System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L;
-        List<String> toRemove = new ArrayList<>();
-        for (Map.Entry<String, Claim> e : claims.entrySet()) {
-            UUID owner = e.getValue().getOwner();
-            OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
-            long last = (op.getLastPlayed() > 0 ? op.getLastPlayed() : op.getFirstPlayed());
-            if (last == 0L) continue; // no data, skip
-            if (last < cutoff) toRemove.add(e.getKey());
-        }
-        if (dryRun) return toRemove.size();
-
-        for (String k : toRemove) {
-            Claim c = claims.remove(k);
-            if (c != null) {
-                ownerCounts.put(c.getOwner(), Math.max(0, ownerCounts.getOrDefault(c.getOwner(), 1) - 1));
-                removeClaimFromConfig(k);
-            }
-        }
-        plugin.saveConfig();
-        return toRemove.size();
-    }
-}
+    public void untrust(Player player, String targetName) {
+        Chunk chunk = player.getLocation().getChunk();
+        Claim claim = claims.get(chunk);
+        if (claim == null || !claim.isOwner(player)) {
+            player.sendMessage

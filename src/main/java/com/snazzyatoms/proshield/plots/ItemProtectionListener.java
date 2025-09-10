@@ -1,116 +1,68 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Chunk;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.hanging.HangingBreakByEntityEvent;
-import org.bukkit.event.hanging.HangingPlaceEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
+import org.bukkit.event.entity.ItemDespawnEvent;
 
 /**
- * Handles item-frame, armor-stand, and container protections inside claims.
- * Extended to merge global + per-claim keep-items rules.
+ * Handles item drop & pickup rules inside claims.
+ * Supports global and per-claim overrides for keep-items.
  */
+@SuppressWarnings("deprecation") // for PlayerPickupItemEvent (legacy support 1.18+)
 public class ItemProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
 
-    public ItemProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
+    public ItemProtectionListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        this.roleManager = roleManager;
     }
 
-    // === Item Frames ===
+    /**
+     * Prevent despawning if global or per-claim keep-items is enabled.
+     */
     @EventHandler(ignoreCancelled = true)
-    public void onItemFrameInteract(PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof ItemFrame frame)) return;
+    public void onItemDespawn(ItemDespawnEvent event) {
+        Item item = event.getEntity();
+        Chunk chunk = item.getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
 
+        boolean keep = resolveKeepItems(plot);
+        if (keep) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Prevent unauthorized players from picking up items if keep-items protection is enabled.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onItemPickup(PlayerPickupItemEvent event) {
         Player player = event.getPlayer();
-        Chunk chunk = frame.getLocation().getChunk();
-
+        Chunk chunk = event.getItem().getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness, allow
 
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canInteract(role)) {
+        boolean keep = resolveKeepItems(plot);
+        if (keep && plot != null && !plot.isTrusted(player.getUniqueId())) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with item frames here.");
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in this claim.");
         }
     }
 
-    // === Armor Stands ===
-    @EventHandler(ignoreCancelled = true)
-    public void onArmorStandInteract(PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof ArmorStand stand)) return;
-
-        Player player = event.getPlayer();
-        Chunk chunk = stand.getLocation().getChunk();
-
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness, allow
-
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canInteract(role)) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot interact with armor stands here.");
+    /**
+     * Utility: resolve whether keep-items is active here.
+     */
+    private boolean resolveKeepItems(Plot plot) {
+        if (plot != null && plot.getKeepItemsEnabled() != null) {
+            return plot.getKeepItemsEnabled();
         }
-    }
-
-    // === Hanging Entities (Item Frames, Paintings) ===
-    @EventHandler(ignoreCancelled = true)
-    public void onHangingBreak(HangingBreakByEntityEvent event) {
-        if (!(event.getRemover() instanceof Player player)) return;
-
-        Chunk chunk = event.getEntity().getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness
-
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canBuild(role)) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot break hanging entities here.");
-        }
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onHangingPlace(HangingPlaceEvent event) {
-        Player player = event.getPlayer();
-        Chunk chunk = event.getEntity().getLocation().getChunk();
-
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness
-
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canBuild(role)) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot place hanging entities here.");
-        }
-    }
-
-    // === Global + Per-Claim Item Keep Logic ===
-    public boolean isKeepItemsEnabled(Chunk chunk) {
-        FileConfiguration config = plugin.getConfig();
-
-        // Global toggle
-        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
-
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) {
-            return globalKeep; // wilderness uses global
-        }
-
-        // Per-claim override if set, otherwise fall back to global
-        Boolean claimKeep = plot.getSettings().getKeepItemsEnabled();
-        return (claimKeep != null) ? claimKeep : globalKeep;
+        return plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
     }
 }

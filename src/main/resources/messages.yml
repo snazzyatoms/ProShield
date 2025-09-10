@@ -1,107 +1,81 @@
-# ==========================================================
-# ProShield - Player & Admin Messages (v1.2.5 Final Sync)
-# ==========================================================
-# Placeholders: {0}, {1}, {2}, etc. — replaced dynamically
-# ==========================================================
-
-general:
+messages:
   prefix: "&3[ProShield]&r "
-  no-permission: "&cYou don't have permission to do that."
-  no-console: "&cThis command can only be run by a player."
-  reloaded: "&aProShield configs reloaded successfully."
-  claim-required: "&cYou must be inside a claim to do that."
-  wilderness: "&7You are in the wilderness."
 
-# ----------------------------------------------------------
-# 🔹 Claim Messages
-# ----------------------------------------------------------
-claims:
-  created: "&aChunk claimed successfully."
-  already-claimed: "&cThis chunk is already claimed."
-  unclaimed: "&eClaim removed."
-  not-claimed: "&cThis chunk is not claimed."
-  not-owner: "&cOnly claim owners can do this."
-  expired: "&eClaim expired and has been removed."
-  preview-start: "&aShowing claim borders..."
-  preview-end: "&cClaim preview ended."
+  # 🔹 General
+  no-permission: "&cYou do not have permission to do that."
+  reloaded: "&aProShield configuration and messages reloaded."
+  not-in-claim: "&7You are not inside a claim."
+  only-player: "&cThis command can only be used in-game."
 
-# ----------------------------------------------------------
-# 🔹 Trust & Roles
-# ----------------------------------------------------------
-trust:
-  usage: "&7Usage: /trust <player> [role]"
-  no-claim: "&cYou must be inside your claim to trust players."
-  not-owner: "&cOnly the claim owner can trust players."
-  success: "&a{0} has been trusted as {1}."
+  # 🔹 Claim actions
+  claim-success: "&aChunk claimed successfully."
+  claim-fail: "&cThis chunk is already claimed."
+  unclaim-success: "&aYou have unclaimed this chunk."
+  unclaim-fail: "&cYou cannot unclaim this chunk."
+  claim-info: "&eClaim owned by {1}. Trusted: {2}"
+  claim-preview-start: "&aShowing preview of your claim borders..."
+  claim-preview-end: "&cClaim preview ended."
 
-untrust:
-  usage: "&7Usage: /untrust <player>"
-  no-claim: "&cYou must be inside your claim to untrust players."
-  not-owner: "&cOnly the claim owner can untrust players."
-  not-trusted: "&c{0} is not trusted in this claim."
-  success: "&a{0} has been untrusted."
+  # 🔹 Trust / Roles
+  trust-already: "&c{1} is already trusted in this claim."
+  trust-success: "&a{1} has been trusted as {2}."
+  trust-fail: "&cFailed to trust {1}."
+  untrust-not-found: "&c{1} is not trusted in this claim."
+  untrust-success: "&a{1} has been untrusted."
+  roles-opened: "&aOpening roles menu..."
+  roles-changed: "&a{1}'s role changed to {2}."
+  transfer-success: "&aOwnership transferred to {1}."
+  transfer-fail: "&cFailed to transfer ownership."
 
-transfer:
-  usage: "&7Usage: /transfer <player>"
-  no-claim: "&cYou must be inside your claim to transfer ownership."
-  not-owner: "&cOnly the claim owner can transfer ownership."
-  success: "&aClaim successfully transferred to {0}."
+  # 🔹 Trusted list
+  trusted-list-title: "&eTrusted players in this claim:"
+  trusted-list-empty: "&7No trusted players."
+  trusted-list-entry: "&b- {1} &7({2})"
 
-roles:
-  no-claim: "&cYou must be inside your claim to manage roles."
-  not-owner: "&cOnly the claim owner can manage roles."
-  opened: "&aRoles menu opened."
+  # 🔹 Admin toggles
+  admin.bypass-on: "&eBypass mode &aENABLED"
+  admin.bypass-off: "&eBypass mode &cDISABLED"
+  admin.debug-on: "&eDebug mode &aENABLED"
+  admin.debug-off: "&eDebug mode &cDISABLED"
+  admin.keepitems-on: "&aKeep items enabled for claims."
+  admin.keepitems-off: "&cKeep items disabled for claims."
+  admin.reload: "&aProShield configs and messages reloaded."
+  admin.transfer: "&aClaim transferred successfully."
+  admin.flags-updated: "&aFlags updated for this claim."
 
-trusted-list:
-  header: "&bTrusted players in this claim:"
-  empty: "&7No trusted players."
-
-# ----------------------------------------------------------
-# 🔹 Admin & Maintenance
-# ----------------------------------------------------------
-admin:
-  bypass-on: "&eBypass &aENABLED"
-  bypass-off: "&eBypass &cDISABLED"
-  tp-disabled: "&cTeleporting to claims is disabled."
-  no-claims: "&7No claims found."
-  purge-start: "&ePurging expired claims..."
-  purge-finished: "&aPurge complete. Removed {0} claims."
-  debug-on: "&aDebug logging enabled."
-  debug-off: "&cDebug logging disabled."
-
-# ----------------------------------------------------------
-# 🔹 Protections
-# ----------------------------------------------------------
-protection:
+  # 🔹 PvP / Protection messages
   pvp-disabled: "&cPvP is disabled here."
-  interact-denied: "&cYou cannot interact with {0} in this claim."
-  block-break-denied: "&cYou cannot break {0} in this claim."
-  block-place-denied: "&cYou cannot place {0} in this claim."
-  container-denied: "&cYou cannot open containers here."
-  redstone-denied: "&cYou cannot use redstone here."
-  bucket-denied: "&cYou cannot use buckets here."
-  fire-denied: "&cFire is disabled in this claim."
-  explosion-denied: "&cExplosions are disabled in this claim."
-  entity-grief-denied: "&cEntity griefing is disabled here."
-  item-frame-denied: "&cYou cannot modify item frames here."
-  armor-stand-denied: "&cYou cannot modify armor stands here."
-  vehicle-denied: "&cYou cannot use vehicles here."
-  mob-repelled: "&cMobs cannot enter your claim."
-  keep-items-enabled: "&aItems will not despawn in this claim."
-  keep-items-disabled: "&cItems will despawn normally here."
+  pvp-enabled: "&aPvP is enabled here."
+  damage-disabled: "&cDamage is disabled in this claim."
+  explosion-blocked: "&cExplosions are blocked in this claim."
+  fire-blocked: "&cFire spread blocked in this claim."
+  bucket-blocked: "&cYou cannot use buckets here."
+  interact-blocked: "&cYou cannot interact with this object."
+  item-frame-protected: "&cItem frames are protected here."
+  armor-stand-protected: "&cArmor stands are protected here."
+  vehicle-protected: "&cVehicles are protected here."
+  mob-griefing-blocked: "&cMob griefing is blocked here."
 
-# ----------------------------------------------------------
-# 🔹 Compass & GUI
-# ----------------------------------------------------------
-compass:
-  given: "&aAdmin compass added to your inventory."
-  already-have: "&cYou already have a ProShield compass."
+  # 🔹 Keep items / drops
+  keep-items-enabled: "&aItem persistence is enabled in this claim."
+  keep-items-disabled: "&cItem persistence is disabled here."
+  keep-drops-enabled: "&aDeath drops are preserved in this claim."
+  keep-drops-disabled: "&cDeath drops are cleared in this claim."
 
-gui:
-  main-title: "&bProShield Menu"
-  admin-title: "&cProShield Admin"
-  roles-title: "&6Roles Manager"
-  flags-title: "&dClaim Flags"
-  trust-title: "&aTrust Players"
-  untrust-title: "&cUntrust Players"
-  transfer-title: "&eTransfer Ownership"
+  # 🔹 Spawn guard
+  spawn-claim-blocked: "&cYou cannot claim land this close to spawn."
+
+  # 🔹 Compass / Join
+  compass-given: "&aAdmin compass given."
+  compass-on-join: "&aYou received a ProShield compass."
+  compass-disabled: "&cCompass distribution disabled."
+  first-claim-reminder: "&eRemember to claim land using &a/claim&e!"
+
+  # 🔹 Purge expired claims
+  purge-started: "&ePurging expired claims older than {1} days..."
+  purge-finished: "&aExpired claims purge complete."
+  purge-dryrun: "&eDry-run purge complete. {1} claims would have been removed."
+
+  # 🔹 Debug messages
+  debug-border: "&7[DEBUG] Nearest border checked at {1},{2} in {3}"
+  debug-claim-check: "&7[DEBUG] Claim check for {1}: {2}"

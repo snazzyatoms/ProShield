@@ -1,28 +1,43 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.roles.ClaimRole;
-import java.util.EnumMap;
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.configuration.file.FileConfiguration;
+
+import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Stores per-claim settings (PvP, item rules, keep-drops, etc.).
- * These settings override global defaults if enabled in config.yml.
+ * Stores per-claim settings, with defaults from global config.
+ * Players (owners/admins) can override these settings individually.
  */
 public class PlotSettings {
 
-    // === Per-claim flags ===
-    private boolean pvpEnabled = false;
-    private boolean keepDropsEnabled = false;
-
-    // Role-based item permissions
-    private final Map<ClaimRole, Boolean> dropPermissions = new EnumMap<>(ClaimRole.class);
-    private final Map<ClaimRole, Boolean> pickupPermissions = new EnumMap<>(ClaimRole.class);
+    private boolean pvpEnabled;
+    private boolean keepDropsEnabled;
+    private final Map<String, Boolean> itemRules = new HashMap<>();
 
     public PlotSettings() {
-        // Default: only owner/co-owner can drop & pick up if global allows
-        for (ClaimRole role : ClaimRole.values()) {
-            dropPermissions.put(role, role == ClaimRole.OWNER || role == ClaimRole.CO_OWNER);
-            pickupPermissions.put(role, role == ClaimRole.OWNER || role == ClaimRole.CO_OWNER);
+        // empty by default (values will be set from global config in initDefaults)
+    }
+
+    /**
+     * Initialize claim settings from global config defaults.
+     */
+    public void initDefaults(ProShield plugin) {
+        FileConfiguration config = plugin.getConfig();
+
+        // === PvP ===
+        this.pvpEnabled = config.getBoolean("protection.pvp-in-claims", false);
+
+        // === Keep drops ===
+        this.keepDropsEnabled = config.getBoolean("claims.keep-items.enabled", false);
+
+        // === Item rules (defaults off unless defined) ===
+        if (config.isConfigurationSection("claims.item-rules")) {
+            for (String key : config.getConfigurationSection("claims.item-rules").getKeys(false)) {
+                boolean def = config.getBoolean("claims.item-rules." + key, false);
+                this.itemRules.put(key, def);
+            }
         }
     }
 
@@ -44,31 +59,26 @@ public class PlotSettings {
         this.keepDropsEnabled = keepDropsEnabled;
     }
 
-    // === Item Drop Rules ===
-    public boolean canDropItems(ClaimRole role) {
-        return dropPermissions.getOrDefault(role, false);
+    // === Item Rules ===
+    public Map<String, Boolean> getItemRules() {
+        return itemRules;
     }
 
-    public void setDropPermission(ClaimRole role, boolean allowed) {
-        dropPermissions.put(role, allowed);
+    public boolean getItemRule(String key) {
+        return itemRules.getOrDefault(key, false);
     }
 
-    // === Item Pickup Rules ===
-    public boolean canPickupItems(ClaimRole role) {
-        return pickupPermissions.getOrDefault(role, false);
+    public void setItemRule(String key, boolean enabled) {
+        itemRules.put(key, enabled);
     }
 
-    public void setPickupPermission(ClaimRole role, boolean allowed) {
-        pickupPermissions.put(role, allowed);
-    }
-
-    // === Utility ===
-    public void resetToDefaults() {
-        pvpEnabled = false;
-        keepDropsEnabled = false;
-        for (ClaimRole role : ClaimRole.values()) {
-            dropPermissions.put(role, role == ClaimRole.OWNER || role == ClaimRole.CO_OWNER);
-            pickupPermissions.put(role, role == ClaimRole.OWNER || role == ClaimRole.CO_OWNER);
-        }
+    // === Debug dump (optional helper) ===
+    @Override
+    public String toString() {
+        return "PlotSettings{" +
+                "pvpEnabled=" + pvpEnabled +
+                ", keepDropsEnabled=" + keepDropsEnabled +
+                ", itemRules=" + itemRules +
+                '}';
     }
 }

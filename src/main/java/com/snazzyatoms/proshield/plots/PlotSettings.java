@@ -1,40 +1,29 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/PlotSettings.java
 package com.snazzyatoms.proshield.plots;
 
-import java.io.Serializable;
+import org.bukkit.configuration.ConfigurationSection;
 
 /**
- * Per-claim settings for protection flags.
- * - Preserves all previous settings
- * - Extended with keepItemsEnabled flag and more toggles
+ * Stores per-claim settings and flags.
+ * - Preserves all older settings (PvP, keep-items, etc.)
+ * - Extended with new flags (fire, explosions, containers, redstone, animals)
+ * - Supports defaults from config.yml
  */
-public class PlotSettings implements Serializable {
+public class PlotSettings {
 
     private boolean pvpEnabled;
     private boolean explosionsEnabled;
     private boolean fireEnabled;
-    private boolean interactionsEnabled;
-    private boolean entityGriefEnabled;
-    private boolean keepItemsEnabled; // NEW per-claim toggle for keep-items
-
-    // Future extended flags (preserved from roadmap)
+    private boolean containersEnabled;
     private boolean redstoneEnabled;
-    private boolean containerAccessEnabled;
-    private boolean animalAccessEnabled;
+    private boolean animalsEnabled;
+    private boolean keepItemsEnabled;
 
     public PlotSettings() {
-        this.pvpEnabled = false;
-        this.explosionsEnabled = true;
-        this.fireEnabled = true;
-        this.interactionsEnabled = true;
-        this.entityGriefEnabled = true;
-        this.keepItemsEnabled = false;
-        this.redstoneEnabled = true;
-        this.containerAccessEnabled = true;
-        this.animalAccessEnabled = true;
+        // Defaults will be filled by PlotManager when loading from config
     }
 
-    // === PvP ===
+    // === Getters / Setters ===
+
     public boolean isPvpEnabled() {
         return pvpEnabled;
     }
@@ -43,7 +32,6 @@ public class PlotSettings implements Serializable {
         this.pvpEnabled = pvpEnabled;
     }
 
-    // === Explosions ===
     public boolean isExplosionsEnabled() {
         return explosionsEnabled;
     }
@@ -52,7 +40,6 @@ public class PlotSettings implements Serializable {
         this.explosionsEnabled = explosionsEnabled;
     }
 
-    // === Fire ===
     public boolean isFireEnabled() {
         return fireEnabled;
     }
@@ -61,34 +48,14 @@ public class PlotSettings implements Serializable {
         this.fireEnabled = fireEnabled;
     }
 
-    // === Interactions ===
-    public boolean isInteractionsEnabled() {
-        return interactionsEnabled;
+    public boolean isContainersEnabled() {
+        return containersEnabled;
     }
 
-    public void setInteractionsEnabled(boolean interactionsEnabled) {
-        this.interactionsEnabled = interactionsEnabled;
+    public void setContainersEnabled(boolean containersEnabled) {
+        this.containersEnabled = containersEnabled;
     }
 
-    // === Entity grief ===
-    public boolean isEntityGriefEnabled() {
-        return entityGriefEnabled;
-    }
-
-    public void setEntityGriefEnabled(boolean entityGriefEnabled) {
-        this.entityGriefEnabled = entityGriefEnabled;
-    }
-
-    // === Keep Items ===
-    public boolean isKeepItemsEnabled() {
-        return keepItemsEnabled;
-    }
-
-    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
-        this.keepItemsEnabled = keepItemsEnabled;
-    }
-
-    // === Redstone ===
     public boolean isRedstoneEnabled() {
         return redstoneEnabled;
     }
@@ -97,21 +64,56 @@ public class PlotSettings implements Serializable {
         this.redstoneEnabled = redstoneEnabled;
     }
 
-    // === Container Access ===
-    public boolean isContainerAccessEnabled() {
-        return containerAccessEnabled;
+    public boolean isAnimalsEnabled() {
+        return animalsEnabled;
     }
 
-    public void setContainerAccessEnabled(boolean containerAccessEnabled) {
-        this.containerAccessEnabled = containerAccessEnabled;
+    public void setAnimalsEnabled(boolean animalsEnabled) {
+        this.animalsEnabled = animalsEnabled;
     }
 
-    // === Animal Access ===
-    public boolean isAnimalAccessEnabled() {
-        return animalAccessEnabled;
+    public boolean isKeepItemsEnabled() {
+        return keepItemsEnabled;
     }
 
-    public void setAnimalAccessEnabled(boolean animalAccessEnabled) {
-        this.animalAccessEnabled = animalAccessEnabled;
+    public void setKeepItemsEnabled(boolean keepItemsEnabled) {
+        this.keepItemsEnabled = keepItemsEnabled;
+    }
+
+    // === Persistence ===
+
+    public void loadFromConfig(ConfigurationSection section, ConfigurationSection globalDefaults) {
+        if (section == null) {
+            // Use global defaults if per-claim section not present
+            this.pvpEnabled = globalDefaults.getBoolean("pvp", false);
+            this.explosionsEnabled = globalDefaults.getBoolean("explosions", false);
+            this.fireEnabled = globalDefaults.getBoolean("fire", false);
+            this.containersEnabled = globalDefaults.getBoolean("containers", true);
+            this.redstoneEnabled = globalDefaults.getBoolean("redstone", true);
+            this.animalsEnabled = globalDefaults.getBoolean("animals", true);
+            this.keepItemsEnabled = globalDefaults.getBoolean("keep-items", false);
+            return;
+        }
+
+        // Read per-claim overrides, fallback to global defaults
+        this.pvpEnabled = section.getBoolean("pvp", globalDefaults.getBoolean("pvp", false));
+        this.explosionsEnabled = section.getBoolean("explosions", globalDefaults.getBoolean("explosions", false));
+        this.fireEnabled = section.getBoolean("fire", globalDefaults.getBoolean("fire", false));
+        this.containersEnabled = section.getBoolean("containers", globalDefaults.getBoolean("containers", true));
+        this.redstoneEnabled = section.getBoolean("redstone", globalDefaults.getBoolean("redstone", true));
+        this.animalsEnabled = section.getBoolean("animals", globalDefaults.getBoolean("animals", true));
+        this.keepItemsEnabled = section.getBoolean("keep-items", globalDefaults.getBoolean("keep-items", false));
+    }
+
+    public void saveToConfig(ConfigurationSection section) {
+        if (section == null) return;
+
+        section.set("pvp", this.pvpEnabled);
+        section.set("explosions", this.explosionsEnabled);
+        section.set("fire", this.fireEnabled);
+        section.set("containers", this.containersEnabled);
+        section.set("redstone", this.redstoneEnabled);
+        section.set("animals", this.animalsEnabled);
+        section.set("keep-items", this.keepItemsEnabled);
     }
 }

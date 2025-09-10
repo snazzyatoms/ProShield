@@ -3,49 +3,96 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 
+/**
+ * Handles block breaking & placing with:
+ * - Wilderness allow/deny toggles (config)
+ * - Per-claim role checks (preserved)
+ * - Admin bypass
+ * - Messages via MessagesUtil
+ */
 public class BlockProtectionListener implements Listener {
+
     private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
+    private final PlotManager plots;
+    private final ClaimRoleManager roles;
+    private final MessagesUtil msg;
 
     public BlockProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.roleManager = roleManager;
+        this.plots = plotManager;
+        this.roles = roleManager;
+        this.msg = plugin.getMessagesUtil();
     }
 
-    @EventHandler(ignoreCancelled = true)
+    /* ---------------------------------------------------------
+     * Block BREAK
+     * --------------------------------------------------------- */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
-        Player player = event.getPlayer();
-        Chunk chunk = event.getBlock().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return;
+        Player p = event.getPlayer();
+        if (plugin.isBypassing(p)) return;
 
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canBuild(role)) {
+        Chunk chunk = event.getBlock().getChunk();
+        Plot plot = plots.getPlot(chunk);
+
+        // Wilderness rules
+        if (plot == null) {
+            FileConfiguration cfg = plugin.getConfig();
+            boolean allow = cfg.getBoolean("protection.wilderness.allow-block-break", true);
+            if (!allow) {
+                event.setCancelled(true);
+                // keep message generic to avoid depending on claim-name methods
+                msg.send(p, "wilderness.break-deny");
+            }
+            return;
+        }
+
+        // Inside a claim → role-based check (preserved behavior)
+        ClaimRole role = roles.getRole(plot, p);
+        if (!roles.canBuild(role)) {
             event.setCancelled(true);
-            plugin.getMessagesUtil().send(player, "build.break-deny", plot.getName());
+            // generic message key; your messages.yml can be customized
+            msg.send(p, "build.break-deny");
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    /* ---------------------------------------------------------
+     * Block PLACE
+     * --------------------------------------------------------- */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
-        Player player = event.getPlayer();
-        Chunk chunk = event.getBlock().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return;
+        Player p = event.getPlayer();
+        if (plugin.isBypassing(p)) return;
 
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canBuild(role)) {
+        Chunk chunk = event.getBlock().getChunk();
+        Plot plot = plots.getPlot(chunk);
+
+        // Wilderness rules
+        if (plot == null) {
+            FileConfiguration cfg = plugin.getConfig();
+            boolean allow = cfg.getBoolean("protection.wilderness.allow-block-place", true);
+            if (!allow) {
+                event.setCancelled(true);
+                msg.send(p, "wilderness.place-deny");
+            }
+            return;
+        }
+
+        // Inside a claim → role-based check (preserved behavior)
+        ClaimRole role = roles.getRole(plot, p);
+        if (!roles.canBuild(role)) {
             event.setCancelled(true);
-            plugin.getMessagesUtil().send(player, "build.place-deny", plot.getName());
+            msg.send(p, "build.place-deny");
         }
     }
 }

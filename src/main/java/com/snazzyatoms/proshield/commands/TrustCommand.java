@@ -17,41 +17,45 @@ public class TrustCommand implements CommandExecutor {
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
-    private final MessagesUtil messages;
 
     public TrustCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
-        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            messages.send(sender, "general.players-only");
-            return true;
-        }
+        if (!(sender instanceof Player player)) return true;
+
         if (args.length < 1) {
-            messages.send(player, "trust.usage");
+            MessagesUtil.sendMessage(player, "command-trust-usage");
             return true;
         }
 
         String targetName = args[0];
-        ClaimRole role = args.length > 1 ? ClaimRole.fromString(args[1]) : ClaimRole.MEMBER;
+        String roleName = args.length > 1 ? args[1].toUpperCase() : "MEMBER";
 
         Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
-
         if (plot == null || !plot.isOwner(player.getUniqueId())) {
-            messages.send(player, "trust.not-owner");
+            MessagesUtil.sendMessage(player, "no-permission");
             return true;
         }
 
-        roleManager.addTrusted(plot, targetName, role);
-        messages.send(player, "trust.success",
-                "%player%", targetName,
-                "%role%", role.name());
+        ClaimRole role = ClaimRole.fromString(roleName);
+        if (role == null) {
+            MessagesUtil.sendMessage(player, "command-trust-invalid-role", "{role}", roleName);
+            return true;
+        }
+
+        if (plot.isTrusted(targetName)) {
+            MessagesUtil.sendMessage(player, "command-trust-already", "{player}", targetName);
+            return true;
+        }
+
+        roleManager.trustPlayer(plot, targetName, role);
+        MessagesUtil.sendMessage(player, "command-trust-success", "{player}", targetName, "{role}", role.name());
         return true;
     }
 }

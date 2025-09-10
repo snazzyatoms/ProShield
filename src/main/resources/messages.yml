@@ -1,216 +1,116 @@
-package com.snazzyatoms.proshield;
+# ==================================================
+# 🛡️ ProShield Messages (v1.2.5)
+# ==================================================
+# All player-facing messages are here.
+# Supports placeholders: {0}, {1}, {2}, etc.
+# ==================================================
 
-import com.snazzyatoms.proshield.commands.*;
-import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.plots.*;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
-import org.bukkit.plugin.java.JavaPlugin;
+prefix: "&3[ProShield]&r "
 
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+error:
+  not-player: "&cOnly players can use this command."
+  no-permission: "&cYou don’t have permission."
+  unknown-command: "&cUnknown command: &e{0}"
+  no-claim: "&cYou are not standing inside a claim."
 
-public class ProShield extends JavaPlugin {
+admin:
+  reload: "&aProShield configuration reloaded."
+  bypass-on: "&eBypass mode &aENABLED"
+  bypass-off: "&eBypass mode &cDISABLED"
+  debug-on: "&cDebug logging enabled."
+  debug-off: "&cDebug logging disabled."
 
-    /** Legacy static prefix (kept for older listeners that still reference it). */
-    public static final String PREFIX = ChatColor.DARK_AQUA + "[ProShield] " + ChatColor.RESET;
+trust:
+  usage: "&eUsage: /trust <player> [role]"
+  no-claim: "&cYou must be in your claim to trust players."
+  not-owner: "&cOnly the claim owner can trust players."
+  not-found: "&cPlayer &e{0} &cis not online."
+  success: "&aYou trusted &e{0} &awith role &6{1}&a."
+  you-were-trusted: "&aYou have been trusted in &e{0}&a’s claim with role &6{1}&a."
 
-    // Core singletons
-    private MessagesUtil messages;
-    private GUIManager guiManager;
-    private PlotManager plotManager;
-    private ClaimRoleManager roleManager;
+untrust:
+  usage: "&eUsage: /untrust <player>"
+  no-claim: "&cYou must be in your claim to untrust players."
+  not-owner: "&cOnly the claim owner can untrust players."
+  not-trusted: "&cPlayer &e{0} &cis not trusted in this claim."
+  success: "&aYou untrusted &e{0}&a."
+  you-were-untrusted: "&cYou were untrusted in &e{0}&c’s claim."
 
-    // Runtime state
-    private final Set<UUID> bypassing = ConcurrentHashMap.newKeySet();
-    private volatile boolean debugEnabled = false;
+transfer:
+  usage: "&eUsage: /transfer <player>"
+  no-claim: "&cYou must be in your claim to transfer ownership."
+  not-owner: "&cOnly the claim owner can transfer ownership."
+  not-found: "&cPlayer &e{0} &cis not online."
+  success: "&aYou transferred ownership of this claim to &e{0}&a."
+  you-received: "&aYou are now the owner of claim &e{0}&a!"
 
-    @Override
-    public void onEnable() {
-        // Config bootstrapping
-        saveDefaultConfig();
-        // Ensure messages.yml exists and load it
-        saveResource("messages.yml", false);
-        messages = new MessagesUtil(this); // reads /plugins/ProShield/messages.yml
+roles:
+  opened: "&aRoles menu opened."
 
-        // Instantiate managers
-        plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(this);
-        guiManager = new GUIManager(this);
+claims:
+  created: "&aClaim created at chunk &e{0}, {1}&a."
+  removed: "&cClaim removed."
+  info:
+    header: "&6--- Claim Info ---"
+    owner: "&eOwner: &f{0}"
+    trusted: "&eTrusted Players: &f{0}"
+    flags: "&eFlags: &f{0}"
+  expired: "&cYour claim at &e{0}, {1} &chas expired."
+  preview-start: "&aPreview started. Walk the border to see claim size."
+  preview-end: "&ePreview ended."
 
-        // Register listeners (keep/add all we’ve built)
-        registerListeners(
-                new PlayerJoinListener(this, plotManager),
-                new ClaimMessageListener(this, plotManager),
-                new SpawnClaimGuardListener(this, plotManager),
-                new MobBorderRepelListener(this, plotManager),
-                new DamageProtectionListener(this, plotManager, roleManager),
-                new BlockProtectionListener(this, plotManager, roleManager),
-                new InteractionProtectionListener(this, plotManager, roleManager),
-                new ExplosionProtectionListener(this, plotManager, roleManager),
-                new FireProtectionListener(this, plotManager),
-                new BucketProtectionListener(this, plotManager),
-                new ItemProtectionListener(this, plotManager, roleManager),
-                new KeepDropsListener(this, plotManager),
-                new EntityGriefProtectionListener(this, plotManager, roleManager),
-                new PvpProtectionListener(this, plotManager, roleManager)
-        );
+flags:
+  toggled: "&aFlag &e{0} &aset to &6{1}&a."
 
-        // Register commands (main dispatcher + split commands)
-        wireCommand("proshield", new ProShieldCommand(this, plotManager, roleManager, guiManager));
-        wireCommand("claim", new ClaimSubCommand(this, plotManager));
-        wireCommand("unclaim", new UnclaimSubCommand(this, plotManager));
-        wireCommand("info", new InfoSubCommand(this, plotManager, roleManager));
-        wireCommand("trust", new TrustCommand(this, plotManager, roleManager));
-        wireCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
-        wireCommand("trusted", new TrustedListCommand(this, plotManager, roleManager));
-        wireCommand("roles", new RolesCommand(this, plotManager, roleManager));
-        wireCommand("transfer", new TransferCommand(this, plotManager));
-        wireCommand("preview", new PreviewSubCommand(this, plotManager));
-        wireCommand("compass", new CompassSubCommand(this, guiManager));
+keep-items:
+  enabled-global: "&aGlobal keep-items enabled."
+  disabled-global: "&cGlobal keep-items disabled."
+  enabled-claim: "&aKeep-items enabled in this claim."
+  disabled-claim: "&cKeep-items disabled in this claim."
 
-        // Optional: schedule recurring tasks owned by listeners (repel, expiry, etc.)
-        // Those are started inside the listeners/managers themselves in our design.
+gui:
+  opened-main: "&aMain menu opened."
+  opened-admin: "&cAdmin menu opened."
+  back: "&7Returned to previous menu."
 
-        if (isDebugEnabled()) {
-            getLogger().info("[ProShield] Debug mode is ON");
-        }
-        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion());
-    }
+compass:
+  given: "&aYou received a ProShield compass."
+  dropped: "&eYour inventory was full, compass dropped."
+  already-has: "&cYou already have a ProShield compass."
 
-    @Override
-    public void onDisable() {
-        // Persist anything necessary; our managers write via config on change, so nothing heavy here.
-        getLogger().info("[ProShield] Disabled");
-    }
+bypass:
+  enabled: "&aBypass enabled."
+  disabled: "&cBypass disabled."
 
-    /* -------------------------------------------------------
-     * Accessors / Exposure
-     * ------------------------------------------------------- */
+pvp:
+  disabled-global: "&cPvP is disabled in this world."
+  disabled-claim: "&cPvP is disabled in this claim."
+  enabled-claim: "&aPvP is enabled in this claim."
 
-    public MessagesUtil getMessagesUtil() {
-        return messages;
-    }
+damage:
+  blocked: "&cYou are protected from damage here."
 
-    public GUIManager getGuiManager() {
-        return guiManager;
-    }
+entity:
+  blocked: "&cYou cannot interact with this entity."
 
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
+interaction:
+  blocked: "&cYou cannot interact with this block."
 
-    public ClaimRoleManager getRoleManager() {
-        return roleManager;
-    }
+explosions:
+  blocked: "&cExplosions are disabled in this claim."
 
-    public boolean isDebugEnabled() {
-        return debugEnabled;
-    }
+fire:
+  blocked: "&cFire is disabled in this claim."
 
-    /* -------------------------------------------------------
-     * Bypass / Debug toggles (as requested)
-     * ------------------------------------------------------- */
+buckets:
+  blocked: "&cYou cannot use buckets here."
 
-    /** Toggle bypass for a player. Returns the new state (true = now bypassing). */
-    public boolean toggleBypass(Player player) {
-        UUID id = player.getUniqueId();
-        boolean nowBypassing;
-        if (bypassing.contains(id)) {
-            bypassing.remove(id);
-            nowBypassing = false;
-            messages.send(player, "admin.bypass-off");
-        } else {
-            bypassing.add(id);
-            nowBypassing = true;
-            messages.send(player, "admin.bypass-on");
-        }
-        return nowBypassing;
-    }
+mob:
+  repelled: "&cMobs are repelled at claim borders."
+  despawned: "&cMobs cannot exist inside this claim."
 
-    /** Check whether the player is currently bypassing claim protections. */
-    public boolean isBypassing(Player player) {
-        return player != null && bypassing.contains(player.getUniqueId());
-    }
+spawn-guard:
+  blocked: "&cYou cannot claim near spawn (within {0} blocks)."
 
-    /** Toggle debug flag globally and announce to console + player (if provided). */
-    public boolean toggleDebug() {
-        debugEnabled = !debugEnabled;
-        getLogger().info("[ProShield] Debug: " + (debugEnabled ? "ENABLED" : "DISABLED"));
-        return debugEnabled;
-    }
-
-    /* -------------------------------------------------------
-     * Reload entrypoint (used by /proshield reload & GUI)
-     * ------------------------------------------------------- */
-
-    /** Soft reload of config + messages + caches + manager settings. */
-    public void reloadAll() {
-        // Bukkit config.yml
-        reloadConfig();
-
-        // Messages
-        if (messages != null) {
-            messages.reload(); // re-read messages.yml
-        } else {
-            messages = new MessagesUtil(this);
-        }
-
-        // Managers
-        if (plotManager != null) {
-            // keep a method with this name to satisfy call sites from earlier patches
-            plotManager.reloadFromConfig();
-        }
-        if (roleManager != null) {
-            roleManager.reloadFromConfig();
-        }
-
-        // GUI cache clear
-        if (guiManager != null) {
-            guiManager.clearCache();
-        }
-
-        // Announce
-        messages.broadcastConsole("messages.reloaded", getServer().getConsoleSender());
-    }
-
-    /* -------------------------------------------------------
-     * Helpers
-     * ------------------------------------------------------- */
-
-    private void wireCommand(String label, Object executor) {
-        PluginCommand cmd = getCommand(label);
-        if (cmd != null) {
-            if (executor instanceof org.bukkit.command.CommandExecutor ce) {
-                cmd.setExecutor(ce);
-            }
-            if (executor instanceof org.bukkit.command.TabCompleter tc) {
-                cmd.setTabCompleter(tc);
-            }
-        } else {
-            getLogger().warning("Command not found in plugin.yml: " + label);
-        }
-    }
-
-    private void registerListeners(Listener... listeners) {
-        for (Listener l : listeners) {
-            Bukkit.getPluginManager().registerEvents(l, this);
-        }
-    }
-
-    /* -------------------------------------------------------
-     * Legacy convenience (used by some older code paths)
-     * ------------------------------------------------------- */
-
-    /** Prefix string for ad-hoc messages (prefer MessagesUtil in new code). */
-    public String getPrefix() {
-        return PREFIX;
-    }
-}
+debug:
+  log: "&7[Debug] {0}"

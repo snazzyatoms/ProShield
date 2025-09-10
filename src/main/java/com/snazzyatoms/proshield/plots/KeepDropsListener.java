@@ -2,17 +2,15 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Chunk;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.ItemDespawnEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerDeathEvent;
 
 /**
- * Handles persistence of dropped items inside claims.
- * - Prevents items from despawning if keep-items is enabled
- * - Supports both global + per-claim toggles
+ * Ensures dropped items from player deaths persist inside claims.
+ * Supports global + per-claim overrides.
  */
 public class KeepDropsListener implements Listener {
 
@@ -24,61 +22,31 @@ public class KeepDropsListener implements Listener {
         this.plotManager = plotManager;
     }
 
-    /**
-     * Player drops an item — respect keep-items rules
-     */
     @EventHandler(ignoreCancelled = true)
-    public void onPlayerDrop(PlayerDropItemEvent event) {
-        Item item = event.getItemDrop();
-        Chunk chunk = item.getLocation().getChunk();
-
-        if (isKeepItemsEnabled(chunk)) {
-            int despawnSeconds = getDespawnSeconds();
-            item.setUnlimitedLifetime(true);
-            item.setTicksLived(1); // reset age
-            item.setPickupDelay(20); // 1s pickup delay
-            plugin.debug("Item drop protected inside claim. Lifetime extended to " + despawnSeconds + "s.");
-        }
-    }
-
-    /**
-     * Prevent item despawn if inside claim with keep-items enabled
-     */
-    @EventHandler(ignoreCancelled = true)
-    public void onItemDespawn(ItemDespawnEvent event) {
-        Item item = event.getEntity();
-        Chunk chunk = item.getLocation().getChunk();
-
-        if (isKeepItemsEnabled(chunk)) {
-            event.setCancelled(true);
-            plugin.debug("Prevented item despawn inside claim.");
-        }
-    }
-
-    /**
-     * Checks whether keep-items is enabled globally or for this claim
-     */
-    private boolean isKeepItemsEnabled(Chunk chunk) {
-        FileConfiguration config = plugin.getConfig();
-
-        // Global toggle
-        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
-
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) {
-            return globalKeep; // wilderness uses global setting
-        }
 
-        // Per-claim override if set, otherwise fallback to global
-        Boolean claimKeep = plot.getSettings().getKeepItemsEnabled();
-        return (claimKeep != null) ? claimKeep : globalKeep;
+        boolean keep = resolveKeepItems(plot);
+        if (keep) {
+            event.setKeepInventory(true);
+            event.setKeepLevel(true);
+
+            // Drop nothing if keep-inventory is active
+            event.getDrops().clear();
+
+            player.sendMessage(plugin.getPrefix() + "§aYour items and levels have been preserved in this claim.");
+        }
     }
 
     /**
-     * Returns configured despawn time from config
+     * Utility: resolve whether keep-items is active here.
      */
-    private int getDespawnSeconds() {
-        FileConfiguration config = plugin.getConfig();
-        return config.getInt("claims.keep-items.despawn-seconds", 900);
+    private boolean resolveKeepItems(Plot plot) {
+        if (plot != null && plot.getKeepItemsEnabled() != null) {
+            return plot.getKeepItemsEnabled();
+        }
+        return plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
     }
 }

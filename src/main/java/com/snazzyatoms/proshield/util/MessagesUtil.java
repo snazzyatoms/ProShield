@@ -1,206 +1,216 @@
-package com.snazzyatoms.proshield.util;
+package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.commands.*;
+import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.plots.*;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Messages utility for ProShield.
- *
- * - Backward compatible with older sendMessage(...) overloads used across listeners/commands.
- * - New flexible send(...) with vararg placeholder pairs: key, "{p1}", "Alice", "{n}", "3"
- * - Honors messages.prefix from messages.yml (or config.yml fallback)
- * - Debug helper respects proshield.debug (config.yml)
- */
-public class MessagesUtil {
+public class ProShield extends JavaPlugin {
 
-    private final ProShield plugin;
-    private File file;
-    private FileConfiguration messages;
+    /** Legacy static prefix (kept for older listeners that still reference it). */
+    public static final String PREFIX = ChatColor.DARK_AQUA + "[ProShield] " + ChatColor.RESET;
 
-    public MessagesUtil(ProShield plugin) {
-        this.plugin = plugin;
-        this.file = new File(plugin.getDataFolder(), "messages.yml");
-        reload(); // load or create
+    // Core singletons
+    private MessagesUtil messages;
+    private GUIManager guiManager;
+    private PlotManager plotManager;
+    private ClaimRoleManager roleManager;
+
+    // Runtime state
+    private final Set<UUID> bypassing = ConcurrentHashMap.newKeySet();
+    private volatile boolean debugEnabled = false;
+
+    @Override
+    public void onEnable() {
+        // Config bootstrapping
+        saveDefaultConfig();
+        // Ensure messages.yml exists and load it
+        saveResource("messages.yml", false);
+        messages = new MessagesUtil(this); // reads /plugins/ProShield/messages.yml
+
+        // Instantiate managers
+        plotManager = new PlotManager(this);
+        roleManager = new ClaimRoleManager(this);
+        guiManager = new GUIManager(this);
+
+        // Register listeners (keep/add all we’ve built)
+        registerListeners(
+                new PlayerJoinListener(this, plotManager),
+                new ClaimMessageListener(this, plotManager),
+                new SpawnClaimGuardListener(this, plotManager),
+                new MobBorderRepelListener(this, plotManager),
+                new DamageProtectionListener(this, plotManager, roleManager),
+                new BlockProtectionListener(this, plotManager, roleManager),
+                new InteractionProtectionListener(this, plotManager, roleManager),
+                new ExplosionProtectionListener(this, plotManager, roleManager),
+                new FireProtectionListener(this, plotManager),
+                new BucketProtectionListener(this, plotManager),
+                new ItemProtectionListener(this, plotManager, roleManager),
+                new KeepDropsListener(this, plotManager),
+                new EntityGriefProtectionListener(this, plotManager, roleManager),
+                new PvpProtectionListener(this, plotManager, roleManager)
+        );
+
+        // Register commands (main dispatcher + split commands)
+        wireCommand("proshield", new ProShieldCommand(this, plotManager, roleManager, guiManager));
+        wireCommand("claim", new ClaimSubCommand(this, plotManager));
+        wireCommand("unclaim", new UnclaimSubCommand(this, plotManager));
+        wireCommand("info", new InfoSubCommand(this, plotManager, roleManager));
+        wireCommand("trust", new TrustCommand(this, plotManager, roleManager));
+        wireCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
+        wireCommand("trusted", new TrustedListCommand(this, plotManager, roleManager));
+        wireCommand("roles", new RolesCommand(this, plotManager, roleManager));
+        wireCommand("transfer", new TransferCommand(this, plotManager));
+        wireCommand("preview", new PreviewSubCommand(this, plotManager));
+        wireCommand("compass", new CompassSubCommand(this, guiManager));
+
+        // Optional: schedule recurring tasks owned by listeners (repel, expiry, etc.)
+        // Those are started inside the listeners/managers themselves in our design.
+
+        if (isDebugEnabled()) {
+            getLogger().info("[ProShield] Debug mode is ON");
+        }
+        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion());
     }
 
-    /* =========================================================
-     * Loading / Reloading
-     * ========================================================= */
+    @Override
+    public void onDisable() {
+        // Persist anything necessary; our managers write via config on change, so nothing heavy here.
+        getLogger().info("[ProShield] Disabled");
+    }
 
-    public void reload() {
-        // Ensure folder exists
-        if (!plugin.getDataFolder().exists()) {
-            //noinspection ResultOfMethodCallIgnored
-            plugin.getDataFolder().mkdirs();
+    /* -------------------------------------------------------
+     * Accessors / Exposure
+     * ------------------------------------------------------- */
+
+    public MessagesUtil getMessagesUtil() {
+        return messages;
+    }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
+    }
+
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    /* -------------------------------------------------------
+     * Bypass / Debug toggles (as requested)
+     * ------------------------------------------------------- */
+
+    /** Toggle bypass for a player. Returns the new state (true = now bypassing). */
+    public boolean toggleBypass(Player player) {
+        UUID id = player.getUniqueId();
+        boolean nowBypassing;
+        if (bypassing.contains(id)) {
+            bypassing.remove(id);
+            nowBypassing = false;
+            messages.send(player, "admin.bypass-off");
+        } else {
+            bypassing.add(id);
+            nowBypassing = true;
+            messages.send(player, "admin.bypass-on");
+        }
+        return nowBypassing;
+    }
+
+    /** Check whether the player is currently bypassing claim protections. */
+    public boolean isBypassing(Player player) {
+        return player != null && bypassing.contains(player.getUniqueId());
+    }
+
+    /** Toggle debug flag globally and announce to console + player (if provided). */
+    public boolean toggleDebug() {
+        debugEnabled = !debugEnabled;
+        getLogger().info("[ProShield] Debug: " + (debugEnabled ? "ENABLED" : "DISABLED"));
+        return debugEnabled;
+    }
+
+    /* -------------------------------------------------------
+     * Reload entrypoint (used by /proshield reload & GUI)
+     * ------------------------------------------------------- */
+
+    /** Soft reload of config + messages + caches + manager settings. */
+    public void reloadAll() {
+        // Bukkit config.yml
+        reloadConfig();
+
+        // Messages
+        if (messages != null) {
+            messages.reload(); // re-read messages.yml
+        } else {
+            messages = new MessagesUtil(this);
         }
 
-        if (!file.exists()) {
-            // First-run bootstrap: save default from jar if present
-            plugin.saveResource("messages.yml", false);
+        // Managers
+        if (plotManager != null) {
+            // keep a method with this name to satisfy call sites from earlier patches
+            plotManager.reloadFromConfig();
+        }
+        if (roleManager != null) {
+            roleManager.reloadFromConfig();
         }
 
-        messages = YamlConfiguration.loadConfiguration(file);
-
-        // Minimal safety: ensure prefix exists
-        if (!messages.isSet("messages.prefix")) {
-            String fallback = plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r ");
-            messages.set("messages.prefix", fallback);
-            saveQuietly();
+        // GUI cache clear
+        if (guiManager != null) {
+            guiManager.clearCache();
         }
+
+        // Announce
+        messages.broadcastConsole("messages.reloaded", getServer().getConsoleSender());
     }
 
-    private void saveQuietly() {
-        try {
-            messages.save(file);
-        } catch (Exception ignored) {}
-    }
+    /* -------------------------------------------------------
+     * Helpers
+     * ------------------------------------------------------- */
 
-    /* =========================================================
-     * Basic getters / utilities
-     * ========================================================= */
-
-    public String prefix() {
-        return colorize(messages.getString("messages.prefix", "&3[ProShield]&r "));
-    }
-
-    public String getRaw(String key) {
-        return messages.getString(key);
-    }
-
-    public boolean exists(String key) {
-        return messages.isSet(key);
-    }
-
-    public String tr(String key, Object... placeholders) {
-        String base = messages.getString(key, key);
-        return applyPlaceholders(colorize(base), placeholders);
-    }
-
-    public void send(CommandSender to, String key, Object... placeholders) {
-        String msg = tr(key, placeholders);
-        if (msg == null || msg.isEmpty()) return;
-        to.sendMessage(prefix() + msg);
-    }
-
-    public void send(Player to, String key, Object... placeholders) {
-        send((CommandSender) to, key, placeholders);
-    }
-
-    public void sendRaw(CommandSender to, String rawColoredMessage) {
-        if (rawColoredMessage == null || rawColoredMessage.isEmpty()) return;
-        to.sendMessage(colorize(rawColoredMessage));
-    }
-
-    public void broadcast(String key, Object... placeholders) {
-        String msg = prefix() + tr(key, placeholders);
-        Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(msg));
-        Bukkit.getConsoleSender().sendMessage(msg);
-    }
-
-    /* =========================================================
-     * Legacy compatibility overloads (used by your current code)
-     * ========================================================= */
-
-    /** Legacy: sendMessage(player, key) */
-    public void sendMessage(Player player, String key) {
-        send(player, key);
-    }
-
-    /** Legacy: sendMessage(player, key, "{a}", "x") */
-    public void sendMessage(Player player, String key, String p1, String v1) {
-        send(player, key, p1, v1);
-    }
-
-    /** Legacy: sendMessage(player, key, "{a}","x","{b}","y","{c}","z") */
-    public void sendMessage(Player player, String key,
-                            String p1, String v1,
-                            String p2, String v2,
-                            String p3, String v3) {
-        send(player, key, p1, v1, p2, v2, p3, v3);
-    }
-
-    /** Some places call messages.send(sender, key) with NO placeholders */
-    public void send(CommandSender sender, String key) {
-        send(sender, key, new Object[0]);
-    }
-
-    /* =========================================================
-     * Debug helpers
-     * ========================================================= */
-
-    public void debug(String message) {
-        boolean enabled = plugin.getConfig().getBoolean("proshield.debug", false);
-        if (!enabled) return;
-        Bukkit.getConsoleSender().sendMessage(prefix() + ChatColor.DARK_GRAY + "[debug] " + ChatColor.GRAY + message);
-    }
-
-    public void debug(ProShield pluginRef, String message) {
-        // Some callers pass pluginRef explicitly; honor it
-        boolean enabled = pluginRef.getConfig().getBoolean("proshield.debug", false);
-        if (!enabled) return;
-        Bukkit.getConsoleSender().sendMessage(prefix() + ChatColor.DARK_GRAY + "[debug] " + ChatColor.GRAY + message);
-    }
-
-    /* =========================================================
-     * Placeholder & color helpers
-     * ========================================================= */
-
-    private String applyPlaceholders(String msg, Object... placeholders) {
-        if (msg == null) return null;
-        if (placeholders == null || placeholders.length == 0) return msg;
-
-        // Accept either pairs varargs or a single Map<?,?>
-        if (placeholders.length == 1 && placeholders[0] instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> map = (Map<String, Object>) placeholders[0];
-            for (Map.Entry<String, Object> e : map.entrySet()) {
-                msg = msg.replace(e.getKey(), String.valueOf(e.getValue()));
+    private void wireCommand(String label, Object executor) {
+        PluginCommand cmd = getCommand(label);
+        if (cmd != null) {
+            if (executor instanceof org.bukkit.command.CommandExecutor ce) {
+                cmd.setExecutor(ce);
             }
-            return msg;
+            if (executor instanceof org.bukkit.command.TabCompleter tc) {
+                cmd.setTabCompleter(tc);
+            }
+        } else {
+            getLogger().warning("Command not found in plugin.yml: " + label);
         }
-
-        // Pairs: "{key}", value, "{key2}", value2, ...
-        if (placeholders.length % 2 != 0) {
-            // If odd, ignore the last dangling token for safety
-            Object[] trimmed = new Object[placeholders.length - 1];
-            System.arraycopy(placeholders, 0, trimmed, 0, trimmed.length);
-            placeholders = trimmed;
-        }
-
-        for (int i = 0; i < placeholders.length; i += 2) {
-            Object k = placeholders[i];
-            Object v = placeholders[i + 1];
-            if (k == null) continue;
-            msg = msg.replace(String.valueOf(k), String.valueOf(v));
-        }
-        return msg;
     }
 
-    private String colorize(String input) {
-        if (input == null) return null;
-        return ChatColor.translateAlternateColorCodes('&', input);
+    private void registerListeners(Listener... listeners) {
+        for (Listener l : listeners) {
+            Bukkit.getPluginManager().registerEvents(l, this);
+        }
     }
 
-    /* =========================================================
-     * Convenience builders
-     * ========================================================= */
+    /* -------------------------------------------------------
+     * Legacy convenience (used by some older code paths)
+     * ------------------------------------------------------- */
 
-    public Map<String, Object> map(Object... kv) {
-        Map<String, Object> out = new LinkedHashMap<>();
-        if (kv == null) return out;
-        int n = kv.length - (kv.length % 2);
-        for (int i = 0; i < n; i += 2) {
-            out.put(String.valueOf(kv[i]), kv[i + 1]);
-        }
-        return out;
+    /** Prefix string for ad-hoc messages (prefer MessagesUtil in new code). */
+    public String getPrefix() {
+        return PREFIX;
     }
 }

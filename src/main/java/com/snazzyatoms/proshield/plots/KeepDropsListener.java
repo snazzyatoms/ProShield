@@ -1,75 +1,71 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Chunk;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.ItemDespawnEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
 
 /**
- * Handles rules for item drops & pickups inside claims.
- * - Complements ItemProtectionListener (which handles despawns)
- * - Enforces role-based permissions on dropping/picking up items
- * - Prevents grief (e.g., visitors littering or stealing)
+ * Handles persistence of dropped items inside claims.
+ * - Global config: claims.keep-items.enabled
+ * - Per-claim override: plot.getSettings().isKeepDrops()
  */
-@SuppressWarnings("deprecation") // PlayerPickupItemEvent is still functional for supported versions
 public class KeepDropsListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
 
-    public KeepDropsListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
+    public KeepDropsListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        this.roleManager = roleManager;
     }
 
-    /**
-     * Prevent certain roles from dropping items in claims.
-     */
     @EventHandler(ignoreCancelled = true)
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
-        Item item = event.getItemDrop();
         Chunk chunk = player.getLocation().getChunk();
-
         Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness → allow drops
+        Item item = event.getItemDrop();
 
-        ClaimRole role = roleManager.getRole(plot, player);
+        FileConfiguration config = plugin.getConfig();
+        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
+        boolean allowOverride = config.getBoolean("claims.keep-items.per-claim-override", true);
 
-        // Example restriction: Visitors cannot drop items inside claims
-        if (role == ClaimRole.VISITOR) {
-            event.setCancelled(true);
-            item.remove();
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items inside this claim.");
+        boolean keepDrops = globalKeep;
+        if (plot != null && allowOverride) {
+            keepDrops = plot.getSettings().isKeepDropsEnabled();
+        }
+
+        if (keepDrops) {
+            int lifespan = config.getInt("claims.keep-items.despawn-seconds", 900) * 20;
+            item.setTicksLived(1); // reset
+            item.setUnlimitedLifetime(true);
+            item.setTicksLived(-lifespan);
+            player.sendMessage(plugin.getPrefix() + "§aThis item will not despawn inside your claim.");
         }
     }
 
-    /**
-     * Prevent certain roles from picking up items in claims.
-     */
     @EventHandler(ignoreCancelled = true)
-    public void onItemPickup(PlayerPickupItemEvent event) {
-        Player player = event.getPlayer();
-        Item item = event.getItem();
-        Chunk chunk = item.getLocation().getChunk();
-
+    public void onItemDespawn(ItemDespawnEvent event) {
+        Chunk chunk = event.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return; // wilderness → allow pickup
+        FileConfiguration config = plugin.getConfig();
 
-        ClaimRole role = roleManager.getRole(plot, player);
+        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
+        boolean allowOverride = config.getBoolean("claims.keep-items.per-claim-override", true);
 
-        // Example restriction: Visitors cannot pick up items inside claims
-        if (role == ClaimRole.VISITOR) {
+        boolean keepDrops = globalKeep;
+        if (plot != null && allowOverride) {
+            keepDrops = plot.getSettings().isKeepDropsEnabled();
+        }
+
+        if (keepDrops) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items inside this claim.");
         }
     }
 }

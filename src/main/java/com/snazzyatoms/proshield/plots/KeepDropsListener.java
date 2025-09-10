@@ -1,7 +1,7 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/KeepDropsListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Item;
@@ -17,16 +17,18 @@ import java.util.Iterator;
  * Handles persistent item drops inside claims.
  * - Prevents despawn of items when enabled globally or per-claim
  * - Optional configurable despawn delay
- * - Preserves original behavior, extended for per-claim + global rules
+ * - Integrates with MessagesUtil
  */
 public class KeepDropsListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
+    private final MessagesUtil messages;
 
     public KeepDropsListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+        this.messages = plugin.getMessagesUtil();
     }
 
     /**
@@ -38,29 +40,35 @@ public class KeepDropsListener implements Listener {
         Chunk chunk = item.getLocation().getChunk();
 
         Plot plot = plotManager.getPlot(chunk);
-        boolean globalKeep = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
+        FileConfiguration config = plugin.getConfig();
 
-        if (plot == null && !globalKeep) return; // no claim, no global keep
-
+        boolean globalKeep = config.getBoolean("claims.keep-items.enabled", false);
         boolean perClaimKeep = plot != null && plot.getSettings().isKeepItemsEnabled();
+
         if (!globalKeep && !perClaimKeep) return;
 
-        // Apply despawn settings
-        FileConfiguration config = plugin.getConfig();
         int despawnSeconds = config.getInt("claims.keep-items.despawn-seconds", 900);
 
+        // Mark item as persistent
         item.setUnlimitedLifetime(true);
         item.setTicksLived(0);
-        item.setCustomName(null);
-        item.setCustomNameVisible(false);
 
-        // Manual despawn scheduling
+        // Optional manual despawn
         if (despawnSeconds > 0) {
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 if (!item.isDead() && item.isValid()) {
                     item.remove();
                 }
             }, despawnSeconds * 20L);
+        }
+
+        // Notify nearby players (debug/feedback)
+        if (plot != null) {
+            for (Player p : chunk.getWorld().getPlayers()) {
+                if (p.getLocation().distance(item.getLocation()) < 8) {
+                    messages.send(p, "keepdrops.item-persistent");
+                }
+            }
         }
     }
 
@@ -78,7 +86,7 @@ public class KeepDropsListener implements Listener {
 
         if (!globalKeep && !perClaimKeep) return;
 
-        // Respect Minecraft defaults but respawn items as persistent
+        // Respect vanilla keep rules but re-spawn items with persistence
         event.setKeepInventory(false);
         event.setKeepLevel(false);
 
@@ -90,11 +98,11 @@ public class KeepDropsListener implements Listener {
             Item drop = player.getWorld().dropItemNaturally(player.getLocation(), stack);
             drop.setUnlimitedLifetime(true);
             drop.setTicksLived(0);
-            drop.setCustomName(null);
-            drop.setCustomNameVisible(false);
         }
 
-        // Clear original drops (we re-spawned them as persistent)
         event.getDrops().clear();
+
+        // Send confirmation message
+        messages.send(player, "keepdrops.death-items-persistent");
     }
 }

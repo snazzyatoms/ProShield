@@ -1,369 +1,216 @@
-package com.snazzyatoms.proshield.plots;
+package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
+import com.snazzyatoms.proshield.commands.*;
+import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.plots.*;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.ChatColor;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Manages all plots (claimed chunks), persistence and lookups.
- * - Preserves prior behavior (YAML-backed, in-memory cache)
- * - Extended with helpers used across listeners/commands in 1.2.5
- */
-public class PlotManager {
+public class ProShield extends JavaPlugin {
 
-    private final ProShield plugin;
-    // Key format: worldName + ":" + chunkX + "," + chunkZ
-    private final Map<String, Plot> plots = new HashMap<>();
+    /** Legacy static prefix (kept for older listeners that still reference it). */
+    public static final String PREFIX = ChatColor.DARK_AQUA + "[ProShield] " + ChatColor.RESET;
 
-    public PlotManager(ProShield plugin) {
-        this.plugin = plugin;
+    // Core singletons
+    private MessagesUtil messages;
+    private GUIManager guiManager;
+    private PlotManager plotManager;
+    private ClaimRoleManager roleManager;
+
+    // Runtime state
+    private final Set<UUID> bypassing = ConcurrentHashMap.newKeySet();
+    private volatile boolean debugEnabled = false;
+
+    @Override
+    public void onEnable() {
+        // Config bootstrapping
+        saveDefaultConfig();
+        // Ensure messages.yml exists and load it
+        saveResource("messages.yml", false);
+        messages = new MessagesUtil(this); // reads /plugins/ProShield/messages.yml
+
+        // Instantiate managers
+        plotManager = new PlotManager(this);
+        roleManager = new ClaimRoleManager(this);
+        guiManager = new GUIManager(this);
+
+        // Register listeners (keep/add all we’ve built)
+        registerListeners(
+                new PlayerJoinListener(this, plotManager),
+                new ClaimMessageListener(this, plotManager),
+                new SpawnClaimGuardListener(this, plotManager),
+                new MobBorderRepelListener(this, plotManager),
+                new DamageProtectionListener(this, plotManager, roleManager),
+                new BlockProtectionListener(this, plotManager, roleManager),
+                new InteractionProtectionListener(this, plotManager, roleManager),
+                new ExplosionProtectionListener(this, plotManager, roleManager),
+                new FireProtectionListener(this, plotManager),
+                new BucketProtectionListener(this, plotManager),
+                new ItemProtectionListener(this, plotManager, roleManager),
+                new KeepDropsListener(this, plotManager),
+                new EntityGriefProtectionListener(this, plotManager, roleManager),
+                new PvpProtectionListener(this, plotManager, roleManager)
+        );
+
+        // Register commands (main dispatcher + split commands)
+        wireCommand("proshield", new ProShieldCommand(this, plotManager, roleManager, guiManager));
+        wireCommand("claim", new ClaimSubCommand(this, plotManager));
+        wireCommand("unclaim", new UnclaimSubCommand(this, plotManager));
+        wireCommand("info", new InfoSubCommand(this, plotManager, roleManager));
+        wireCommand("trust", new TrustCommand(this, plotManager, roleManager));
+        wireCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
+        wireCommand("trusted", new TrustedListCommand(this, plotManager, roleManager));
+        wireCommand("roles", new RolesCommand(this, plotManager, roleManager));
+        wireCommand("transfer", new TransferCommand(this, plotManager));
+        wireCommand("preview", new PreviewSubCommand(this, plotManager));
+        wireCommand("compass", new CompassSubCommand(this, guiManager));
+
+        // Optional: schedule recurring tasks owned by listeners (repel, expiry, etc.)
+        // Those are started inside the listeners/managers themselves in our design.
+
+        if (isDebugEnabled()) {
+            getLogger().info("[ProShield] Debug mode is ON");
+        }
+        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion());
     }
 
-    public ProShield getPlugin() {
-        return plugin;
+    @Override
+    public void onDisable() {
+        // Persist anything necessary; our managers write via config on change, so nothing heavy here.
+        getLogger().info("[ProShield] Disabled");
     }
 
-    /* =========================================================
-     * Loading / Saving
-     * ========================================================= */
+    /* -------------------------------------------------------
+     * Accessors / Exposure
+     * ------------------------------------------------------- */
 
-    public void reloadFromConfig() {
-        plots.clear();
-        loadFromConfig(plugin.getConfig());
+    public MessagesUtil getMessagesUtil() {
+        return messages;
     }
 
-    public void loadFromConfig(FileConfiguration config) {
-        ConfigurationSection claimsSec = config.getConfigurationSection("claims");
-        if (claimsSec == null) {
-            // nothing yet; first run scenario
-            return;
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
+    }
+
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    /* -------------------------------------------------------
+     * Bypass / Debug toggles (as requested)
+     * ------------------------------------------------------- */
+
+    /** Toggle bypass for a player. Returns the new state (true = now bypassing). */
+    public boolean toggleBypass(Player player) {
+        UUID id = player.getUniqueId();
+        boolean nowBypassing;
+        if (bypassing.contains(id)) {
+            bypassing.remove(id);
+            nowBypassing = false;
+            messages.send(player, "admin.bypass-off");
+        } else {
+            bypassing.add(id);
+            nowBypassing = true;
+            messages.send(player, "admin.bypass-on");
+        }
+        return nowBypassing;
+    }
+
+    /** Check whether the player is currently bypassing claim protections. */
+    public boolean isBypassing(Player player) {
+        return player != null && bypassing.contains(player.getUniqueId());
+    }
+
+    /** Toggle debug flag globally and announce to console + player (if provided). */
+    public boolean toggleDebug() {
+        debugEnabled = !debugEnabled;
+        getLogger().info("[ProShield] Debug: " + (debugEnabled ? "ENABLED" : "DISABLED"));
+        return debugEnabled;
+    }
+
+    /* -------------------------------------------------------
+     * Reload entrypoint (used by /proshield reload & GUI)
+     * ------------------------------------------------------- */
+
+    /** Soft reload of config + messages + caches + manager settings. */
+    public void reloadAll() {
+        // Bukkit config.yml
+        reloadConfig();
+
+        // Messages
+        if (messages != null) {
+            messages.reload(); // re-read messages.yml
+        } else {
+            messages = new MessagesUtil(this);
         }
 
-        for (String key : claimsSec.getKeys(false)) {
-            // key = world:x,z
-            String[] worldAndCoords = key.split(":");
-            if (worldAndCoords.length != 2) continue;
-
-            String world = worldAndCoords[0];
-            String[] coords = worldAndCoords[1].split(",");
-            if (coords.length != 2) continue;
-
-            int x, z;
-            try {
-                x = Integer.parseInt(coords[0]);
-                z = Integer.parseInt(coords[1]);
-            } catch (NumberFormatException nfe) {
-                continue;
-            }
-
-            ConfigurationSection pSec = claimsSec.getConfigurationSection(key);
-            if (pSec == null) continue;
-
-            String ownerStr = pSec.getString("owner");
-            if (ownerStr == null) continue;
-
-            UUID owner;
-            try {
-                owner = UUID.fromString(ownerStr);
-            } catch (IllegalArgumentException iae) {
-                // legacy or name-based? try to resolve by name (best effort)
-                OfflinePlayer legacy = Bukkit.getOfflinePlayer(ownerStr);
-                owner = legacy.getUniqueId();
-            }
-
-            Plot plot = new Plot(owner, world, x, z);
-
-            // Trusted players + roles
-            ConfigurationSection trustedSec = pSec.getConfigurationSection("trusted");
-            if (trustedSec != null) {
-                for (String uuidOrName : trustedSec.getKeys(false)) {
-                    ClaimRole role = ClaimRole.fromString(trustedSec.getString(uuidOrName, "VISITOR"));
-                    UUID trustId = parseUuidOrResolve(uuidOrName);
-                    if (trustId != null) {
-                        plot.trustPlayer(trustId, role);
-                    }
-                }
-            }
-
-            // Flags (per-claim) via PlotSettings
-            PlotSettings ps = plot.getSettings();
-            ConfigurationSection flagsSec = pSec.getConfigurationSection("flags");
-            if (flagsSec != null) {
-                // Core booleans (only set if present to preserve defaults)
-                setIfPresentBoolean(flagsSec, "pvp", ps::setPvpEnabled);
-                setIfPresentBoolean(flagsSec, "keep-items", ps::setKeepItemsEnabled);
-
-                setIfPresentBoolean(flagsSec, "damage.enabled", ps::setDamageEnabled);
-                setIfPresentBoolean(flagsSec, "damage.pve", ps::setPveEnabled);
-
-                setIfPresentBoolean(flagsSec, "entity-grief", ps::setEntityGriefingAllowed);
-                setIfPresentBoolean(flagsSec, "item-frames", ps::setItemFramesAllowed);
-                setIfPresentBoolean(flagsSec, "vehicles", ps::setVehiclesAllowed);
-                setIfPresentBoolean(flagsSec, "buckets", ps::setBucketsAllowed);
-
-                setIfPresentBoolean(flagsSec, "redstone", ps::setRedstoneAllowed);
-                setIfPresentBoolean(flagsSec, "containers", ps::setContainersAllowed);
-                setIfPresentBoolean(flagsSec, "animals", ps::setAnimalAccessAllowed);
-
-                // Generic flags bag (for future)
-                ConfigurationSection bag = flagsSec.getConfigurationSection("bag");
-                if (bag != null) {
-                    for (String fk : bag.getKeys(false)) {
-                        ps.setFlag(fk, bag.getBoolean(fk, false));
-                    }
-                }
-            }
-
-            plots.put(key, plot);
+        // Managers
+        if (plotManager != null) {
+            // keep a method with this name to satisfy call sites from earlier patches
+            plotManager.reloadFromConfig();
         }
-    }
-
-    public void saveToConfig() {
-        FileConfiguration config = plugin.getConfig();
-        // wipe & rebuild section (safer than partial updates)
-        config.set("claims", null);
-        for (Plot p : plots.values()) {
-            String key = key(p.getWorldName(), p.getChunkX(), p.getChunkZ());
-            String base = "claims." + key;
-
-            config.set(base + ".owner", p.getOwner().toString());
-
-            // trusted
-            String trustedPath = base + ".trusted";
-            config.set(trustedPath, null);
-            for (Map.Entry<UUID, ClaimRole> e : p.getTrustedPlayers().entrySet()) {
-                config.set(trustedPath + "." + e.getKey().toString(), e.getValue().name());
-            }
-
-            // flags
-            PlotSettings ps = p.getSettings();
-            String flags = base + ".flags";
-            config.set(flags + ".pvp", ps.isPvpEnabled());
-            config.set(flags + ".keep-items", ps.isKeepItemsEnabled());
-
-            config.set(flags + ".damage.enabled", ps.isDamageEnabled());
-            config.set(flags + ".damage.pve", ps.isPveEnabled());
-
-            config.set(flags + ".entity-grief", ps.isEntityGriefingAllowed());
-            config.set(flags + ".item-frames", ps.isItemFramesAllowed());
-            config.set(flags + ".vehicles", ps.isVehiclesAllowed());
-            config.set(flags + ".buckets", ps.isBucketsAllowed());
-
-            config.set(flags + ".redstone", ps.isRedstoneAllowed());
-            config.set(flags + ".containers", ps.isContainersAllowed());
-            config.set(flags + ".animals", ps.isAnimalAccessAllowed());
-
-            // bag
-            if (!ps.getFlags().isEmpty()) {
-                for (Map.Entry<String, Boolean> f : ps.getFlags().entrySet()) {
-                    config.set(flags + ".bag." + f.getKey(), f.getValue());
-                }
-            }
-        }
-        plugin.saveConfig();
-    }
-
-    private void setIfPresentBoolean(ConfigurationSection sec, String path, java.util.function.Consumer<Boolean> setter) {
-        if (sec.isSet(path)) setter.accept(sec.getBoolean(path, false));
-    }
-
-    private UUID parseUuidOrResolve(String id) {
-        try {
-            return UUID.fromString(id);
-        } catch (IllegalArgumentException ignored) {
-            OfflinePlayer op = Bukkit.getOfflinePlayer(id);
-            return op != null ? op.getUniqueId() : null;
-        }
-    }
-
-    /* =========================================================
-     * Lookups
-     * ========================================================= */
-
-    public Plot getPlot(Chunk chunk) {
-        return plots.get(key(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()));
-    }
-
-    public Plot getClaim(Location loc) {
-        Chunk c = loc.getChunk();
-        return getPlot(c);
-    }
-
-    public boolean isClaimed(Location loc) {
-        return getClaim(loc) != null;
-    }
-
-    public boolean isOwner(UUID playerId, Location loc) {
-        Plot p = getClaim(loc);
-        return p != null && p.isOwner(playerId);
-    }
-
-    public String getClaimName(Location loc) {
-        Plot p = getClaim(loc);
-        if (p == null) return "Wilderness";
-        OfflinePlayer op = Bukkit.getOfflinePlayer(p.getOwner());
-        String name = (op != null && op.getName() != null) ? op.getName() : p.getOwner().toString();
-        return name + "'s Claim";
-    }
-
-    public boolean hasAnyClaim(UUID playerId) {
-        for (Plot p : plots.values()) {
-            if (p.getOwner().equals(playerId)) return true;
-        }
-        return false;
-    }
-
-    public List<Plot> getAllClaimsOf(UUID playerId) {
-        return plots.values().stream()
-                .filter(p -> p.getOwner().equals(playerId))
-                .collect(Collectors.toList());
-    }
-
-    public Collection<Plot> getAllPlots() {
-        return Collections.unmodifiableCollection(plots.values());
-    }
-
-    /* =========================================================
-     * Mutations
-     * ========================================================= */
-
-    public boolean createClaim(UUID owner, Location loc) {
-        Chunk c = loc.getChunk();
-        String k = key(c.getWorld().getName(), c.getX(), c.getZ());
-        if (plots.containsKey(k)) return false;
-        Plot p = new Plot(owner, c.getWorld().getName(), c.getX(), c.getZ());
-        plots.put(k, p);
-        saveToConfig();
-        return true;
-    }
-
-    public boolean removeClaim(Location loc) {
-        Chunk c = loc.getChunk();
-        String k = key(c.getWorld().getName(), c.getX(), c.getZ());
-        if (!plots.containsKey(k)) return false;
-        plots.remove(k);
-        saveToConfig();
-        return true;
-    }
-
-    /**
-     * Transfer ownership of an existing plot. Because Plot.owner is immutable,
-     * we re-create a Plot and migrate settings & trusted.
-     */
-    public boolean transferOwnership(Plot plot, UUID newOwner) {
-        if (plot == null || newOwner == null) return false;
-
-        // Remove old
-        String oldKey = key(plot.getWorldName(), plot.getChunkX(), plot.getChunkZ());
-        PlotSettings oldSettings = plot.getSettings();
-        Map<UUID, ClaimRole> oldTrusted = new HashMap<>(plot.getTrustedPlayers());
-
-        plots.remove(oldKey);
-
-        // Create new
-        Plot np = new Plot(newOwner, plot.getWorldName(), plot.getChunkX(), plot.getChunkZ());
-
-        // Copy settings
-        PlotSettings ns = np.getSettings();
-        ns.copyFrom(oldSettings);
-
-        // Copy trusted
-        for (Map.Entry<UUID, ClaimRole> e : oldTrusted.entrySet()) {
-            // if they were the new owner previously trusted, it's fine to keep or you may choose to clear
-            np.trustPlayer(e.getKey(), e.getValue());
+        if (roleManager != null) {
+            roleManager.reloadFromConfig();
         }
 
-        // Put new in the same key
-        plots.put(oldKey, np);
-        saveToConfig();
-        return true;
-    }
-
-    public boolean transferOwnership(Plot plot, String targetNameOrUuid) {
-        UUID target = parseUuidOrResolve(targetNameOrUuid);
-        return target != null && transferOwnership(plot, target);
-    }
-
-    /* =========================================================
-     * Expiry / Maintenance
-     * ========================================================= */
-
-    /**
-     * Purge claims whose owner hasn't played for `days` days.
-     * Returns number of candidates (dryRun=true) or number purged (dryRun=false).
-     */
-    public int purgeExpired(int days, boolean dryRun) {
-        if (days <= 0) return 0;
-
-        long cutoff = System.currentTimeMillis() - (days * 24L * 60L * 60L * 1000L);
-
-        List<String> toRemove = new ArrayList<>();
-        for (Map.Entry<String, Plot> e : plots.entrySet()) {
-            UUID owner = e.getValue().getOwner();
-            OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
-            long last = (op != null) ? op.getLastPlayed() : 0L;
-            // last == 0 means never joined (some hosts return 0); treat as expired
-            if (last == 0L || last < cutoff) {
-                toRemove.add(e.getKey());
-            }
+        // GUI cache clear
+        if (guiManager != null) {
+            guiManager.clearCache();
         }
 
-        if (dryRun) {
-            return toRemove.size();
-        }
-
-        for (String k : toRemove) {
-            plots.remove(k);
-        }
-        if (!toRemove.isEmpty()) saveToConfig();
-        return toRemove.size();
+        // Announce
+        messages.broadcastConsole("messages.reloaded", getServer().getConsoleSender());
     }
 
-    /* =========================================================
+    /* -------------------------------------------------------
      * Helpers
-     * ========================================================= */
+     * ------------------------------------------------------- */
 
-    public static String key(String world, int x, int z) {
-        return world + ":" + x + "," + z;
+    private void wireCommand(String label, Object executor) {
+        PluginCommand cmd = getCommand(label);
+        if (cmd != null) {
+            if (executor instanceof org.bukkit.command.CommandExecutor ce) {
+                cmd.setExecutor(ce);
+            }
+            if (executor instanceof org.bukkit.command.TabCompleter tc) {
+                cmd.setTabCompleter(tc);
+            }
+        } else {
+            getLogger().warning("Command not found in plugin.yml: " + label);
+        }
     }
 
-    public static String key(Chunk c) {
-        return key(c.getWorld().getName(), c.getX(), c.getZ());
+    private void registerListeners(Listener... listeners) {
+        for (Listener l : listeners) {
+            Bukkit.getPluginManager().registerEvents(l, this);
+        }
     }
 
-    public Optional<Plot> findByKey(String key) {
-        return Optional.ofNullable(plots.get(key));
-    }
+    /* -------------------------------------------------------
+     * Legacy convenience (used by some older code paths)
+     * ------------------------------------------------------- */
 
-    public Optional<Plot> findByLocation(Location loc) {
-        return Optional.ofNullable(getClaim(loc));
-    }
-
-    public Optional<Plot> findByChunk(Chunk c) {
-        return Optional.ofNullable(getPlot(c));
-    }
-
-    /* =========================================================
-     * Utilities for commands/listeners to name owners safely
-     * ========================================================= */
-
-    public String ownerDisplayName(UUID owner) {
-        OfflinePlayer op = Bukkit.getOfflinePlayer(owner);
-        return (op != null && op.getName() != null) ? op.getName() : owner.toString();
-    }
-
-    public String describe(Location loc) {
-        World w = loc.getWorld();
-        Chunk c = loc.getChunk();
-        return (w != null ? w.getName() : "world") + "@" + c.getX() + "," + c.getZ();
+    /** Prefix string for ad-hoc messages (prefer MessagesUtil in new code). */
+    public String getPrefix() {
+        return PREFIX;
     }
 }

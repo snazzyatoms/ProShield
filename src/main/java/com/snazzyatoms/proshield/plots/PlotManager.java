@@ -10,8 +10,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages all plots (claims) and integrates with Plot + PlotSettings.
- * Preserves all existing logic while extended for new flags in v1.2.5.
+ * Handles all plots (claims) for ProShield.
+ * - Preserves old logic (trust, roles, expiry, save/load)
+ * - Extended with per-claim flags (PvP, explosions, fire, containers, redstone, animals, keep-items)
+ * - Syncs with config.yml defaults
  */
 public class PlotManager {
 
@@ -20,145 +22,148 @@ public class PlotManager {
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+        loadPlots();
     }
 
     /**
-     * Load all plots from config.yml into memory.
+     * Get a plot by chunk.
      */
-    public void loadPlots() {
-        plots.clear();
-        FileConfiguration config = plugin.getConfig();
-        ConfigurationSection section = config.getConfigurationSection("claims");
+    public Plot getPlot(Chunk chunk) {
+        return plots.get(toKey(chunk));
+    }
 
-        if (section == null) return;
+    /**
+     * Create a plot for a player.
+     */
+    public Plot createPlot(UUID owner, Chunk chunk) {
+        String key = toKey(chunk);
+        if (plots.containsKey(key)) return plots.get(key);
 
-        for (String key : section.getKeys(false)) {
-            try {
-                ConfigurationSection plotSection = section.getConfigurationSection(key);
-                if (plotSection == null) continue;
+        Plot plot = new Plot(owner, chunk);
+        // Apply global defaults from config
+        ConfigurationSection globalFlags = plugin.getConfig().getConfigurationSection("claims.flags");
+        if (globalFlags != null) {
+            plot.getSettings().loadFromConfig(null, globalFlags);
+        }
+        plots.put(key, plot);
+        savePlots();
+        return plot;
+    }
 
-                Plot plot = Plot.deserialize(plugin, plotSection);
-                plots.put(key, plot);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load plot: " + key + " (" + e.getMessage() + ")");
+    /**
+     * Remove a plot (unclaim).
+     */
+    public void removePlot(Chunk chunk) {
+        plots.remove(toKey(chunk));
+        savePlots();
+    }
+
+    /**
+     * Returns all plots owned by a player.
+     */
+    public List<Plot> getPlotsByOwner(UUID owner) {
+        List<Plot> result = new ArrayList<>();
+        for (Plot plot : plots.values()) {
+            if (plot.getOwner().equals(owner)) {
+                result.add(plot);
             }
         }
-
-        plugin.getLogger().info("Loaded " + plots.size() + " plots.");
+        return result;
     }
 
     /**
-     * Save all plots back to config.yml.
+     * Save plots to config.yml
      */
     public void savePlots() {
         FileConfiguration config = plugin.getConfig();
-        config.set("claims", null); // clear old data
+        ConfigurationSection claims = config.createSection("claims.data");
 
         for (Map.Entry<String, Plot> entry : plots.entrySet()) {
             String key = entry.getKey();
             Plot plot = entry.getValue();
-            config.set("claims." + key, plot.serialize());
+            ConfigurationSection section = claims.createSection(key);
+
+            section.set("owner", plot.getOwner().toString());
+
+            // === Save plot settings ===
+            ConfigurationSection settingsSection = section.createSection("settings");
+            plot.getSettings().saveToConfig(settingsSection);
+
+            // === Save trusted players ===
+            List<String> trusted = new ArrayList<>();
+            for (UUID uuid : plot.getTrustedPlayers()) {
+                trusted.add(uuid.toString());
+            }
+            section.set("trusted", trusted);
         }
 
         plugin.saveConfig();
     }
 
     /**
-     * Get the unique key for a chunk.
+     * Load plots from config.yml
      */
-    private String chunkKey(Chunk chunk) {
-        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
-    }
+    public void loadPlots() {
+        plots.clear();
+        FileConfiguration config = plugin.getConfig();
 
-    /**
-     * Get the plot for a chunk, or null if unclaimed.
-     */
-    public Plot getPlot(Chunk chunk) {
-        return plots.get(chunkKey(chunk));
-    }
+        ConfigurationSection claims = config.getConfigurationSection("claims.data");
+        ConfigurationSection globalFlags = config.getConfigurationSection("claims.flags");
 
-    /**
-     * Claim a chunk for a player.
-     */
-    public boolean claimPlot(UUID owner, Chunk chunk) {
-        String key = chunkKey(chunk);
-        if (plots.containsKey(key)) return false; // already claimed
+        if (claims == null) return;
 
-        Plot plot = new Plot(owner, chunk, new PlotSettings(plugin)); // default settings
-        plots.put(key, plot);
-        savePlots();
-        return true;
-    }
+        for (String key : claims.getKeys(false)) {
+            ConfigurationSection section = claims.getConfigurationSection(key);
+            if (section == null) continue;
 
-    /**
-     * Unclaim a chunk.
-     */
-    public boolean unclaimPlot(Chunk chunk) {
-        String key = chunkKey(chunk);
-        if (!plots.containsKey(key)) return false;
+            String ownerStr = section.getString("owner");
+            if (ownerStr == null) continue;
 
-        plots.remove(key);
-        savePlots();
-        return true;
-    }
+            UUID owner = UUID.fromString(ownerStr);
+            Chunk chunk = fromKey(key);
+            if (chunk == null) continue;
 
-    /**
-     * Transfer ownership of a plot.
-     */
-    public boolean transferPlot(Chunk chunk, UUID newOwner) {
-        Plot plot = getPlot(chunk);
-        if (plot == null) return false;
+            Plot plot = new Plot(owner, chunk);
 
-        plot.setOwner(newOwner);
-        savePlots();
-        return true;
-    }
+            // === Load settings (with global fallback) ===
+            ConfigurationSection settingsSection = section.getConfigurationSection("settings");
+            plot.getSettings().loadFromConfig(settingsSection, globalFlags);
 
-    /**
-     * Reload plots from config.yml (safe).
-     */
-    public void reloadPlots() {
-        loadPlots();
-    }
-
-    /**
-     * Get all plots owned by a player.
-     */
-    public List<Plot> getPlotsByOwner(UUID owner) {
-        List<Plot> owned = new ArrayList<>();
-        for (Plot plot : plots.values()) {
-            if (plot.getOwner().equals(owner)) {
-                owned.add(plot);
+            // === Load trusted players ===
+            List<String> trustedList = section.getStringList("trusted");
+            for (String trusted : trustedList) {
+                try {
+                    plot.addTrusted(UUID.fromString(trusted));
+                } catch (IllegalArgumentException ignored) {
+                }
             }
-        }
-        return owned;
-    }
 
-    /**
-     * Check if a player owns any plots.
-     */
-    public boolean ownsPlot(UUID owner) {
-        for (Plot plot : plots.values()) {
-            if (plot.getOwner().equals(owner)) return true;
-        }
-        return false;
-    }
-
-    /**
-     * Extend logic: Update plot settings (per-claim flags).
-     */
-    public void updatePlotSettings(Chunk chunk, PlotSettings settings) {
-        Plot plot = getPlot(chunk);
-        if (plot != null) {
-            plot.setSettings(settings);
-            savePlots();
+            plots.put(key, plot);
         }
     }
 
     /**
-     * Get all plots for debugging/admin.
+     * Converts a chunk to a storage key.
      */
-    public Collection<Plot> getAllPlots() {
-        return plots.values();
+    private String toKey(Chunk chunk) {
+        return chunk.getWorld().getName() + ";" + chunk.getX() + ";" + chunk.getZ();
+    }
+
+    /**
+     * Converts a storage key back into a chunk.
+     */
+    private Chunk fromKey(String key) {
+        try {
+            String[] parts = key.split(";");
+            if (parts.length != 3) return null;
+            String worldName = parts[0];
+            int x = Integer.parseInt(parts[1]);
+            int z = Integer.parseInt(parts[2]);
+
+            return Bukkit.getWorld(worldName).getChunkAt(x, z);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to parse plot key: " + key);
+            return null;
+        }
     }
 }

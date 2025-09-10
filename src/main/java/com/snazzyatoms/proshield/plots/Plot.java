@@ -1,131 +1,134 @@
 package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.Chunk;
-import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * Represents a land claim (plot).
- * - Stores owner, trusted players, and role data
- * - Stores claim-specific settings (merged with global config defaults)
+ * Represents a single land claim (plot).
+ * - Stores owner, location, trusted players/roles
+ * - Holds per-claim settings (PvP, keep items, explosions, fire, mob grief)
  */
 public class Plot {
 
     private final UUID owner;
-    private final Chunk chunk;
-    private final Set<UUID> trustedPlayers;
-    private final PlotSettings settings;
+    private final String world;
+    private final int x;
+    private final int z;
+
+    // Trusted players (UUID → role string)
+    private final Map<UUID, String> trusted = new HashMap<>();
+
+    // Claim-specific settings (PvP, explosions, etc.)
+    private final PlotSettings settings = new PlotSettings();
 
     public Plot(UUID owner, Chunk chunk) {
         this.owner = owner;
-        this.chunk = chunk;
-        this.trustedPlayers = new HashSet<>();
-        this.settings = new PlotSettings(); // defaults applied
+        this.world = chunk.getWorld().getName();
+        this.x = chunk.getX();
+        this.z = chunk.getZ();
+    }
+
+    public Plot(UUID owner, String world, int x, int z) {
+        this.owner = owner;
+        this.world = world;
+        this.x = x;
+        this.z = z;
     }
 
     public UUID getOwner() {
         return owner;
     }
 
-    public Chunk getChunk() {
-        return chunk;
+    public String getWorld() {
+        return world;
     }
 
-    public Location getCenter() {
-        return chunk.getBlock(8, chunk.getWorld().getHighestBlockYAt(chunk.getBlock(8, 0, 8).getLocation()), 8).getLocation();
+    public int getX() {
+        return x;
     }
 
-    public Set<UUID> getTrustedPlayers() {
-        return trustedPlayers;
-    }
-
-    public void addTrusted(UUID playerId) {
-        trustedPlayers.add(playerId);
-    }
-
-    public void removeTrusted(UUID playerId) {
-        trustedPlayers.remove(playerId);
-    }
-
-    public boolean isTrusted(UUID playerId) {
-        return trustedPlayers.contains(playerId);
+    public int getZ() {
+        return z;
     }
 
     public PlotSettings getSettings() {
         return settings;
     }
 
-    // === NEW EXTENSIONS ===
+    public Map<UUID, String> getTrusted() {
+        return trusted;
+    }
 
-    /**
-     * Returns whether item-keep is enabled in this claim.
-     * Falls back to global config if not overridden.
-     */
-    public boolean isKeepItemsEnabled() {
-        return settings.isKeepItemsEnabled();
+    public boolean isTrusted(UUID uuid) {
+        return trusted.containsKey(uuid);
+    }
+
+    public void trust(UUID uuid, String role) {
+        trusted.put(uuid, role);
+    }
+
+    public void untrust(UUID uuid) {
+        trusted.remove(uuid);
     }
 
     /**
-     * Sets the keep-items flag for this claim.
+     * Load this plot's data from config.
      */
-    public void setKeepItemsEnabled(boolean enabled) {
-        settings.setKeepItemsEnabled(enabled);
+    public void loadFromConfig(ConfigurationSection section) {
+        // === Trusted players ===
+        ConfigurationSection trustedSec = section.getConfigurationSection("trusted");
+        if (trustedSec != null) {
+            for (String uuidStr : trustedSec.getKeys(false)) {
+                UUID uuid = UUID.fromString(uuidStr);
+                String role = trustedSec.getString(uuidStr, "member");
+                trusted.put(uuid, role);
+            }
+        }
+
+        // === Settings (new) ===
+        ConfigurationSection settingsSec = section.getConfigurationSection("settings");
+        if (settingsSec != null) {
+            settings.setKeepItemsEnabled(settingsSec.getBoolean("keep-items", false));
+            settings.setPvpEnabled(settingsSec.getBoolean("pvp", false));
+            settings.setExplosionsEnabled(settingsSec.getBoolean("explosions", false));
+            settings.setFireEnabled(settingsSec.getBoolean("fire", false));
+            settings.setMobGriefEnabled(settingsSec.getBoolean("mob-grief", false));
+        }
     }
 
     /**
-     * Returns whether PvP is enabled in this claim.
-     * Used by PvpProtectionListener.
+     * Save this plot's data to config.
      */
-    public boolean isPvpEnabled() {
-        return settings.isPvpEnabled();
-    }
+    public void saveToConfig(ConfigurationSection section) {
+        // === Owner ===
+        section.set("owner", owner.toString());
 
-    public void setPvpEnabled(boolean enabled) {
-        settings.setPvpEnabled(enabled);
-    }
+        // === Trusted players ===
+        ConfigurationSection trustedSec = section.createSection("trusted");
+        for (Map.Entry<UUID, String> entry : trusted.entrySet()) {
+            trustedSec.set(entry.getKey().toString(), entry.getValue());
+        }
 
-    /**
-     * Returns whether explosions are allowed in this claim.
-     */
-    public boolean isExplosionsEnabled() {
-        return settings.isExplosionsEnabled();
-    }
-
-    public void setExplosionsEnabled(boolean enabled) {
-        settings.setExplosionsEnabled(enabled);
-    }
-
-    /**
-     * Returns whether fire is allowed in this claim.
-     */
-    public boolean isFireEnabled() {
-        return settings.isFireEnabled();
-    }
-
-    public void setFireEnabled(boolean enabled) {
-        settings.setFireEnabled(enabled);
-    }
-
-    /**
-     * Returns whether mob griefing is allowed in this claim.
-     */
-    public boolean isMobGriefEnabled() {
-        return settings.isMobGriefEnabled();
-    }
-
-    public void setMobGriefEnabled(boolean enabled) {
-        settings.setMobGriefEnabled(enabled);
+        // === Settings (new) ===
+        ConfigurationSection settingsSec = section.createSection("settings");
+        settingsSec.set("keep-items", settings.isKeepItemsEnabled());
+        settingsSec.set("pvp", settings.isPvpEnabled());
+        settingsSec.set("explosions", settings.isExplosionsEnabled());
+        settingsSec.set("fire", settings.isFireEnabled());
+        settingsSec.set("mob-grief", settings.isMobGriefEnabled());
     }
 
     @Override
     public String toString() {
         return "Plot{" +
                 "owner=" + owner +
-                ", chunk=" + chunk +
-                ", trustedPlayers=" + trustedPlayers +
+                ", world='" + world + '\'' +
+                ", x=" + x +
+                ", z=" + z +
+                ", trusted=" + trusted +
                 ", settings=" + settings +
                 '}';
     }

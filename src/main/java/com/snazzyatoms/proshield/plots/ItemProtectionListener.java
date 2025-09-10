@@ -4,19 +4,24 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.Set;
 
 /**
- * Handles item drop & pickup protection inside claims.
- * - Uses both global config (protection.items) and per-claim settings
- * - Role-based checks to decide if allowed
+ * Handles item drops and pickups inside claims.
+ * - Supports per-claim overrides (allowed/blocked items, keep-drops).
+ * - Falls back to global config if no claim override.
+ * - Role-based: only trusted roles can bypass item restrictions.
  */
-@SuppressWarnings("deprecation") // for PlayerPickupItemEvent in legacy APIs
+@SuppressWarnings("deprecation") // PlayerPickupItemEvent is legacy but still used in 1.18–1.20
 public class ItemProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -32,40 +37,86 @@ public class ItemProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
+        ItemStack item = event.getItemDrop().getItemStack();
+
         Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        ClaimRole role = (plot != null) ? roleManager.getRole(plot, player) : ClaimRole.VISITOR;
-        FileConfiguration config = plugin.getConfig();
+        if (plot == null) {
+            // Wilderness → follow global rules only
+            FileConfiguration config = plugin.getConfig();
+            boolean wildernessAllow = config.getBoolean("protection.wilderness.allow-item-drop", true);
+            if (!wildernessAllow) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items in the wilderness.");
+            }
+            return;
+        }
 
-        boolean globalAllowed = isAllowed(config, "protection.items.drop", role);
-        boolean claimAllowed = (plot != null) ? plot.getSettings().canDropItems(role) : globalAllowed;
+        // === Inside a claim ===
+        ClaimRole role = roleManager.getRole(plot, player);
+        PlotSettings settings = plot.getSettings();
 
-        if (!claimAllowed) {
+        // Check role → Owners/Co-Owners can always drop
+        if (roleManager.isOwnerOrCoOwner(role)) return;
+
+        // Check per-claim allowed items
+        Set<String> allowedItems = settings.getAllowedItems();
+        Set<String> blockedItems = settings.getBlockedItems();
+
+        Material type = item.getType();
+        if (!allowedItems.isEmpty() && !allowedItems.contains(type.name())) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot drop items here.");
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot drop " + type.name() + " in this claim.");
+            return;
+        }
+
+        if (blockedItems.contains(type.name())) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cDropping " + type.name() + " is blocked in this claim.");
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onItemPickup(PlayerPickupItemEvent event) {
         Player player = event.getPlayer();
+        ItemStack item = event.getItem().getItemStack();
+
         Chunk chunk = player.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        ClaimRole role = (plot != null) ? roleManager.getRole(plot, player) : ClaimRole.VISITOR;
-        FileConfiguration config = plugin.getConfig();
-
-        boolean globalAllowed = isAllowed(config, "protection.items.pickup", role);
-        boolean claimAllowed = (plot != null) ? plot.getSettings().canPickupItems(role) : globalAllowed;
-
-        if (!claimAllowed) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items here.");
+        if (plot == null) {
+            // Wilderness → follow global rules only
+            FileConfiguration config = plugin.getConfig();
+            boolean wildernessAllow = config.getBoolean("protection.wilderness.allow-item-pickup", true);
+            if (!wildernessAllow) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up items in the wilderness.");
+            }
+            return;
         }
-    }
 
-    private boolean isAllowed(FileConfiguration config, String path, ClaimRole role) {
-        return config.getBoolean(path + "." + role.name().toLowerCase(), true);
+        // === Inside a claim ===
+        ClaimRole role = roleManager.getRole(plot, player);
+        PlotSettings settings = plot.getSettings();
+
+        // Check role → Owners/Co-Owners can always pick up
+        if (roleManager.isOwnerOrCoOwner(role)) return;
+
+        // Check per-claim allowed items
+        Set<String> allowedItems = settings.getAllowedItems();
+        Set<String> blockedItems = settings.getBlockedItems();
+
+        Material type = item.getType();
+        if (!allowedItems.isEmpty() && !allowedItems.contains(type.name())) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cYou cannot pick up " + type.name() + " in this claim.");
+            return;
+        }
+
+        if (blockedItems.contains(type.name())) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.getPrefix() + "§cPicking up " + type.name() + " is blocked in this claim.");
+        }
     }
 }

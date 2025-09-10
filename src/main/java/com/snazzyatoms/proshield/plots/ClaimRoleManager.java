@@ -1,75 +1,133 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/ClaimRoleManager.java
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
 
 public class ClaimRoleManager {
+    private final JavaPlugin plugin;
 
-    private final ProShield plugin;
+    private final Map<String, Integer> roleHierarchy = new HashMap<>();
+    private final Map<String, Set<String>> rolePermissions = new HashMap<>();
 
-    // key -> (playerUUID -> role)
-    private final Map<String, Map<UUID, ClaimRole>> roles = new HashMap<>();
-
-    public ClaimRoleManager(ProShield plugin) {
+    public ClaimRoleManager(JavaPlugin plugin) {
         this.plugin = plugin;
-        reloadFromConfig();
+        loadFromConfig();
     }
 
-    public void reloadFromConfig() {
-        roles.clear();
-        ConfigurationSection claims = plugin.getConfig().getConfigurationSection("claims");
-        if (claims == null) return;
-        for (String key : claims.getKeys(false)) {
-            ConfigurationSection sec = claims.getConfigurationSection(key);
-            if (sec == null) continue;
-            ConfigurationSection r = sec.getConfigurationSection("roles");
-            if (r == null) continue;
-            Map<UUID, ClaimRole> map = new HashMap<>();
-            for (String uuidStr : r.getKeys(false)) {
-                try {
-                    UUID u = UUID.fromString(uuidStr);
-                    ClaimRole role = ClaimRole.from(r.getString(uuidStr), ClaimRole.MEMBER);
-                    map.put(u, role);
-                } catch (Exception ignored) {}
-            }
-            if (!map.isEmpty()) roles.put(key, map);
+    // ==========================
+    // Load Roles & Permissions
+    // ==========================
+
+    public void loadFromConfig() {
+        roleHierarchy.clear();
+        rolePermissions.clear();
+
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("roles");
+
+        if (section == null) {
+            loadDefaults();
+            return;
+        }
+
+        for (String role : section.getKeys(false)) {
+            int rank = section.getInt(role + ".rank", 0);
+            List<String> perms = section.getStringList(role + ".permissions");
+
+            roleHierarchy.put(role.toLowerCase(), rank);
+            rolePermissions.put(role.toLowerCase(), new HashSet<>(perms));
+        }
+
+        // Always ensure defaults exist
+        ensureDefaults();
+    }
+
+    private void loadDefaults() {
+        roleHierarchy.put("visitor", 0);
+        roleHierarchy.put("member", 1);
+        roleHierarchy.put("container", 2);
+        roleHierarchy.put("builder", 3);
+        roleHierarchy.put("co-owner", 4);
+
+        rolePermissions.put("visitor", Set.of("walk"));
+        rolePermissions.put("member", Set.of("walk", "interact"));
+        rolePermissions.put("container", Set.of("walk", "interact", "open_containers"));
+        rolePermissions.put("builder", Set.of("walk", "interact", "open_containers", "build"));
+        rolePermissions.put("co-owner", Set.of("all"));
+    }
+
+    private void ensureDefaults() {
+        if (!roleHierarchy.containsKey("visitor")) {
+            roleHierarchy.put("visitor", 0);
+            rolePermissions.put("visitor", Set.of("walk"));
+        }
+        if (!roleHierarchy.containsKey("member")) {
+            roleHierarchy.put("member", 1);
+            rolePermissions.put("member", Set.of("walk", "interact"));
+        }
+        if (!roleHierarchy.containsKey("container")) {
+            roleHierarchy.put("container", 2);
+            rolePermissions.put("container", Set.of("walk", "interact", "open_containers"));
+        }
+        if (!roleHierarchy.containsKey("builder")) {
+            roleHierarchy.put("builder", 3);
+            rolePermissions.put("builder", Set.of("walk", "interact", "open_containers", "build"));
+        }
+        if (!roleHierarchy.containsKey("co-owner")) {
+            roleHierarchy.put("co-owner", 4);
+            rolePermissions.put("co-owner", Set.of("all"));
         }
     }
 
-    public ClaimRole getRole(Location loc, UUID player) {
-        String key = key(loc);
-        Map<UUID, ClaimRole> map = roles.get(key);
-        if (map == null) return ClaimRole.VISITOR;
-        return map.getOrDefault(player, ClaimRole.VISITOR);
+    // ==========================
+    // Role Checks
+    // ==========================
+
+    public int getRank(String role) {
+        return roleHierarchy.getOrDefault(role.toLowerCase(), 0);
     }
 
-    public String getRoleName(UUID owner, UUID player) {
-        // Human-readable, used by claim messages/listing
-        ClaimRole role = ClaimRole.VISITOR;
-        // (No owner context needed here; kept for future expansion)
-        return role.name();
+    public boolean hasPermission(String role, String perm) {
+        role = role.toLowerCase();
+
+        if (rolePermissions.containsKey(role)) {
+            Set<String> perms = rolePermissions.get(role);
+            return perms.contains("all") || perms.contains(perm.toLowerCase());
+        }
+
+        return false;
     }
 
-    public void setRole(String claimKey, UUID player, ClaimRole role) {
-        roles.computeIfAbsent(claimKey, k -> new HashMap<>()).put(player, role);
-        // also persist to config
-        String path = "claims." + claimKey + ".roles." + player.toString();
-        plugin.getConfig().set(path, role.name());
-        plugin.saveConfig();
+    public boolean canBuild(String role) {
+        return hasPermission(role, "build");
     }
 
-    public void clearRole(String claimKey, UUID player) {
-        Map<UUID, ClaimRole> map = roles.get(claimKey);
-        if (map != null) map.remove(player);
-        plugin.getConfig().set("claims." + claimKey + ".roles." + player.toString(), null);
-        plugin.saveConfig();
+    public boolean canOpenContainers(String role) {
+        return hasPermission(role, "open_containers");
     }
 
-    private String key(Location loc) {
-        return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
+    public boolean canInteract(String role) {
+        return hasPermission(role, "interact");
+    }
+
+    public boolean canDoEverything(String role) {
+        return hasPermission(role, "all");
+    }
+
+    // ==========================
+    // Utility
+    // ==========================
+
+    public Set<String> getDefinedRoles() {
+        return Collections.unmodifiableSet(roleHierarchy.keySet());
+    }
+
+    public Map<String, Integer> getRoleHierarchy() {
+        return Collections.unmodifiableMap(roleHierarchy);
+    }
+
+    public Map<String, Set<String>> getRolePermissions() {
+        return Collections.unmodifiableMap(rolePermissions);
     }
 }

@@ -1,109 +1,71 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Chunk;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import java.util.Collection;
 
-public class MobBorderRepelListener implements Listener {
+public class MobBorderRepelListener {
 
-    private final PlotManager plots;
     private final ProShield plugin;
+    private final PlotManager plots;
 
-    private boolean enabled;
-    private double radius;
-    private double pushH;
-    private double pushV;
-    private int interval;
-
-    public MobBorderRepelListener(PlotManager plots) {
+    public MobBorderRepelListener(ProShield plugin, PlotManager plots) {
+        this.plugin = plugin;
         this.plots = plots;
-        this.plugin = plots.getPlugin();
-        readConfig();
-        if (enabled) {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    try {
-                        tickRepel();
-                    } catch (Throwable ignored) {}
-                }
-            }.runTaskTimer(plugin, interval, interval);
-        }
+        startTask();
     }
 
-    private void readConfig() {
-        enabled  = plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
-        radius   = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 1.5D);
-        pushH    = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.6D);
-        pushV    = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.15D);
-        interval = plugin.getConfig().getInt("protection.mobs.border-repel.interval-ticks", 20);
-        if (interval < 1) interval = 20;
-        if (radius < 0D) radius = 0D;
+    private void startTask() {
+        int interval = plugin.getConfig().getInt("protection.mobs.border-repel.interval-ticks", 20);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                repelMobs();
+            }
+        }.runTaskTimer(plugin, interval, interval);
     }
 
-    private void tickRepel() {
-        if (!enabled) return;
+    private void repelMobs() {
+        double repelRadius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.5);
+        double horizontalPush = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 1.2);
+        double verticalPush = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.3);
+        boolean despawnInside = plugin.getConfig().getBoolean("protection.mobs.despawn-inside", true);
 
-        for (Player p : plugin.getServer().getOnlinePlayers()) {
-            World w = p.getWorld();
-            double rScan = Math.max(8.0, radius + 4.0);
-            Collection<? extends LivingEntity> nearby = p.getLocation().getNearbyLivingEntities(rScan);
-            for (LivingEntity le : nearby) {
-                if (!(le instanceof Monster)) continue;
-                Location el = le.getLocation();
+        Bukkit.getWorlds().forEach(world -> {
+            Collection<LivingEntity> entities = world.getLivingEntities();
+            for (LivingEntity entity : entities) {
+                if (entity instanceof Player) continue;
 
-                // Only when the mob is inside a claimed chunk
-                if (!plots.isClaimed(el)) continue;
+                Location loc = entity.getLocation();
 
-                // Distance to nearest chunk edge using local chunk coords (0..16)
-                Chunk ch = el.getChunk();
-                int baseX = ch.getX() << 4;
-                int baseZ = ch.getZ() << 4;
-
-                double localX = el.getX() - baseX;
-                double localZ = el.getZ() - baseZ;
-
-                double distLeft   = localX;
-                double distRight  = 16.0 - localX;
-                double distTop    = localZ;
-                double distBottom = 16.0 - localZ;
-
-                double minEdge = Math.min(Math.min(distLeft, distRight), Math.min(distTop, distBottom));
-
-                if (minEdge <= radius) {
-                    Vector push = new Vector(0, pushV, 0);
-
-                    if (minEdge == distLeft) {
-                        push.setX(-pushH);
-                    } else if (minEdge == distRight) {
-                        push.setX(pushH);
-                    } else if (minEdge == distTop) {
-                        push.setZ(-pushH);
-                    } else {
-                        push.setZ(pushH);
+                if (plots.isInsideClaim(loc)) {
+                    // If mobs are not allowed inside claims, remove them
+                    if (despawnInside) {
+                        entity.remove();
+                        continue;
                     }
-
-                    Vector v = le.getVelocity();
-                    le.setVelocity(new Vector(
-                            clamp(v.getX() + push.getX(), -1.2, 1.2),
-                            clamp(v.getY() + push.getY(), -0.2, 0.6),
-                            clamp(v.getZ() + push.getZ(), -1.2, 1.2)
-                    ));
+                } else {
+                    // Repel mobs that approach a claim border
+                    double distance = plots.distanceToClaimBorder(loc);
+                    if (distance <= repelRadius) {
+                        Location nearestBorder = plots.getNearestClaimBorder(loc);
+                        if (nearestBorder != null) {
+                            Vector push = loc.toVector()
+                                    .subtract(nearestBorder.toVector())
+                                    .normalize()
+                                    .multiply(horizontalPush)
+                                    .setY(verticalPush);
+                            entity.setVelocity(push);
+                        }
+                    }
                 }
             }
-        }
-    }
-
-    private double clamp(double v, double lo, double hi) {
-        return Math.max(lo, Math.min(hi, v));
+        });
     }
 }

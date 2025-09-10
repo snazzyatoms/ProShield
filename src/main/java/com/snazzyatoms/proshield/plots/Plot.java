@@ -1,84 +1,159 @@
-// path: src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.Chunk;
-import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import com.snazzyatoms.proshield.roles.ClaimRole;
+
+import java.util.*;
 
 /**
- * Represents a claimed plot (chunk).
- * - Preserves all existing functionality
- * - Extended with new PlotSettings flags (keepItems, redstone, etc.)
+ * Represents a single claimed plot (chunk).
+ * Stores ownership, trusted players, roles, and per-claim settings.
  */
-public class Plot implements Serializable {
+public class Plot {
 
     private final UUID owner;
     private final String worldName;
-    private final int x;
-    private final int z;
+    private final int chunkX;
+    private final int chunkZ;
+
+    private final Map<UUID, ClaimRole> trustedPlayers;
     private final PlotSettings settings;
 
-    private final Set<UUID> trustedPlayers;
-
-    public Plot(UUID owner, Chunk chunk) {
+    public Plot(UUID owner, String worldName, int chunkX, int chunkZ) {
         this.owner = owner;
-        this.worldName = chunk.getWorld().getName();
-        this.x = chunk.getX();
-        this.z = chunk.getZ();
-        this.settings = new PlotSettings();
-        this.trustedPlayers = new HashSet<>();
+        this.worldName = worldName;
+        this.chunkX = chunkX;
+        this.chunkZ = chunkZ;
+        this.trustedPlayers = new HashMap<>();
+        this.settings = new PlotSettings(); // default flags
     }
 
-    // === Getters ===
+    // =====================
+    // ✅ Ownership
+    // =====================
+
     public UUID getOwner() {
         return owner;
     }
+
+    public boolean isOwner(UUID playerId) {
+        return owner.equals(playerId);
+    }
+
+    // =====================
+    // ✅ Chunk Info
+    // =====================
 
     public String getWorldName() {
         return worldName;
     }
 
-    public int getX() {
-        return x;
+    public int getChunkX() {
+        return chunkX;
     }
 
-    public int getZ() {
-        return z;
+    public int getChunkZ() {
+        return chunkZ;
     }
+
+    // =====================
+    // ✅ Trusted Players & Roles
+    // =====================
+
+    public void trustPlayer(UUID playerId, ClaimRole role) {
+        trustedPlayers.put(playerId, role);
+    }
+
+    public void removeTrusted(UUID playerId) {
+        trustedPlayers.remove(playerId);
+    }
+
+    public boolean isTrusted(UUID playerId) {
+        return trustedPlayers.containsKey(playerId);
+    }
+
+    public ClaimRole getRole(UUID playerId) {
+        return trustedPlayers.getOrDefault(playerId, ClaimRole.VISITOR);
+    }
+
+    public Map<UUID, ClaimRole> getTrustedPlayers() {
+        return Collections.unmodifiableMap(trustedPlayers);
+    }
+
+    // =====================
+    // ✅ Per-Claim Settings
+    // =====================
 
     public PlotSettings getSettings() {
         return settings;
     }
 
-    public Set<UUID> getTrustedPlayers() {
-        return trustedPlayers;
+    // Convenience shortcuts for listeners:
+
+    public boolean isPvpEnabled() {
+        return settings.isPvpEnabled();
     }
 
-    // === Helpers ===
-    public boolean isTrusted(UUID player) {
-        return trustedPlayers.contains(player);
+    public boolean isKeepItemsEnabled() {
+        return settings.isKeepItemsEnabled();
     }
 
-    public void trust(UUID player) {
-        trustedPlayers.add(player);
+    public boolean isDamageEnabled() {
+        return settings.isDamageEnabled();
     }
 
-    public void untrust(UUID player) {
-        trustedPlayers.remove(player);
+    public boolean isPveEnabled() {
+        return settings.isPveEnabled();
     }
 
-    public boolean isChunk(Chunk chunk) {
-        return worldName.equals(chunk.getWorld().getName()) &&
-               x == chunk.getX() &&
-               z == chunk.getZ();
+    public boolean isEntityGriefingAllowed() {
+        return settings.isEntityGriefingAllowed();
     }
 
-    // === Forward Settings for convenience ===
-    public boolean isPvpEnabled() { return settings.isPvpEnabled(); }
-    public boolean isKeepItemsEnabled() { return settings.isKeepItemsEnabled(); }
-    public boolean isRedstoneEnabled() { return settings.isRedstoneEnabled(); }
-    public boolean isContainerAccessEnabled() { return settings.isContainerAccessEnabled(); }
-    public boolean isAnimalAccessEnabled() { return settings.isAnimalAccessEnabled(); }
+    public boolean isItemFramesAllowed() {
+        return settings.isItemFramesAllowed();
+    }
+
+    public boolean isVehiclesAllowed() {
+        return settings.isVehiclesAllowed();
+    }
+
+    public boolean isBucketsAllowed() {
+        return settings.isBucketsAllowed();
+    }
+
+    public boolean isRedstoneAllowed() {
+        return settings.isRedstoneAllowed();
+    }
+
+    public boolean isContainersAllowed() {
+        return settings.isContainersAllowed();
+    }
+
+    public boolean isAnimalAccessAllowed() {
+        return settings.isAnimalAccessAllowed();
+    }
+
+    public boolean hasFlag(String flag) {
+        return settings.hasFlag(flag);
+    }
+
+    // =====================
+    // ✅ Utility
+    // =====================
+
+    public String getId() {
+        return worldName + ":" + chunkX + "," + chunkZ;
+    }
+
+    @Override
+    public String toString() {
+        return "Plot{" +
+                "owner=" + owner +
+                ", world='" + worldName + '\'' +
+                ", chunkX=" + chunkX +
+                ", chunkZ=" + chunkZ +
+                ", trusted=" + trustedPlayers.size() +
+                ", settings=" + settings.getFlags() +
+                '}';
+    }
 }

@@ -1,135 +1,96 @@
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.Chunk;
-import org.bukkit.World;
-import org.bukkit.configuration.ConfigurationSection;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
- * Represents a single land claim (plot).
- * - Stores owner, location, trusted players/roles
- * - Holds per-claim settings (PvP, keep items, explosions, fire, mob grief)
+ * Represents a claimed chunk.
+ * Stores ownership, trusted players, and per-claim settings.
  */
 public class Plot {
 
     private final UUID owner;
-    private final String world;
-    private final int x;
-    private final int z;
+    private final String key;
+    private final Map<UUID, String> trusted;
+    private PlotSettings settings;
 
-    // Trusted players (UUID → role string)
-    private final Map<UUID, String> trusted = new HashMap<>();
-
-    // Claim-specific settings (PvP, explosions, etc.)
-    private final PlotSettings settings = new PlotSettings();
-
-    public Plot(UUID owner, Chunk chunk) {
+    public Plot(UUID owner, String key) {
         this.owner = owner;
-        this.world = chunk.getWorld().getName();
-        this.x = chunk.getX();
-        this.z = chunk.getZ();
+        this.key = key;
+        this.trusted = new HashMap<>();
+        this.settings = new PlotSettings(); // defaults applied
     }
 
-    public Plot(UUID owner, String world, int x, int z) {
-        this.owner = owner;
-        this.world = world;
-        this.x = x;
-        this.z = z;
-    }
-
+    // === Core Info ===
     public UUID getOwner() {
         return owner;
     }
 
-    public String getWorld() {
-        return world;
+    public String getKey() {
+        return key;
     }
 
-    public int getX() {
-        return x;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    public PlotSettings getSettings() {
-        return settings;
-    }
-
+    // === Trusted Players ===
     public Map<UUID, String> getTrusted() {
         return trusted;
     }
 
-    public boolean isTrusted(UUID uuid) {
-        return trusted.containsKey(uuid);
+    public void addTrusted(UUID player, String role) {
+        trusted.put(player, role);
     }
 
-    public void trust(UUID uuid, String role) {
-        trusted.put(uuid, role);
+    public void removeTrusted(UUID player) {
+        trusted.remove(player);
     }
 
-    public void untrust(UUID uuid) {
-        trusted.remove(uuid);
+    public boolean isTrusted(UUID player) {
+        return trusted.containsKey(player);
     }
 
-    /**
-     * Load this plot's data from config.
-     */
-    public void loadFromConfig(ConfigurationSection section) {
-        // === Trusted players ===
-        ConfigurationSection trustedSec = section.getConfigurationSection("trusted");
-        if (trustedSec != null) {
-            for (String uuidStr : trustedSec.getKeys(false)) {
-                UUID uuid = UUID.fromString(uuidStr);
-                String role = trustedSec.getString(uuidStr, "member");
-                trusted.put(uuid, role);
-            }
-        }
-
-        // === Settings (new) ===
-        ConfigurationSection settingsSec = section.getConfigurationSection("settings");
-        if (settingsSec != null) {
-            settings.setKeepItemsEnabled(settingsSec.getBoolean("keep-items", false));
-            settings.setPvpEnabled(settingsSec.getBoolean("pvp", false));
-            settings.setExplosionsEnabled(settingsSec.getBoolean("explosions", false));
-            settings.setFireEnabled(settingsSec.getBoolean("fire", false));
-            settings.setMobGriefEnabled(settingsSec.getBoolean("mob-grief", false));
-        }
+    public String getRole(UUID player) {
+        return trusted.getOrDefault(player, "Visitor");
     }
 
-    /**
-     * Save this plot's data to config.
-     */
-    public void saveToConfig(ConfigurationSection section) {
-        // === Owner ===
-        section.set("owner", owner.toString());
-
-        // === Trusted players ===
-        ConfigurationSection trustedSec = section.createSection("trusted");
-        for (Map.Entry<UUID, String> entry : trusted.entrySet()) {
-            trustedSec.set(entry.getKey().toString(), entry.getValue());
-        }
-
-        // === Settings (new) ===
-        ConfigurationSection settingsSec = section.createSection("settings");
-        settingsSec.set("keep-items", settings.isKeepItemsEnabled());
-        settingsSec.set("pvp", settings.isPvpEnabled());
-        settingsSec.set("explosions", settings.isExplosionsEnabled());
-        settingsSec.set("fire", settings.isFireEnabled());
-        settingsSec.set("mob-grief", settings.isMobGriefEnabled());
+    // === Settings ===
+    public PlotSettings getSettings() {
+        return settings;
     }
 
-    @Override
-    public String toString() {
-        return "Plot{" +
-                "owner=" + owner +
-                ", world='" + world + '\'' +
-                ", x=" + x +
-                ", z=" + z +
-                ", trusted=" + trusted +
-                ", settings=" + settings +
-                '}';
+    public void setSettings(PlotSettings settings) {
+        this.settings = settings;
+    }
+
+    // === Convenience Checks for Flags ===
+    public boolean isPvpEnabled() {
+        return settings.isPvpEnabled();
+    }
+
+    public boolean isExplosionsEnabled() {
+        return settings.isExplosionsEnabled();
+    }
+
+    public boolean isFireEnabled() {
+        return settings.isFireEnabled();
+    }
+
+    public boolean isMobGriefEnabled() {
+        return settings.isMobGriefEnabled();
+    }
+
+    public boolean isKeepItemsEnabled() {
+        return settings.isKeepItemsEnabled();
+    }
+
+    public boolean isRedstoneEnabled() {
+        return settings.isRedstoneEnabled();
+    }
+
+    public boolean isContainerAccessEnabled() {
+        return settings.isContainerAccessEnabled();
+    }
+
+    public boolean isAnimalInteractEnabled() {
+        return settings.isAnimalInteractEnabled();
     }
 }

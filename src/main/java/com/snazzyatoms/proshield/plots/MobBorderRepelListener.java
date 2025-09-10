@@ -6,30 +6,24 @@ import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Monster;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
- * Handles mob pushback at claim borders & despawning inside claims.
- * - Mobs cannot enter claims (are pushed back)
- * - Mobs spawning inside claims despawn instantly
- * - Configurable radius & pushback force
- * - Uses global + per-claim overrides
- * - Integrated with MessagesUtil
+ * Handles mob pushback & despawn inside claims.
+ * - Prevents mobs from walking into claims (repel radius)
+ * - Removes mobs that spawn inside claims if enabled
+ * - Supports per-claim overrides and global settings
  */
 public class MobBorderRepelListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final MessagesUtil messages;
-    private BukkitTask repelTask;
 
     public MobBorderRepelListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
@@ -41,75 +35,72 @@ public class MobBorderRepelListener implements Listener {
 
     private void startRepelTask() {
         FileConfiguration config = plugin.getConfig();
-        long interval = config.getLong("protection.mobs.border-repel.interval-ticks", 20L);
 
-        if (repelTask != null) repelTask.cancel();
+        boolean enabled = config.getBoolean("protection.mobs.border-repel.enabled", true);
+        int intervalTicks = config.getInt("protection.mobs.border-repel.interval-ticks", 20);
 
-        repelTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            for (LivingEntity entity : Bukkit.getWorlds().stream()
-                    .flatMap(world -> world.getLivingEntities().stream())
-                    .collect(Collectors.toList())) {
+        if (!enabled) {
+            messages.debug(plugin, "&eMob repel task disabled via config.");
+            return;
+        }
 
-                if (!(entity instanceof Monster)) continue; // only hostile mobs
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                repelAndDespawnMobs();
+            }
+        }.runTaskTimer(plugin, 0L, intervalTicks);
+    }
+
+    /**
+     * Applies pushback or despawn to mobs based on claim/global rules.
+     */
+    private void repelAndDespawnMobs() {
+        FileConfiguration config = plugin.getConfig();
+
+        double globalRadius = config.getDouble("protection.mobs.border-repel.radius", 3.0);
+        double hPush = config.getDouble("protection.mobs.border-repel.horizontal-push", 1.0);
+        double vPush = config.getDouble("protection.mobs.border-repel.vertical-push", 0.3);
+        boolean globalDespawnInside = config.getBoolean("protection.mobs.border-repel.despawn-inside", true);
+
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            List<Entity> entities = world.getEntities();
+
+            for (Entity entity : entities) {
+                if (!(entity instanceof LivingEntity living)) continue;
+                if (entity.getCustomName() != null && entity.getCustomName().equalsIgnoreCase("§c[ProShield-Bypass]")) continue;
 
                 Chunk chunk = entity.getLocation().getChunk();
                 Plot plot = plotManager.getPlot(chunk);
 
-                // If inside claim and despawn enabled
-                if (plot != null) {
-                    if (plugin.getConfig().getBoolean("protection.mobs.border-repel.despawn-inside", true)) {
-                        entity.remove();
-                        messages.debug(plugin, "Mob despawned inside claim at " + chunk);
-                    }
+                if (plot == null) continue; // no claim here
+
+                PlotSettings settings = plot.getSettings();
+                boolean repelEnabled = settings.isMobRepelEnabled();
+                boolean despawnInside = settings.isMobDespawnInsideEnabled();
+
+                // If mobs are inside claim and despawn is active
+                if (despawnInside || globalDespawnInside) {
+                    messages.debug(plugin, "&cDespawning mob inside claim: " + entity.getType());
+                    entity.remove();
                     continue;
                 }
 
-                // Check nearby plots for pushback
-                List<Plot> nearbyPlots = plotManager.getNearbyPlots(entity.getLocation(),
-                        config.getDouble("protection.mobs.border-repel.radius", 3.0));
+                // If repel is enabled
+                if (repelEnabled) {
+                    Location edge = plot.getNearestBorder(entity.getLocation());
+                    if (edge != null && entity.getLocation().distance(edge) < globalRadius) {
+                        double dx = entity.getLocation().getX() - edge.getX();
+                        double dz = entity.getLocation().getZ() - edge.getZ();
 
-                if (!nearbyPlots.isEmpty()) {
-                    pushBackFromClaims(entity, nearbyPlots,
-                            config.getDouble("protection.mobs.border-repel.horizontal-push", 1.0),
-                            config.getDouble("protection.mobs.border-repel.vertical-push", 0.3));
+                        entity.setVelocity(entity.getVelocity().add(
+                                new org.bukkit.util.Vector(dx * hPush, vPush, dz * hPush)
+                        ));
+
+                        messages.debug(plugin, "&ePushed mob back from claim border: " + entity.getType());
+                    }
                 }
             }
-        }, interval, interval);
-    }
-
-    private void pushBackFromClaims(LivingEntity entity, List<Plot> plots, double hPush, double vPush) {
-        Location entityLoc = entity.getLocation();
-
-        for (Plot plot : plots) {
-            Location plotCenter = plot.getCenter();
-            double dx = entityLoc.getX() - plotCenter.getX();
-            double dz = entityLoc.getZ() - plotCenter.getZ();
-            double distance = Math.sqrt(dx * dx + dz * dz);
-
-            if (distance < 0.1) distance = 0.1; // avoid div/0
-
-            double nx = (dx / distance) * hPush;
-            double nz = (dz / distance) * hPush;
-
-            entity.setVelocity(entity.getVelocity().add(new org.bukkit.util.Vector(nx, vPush, nz)));
-            messages.debug(plugin, "Mob pushed back from claim border near " + plot.getOwner());
-        }
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onCreatureSpawn(CreatureSpawnEvent event) {
-        LivingEntity entity = event.getEntity();
-        Chunk chunk = entity.getLocation().getChunk();
-
-        Plot plot = plotManager.getPlot(chunk);
-        if (plot == null) return;
-
-        boolean blockSpawn = plugin.getConfig().getBoolean("protection.mobs.block-spawn", true);
-        boolean allowSpawner = plugin.getConfig().getBoolean("protection.mobs.allow-spawner-spawn", true);
-
-        if (blockSpawn && (!allowSpawner || event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.SPAWNER)) {
-            event.setCancelled(true);
-            messages.debug(plugin, "Mob spawn blocked inside claim at " + chunk);
         }
     }
 }

@@ -1,87 +1,85 @@
 package com.snazzyatoms.proshield.gui;
 
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-
-import java.util.Map;
-import java.util.Objects;
+import java.util.HashMap;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Lightweight per-player GUI cache.
- * - Caches Inventories per player + menu id (GUIManager.MenuId)
- * - Fully invalidated on /proshield reload via invalidateAll()
- * - Also supports targeted invalidation per player
+ * Lightweight cache for ProShield GUIs to avoid regenerating
+ * menus on every click. Keeps inventories per player in memory.
  */
-public final class GUICache {
+public class GUICache {
 
-    public enum Scope {
-        PLAYER, GLOBAL
+    private final HashMap<UUID, Inventory> mainMenus = new HashMap<>();
+    private final HashMap<UUID, Inventory> adminMenus = new HashMap<>();
+    private final HashMap<UUID, Inventory> trustMenus = new HashMap<>();
+    private final HashMap<UUID, Inventory> roleMenus = new HashMap<>();
+    private final HashMap<UUID, Inventory> flagMenus = new HashMap<>();
+    private final HashMap<UUID, Inventory> transferMenus = new HashMap<>();
+
+    public void cacheMain(UUID uuid, Inventory inv) {
+        mainMenus.put(uuid, inv);
     }
 
-    private static final GUICache INSTANCE = new GUICache();
-
-    // Key: player UUID + menu id
-    private static final class Key {
-        private final UUID uuid;
-        private final String menuId;
-
-        private Key(UUID uuid, String menuId) {
-            this.uuid = uuid;
-            this.menuId = menuId;
-        }
-
-        @Override public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Key)) return false;
-            Key key = (Key) o;
-            return Objects.equals(uuid, key.uuid) && Objects.equals(menuId, key.menuId);
-        }
-
-        @Override public int hashCode() { return Objects.hash(uuid, menuId); }
+    public Inventory getMain(UUID uuid) {
+        return mainMenus.get(uuid);
     }
 
-    private final Map<Key, Inventory> cache = new ConcurrentHashMap<>();
-
-    private GUICache() {}
-
-    public static GUICache get() {
-        return INSTANCE;
+    public void cacheAdmin(UUID uuid, Inventory inv) {
+        adminMenus.put(uuid, inv);
     }
 
-    /**
-     * Get cached inventory if present.
-     */
-    public Inventory get(Player player, String menuId) {
-        return cache.get(new Key(player.getUniqueId(), menuId));
+    public Inventory getAdmin(UUID uuid) {
+        return adminMenus.get(uuid);
     }
 
-    /**
-     * Put inventory into cache.
-     */
-    public void put(Player player, String menuId, Inventory inv) {
-        if (player == null || inv == null) return;
-        cache.put(new Key(player.getUniqueId(), menuId), inv);
+    public void cacheTrust(UUID uuid, Inventory inv) {
+        trustMenus.put(uuid, inv);
     }
 
-    /**
-     * Invalidate all menus for one player.
-     */
-    public void invalidate(Player player) {
-        if (player == null) return;
-        UUID id = player.getUniqueId();
-        cache.keySet().removeIf(k -> k.uuid.equals(id));
+    public Inventory getTrust(UUID uuid) {
+        return trustMenus.get(uuid);
     }
 
-    /**
-     * Invalidate everything (used on /proshield reload).
-     */
-    public void invalidateAll() {
-        cache.clear();
+    public void cacheRole(UUID uuid, Inventory inv) {
+        roleMenus.put(uuid, inv);
     }
 
-    public int size() {
-        return cache.size();
+    public Inventory getRole(UUID uuid) {
+        return roleMenus.get(uuid);
+    }
+
+    public void cacheFlag(UUID uuid, Inventory inv) {
+        flagMenus.put(uuid, inv);
+    }
+
+    public Inventory getFlag(UUID uuid) {
+        return flagMenus.get(uuid);
+    }
+
+    public void cacheTransfer(UUID uuid, Inventory inv) {
+        transferMenus.put(uuid, inv);
+    }
+
+    public Inventory getTransfer(UUID uuid) {
+        return transferMenus.get(uuid);
+    }
+
+    public void clear(UUID uuid) {
+        mainMenus.remove(uuid);
+        adminMenus.remove(uuid);
+        trustMenus.remove(uuid);
+        roleMenus.remove(uuid);
+        flagMenus.remove(uuid);
+        transferMenus.remove(uuid);
+    }
+
+    public void clearAll() {
+        mainMenus.clear();
+        adminMenus.clear();
+        trustMenus.clear();
+        roleMenus.clear();
+        flagMenus.clear();
+        transferMenus.clear();
     }
 }

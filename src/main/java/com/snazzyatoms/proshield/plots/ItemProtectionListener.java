@@ -1,13 +1,15 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Item;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 
 public class ItemProtectionListener implements Listener {
@@ -21,47 +23,62 @@ public class ItemProtectionListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onItemSpawn(ItemSpawnEvent event) {
-        Item item = event.getEntity();
-        Claim claim = plots.getClaimAt(item.getLocation());
+    public void onItemPickup(PlayerPickupItemEvent event) {
+        Player player = event.getPlayer();
 
+        Claim claim = plots.getClaimAt(event.getItem().getLocation());
         if (claim == null) return;
 
-        // Check config: keep items inside claims
-        boolean keepEnabled = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
+        if (plots.isBypassing(player)) return;
 
-        if (keepEnabled) {
-            int despawn = plugin.getConfig().getInt("claims.keep-items.despawn-seconds", 900);
-            item.setTicksLived(1); // reset life
-            item.setUnlimitedLifetime(true);
-            item.setPickupDelay(0);
-            item.setCustomName(ChatColor.YELLOW + "[Claim-Protected]");
-            item.setCustomNameVisible(false);
-
-            // Custom despawn override
-            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                if (!item.isDead() && item.isValid()) {
-                    item.remove();
-                }
-            }, despawn * 20L);
+        if (!claim.canPickupItems(player)) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.prefix() + ChatColor.RED + "You cannot pick up items here.");
         }
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onItemPickup(PlayerPickupItemEvent event) {
-        Player player = event.getPlayer();
-        Item item = event.getItem();
+    public void onItemFrameBreak(HangingBreakByEntityEvent event) {
+        if (!(event.getRemover() instanceof Player player)) return;
 
-        Claim claim = plots.getClaimAt(item.getLocation());
+        Claim claim = plots.getClaimAt(event.getEntity().getLocation());
         if (claim == null) return;
 
-        if (plots.isBypassing(player)) return; // Admin bypass
+        if (plots.isBypassing(player)) return;
 
-        ClaimRole role = claim.getRole(player.getUniqueId());
-
-        if (!role.canPickupItems()) {
+        if (event.getEntity() instanceof ItemFrame && !claim.canInteract(player, "item-frames")) {
             event.setCancelled(true);
-            player.sendMessage(plugin.prefix() + ChatColor.RED + "You cannot pick up items inside this claim!");
+            player.sendMessage(plugin.prefix() + ChatColor.RED + "You cannot break item frames here.");
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onItemFramePlace(HangingPlaceEvent event) {
+        Player player = event.getPlayer();
+
+        Claim claim = plots.getClaimAt(event.getEntity().getLocation());
+        if (claim == null) return;
+
+        if (plots.isBypassing(player)) return;
+
+        if (event.getEntity() instanceof ItemFrame && !claim.canInteract(player, "item-frames")) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.prefix() + ChatColor.RED + "You cannot place item frames here.");
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onArmorStand(PlayerArmorStandManipulateEvent event) {
+        Player player = event.getPlayer();
+
+        Claim claim = plots.getClaimAt(event.getRightClicked().getLocation());
+        if (claim == null) return;
+
+        if (plots.isBypassing(player)) return;
+
+        if (event.getRightClicked() instanceof ArmorStand && !claim.canInteract(player, "armor-stands")) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.prefix() + ChatColor.RED + "You cannot interact with armor stands here.");
         }
     }
 }

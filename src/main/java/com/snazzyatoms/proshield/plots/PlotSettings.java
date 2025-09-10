@@ -1,69 +1,77 @@
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.configuration.ConfigurationSection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Per-claim settings for ProShield.
- * Stored alongside claim ownership & trusted players.
- * Supports merging with global config defaults.
+ * Stores per-claim settings such as PvP, explosions, fire, and item persistence.
+ * Extended to support keep-items toggle.
  */
 public class PlotSettings {
 
     private boolean pvpEnabled;
-    private boolean keepDropsEnabled;
+    private boolean explosionsEnabled;
+    private boolean fireEnabled;
 
-    // Future-proof: we can add more toggles like explosions/fire/etc.
+    // New: per-claim keep-items toggle
+    private Boolean keepItemsEnabled; // nullable → null = fallback to global
+
+    // Generic future-proof map for custom flags
+    private final Map<String, Object> customFlags = new HashMap<>();
 
     public PlotSettings() {
-        // defaults
-        this.pvpEnabled = false;          // global default (from config)
-        this.keepDropsEnabled = false;    // global default (from config)
+        this.pvpEnabled = false;
+        this.explosionsEnabled = true;
+        this.fireEnabled = true;
+        this.keepItemsEnabled = null; // default → defer to global
     }
 
+    // === PvP ===
     public boolean isPvpEnabled() {
         return pvpEnabled;
     }
 
-    public void setPvpEnabled(boolean enabled) {
-        this.pvpEnabled = enabled;
+    public void setPvpEnabled(boolean pvpEnabled) {
+        this.pvpEnabled = pvpEnabled;
     }
 
-    public boolean isKeepDropsEnabled() {
-        return keepDropsEnabled;
+    // === Explosions ===
+    public boolean isExplosionsEnabled() {
+        return explosionsEnabled;
     }
 
-    public void setKeepDropsEnabled(boolean enabled) {
-        this.keepDropsEnabled = enabled;
+    public void setExplosionsEnabled(boolean explosionsEnabled) {
+        this.explosionsEnabled = explosionsEnabled;
     }
 
-    /**
-     * Load per-claim settings from a YAML section.
-     * Falls back to defaults if missing.
-     */
-    public static PlotSettings fromConfig(ConfigurationSection section) {
-        PlotSettings settings = new PlotSettings();
-
-        if (section == null) return settings;
-
-        settings.setPvpEnabled(section.getBoolean("pvp", false));
-        settings.setKeepDropsEnabled(section.getBoolean("keep-drops", false));
-
-        return settings;
+    // === Fire ===
+    public boolean isFireEnabled() {
+        return fireEnabled;
     }
 
-    /**
-     * Save per-claim settings to YAML.
-     */
-    public void saveToConfig(ConfigurationSection section) {
-        section.set("pvp", this.pvpEnabled);
-        section.set("keep-drops", this.keepDropsEnabled);
+    public void setFireEnabled(boolean fireEnabled) {
+        this.fireEnabled = fireEnabled;
     }
 
-    @Override
-    public String toString() {
-        return "PlotSettings{" +
-                "pvpEnabled=" + pvpEnabled +
-                ", keepDropsEnabled=" + keepDropsEnabled +
-                '}';
+    // === Keep Items ===
+    public Boolean getKeepItemsEnabled() {
+        return keepItemsEnabled;
+    }
+
+    public void setKeepItemsEnabled(Boolean keepItemsEnabled) {
+        this.keepItemsEnabled = keepItemsEnabled;
+    }
+
+    // === Custom Flags ===
+    public Map<String, Object> getCustomFlags() {
+        return customFlags;
+    }
+
+    public void setCustomFlag(String key, Object value) {
+        customFlags.put(key, value);
+    }
+
+    public Object getCustomFlag(String key) {
+        return customFlags.get(key);
     }
 }

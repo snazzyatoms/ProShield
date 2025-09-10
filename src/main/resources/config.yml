@@ -90,15 +90,15 @@ protection:
 
   # Mob control inside claims
   mobs:
-    block-spawn: true             # cancel spawns inside claims (natural)
-    despawn-inside: true          # NEW: instantly remove mobs that exist inside claims
-    allow-spawner-spawn: true     # allow if origin is SPAWNER
+    block-spawn: true            # cancel natural spawns inside claims
+    allow-spawner-spawn: true    # allow mobs spawned from spawners
     border-repel:
       enabled: true
-      radius: 3.5                 # NEW: larger repel radius (default was 1.5)
-      horizontal-push: 1.2        # stronger knockback (default was 0.6)
-      vertical-push: 0.3
-      interval-ticks: 10          # faster checks (default was 20)
+      radius: 3.0               # detection radius around claim border
+      horizontal-push: 1.0       # push force on X/Z
+      vertical-push: 0.25        # upward push
+      interval-ticks: 20         # task repeat interval (20 = 1s)
+    despawn-inside-claims: true  # instantly remove mobs that manage to spawn inside claims
 
 claims:
   keep-items:
@@ -135,7 +135,7 @@ gui:
       pvp: 14
       keep-items: 20
       purge-expired: 21
-      reload: 25
+      reload: 22
       debug: 23
       compass-drop-if-full: 24
       spawn-guard: 25

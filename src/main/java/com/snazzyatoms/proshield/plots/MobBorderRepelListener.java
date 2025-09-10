@@ -3,91 +3,86 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
+import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.event.Listener;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Monster;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 import java.util.List;
 
-public class MobBorderRepelListener implements Listener {
+public class MobBorderRepelListener {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
+    private BukkitTask task;
 
-    private boolean enabled;
-    private boolean despawnInside;
-    private double repelRadius;
-    private double pushHorizontal;
-    private double pushVertical;
-    private int intervalTicks;
+    // Config values
+    private final double radius;
+    private final double pushHorizontal;
+    private final double pushVertical;
+    private final int interval;
 
-    public MobBorderRepelListener(ProShield plugin, PlotManager plots) {
-        this.plugin = plugin;
-        this.plots = plots;
-        loadConfig();
+    public MobBorderRepelListener(PlotManager plotManager) {
+        this.plugin = ProShield.getInstance();
+        this.plotManager = plotManager;
 
-        if (enabled) {
-            startTask();
+        // Load from config.yml
+        this.radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.0);
+        this.pushHorizontal = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 1.0);
+        this.pushVertical = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
+        this.interval = plugin.getConfig().getInt("protection.mobs.border-repel.interval-ticks", 20);
+    }
+
+    public void startTask() {
+        if (task != null) {
+            task.cancel();
+        }
+        task = Bukkit.getScheduler().runTaskTimer(plugin, this::repelMobs, 0L, interval);
+    }
+
+    public void stopTask() {
+        if (task != null) {
+            task.cancel();
+            task = null;
         }
     }
 
-    /**
-     * Reload settings from config.yml
-     */
-    public void loadConfig() {
-        enabled = plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
-        despawnInside = plugin.getConfig().getBoolean("protection.mobs.despawn-inside", true);
-        repelRadius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.5);
-        pushHorizontal = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 1.2);
-        pushVertical = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.3);
-        intervalTicks = plugin.getConfig().getInt("protection.mobs.border-repel.interval-ticks", 10);
-    }
+    private void repelMobs() {
+        for (World world : Bukkit.getWorlds()) {
+            List<LivingEntity> entities = world.getLivingEntities();
+            for (LivingEntity entity : entities) {
+                // Only apply to hostile mobs (zombies, skeletons, etc.)
+                if (!(entity instanceof Monster)) continue;
 
-    private void startTask() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!enabled) return;
+                Location loc = entity.getLocation();
 
-                Bukkit.getWorlds().forEach(world -> {
-                    List<LivingEntity> mobs = world.getLivingEntities();
+                // Check if mob is inside a claim
+                if (plotManager.isClaimed(loc)) {
+                    // Instantly despawn mobs that spawn inside claims
+                    entity.remove();
+                    continue;
+                }
 
-                    for (LivingEntity mob : mobs) {
-                        // Skip players
-                        if (mob.getType().isPlayer()) continue;
+                // Check nearby players (to apply repel effect when mobs get close)
+                for (Player player : world.getPlayers()) {
+                    if (!plotManager.isClaimed(player.getLocation())) continue;
 
-                        Location loc = mob.getLocation();
+                    double distance = loc.distance(player.getLocation());
+                    if (distance <= radius) {
+                        // Calculate push direction
+                        Vector push = entity.getLocation().toVector()
+                                .subtract(player.getLocation().toVector())
+                                .normalize()
+                                .multiply(pushHorizontal);
 
-                        if (plots.isInsideClaim(loc)) {
-                            if (despawnInside) {
-                                mob.remove(); // instantly despawn
-                            }
-                            continue;
-                        }
+                        push.setY(pushVertical);
 
-                        double dist = plots.distanceToClaimBorder(loc, repelRadius);
-                        if (dist < repelRadius) {
-                            // Push mob away from claim
-                            Location nearestBorder = plots.closestClaimBorder(loc);
-                            if (nearestBorder != null) {
-                                double dx = loc.getX() - nearestBorder.getX();
-                                double dz = loc.getZ() - nearestBorder.getZ();
-                                double len = Math.sqrt(dx * dx + dz * dz);
-
-                                if (len > 0.001) {
-                                    double nx = dx / len;
-                                    double nz = dz / len;
-
-                                    mob.setVelocity(mob.getVelocity().add(
-                                            new org.bukkit.util.Vector(nx * pushHorizontal, pushVertical, nz * pushHorizontal)
-                                    ));
-                                }
-                            }
-                        }
+                        entity.setVelocity(push);
                     }
-                });
+                }
             }
-        }.runTaskTimer(plugin, intervalTicks, intervalTicks);
+        }
     }
 }

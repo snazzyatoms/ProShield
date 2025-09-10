@@ -22,20 +22,15 @@ public class PvpProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player victim)) return;
         if (!(event.getDamager() instanceof Player attacker)) return;
 
-        Claim claim = plots.getClaimAt(victim.getLocation());
-        if (claim == null) return;
-
-        // Admin bypass ignores PvP rules
+        // Admin bypass
         if (plots.isBypassing(attacker) || plots.isBypassing(victim)) return;
 
-        // Global config (default)
-        boolean globalPvpAllowed = plugin.getConfig().getBoolean("protection.pvp-in-claims", false);
+        // Get claim at victim's location
+        Claim claim = plots.getClaimAt(victim.getLocation());
+        if (claim == null) return; // PvP in wilderness handled by server
 
-        // Per-claim setting (if defined, overrides global)
-        Boolean claimPvp = claim.getFlag("pvp");
-        boolean isAllowed = (claimPvp != null) ? claimPvp : globalPvpAllowed;
-
-        if (!isAllowed) {
+        // Check if PvP is enabled in this claim
+        if (!claim.isPvpAllowed()) {
             event.setCancelled(true);
             attacker.sendMessage(plugin.prefix() + ChatColor.RED + "PvP is disabled in this claim.");
         }

@@ -1,98 +1,147 @@
 package com.snazzyatoms.proshield.plots;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
+
+import java.util.*;
 
 /**
- * Stores per-claim settings and flags.
- * Preserves all existing logic, extended with new flags for v1.2.5.
+ * Manages all claimed plots in ProShield.
+ * Preserves legacy logic while extending with helpers for 1.2.5.
  */
-public class PlotSettings {
+public class PlotManager {
 
-    private boolean pvpEnabled = false;
-    private boolean keepItemsEnabled = false;
+    private final ProShield plugin;
+    private final Map<String, Plot> plots = new HashMap<>();
 
-    private boolean explosionsAllowed = true;
-    private boolean fireAllowed = true;
-    private boolean entityGriefingAllowed = false;
-    private boolean redstoneAllowed = true;
-    private boolean containerAccessAllowed = true;
-    private boolean animalInteractAllowed = true;
-    private boolean bucketUsageAllowed = true;
-    private boolean itemFramesAllowed = true;
-    private boolean vehiclesAllowed = true;
-
-    public boolean isPvpEnabled() { return pvpEnabled; }
-    public void setPvpEnabled(boolean enabled) { this.pvpEnabled = enabled; }
-
-    public boolean isKeepItemsEnabled() { return keepItemsEnabled; }
-    public void setKeepItemsEnabled(boolean enabled) { this.keepItemsEnabled = enabled; }
-
-    public boolean isExplosionsAllowed() { return explosionsAllowed; }
-    public void setExplosionsAllowed(boolean allowed) { this.explosionsAllowed = allowed; }
-
-    public boolean isFireAllowed() { return fireAllowed; }
-    public void setFireAllowed(boolean allowed) { this.fireAllowed = allowed; }
-
-    public boolean isEntityGriefingAllowed() { return entityGriefingAllowed; }
-    public void setEntityGriefingAllowed(boolean allowed) { this.entityGriefingAllowed = allowed; }
-
-    public boolean isRedstoneAllowed() { return redstoneAllowed; }
-    public void setRedstoneAllowed(boolean allowed) { this.redstoneAllowed = allowed; }
-
-    public boolean isContainerAccessAllowed() { return containerAccessAllowed; }
-    public void setContainerAccessAllowed(boolean allowed) { this.containerAccessAllowed = allowed; }
-
-    public boolean isAnimalInteractAllowed() { return animalInteractAllowed; }
-    public void setAnimalInteractAllowed(boolean allowed) { this.animalInteractAllowed = allowed; }
-
-    public boolean isBucketsAllowed() { return bucketUsageAllowed; }
-    public void setBucketsAllowed(boolean allowed) { this.bucketUsageAllowed = allowed; }
-
-    public boolean isItemFramesAllowed() { return itemFramesAllowed; }
-    public void setItemFramesAllowed(boolean allowed) { this.itemFramesAllowed = allowed; }
-
-    public boolean isVehiclesAllowed() { return vehiclesAllowed; }
-    public void setVehiclesAllowed(boolean allowed) { this.vehiclesAllowed = allowed; }
-
-    /**
-     * Serialize claim settings into map for storage.
-     */
-    public Map<String, Object> serialize() {
-        Map<String, Object> map = new HashMap<>();
-        map.put("pvp", pvpEnabled);
-        map.put("keep-items", keepItemsEnabled);
-        map.put("explosions", explosionsAllowed);
-        map.put("fire", fireAllowed);
-        map.put("entity-grief", entityGriefingAllowed);
-        map.put("redstone", redstoneAllowed);
-        map.put("container", containerAccessAllowed);
-        map.put("animals", animalInteractAllowed);
-        map.put("buckets", bucketUsageAllowed);
-        map.put("item-frames", itemFramesAllowed);
-        map.put("vehicles", vehiclesAllowed);
-        return map;
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
     }
 
-    /**
-     * Deserialize from map to settings object.
-     */
-    public static PlotSettings deserialize(Map<String, Object> map) {
-        PlotSettings settings = new PlotSettings();
-        if (map == null) return settings;
+    /* ---------------------------------------------------------
+     * 🔹 Claim Management
+     * --------------------------------------------------------- */
+    public Plot createClaim(UUID owner, Location loc) {
+        Chunk chunk = loc.getChunk();
+        String key = getKey(chunk);
 
-        settings.pvpEnabled = (boolean) map.getOrDefault("pvp", false);
-        settings.keepItemsEnabled = (boolean) map.getOrDefault("keep-items", false);
-        settings.explosionsAllowed = (boolean) map.getOrDefault("explosions", true);
-        settings.fireAllowed = (boolean) map.getOrDefault("fire", true);
-        settings.entityGriefingAllowed = (boolean) map.getOrDefault("entity-grief", false);
-        settings.redstoneAllowed = (boolean) map.getOrDefault("redstone", true);
-        settings.containerAccessAllowed = (boolean) map.getOrDefault("container", true);
-        settings.animalInteractAllowed = (boolean) map.getOrDefault("animals", true);
-        settings.bucketUsageAllowed = (boolean) map.getOrDefault("buckets", true);
-        settings.itemFramesAllowed = (boolean) map.getOrDefault("item-frames", true);
-        settings.vehiclesAllowed = (boolean) map.getOrDefault("vehicles", true);
+        if (plots.containsKey(key)) return plots.get(key);
 
-        return settings;
+        Plot plot = new Plot(owner, chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+        plots.put(key, plot);
+        return plot;
+    }
+
+    public boolean isClaimed(Location loc) {
+        return plots.containsKey(getKey(loc.getChunk()));
+    }
+
+    public Plot getPlot(Chunk chunk) {
+        return plots.get(getKey(chunk));
+    }
+
+    public Plot getPlot(Location loc) {
+        return plots.get(getKey(loc.getChunk()));
+    }
+
+    public void unclaim(Location loc) {
+        plots.remove(getKey(loc.getChunk()));
+    }
+
+    public void transferOwnership(Plot plot, UUID newOwner) {
+        if (plot == null) return;
+        plots.put(getKey(plot.getWorld(), plot.getX(), plot.getZ()),
+                new Plot(newOwner, plot.getWorld(), plot.getX(), plot.getZ()));
+    }
+
+    /* ---------------------------------------------------------
+     * 🔹 Ownership Helpers
+     * --------------------------------------------------------- */
+    public boolean isOwner(UUID playerId, Location loc) {
+        Plot plot = getPlot(loc);
+        return plot != null && plot.isOwner(playerId);
+    }
+
+    public boolean hasAnyClaim(UUID playerId) {
+        for (Plot plot : plots.values()) {
+            if (plot.isOwner(playerId)) return true;
+        }
+        return false;
+    }
+
+    /* ---------------------------------------------------------
+     * 🔹 Serialization / Persistence
+     * --------------------------------------------------------- */
+    public void save() {
+        plugin.getConfig().set("claims", null); // clear
+        for (Map.Entry<String, Plot> entry : plots.entrySet()) {
+            plugin.getConfig().set("claims." + entry.getKey(), entry.getValue().serialize());
+        }
+        plugin.saveConfig();
+    }
+
+    @SuppressWarnings("unchecked")
+    public void load() {
+        plots.clear();
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("claims");
+        if (section == null) return;
+
+        for (String key : section.getKeys(false)) {
+            Map<String, Object> map = (Map<String, Object>) section.get(key);
+            if (map == null) continue;
+            Plot plot = Plot.deserialize(map);
+            plots.put(key, plot);
+        }
+    }
+
+    public void reloadFromConfig() {
+        plugin.reloadConfig();
+        load();
+    }
+
+    /* ---------------------------------------------------------
+     * 🔹 Expiry Handling
+     * --------------------------------------------------------- */
+    public int purgeExpired(int days, boolean dryRun) {
+        int removed = 0;
+        long cutoff = System.currentTimeMillis() - (days * 24L * 60 * 60 * 1000);
+
+        Iterator<Map.Entry<String, Plot>> it = plots.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Plot> entry = it.next();
+            UUID owner = entry.getValue().getOwner();
+
+            // Use Bukkit's offline player data for last played check
+            long lastPlayed = Bukkit.getOfflinePlayer(owner).getLastPlayed();
+            if (lastPlayed != 0 && lastPlayed < cutoff) {
+                if (!dryRun) it.remove();
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    /* ---------------------------------------------------------
+     * 🔹 Utility
+     * --------------------------------------------------------- */
+    private String getKey(Chunk chunk) {
+        return getKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+    }
+
+    private String getKey(String world, int x, int z) {
+        return world + ";" + x + ";" + z;
+    }
+
+    public Map<String, Plot> getAllPlots() {
+        return Collections.unmodifiableMap(plots);
+    }
+
+    public String getClaimName(Location loc) {
+        Plot plot = getPlot(loc);
+        if (plot == null) return null;
+        return plot.getOwner().toString().substring(0, 8) + "@" + plot.getX() + "," + plot.getZ();
     }
 }

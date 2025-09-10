@@ -5,21 +5,23 @@ import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Vehicle;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
 
 /**
- * Handles protection for items and entities such as:
- * - Item frames, armor stands, vehicles
- * Respects both global config and per-claim flags.
- * Uses role checks for trusted access.
+ * Handles protections for entities inside claims:
+ * - Item frames
+ * - Armor stands
+ * - Containers (via PlayerInteractEntityEvent)
+ * - Vehicles (boats, minecarts)
+ * - Passive animals & pets
+ *
+ * Uses global + per-claim rules from PlotSettings.
  */
 public class ItemProtectionListener implements Listener {
 
@@ -35,79 +37,111 @@ public class ItemProtectionListener implements Listener {
         this.messages = plugin.getMessagesUtil();
     }
 
+    /* ------------------------------
+     * Item Frames & Armor Stands
+     * ------------------------------ */
     @EventHandler(ignoreCancelled = true)
-    public void onItemFrameBreak(HangingBreakByEntityEvent event) {
+    public void onHangingBreak(HangingBreakByEntityEvent event) {
         if (!(event.getRemover() instanceof Player player)) return;
-        Chunk chunk = event.getEntity().getLocation().getChunk();
-        FileConfiguration config = plugin.getConfig();
 
+        Chunk chunk = event.getEntity().getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        // === Wilderness ===
         if (plot == null) {
-            if (config.getBoolean("protection.entities.item-frames", true)) {
+            if (!plugin.getConfig().getBoolean("protection.entities.item-frames", true)) {
                 event.setCancelled(true);
-                messages.send(player, "protection.itemframe-break-blocked");
+                messages.send(player, "item-frames-deny");
             }
             return;
         }
 
-        // === Inside claim ===
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canBuild(role) || !plot.getSettings().isItemFramesAllowed()) {
+        if (!plot.getSettings().isItemFramesAllowed()) {
             event.setCancelled(true);
-            messages.send(player, "protection.itemframe-break-blocked");
+            messages.send(player, "item-frames-deny");
+            messages.debug(plugin, "&cPrevented item frame break inside claim: " + plot.getName());
         }
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onItemFramePlace(HangingPlaceEvent event) {
+    public void onHangingPlace(HangingPlaceEvent event) {
         Player player = event.getPlayer();
         Chunk chunk = event.getEntity().getLocation().getChunk();
-        FileConfiguration config = plugin.getConfig();
-
         Plot plot = plotManager.getPlot(chunk);
 
-        // === Wilderness ===
-        if (plot == null) {
-            if (config.getBoolean("protection.entities.item-frames", true)) {
-                event.setCancelled(true);
-                messages.send(player, "protection.itemframe-place-blocked");
-            }
-            return;
-        }
+        if (plot == null) return;
 
-        // === Inside claim ===
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canBuild(role) || !plot.getSettings().isItemFramesAllowed()) {
+        if (!plot.getSettings().isItemFramesAllowed()) {
             event.setCancelled(true);
-            messages.send(player, "protection.itemframe-place-blocked");
+            messages.send(player, "item-frames-deny");
         }
     }
 
+    /* ------------------------------
+     * Interacting with entities (Armor Stands, Animals, Containers)
+     * ------------------------------ */
+    @EventHandler(ignoreCancelled = true)
+    public void onInteractEntity(PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+        Entity entity = event.getRightClicked();
+        Chunk chunk = entity.getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
+
+        if (plot == null) {
+            return; // wilderness - handled by config elsewhere
+        }
+
+        ClaimRole role = roleManager.getRole(plot, player);
+
+        // Armor stands
+        if (entity instanceof ArmorStand && !plot.getSettings().isArmorStandsAllowed()) {
+            event.setCancelled(true);
+            messages.send(player, "armor-stands-deny");
+            return;
+        }
+
+        // Passive animals
+        if (entity instanceof Animals && !plot.getSettings().isAnimalAccessAllowed()) {
+            event.setCancelled(true);
+            messages.send(player, "animals-deny");
+            return;
+        }
+
+        // Tamed pets
+        if (entity instanceof Tameable tameable && tameable.isTamed() && !plot.getSettings().isPetAccessAllowed()) {
+            event.setCancelled(true);
+            messages.send(player, "pets-deny");
+            return;
+        }
+
+        // Containers (minecarts with chest, etc.)
+        if (entity instanceof Minecart && !plot.getSettings().isContainersAllowed()) {
+            event.setCancelled(true);
+            messages.send(player, "containers-deny");
+        }
+    }
+
+    /* ------------------------------
+     * Vehicle Protections
+     * ------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onVehicleDestroy(VehicleDestroyEvent event) {
         if (!(event.getAttacker() instanceof Player player)) return;
-        Vehicle vehicle = event.getVehicle();
-        Chunk chunk = vehicle.getLocation().getChunk();
-        FileConfiguration config = plugin.getConfig();
 
+        Chunk chunk = event.getVehicle().getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        // === Wilderness ===
         if (plot == null) {
-            if (config.getBoolean("protection.entities.vehicles", true)) {
+            if (!plugin.getConfig().getBoolean("protection.entities.vehicles", true)) {
                 event.setCancelled(true);
-                messages.send(player, "protection.vehicle-destroy-blocked");
+                messages.send(player, "vehicles-deny");
             }
             return;
         }
 
-        // === Inside claim ===
-        ClaimRole role = roleManager.getRole(plot, player);
-        if (!roleManager.canBuild(role) || !plot.getSettings().isVehiclesAllowed()) {
+        if (!plot.getSettings().isVehiclesAllowed()) {
             event.setCancelled(true);
-            messages.send(player, "protection.vehicle-destroy-blocked");
+            messages.send(player, "vehicles-deny");
+            messages.debug(plugin, "&cPrevented vehicle destroy in claim: " + plot.getName());
         }
     }
 }

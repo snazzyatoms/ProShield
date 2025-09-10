@@ -1,3 +1,4 @@
+// path: src/main/java/com/snazzyatoms/proshield/plots/KeepDropsListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -16,7 +17,7 @@ import java.util.Iterator;
  * Handles persistent item drops inside claims.
  * - Prevents despawn of items when enabled globally or per-claim
  * - Optional configurable despawn delay
- * - Now extended with PlotManager helper methods for consistency
+ * - Preserves original behavior, extended for per-claim + global rules
  */
 public class KeepDropsListener implements Listener {
 
@@ -36,8 +37,13 @@ public class KeepDropsListener implements Listener {
         Item item = event.getEntity();
         Chunk chunk = item.getLocation().getChunk();
 
-        // Global + per-claim merged check
-        if (!plotManager.isKeepItemsEnabled(chunk)) return;
+        Plot plot = plotManager.getPlot(chunk);
+        boolean globalKeep = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
+
+        if (plot == null && !globalKeep) return; // no claim, no global keep
+
+        boolean perClaimKeep = plot != null && plot.getSettings().isKeepItemsEnabled();
+        if (!globalKeep && !perClaimKeep) return;
 
         // Apply despawn settings
         FileConfiguration config = plugin.getConfig();
@@ -48,7 +54,7 @@ public class KeepDropsListener implements Listener {
         item.setCustomName(null);
         item.setCustomNameVisible(false);
 
-        // Schedule manual despawn (if configured)
+        // Manual despawn scheduling
         if (despawnSeconds > 0) {
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 if (!item.isDead() && item.isValid()) {
@@ -65,15 +71,17 @@ public class KeepDropsListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         Chunk chunk = player.getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
 
-        // Global + per-claim merged check
-        if (!plotManager.isKeepItemsEnabled(chunk)) return;
+        boolean globalKeep = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
+        boolean perClaimKeep = plot != null && plot.getSettings().isKeepItemsEnabled();
 
-        // Prevent default keepInventory from interfering
+        if (!globalKeep && !perClaimKeep) return;
+
+        // Respect Minecraft defaults but respawn items as persistent
         event.setKeepInventory(false);
         event.setKeepLevel(false);
 
-        // Respawn items with persistence
         Iterator<org.bukkit.inventory.ItemStack> it = event.getDrops().iterator();
         while (it.hasNext()) {
             org.bukkit.inventory.ItemStack stack = it.next();
@@ -82,11 +90,11 @@ public class KeepDropsListener implements Listener {
             Item drop = player.getWorld().dropItemNaturally(player.getLocation(), stack);
             drop.setUnlimitedLifetime(true);
             drop.setTicksLived(0);
+            drop.setCustomName(null);
+            drop.setCustomNameVisible(false);
         }
 
-        // Clear default drops since we respawned them
+        // Clear original drops (we re-spawned them as persistent)
         event.getDrops().clear();
-
-        player.sendMessage(plugin.getPrefix() + "§aYour items were preserved inside this claim.");
     }
 }

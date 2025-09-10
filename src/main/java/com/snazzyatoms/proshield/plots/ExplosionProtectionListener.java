@@ -38,10 +38,10 @@ public class ExplosionProtectionListener implements Listener {
 
         // Wilderness explosions → global toggle
         if (plot == null) {
-            boolean allowExplosions = plugin.getConfig().getBoolean("protection.explosions.enabled", true);
+            boolean allowExplosions = plugin.getConfig().getBoolean("protection.explosions.wilderness", true);
             if (!allowExplosions) {
                 event.setCancelled(true);
-                messages.debug(plugin, "&cExplosion cancelled in wilderness: " + explosionType);
+                messages.debug("&cExplosion cancelled in wilderness: " + explosionType);
             }
             return;
         }
@@ -49,23 +49,21 @@ public class ExplosionProtectionListener implements Listener {
         // Inside claim → per-claim flags
         if (!plot.getSettings().isExplosionsAllowed()) {
             event.setCancelled(true);
-            messages.debug(plugin, "&cExplosion cancelled in claim: " + explosionType + " @ " + plot.getName());
+            messages.debug("&cExplosion cancelled in claim: " + explosionType + " @ " + plot.getDisplayNameSafe());
             return;
         }
 
-        // If explosions allowed, filter affected blocks
+        // If explosions allowed, filter affected blocks so they can’t grief claims
         Iterator<org.bukkit.block.Block> it = event.blockList().iterator();
         while (it.hasNext()) {
             org.bukkit.block.Block block = it.next();
-
-            // Prevent claim grief
             if (plotManager.getPlot(block.getChunk()) != null) {
                 it.remove();
             }
         }
 
         if (entity instanceof Explosive) {
-            messages.debug(plugin, "&eExplosion processed: " + explosionType + " in " + plot.getName());
+            messages.debug("&eExplosion processed: " + explosionType + " in " + plot.getDisplayNameSafe());
         }
     }
 }

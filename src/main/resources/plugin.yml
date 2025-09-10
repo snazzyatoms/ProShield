@@ -3,72 +3,142 @@ main: com.snazzyatoms.proshield.ProShield
 version: 1.2.5
 api-version: 1.18
 author: SnazzyAtoms
-description: Lightweight land & plot protection plugin for Spigot and Paper servers.
+description: >
+  ProShield is a lightweight yet powerful land & plot protection plugin 
+  for Spigot and Paper servers. Protects claims, manages roles, and 
+  provides intuitive GUIs for players and admins.
+
 website: https://github.com/snazzyatoms/ProShield
 
 commands:
   proshield:
     description: Main ProShield command
-    usage: /<command>
+    usage: /<command> [args]
     aliases: [ps, shield]
+    permission: proshield.use
+
+  # 🔹 Core Claim Commands
+  claim:
+    description: Claim your current chunk
+    usage: /<command>
+    permission: proshield.use
+
+  unclaim:
+    description: Unclaim your current chunk
+    usage: /<command>
+    permission: proshield.use
+
+  info:
+    description: Show info about the current claim
+    usage: /<command>
+    permission: proshield.use
+
+  # 🔹 Trust & Roles
+  trust:
+    description: Trust a player with optional role
+    usage: /<command> <player> [role]
+    permission: proshield.use
+
+  untrust:
+    description: Remove trust from a player
+    usage: /<command> <player>
+    permission: proshield.use
+
+  trusted:
+    description: List trusted players in your claim
+    usage: /<command>
+    permission: proshield.use
+
+  roles:
+    description: Manage claim roles via GUI
+    usage: /<command>
+    permission: proshield.use
+
+  # 🔹 Claim Tools
+  transfer:
+    description: Transfer claim ownership to another player
+    usage: /<command> <player>
+    permission: proshield.use
+
+  preview:
+    description: Preview claim borders with particles
+    usage: /<command>
+    permission: proshield.use
+
+  compass:
+    description: Get the ProShield compass
+    usage: /<command>
+    permission: proshield.compass
+
+  # 🔹 Admin & Maintenance
+  bypass:
+    description: Toggle admin bypass mode
+    usage: /<command> <on|off|toggle>
+    permission: proshield.bypass
+
+  reload:
+    description: Reload ProShield configuration
+    usage: /<command>
+    permission: proshield.admin.reload
+
+  purgeexpired:
+    description: Purge expired claims
+    usage: /<command> <days> [dryrun]
+    permission: proshield.admin.expired.purge
+
+  debug:
+    description: Toggle debug logging
+    usage: /<command> <on|off|toggle>
+    permission: proshield.admin.debug
 
 permissions:
+  # General Use
   proshield.use:
-    description: Use ProShield commands and GUI
+    description: Use ProShield commands & GUI
     default: true
 
-  proshield.admin:
-    description: Full admin access to ProShield
-    default: op
-
+  # Compass & Tools
   proshield.compass:
-    description: Receive and use the ProShield compass
+    description: Receive/use ProShield compass
     default: op
 
   proshield.bypass:
-    description: Toggle admin bypass protection
+    description: Toggle bypass mode
     default: op
 
   proshield.unlimited:
     description: Ignore max-claims limit
     default: op
 
+  # Admin Core
+  proshield.admin:
+    description: Access admin tools (compass, bypass, force unclaim, purge)
+    default: op
+
   proshield.admin.tp:
-    description: Teleport to claims from admin menu
+    description: Teleport to claims via admin tools
     default: op
 
   proshield.admin.reload:
-    description: Reload configs
+    description: Reload ProShield config
     default: op
 
   proshield.admin.expired.purge:
-    description: Purge expired claims
+    description: Manage expired claims
     default: op
 
   proshield.admin.keepitems:
-    description: Toggle claim item-drop protection
+    description: Toggle item-keep inside claims
     default: op
 
   proshield.admin.transfer:
-    description: Transfer ownership of claims
+    description: Transfer claim ownership
     default: op
 
   proshield.admin.debug:
     description: Toggle debug logging
     default: op
 
-listeners:
-  # Core claim protections
-  - com.snazzyatoms.proshield.plots.BlockProtectionListener
-  - com.snazzyatoms.proshield.plots.ItemProtectionListener
-  - com.snazzyatoms.proshield.plots.PvpProtectionListener
-  - com.snazzyatoms.proshield.plots.ClaimMessageListener
-  - com.snazzyatoms.proshield.plots.PlayerJoinListener
-  - com.snazzyatoms.proshield.plots.KeepDropsListener
-
-  # GUI handlers
-  - com.snazzyatoms.proshield.gui.GUIListener
-
-  # New mob repel + spawn guard
-  - com.snazzyatoms.proshield.plots.MobBorderRepelListener
-  - com.snazzyatoms.proshield.plots.SpawnGuardListener
+  proshield.admin.flags:
+    description: Manage claim flags (PvP, explosions, fire, etc.)
+    default: op

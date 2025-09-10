@@ -1,47 +1,34 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Stores per-claim settings, with defaults from global config.
- * Players (owners/admins) can override these settings individually.
+ * Stores per-claim settings, merged with global defaults but
+ * configurable per-claim. Persisted via PlotManager.
  */
 public class PlotSettings {
 
+    // === Core Settings ===
     private boolean pvpEnabled;
     private boolean keepDropsEnabled;
-    private final Map<String, Boolean> itemRules = new HashMap<>();
+
+    // Item rules (extra granularity per-claim)
+    private final Set<String> allowedItems = new HashSet<>();
+    private final Set<String> blockedItems = new HashSet<>();
 
     public PlotSettings() {
-        // empty by default (values will be set from global config in initDefaults)
+        // defaults: read from global config later in loadFromConfig
+        this.pvpEnabled = false;
+        this.keepDropsEnabled = false;
     }
 
-    /**
-     * Initialize claim settings from global config defaults.
-     */
-    public void initDefaults(ProShield plugin) {
-        FileConfiguration config = plugin.getConfig();
+    // ==================================================
+    // Getters & Setters
+    // ==================================================
 
-        // === PvP ===
-        this.pvpEnabled = config.getBoolean("protection.pvp-in-claims", false);
-
-        // === Keep drops ===
-        this.keepDropsEnabled = config.getBoolean("claims.keep-items.enabled", false);
-
-        // === Item rules (defaults off unless defined) ===
-        if (config.isConfigurationSection("claims.item-rules")) {
-            for (String key : config.getConfigurationSection("claims.item-rules").getKeys(false)) {
-                boolean def = config.getBoolean("claims.item-rules." + key, false);
-                this.itemRules.put(key, def);
-            }
-        }
-    }
-
-    // === PvP ===
     public boolean isPvpEnabled() {
         return pvpEnabled;
     }
@@ -50,7 +37,6 @@ public class PlotSettings {
         this.pvpEnabled = pvpEnabled;
     }
 
-    // === Keep Drops ===
     public boolean isKeepDropsEnabled() {
         return keepDropsEnabled;
     }
@@ -59,26 +45,36 @@ public class PlotSettings {
         this.keepDropsEnabled = keepDropsEnabled;
     }
 
-    // === Item Rules ===
-    public Map<String, Boolean> getItemRules() {
-        return itemRules;
+    public Set<String> getAllowedItems() {
+        return allowedItems;
     }
 
-    public boolean getItemRule(String key) {
-        return itemRules.getOrDefault(key, false);
+    public Set<String> getBlockedItems() {
+        return blockedItems;
     }
 
-    public void setItemRule(String key, boolean enabled) {
-        itemRules.put(key, enabled);
+    // ==================================================
+    // Persistence
+    // ==================================================
+
+    public void saveToConfig(FileConfiguration config, String path) {
+        config.set(path + ".pvp-enabled", pvpEnabled);
+        config.set(path + ".keep-drops-enabled", keepDropsEnabled);
+        config.set(path + ".allowed-items", new HashSet<>(allowedItems));
+        config.set(path + ".blocked-items", new HashSet<>(blockedItems));
     }
 
-    // === Debug dump (optional helper) ===
-    @Override
-    public String toString() {
-        return "PlotSettings{" +
-                "pvpEnabled=" + pvpEnabled +
-                ", keepDropsEnabled=" + keepDropsEnabled +
-                ", itemRules=" + itemRules +
-                '}';
+    @SuppressWarnings("unchecked")
+    public void loadFromConfig(FileConfiguration config, String path) {
+        this.pvpEnabled = config.getBoolean(path + ".pvp-enabled",
+                config.getBoolean("protection.pvp-in-claims", false));
+        this.keepDropsEnabled = config.getBoolean(path + ".keep-drops-enabled",
+                config.getBoolean("claims.keep-items.enabled", false));
+
+        this.allowedItems.clear();
+        this.blockedItems.clear();
+
+        this.allowedItems.addAll(config.getStringList(path + ".allowed-items"));
+        this.blockedItems.addAll(config.getStringList(path + ".blocked-items"));
     }
 }

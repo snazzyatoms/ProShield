@@ -1,20 +1,30 @@
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.configuration.ConfigurationSection;
-
 /**
- * Stores per-claim settings such as PvP, item-keep, and flags.
+ * Stores per-claim settings such as PvP, explosions, item-keep, and item-protection.
+ * These settings override global config values if toggled by the claim owner.
  */
 public class PlotSettings {
 
     private boolean pvpEnabled;
+    private boolean explosionsEnabled;
+    private boolean fireSpreadEnabled;
+
+    // === NEW: per-claim item keep toggle ===
     private boolean keepItemsEnabled;
 
+    // === NEW: per-claim item protection toggle ===
+    private boolean itemProtectionEnabled;
+
     public PlotSettings() {
-        this.pvpEnabled = false;       // default: PvP disabled
-        this.keepItemsEnabled = false; // default: no keep-items
+        this.pvpEnabled = false;               // default -> follow global config
+        this.explosionsEnabled = true;         // default -> allow unless overridden
+        this.fireSpreadEnabled = true;         // default -> allow unless overridden
+        this.keepItemsEnabled = false;         // default -> inherit from global config
+        this.itemProtectionEnabled = true;     // default -> inherit from global config
     }
 
+    // PvP
     public boolean isPvpEnabled() {
         return pvpEnabled;
     }
@@ -23,6 +33,25 @@ public class PlotSettings {
         this.pvpEnabled = pvpEnabled;
     }
 
+    // Explosions
+    public boolean isExplosionsEnabled() {
+        return explosionsEnabled;
+    }
+
+    public void setExplosionsEnabled(boolean explosionsEnabled) {
+        this.explosionsEnabled = explosionsEnabled;
+    }
+
+    // Fire Spread
+    public boolean isFireSpreadEnabled() {
+        return fireSpreadEnabled;
+    }
+
+    public void setFireSpreadEnabled(boolean fireSpreadEnabled) {
+        this.fireSpreadEnabled = fireSpreadEnabled;
+    }
+
+    // === NEW Keep Items ===
     public boolean isKeepItemsEnabled() {
         return keepItemsEnabled;
     }
@@ -31,21 +60,12 @@ public class PlotSettings {
         this.keepItemsEnabled = keepItemsEnabled;
     }
 
-    /**
-     * Load settings from config section.
-     */
-    public void load(ConfigurationSection section) {
-        if (section == null) return;
-        this.pvpEnabled = section.getBoolean("pvp", false);
-        this.keepItemsEnabled = section.getBoolean("keep-items", false);
+    // === NEW Item Protection ===
+    public boolean isItemProtectionEnabled() {
+        return itemProtectionEnabled;
     }
 
-    /**
-     * Save settings into config section.
-     */
-    public void save(ConfigurationSection section) {
-        if (section == null) return;
-        section.set("pvp", this.pvpEnabled);
-        section.set("keep-items", this.keepItemsEnabled);
+    public void setItemProtectionEnabled(boolean itemProtectionEnabled) {
+        this.itemProtectionEnabled = itemProtectionEnabled;
     }
 }

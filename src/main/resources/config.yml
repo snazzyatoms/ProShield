@@ -1,8 +1,8 @@
-# ProShield configuration (v1.2.4)
+# ProShield configuration (v1.2.5)
 messages:
   prefix: "&3[ProShield]&r "
 
-version: "1.2.4"
+version: "1.2.5"
 
 limits:
   max-claims: 5  # -1 = unlimited (players with proshield.unlimited bypass)
@@ -90,14 +90,15 @@ protection:
 
   # Mob control inside claims
   mobs:
-    block-spawn: true            # cancel natural spawns inside claims
-    allow-spawner-spawn: true    # allow if origin is SPAWNER
+    block-spawn: true             # cancel spawns inside claims (natural)
+    despawn-inside: true          # NEW: instantly remove mobs that exist inside claims
+    allow-spawner-spawn: true     # allow if origin is SPAWNER
     border-repel:
       enabled: true
-      radius: 1.5
-      horizontal-push: 0.6
-      vertical-push: 0.15
-      interval-ticks: 20
+      radius: 3.5                 # NEW: larger repel radius (default was 1.5)
+      horizontal-push: 1.2        # stronger knockback (default was 0.6)
+      vertical-push: 0.3
+      interval-ticks: 10          # faster checks (default was 20)
 
 claims:
   keep-items:
@@ -134,13 +135,13 @@ gui:
       pvp: 14
       keep-items: 20
       purge-expired: 21
-      help: 22
+      reload: 25
       debug: 23
       compass-drop-if-full: 24
-      reload: 25          # 🔁 keep Reload on 25
-      spawn-guard: 26     # ✅ moved Spawn Guard to 26 to avoid conflict
+      spawn-guard: 25
       tp-tools: 30
       back: 31
+      help: 22
 
 # Claims storage (runtime)
 claims: {}

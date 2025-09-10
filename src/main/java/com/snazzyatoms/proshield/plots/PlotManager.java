@@ -1,237 +1,77 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
+import org.bukkit.World;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class PlotManager {
 
     private final ProShield plugin;
-    private final Map<Chunk, Claim> claims = new ConcurrentHashMap<>();
+    private final Map<String, Claim> claims = new HashMap<>();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
-    /* -----------------------------------------------------
-     * Claim Operations
-     * --------------------------------------------------- */
-    public void claim(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        if (claims.containsKey(chunk)) {
-            player.sendMessage(ChatColor.RED + "This chunk is already claimed.");
-            return;
-        }
-        Claim claim = new Claim(player.getUniqueId(), chunk);
-        claims.put(chunk, claim);
-        player.sendMessage(ChatColor.GREEN + "You claimed this chunk.");
-    }
-
-    public void unclaim(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null) {
-            player.sendMessage(ChatColor.RED + "This chunk is not claimed.");
-            return;
-        }
-        if (!claim.isOwner(player)) {
-            player.sendMessage(ChatColor.RED + "You do not own this claim.");
-            return;
-        }
-        claims.remove(chunk);
-        player.sendMessage(ChatColor.YELLOW + "You unclaimed this chunk.");
-    }
-
-    public void showInfo(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null) {
-            player.sendMessage(ChatColor.YELLOW + "This chunk is unclaimed.");
-            return;
-        }
-        player.sendMessage(ChatColor.AQUA + "Owner: " + Bukkit.getOfflinePlayer(claim.getOwner()).getName());
-        player.sendMessage(ChatColor.AQUA + "Trusted: " + claim.getTrusted().size());
-    }
-
-    /* -----------------------------------------------------
-     * Trust System
-     * --------------------------------------------------- */
-    public void trust(Player player, String targetName) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null || !claim.isOwner(player)) {
-            player.sendMessage(ChatColor.RED + "You must own this claim.");
-            return;
-        }
-
-        Player target = Bukkit.getPlayerExact(targetName);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "Player not found.");
-            return;
-        }
-
-        claim.getTrusted().put(target.getUniqueId(), "Member");
-        player.sendMessage(ChatColor.GREEN + "Trusted " + target.getName() + " as Member.");
-    }
-
-    public void untrust(Player player, String targetName) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null || !claim.isOwner(player)) {
-            player.sendMessage(ChatColor.RED + "You must own this claim.");
-            return;
-        }
-
-        Player target = Bukkit.getPlayerExact(targetName);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "Player not found.");
-            return;
-        }
-
-        claim.getTrusted().remove(target.getUniqueId());
-        player.sendMessage(ChatColor.YELLOW + "Untrusted " + target.getName() + ".");
-    }
-
-    public void listTrusted(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null) {
-            player.sendMessage(ChatColor.YELLOW + "This chunk is unclaimed.");
-            return;
-        }
-        if (claim.getTrusted().isEmpty()) {
-            player.sendMessage(ChatColor.GRAY + "No trusted players.");
-            return;
-        }
-        player.sendMessage(ChatColor.AQUA + "Trusted players:");
-        claim.getTrusted().forEach((uuid, role) ->
-                player.sendMessage("- " + Bukkit.getOfflinePlayer(uuid).getName() + " (" + role + ")"));
-    }
-
-    /* -----------------------------------------------------
-     * Ownership Transfer
-     * --------------------------------------------------- */
-    public void transfer(Player player, String targetName) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null || !claim.isOwner(player)) {
-            player.sendMessage(ChatColor.RED + "You must own this claim.");
-            return;
-        }
-
-        Player target = Bukkit.getPlayerExact(targetName);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "Player not found.");
-            return;
-        }
-
-        claim.setOwner(target.getUniqueId());
-        player.sendMessage(ChatColor.GREEN + "Transferred claim to " + target.getName() + ".");
-    }
-
-    /* -----------------------------------------------------
-     * Role Management
-     * --------------------------------------------------- */
-    public void assignRole(Player player, String role) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null || !claim.isOwner(player)) {
-            player.sendMessage(ChatColor.RED + "You must own this claim.");
-            return;
-        }
-
-        // Assign role to last trusted player (for simplicity in GUI prototype)
-        UUID lastTrusted = claim.getTrusted().keySet().stream().reduce((first, second) -> second).orElse(null);
-        if (lastTrusted == null) {
-            player.sendMessage(ChatColor.RED + "No trusted players to assign a role.");
-            return;
-        }
-
-        claim.getTrusted().put(lastTrusted, role);
-        player.sendMessage(ChatColor.GREEN + "Set role of " + Bukkit.getOfflinePlayer(lastTrusted).getName() + " to " + role + ".");
-    }
-
-    /* -----------------------------------------------------
-     * Claim Flags
-     * --------------------------------------------------- */
-    public void toggleFlag(Player player, String flag) {
-        Chunk chunk = player.getLocation().getChunk();
-        Claim claim = claims.get(chunk);
-        if (claim == null || !claim.isOwner(player)) {
-            player.sendMessage(ChatColor.RED + "You must own this claim.");
-            return;
-        }
-
-        boolean current = claim.getFlags().getOrDefault(flag, false);
-        claim.getFlags().put(flag, !current);
-        player.sendMessage(ChatColor.YELLOW + "Flag " + flag + " set to " + !current + ".");
-    }
-
-    /* -----------------------------------------------------
-     * Previews / Expiry
-     * --------------------------------------------------- */
-    public void preview(Player player) {
-        player.sendMessage(ChatColor.GRAY + "Showing claim preview (particles in 2.0).");
-    }
-
-    public void purgeExpired(Player player) {
-        // Stub logic
-        player.sendMessage(ChatColor.RED + "Expired claims purged (simulation).");
-    }
-
-    /* -----------------------------------------------------
-     * Accessors
-     * --------------------------------------------------- */
     public ProShield getPlugin() {
         return plugin;
     }
 
-    public Map<Chunk, Claim> getClaims() {
-        return claims;
+    public boolean isInsideClaim(Location loc) {
+        String key = getChunkKey(loc.getChunk());
+        return claims.containsKey(key);
     }
 
-    /* -----------------------------------------------------
-     * Claim Data Class
-     * --------------------------------------------------- */
-    public static class Claim {
-        private UUID owner;
-        private final Chunk chunk;
-        private final Map<UUID, String> trusted = new HashMap<>();
-        private final Map<String, Boolean> flags = new HashMap<>();
+    public Claim getClaim(Location loc) {
+        return claims.get(getChunkKey(loc.getChunk()));
+    }
 
-        public Claim(UUID owner, Chunk chunk) {
-            this.owner = owner;
-            this.chunk = chunk;
-        }
+    public void addClaim(Location loc, UUID owner) {
+        claims.put(getChunkKey(loc.getChunk()), new Claim(owner));
+    }
 
-        public boolean isOwner(Player player) {
-            return player.getUniqueId().equals(owner);
-        }
+    public void removeClaim(Location loc) {
+        claims.remove(getChunkKey(loc.getChunk()));
+    }
 
-        public UUID getOwner() {
-            return owner;
-        }
+    private String getChunkKey(Chunk chunk) {
+        return chunk.getWorld().getName() + ":" + chunk.getX() + "," + chunk.getZ();
+    }
 
-        public void setOwner(UUID owner) {
-            this.owner = owner;
-        }
+    /**
+     * Calculate distance from a location to the nearest claim border
+     */
+    public double distanceToClaimBorder(Location loc, double maxRadius) {
+        Claim claim = getClaim(loc);
+        if (claim == null) return maxRadius + 1;
 
-        public Map<UUID, String> getTrusted() {
-            return trusted;
-        }
+        Chunk chunk = loc.getChunk();
+        double cx = (chunk.getX() << 4) + 8; // center X of chunk
+        double cz = (chunk.getZ() << 4) + 8; // center Z of chunk
+        double half = 8; // half chunk size
 
-        public Map<String, Boolean> getFlags() {
-            return flags;
-        }
+        double dx = Math.max(0, Math.abs(loc.getX() - cx) - half);
+        double dz = Math.max(0, Math.abs(loc.getZ() - cz) - half);
 
-        public Chunk getChunk() {
-            return chunk;
-        }
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /**
+     * Find nearest border point of the claim (approx for repel vector)
+     */
+    public Location closestClaimBorder(Location loc) {
+        Chunk chunk = loc.getChunk();
+        World world = loc.getWorld();
+        if (world == null) return null;
+
+        double bx = Math.max(Math.min(loc.getX(), (chunk.getX() << 4) + 15), (chunk.getX() << 4));
+        double bz = Math.max(Math.min(loc.getZ(), (chunk.getZ() << 4) + 15), (chunk.getZ() << 4));
+
+        return new Location(world, bx, loc.getY(), bz);
     }
 }

@@ -2,15 +2,12 @@ package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.cache.GUICache;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.List;
+import static com.snazzyatoms.proshield.cache.GUICache.createInventory;
+import static com.snazzyatoms.proshield.cache.GUICache.createItem;
+import org.bukkit.Material;
 
 public class GUIManager {
 
@@ -23,89 +20,68 @@ public class GUIManager {
     }
 
     // ==========================
-    // COMPASS HANDLING
+    // OPEN MAIN MENU
     // ==========================
-
-    public void giveCompass(Player player, boolean admin) {
-        ItemStack compass = admin ? cache.getAdminCompass() : cache.getPlayerCompass();
-        if (compass == null) return;
-
-        // Place in inventory if free slot exists, otherwise drop
-        if (player.getInventory().firstEmpty() != -1) {
-            player.getInventory().addItem(compass.clone());
-        } else {
-            player.getWorld().dropItemNaturally(player.getLocation(), compass.clone());
-        }
-    }
-
-    public boolean isProShieldCompass(ItemStack item) {
-        if (item == null || !item.hasItemMeta()) return false;
-        String display = ChatColor.stripColor(item.getItemMeta().getDisplayName());
-        return display != null && (display.contains("ProShield") || display.contains("Admin ProShield"));
-    }
-
-    // ==========================
-    // MAIN MENU
-    // ==========================
-
     public void openMain(Player player, boolean admin) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + "ProShield Menu");
-
         if (admin) {
-            setupAdminGUI(inv);
+            openAdminMenu(player);
         } else {
-            setupPlayerGUI(inv);
+            openPlayerMenu(player);
         }
+    }
 
+    // ==========================
+    // PLAYER MENU
+    // ==========================
+    public void openPlayerMenu(Player player) {
+        Inventory inv = cache.getGUI("playerMain");
+        if (inv == null) {
+            inv = createInventory("&bProShield Menu", 54);
+
+            inv.setItem(11, createItem(Material.GRASS_BLOCK, "&aClaim Chunk", "&7Claim your current chunk."));
+            inv.setItem(13, createItem(Material.BOOK, "&bClaim Info", "&7View claim owner & trusted players."));
+            inv.setItem(15, createItem(Material.BARRIER, "&cUnclaim", "&7Remove your claim."));
+
+            inv.setItem(20, createItem(Material.PLAYER_HEAD, "&eTrust Player", "&7Add a player to your claim."));
+            inv.setItem(21, createItem(Material.SKELETON_SKULL, "&cUntrust Player", "&7Remove a player from your claim."));
+            inv.setItem(22, createItem(Material.PAPER, "&dManage Roles", "&7Assign roles (Visitor, Member, Builder, etc.)."));
+            inv.setItem(23, createItem(Material.REDSTONE_TORCH, "&6Claim Flags", "&7Toggle protections (PvP, explosions, etc.)."));
+            inv.setItem(24, createItem(Material.CHEST, "&bTransfer Ownership", "&7Give your claim to another player."));
+
+            inv.setItem(31, createItem(Material.OAK_SIGN, "&aHelp", "&7List of available commands."));
+            inv.setItem(48, createItem(Material.ARROW, "&fBack", "&7Return to main menu."));
+
+            cache.storeGUI("playerMain", inv);
+        }
         player.openInventory(inv);
     }
 
-    private void setupPlayerGUI(Inventory inv) {
-        inv.setItem(11, cache.buildItem(Material.GRASS_BLOCK, "&aClaim Chunk", "&7Protect the current chunk."));
-        inv.setItem(13, cache.buildItem(Material.BOOK, "&eClaim Info", "&7View owner and trusted players."));
-        inv.setItem(15, cache.buildItem(Material.BARRIER, "&cUnclaim", "&7Release this claim."));
-
-        // New: trust/untrust/roles
-        inv.setItem(19, cache.buildItem(Material.PLAYER_HEAD, "&bTrust Player", "&7Grant a player access to your claim."));
-        inv.setItem(20, cache.buildItem(Material.SKELETON_SKULL, "&cUntrust Player", "&7Remove a player’s access."));
-        inv.setItem(21, cache.buildItem(Material.PAPER, "&eManage Roles", "&7Assign Visitor, Member, Builder, etc."));
-
-        // New: claim transfer & flags
-        inv.setItem(23, cache.buildItem(Material.CHEST, "&6Transfer Claim", "&7Give this claim to another player."));
-        inv.setItem(24, cache.buildItem(Material.REDSTONE_TORCH, "&cClaim Flags", "&7Toggle PvP, explosions, fire, etc."));
-
-        inv.setItem(31, cache.buildItem(Material.OAK_SIGN, "&9Help", "&7Show available commands."));
-
-        // Back button (always functional)
-        inv.setItem(48, cache.buildItem(Material.ARROW, "&7Back", "&7Return to previous menu."));
-    }
-
-    private void setupAdminGUI(Inventory inv) {
-        inv.setItem(10, cache.buildItem(Material.FLINT_AND_STEEL, "&cFire Toggle", "&7Toggle fire spread and ignition."));
-        inv.setItem(11, cache.buildItem(Material.TNT, "&cExplosion Toggle", "&7Toggle TNT, creepers, withers, etc."));
-        inv.setItem(12, cache.buildItem(Material.ENDER_PEARL, "&cEntity Grief", "&7Toggle Endermen, ravagers, silverfish."));
-        inv.setItem(13, cache.buildItem(Material.LEVER, "&eInteractions", "&7Toggle door/button/fence gate use."));
-        inv.setItem(14, cache.buildItem(Material.IRON_SWORD, "&4PvP Toggle", "&7Enable or disable PvP in claims."));
-
-        inv.setItem(20, cache.buildItem(Material.HOPPER, "&aKeep Items", "&7Toggle item keep inside claims."));
-        inv.setItem(21, cache.buildItem(Material.LAVA_BUCKET, "&cPurge Expired", "&7Remove old claims."));
-        inv.setItem(22, cache.buildItem(Material.BOOK, "&bHelp", "&7Show admin commands."));
-        inv.setItem(23, cache.buildItem(Material.COMMAND_BLOCK, "&dDebug Mode", "&7Toggle debug logging."));
-        inv.setItem(24, cache.buildItem(Material.CHEST_MINECART, "&6Compass Drop Policy", "&7Toggle compass drop if full."));
-
-        // Reload added here
-        inv.setItem(25, cache.buildItem(Material.REDSTONE_BLOCK, "&4Reload Config", "&7Reloads ProShield configuration."));
-
-        inv.setItem(30, cache.buildItem(Material.ENDER_EYE, "&dTP Tools", "&7Teleport to claims."));
-        inv.setItem(31, cache.buildItem(Material.ARROW, "&7Back", "&7Return to previous menu."));
-    }
-
     // ==========================
-    // UTILS
+    // ADMIN MENU
     // ==========================
+    public void openAdminMenu(Player player) {
+        Inventory inv = cache.getGUI("adminMain");
+        if (inv == null) {
+            inv = createInventory("&cProShield Admin Menu", 54);
 
-    public ItemStack buildItem(Material mat, String name, String... lore) {
-        return cache.buildItem(mat, name, lore);
+            inv.setItem(10, createItem(Material.FLINT_AND_STEEL, "&cFire Protection", "&7Toggle fire spread/ignite."));
+            inv.setItem(11, createItem(Material.TNT, "&cExplosion Protection", "&7Toggle TNT/creeper/etc."));
+            inv.setItem(12, createItem(Material.ENDER_PEARL, "&cEntity Grief", "&7Toggle Enderman, Ravagers, etc."));
+            inv.setItem(13, createItem(Material.LEVER, "&cInteractions", "&7Toggle redstone, doors, buttons."));
+            inv.setItem(14, createItem(Material.IRON_SWORD, "&cPvP Toggle", "&7Enable or disable PvP in claims."));
+
+            inv.setItem(20, createItem(Material.HOPPER, "&aKeep Items", "&7Toggle item keep in claims."));
+            inv.setItem(21, createItem(Material.LAVA_BUCKET, "&cPurge Expired", "&7Remove expired claims."));
+            inv.setItem(22, createItem(Material.BOOK, "&bAdmin Help", "&7List admin commands."));
+            inv.setItem(23, createItem(Material.COMMAND_BLOCK, "&6Debug", "&7Toggle debug mode."));
+            inv.setItem(24, createItem(Material.CHEST_MINECART, "&eCompass Policy", "&7Adjust compass settings."));
+            inv.setItem(25, createItem(Material.REDSTONE_BLOCK, "&cReload Config", "&7Reload plugin configuration."));
+
+            inv.setItem(30, createItem(Material.ENDER_EYE, "&dTeleport Tools", "&7Teleport to claims."));
+            inv.setItem(31, createItem(Material.ARROW, "&fBack", "&7Return to main menu."));
+
+            cache.storeGUI("adminMain", inv);
+        }
+        player.openInventory(inv);
     }
-
 }

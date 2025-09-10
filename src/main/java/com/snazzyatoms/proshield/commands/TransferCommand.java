@@ -13,21 +13,17 @@ import org.bukkit.entity.Player;
 public class TransferCommand implements CommandExecutor {
 
     private final PlotManager plotManager;
-    private final MessagesUtil messages;
 
     public TransferCommand(ProShield plugin, PlotManager plotManager) {
         this.plotManager = plotManager;
-        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            messages.send(sender, "general.players-only");
-            return true;
-        }
+        if (!(sender instanceof Player player)) return true;
+
         if (args.length < 1) {
-            messages.send(player, "transfer.usage");
+            MessagesUtil.sendMessage(player, "command-transfer-usage");
             return true;
         }
 
@@ -36,12 +32,17 @@ public class TransferCommand implements CommandExecutor {
         Plot plot = plotManager.getPlot(chunk);
 
         if (plot == null || !plot.isOwner(player.getUniqueId())) {
-            messages.send(player, "transfer.not-owner");
+            MessagesUtil.sendMessage(player, "command-transfer-not-owner");
             return true;
         }
 
-        plotManager.transferOwnership(plot, targetName);
-        messages.send(player, "transfer.success", "%player%", targetName);
+        boolean success = plotManager.transferOwnership(plot, targetName);
+        if (success) {
+            MessagesUtil.sendMessage(player, "command-transfer-success", "{player}", targetName);
+        } else {
+            MessagesUtil.sendMessage(player, "command-transfer-fail");
+        }
+
         return true;
     }
 }

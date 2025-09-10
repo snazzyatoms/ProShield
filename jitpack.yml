@@ -1,14 +1,8 @@
-# path: jitpack.yml
 jdk:
   - openjdk17
 
+before_install:
+  - echo "Using OpenJDK 17 for ProShield build"
+
 install:
-  - mvn -B -V -DskipTests de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
-
-build:
-  commands:
-    - mvn -B -DskipTests clean package
-
-artifacts:
-  - path: target/*.jar
-    name: ProShield
+  - mvn -B -DskipTests clean install

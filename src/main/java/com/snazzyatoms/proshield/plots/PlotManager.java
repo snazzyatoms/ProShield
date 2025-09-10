@@ -1,111 +1,141 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * Manages all plots (claims) in the server.
- * Handles loading, saving, and runtime cache of plots & settings.
+ * Manages all plots (claims) on the server.
+ * Handles loading/saving from config.yml and runtime lookups.
  */
 public class PlotManager {
 
     private final ProShield plugin;
-    private final Map<String, Plot> plots = new HashMap<>();
+    private final Map<String, Plot> plots = new HashMap<>(); // key = world:x:z
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-        loadPlots();
     }
 
-    public ProShield getPlugin() {
-        return plugin;
+    // === Core ===
+
+    private String getKey(Chunk chunk) {
+        return chunk.getWorld().getName() + ":" + chunk.getX() + ":" + chunk.getZ();
     }
 
     public Plot getPlot(Chunk chunk) {
-        String key = chunkToKey(chunk);
-        return plots.get(key);
+        return plots.get(getKey(chunk));
     }
 
-    public Plot getOrCreatePlot(Chunk chunk, UUID owner) {
-        String key = chunkToKey(chunk);
-        return plots.computeIfAbsent(key, k -> new Plot(owner, new PlotSettings()));
+    public boolean isClaimed(Chunk chunk) {
+        return plots.containsKey(getKey(chunk));
+    }
+
+    public void addPlot(Chunk chunk, UUID owner) {
+        String key = getKey(chunk);
+        Plot plot = new Plot(chunk, owner);
+        plots.put(key, plot);
+        savePlot(key, plot);
     }
 
     public void removePlot(Chunk chunk) {
-        String key = chunkToKey(chunk);
+        String key = getKey(chunk);
         plots.remove(key);
-    }
 
-    public Map<String, Plot> getAllPlots() {
-        return plots;
-    }
-
-    private String chunkToKey(Chunk chunk) {
-        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
-    }
-
-    /**
-     * Load plots + settings from config.yml
-     */
-    public void loadPlots() {
         FileConfiguration config = plugin.getConfig();
         ConfigurationSection claimsSection = config.getConfigurationSection("claims");
-
-        if (claimsSection == null) {
-            plugin.getLogger().info("No claims found in config.");
-            return;
+        if (claimsSection != null) {
+            claimsSection.set(key, null);
         }
-
-        for (String key : claimsSection.getKeys(false)) {
-            ConfigurationSection claimSection = claimsSection.getConfigurationSection(key);
-            if (claimSection == null) continue;
-
-            String ownerStr = claimSection.getString("owner");
-            if (ownerStr == null) continue;
-
-            UUID owner = UUID.fromString(ownerStr);
-
-            // Load per-claim settings safely
-            ConfigurationSection settingsSection = claimSection.getConfigurationSection("settings");
-            PlotSettings settings = PlotSettings.fromConfig(settingsSection);
-
-            Plot plot = new Plot(owner, settings);
-            plot.loadTrusted(claimSection.getConfigurationSection("trusted"));
-
-            plots.put(key, plot);
-        }
-
-        plugin.getLogger().info("Loaded " + plots.size() + " plots.");
+        plugin.saveConfig();
     }
 
-    /**
-     * Save plots + settings to config.yml
-     */
-    public void savePlots() {
+    public Collection<Plot> getAllPlots() {
+        return Collections.unmodifiableCollection(plots.values());
+    }
+
+    // === Save/Load ===
+
+    public void loadAll() {
+        plots.clear();
         FileConfiguration config = plugin.getConfig();
-        ConfigurationSection claimsSection = config.createSection("claims");
+        ConfigurationSection claimsSection = config.getConfigurationSection("claims");
+        if (claimsSection == null) return;
+
+        for (String key : claimsSection.getKeys(false)) {
+            try {
+                ConfigurationSection section = claimsSection.getConfigurationSection(key);
+                if (section == null) continue;
+
+                UUID owner = UUID.fromString(section.getString("owner"));
+                String[] parts = key.split(":");
+                if (parts.length != 3) continue;
+
+                String world = parts[0];
+                int x = Integer.parseInt(parts[1]);
+                int z = Integer.parseInt(parts[2]);
+
+                Chunk chunk = Bukkit.getWorld(world).getChunkAt(x, z);
+                Plot plot = new Plot(chunk, owner);
+
+                // === Existing settings ===
+                if (section.isSet("settings.pvp")) {
+                    plot.setPvpEnabled(section.getBoolean("settings.pvp"));
+                }
+                if (section.isSet("settings.explosions")) {
+                    plot.setExplosionsEnabled(section.getBoolean("settings.explosions"));
+                }
+                if (section.isSet("settings.fire")) {
+                    plot.setFireEnabled(section.getBoolean("settings.fire"));
+                }
+
+                // === NEW: Keep-items per-claim ===
+                if (section.isSet("settings.keep-items")) {
+                    plot.setKeepItemsEnabled(section.getBoolean("settings.keep-items"));
+                } else {
+                    plot.setKeepItemsEnabled(null); // fallback to global
+                }
+
+                plots.put(key, plot);
+
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to load claim at " + key + ": " + e.getMessage());
+            }
+        }
+    }
+
+    public void saveAll() {
+        FileConfiguration config = plugin.getConfig();
+        config.set("claims", null); // wipe and rebuild
 
         for (Map.Entry<String, Plot> entry : plots.entrySet()) {
-            String key = entry.getKey();
-            Plot plot = entry.getValue();
+            savePlot(entry.getKey(), entry.getValue());
+        }
+        plugin.saveConfig();
+    }
 
-            ConfigurationSection claimSection = claimsSection.createSection(key);
-            claimSection.set("owner", plot.getOwner().toString());
-
-            // Save trusted players
-            plot.saveTrusted(claimSection.createSection("trusted"));
-
-            // Save per-claim settings
-            ConfigurationSection settingsSection = claimSection.createSection("settings");
-            plot.getSettings().saveToConfig(settingsSection);
+    private void savePlot(String key, Plot plot) {
+        FileConfiguration config = plugin.getConfig();
+        ConfigurationSection claimsSection = config.getConfigurationSection("claims");
+        if (claimsSection == null) {
+            claimsSection = config.createSection("claims");
         }
 
-        plugin.saveConfig();
+        ConfigurationSection section = claimsSection.createSection(key);
+        section.set("owner", plot.getOwner().toString());
+
+        // === Existing settings ===
+        section.set("settings.pvp", plot.isPvpEnabled());
+        section.set("settings.explosions", plot.isExplosionsEnabled());
+        section.set("settings.fire", plot.isFireEnabled());
+
+        // === NEW: Keep-items per-claim ===
+        if (plot.getKeepItemsEnabled() != null) {
+            section.set("settings.keep-items", plot.getKeepItemsEnabled());
+        }
     }
 }

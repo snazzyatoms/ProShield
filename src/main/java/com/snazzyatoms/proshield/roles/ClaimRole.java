@@ -1,58 +1,72 @@
 // src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
-import org.bukkit.ChatColor;
-
+/**
+ * ClaimRole
+ *
+ * Defines the available roles inside a ProShield claim.
+ * Each role has increasing permissions.
+ *
+ * Order is important → progression is from lowest (VISITOR) to highest (MANAGER).
+ */
 public enum ClaimRole {
-    OWNER(ChatColor.DARK_RED + "Owner", 5), // 🔹 Added owner role
-    COOWNER(ChatColor.LIGHT_PURPLE + "Co-Owner", 4),
-    // Back-compat alias for older references:
-    CO_OWNER(ChatColor.LIGHT_PURPLE + "Co-Owner", 4),
-    BUILDER(ChatColor.AQUA + "Builder", 3),
-    CONTAINER(ChatColor.GOLD + "Container", 2),
-    MEMBER(ChatColor.GREEN + "Member", 1),
-    VISITOR(ChatColor.GRAY + "Visitor", 0);
+    VISITOR("Visitor", "§7Minimal access, can only enter claim."),
+    MEMBER("Member", "§aBasic access to walk and interact."),
+    TRUSTED("Trusted", "§bCan interact with doors, buttons, etc."),
+    BUILDER("Builder", "§2Can place and break blocks."),
+    CONTAINER("Container", "§6Can open chests, furnaces, hoppers."),
+    MODERATOR("Moderator", "§cCan manage PvP, entities, containers."),
+    MANAGER("Manager", "§eFull management rights except transfer."),
+    OWNER("Owner", "§dClaim owner, full permissions.");
 
-    private final String display;
-    private final int level;
+    private final String displayName;
+    private final String description;
 
-    ClaimRole(String display, int level) {
-        this.display = display;
-        this.level = level;
+    ClaimRole(String displayName, String description) {
+        this.displayName = displayName;
+        this.description = description;
     }
 
-    public String display() {
-        return display;
+    public String getDisplayName() {
+        return displayName;
     }
 
-    public int level() {
-        return level;
-    }
-
-    /**
-     * Returns true if this role has at least the same or higher privileges
-     * compared to another role.
-     */
-    public boolean atLeast(ClaimRole other) {
-        return this.level >= other.level;
+    public String getDescription() {
+        return description;
     }
 
     /**
-     * Convert string (config, commands, etc.) into a ClaimRole.
-     * Accepts multiple aliases for compatibility.
+     * Get the next higher role in progression.
      */
-    public static ClaimRole fromString(String s) {
-        if (s == null) return VISITOR;
-        String k = s.trim().toUpperCase().replace('-', '_').replace(' ', '_');
-
-        // Aliases
-        if ("CO_OWNER".equals(k)) return COOWNER;
-        if ("OWNER".equals(k)) return OWNER;
-
-        try {
-            return ClaimRole.valueOf(k);
-        } catch (IllegalArgumentException ex) {
-            return VISITOR;
+    public ClaimRole next() {
+        int index = this.ordinal();
+        ClaimRole[] values = ClaimRole.values();
+        if (index + 1 < values.length) {
+            return values[index + 1];
         }
+        return this; // already at highest
+    }
+
+    /**
+     * Get the previous lower role in progression.
+     */
+    public ClaimRole previous() {
+        int index = this.ordinal();
+        if (index - 1 >= 0) {
+            return ClaimRole.values()[index - 1];
+        }
+        return this; // already at lowest
+    }
+
+    /**
+     * Look up a ClaimRole by name (case-insensitive).
+     */
+    public static ClaimRole fromString(String name) {
+        for (ClaimRole role : ClaimRole.values()) {
+            if (role.name().equalsIgnoreCase(name)) {
+                return role;
+            }
+        }
+        return null;
     }
 }

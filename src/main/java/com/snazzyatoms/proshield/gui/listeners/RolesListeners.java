@@ -2,6 +2,7 @@
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
@@ -13,59 +14,81 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * RolesListener
+ *
+ * ✅ Handles clicks in the Roles GUI.
+ * ✅ Assigns ClaimRole from enum (Visitor → Manager).
+ * ✅ Prevents moving items.
+ * ✅ Feedback via sounds + updated GUI refresh.
+ */
 public class RolesListener implements Listener {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
+    private final GUIManager gui;
 
-    private final List<ClaimRole> roleCycle = List.of(
-            ClaimRole.VISITOR,
-            ClaimRole.MEMBER,
-            ClaimRole.TRUSTED,
-            ClaimRole.BUILDER,
-            ClaimRole.CONTAINER,
-            ClaimRole.MODERATOR,
-            ClaimRole.MANAGER
-    );
-
-    public RolesListener(ProShield plugin, PlotManager plots, ClaimRoleManager roleManager) {
+    public RolesListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, GUIManager gui) {
         this.plugin = plugin;
-        this.plots = plots;
+        this.plotManager = plotManager;
         this.roleManager = roleManager;
+        this.gui = gui;
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onRolesMenuClick(InventoryClickEvent e) {
+    public void onRolesClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         if (e.getCurrentItem() == null) return;
 
-        e.setCancelled(true); // prevent moving items
+        // ✅ Prevent item movement
+        e.setCancelled(true);
+
         ItemStack item = e.getCurrentItem();
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
 
-        if (!(item.getItemMeta() instanceof SkullMeta skull)) return;
-        if (!skull.hasOwner()) return;
-
-        String targetName = skull.getOwnerProfile().getName();
-        if (targetName == null) return;
-
-        Plot plot = plots.getPlot(player.getLocation());
+        String name = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) return;
 
-        UUID targetUUID = plugin.getServer().getOfflinePlayer(targetName).getUniqueId();
-        ClaimRole current = roleManager.getRole(plot, targetUUID);
-        int idx = roleCycle.indexOf(current);
-        ClaimRole nextRole = roleCycle.get((idx + 1) % roleCycle.size());
+        // Only owner or admin can assign roles
+        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+            return;
+        }
 
-        roleManager.setRole(plot, targetUUID, nextRole);
-        plot.saveAsync();
+        UUID target = roleManager.getPendingTarget(player);
+        if (target == null) {
+            player.sendMessage(ChatColor.RED + "⚠ No player selected for role assignment.");
+            return;
+        }
 
-        player.sendMessage(ChatColor.YELLOW + "Updated " + targetName + " → " + nextRole.name());
+        ClaimRole chosen = null;
+        for (ClaimRole role : ClaimRole.values()) {
+            if (name.contains(role.name().toLowerCase())) {
+                chosen = role;
+                break;
+            }
+        }
+
+        if (chosen == null || chosen == ClaimRole.OWNER) return; // skip invalid or owner
+
+        // ✅ Assign role
+        roleManager.setRole(plot, target, chosen);
+
+        // ✅ Feedback
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+        player.sendMessage(ChatColor.GREEN + "✔ Assigned " +
+                ChatColor.AQUA + chosen.getDisplayName() +
+                ChatColor.GREEN + " to player.");
+
+        // ✅ Refresh GUI
+        boolean fromAdmin = player.hasPermission("proshield.admin");
+        gui.openRolesGUI(player, plot, fromAdmin);
     }
 }

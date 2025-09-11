@@ -2,6 +2,7 @@ package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,7 +15,7 @@ import org.bukkit.inventory.meta.ItemMeta;
  *
  * ✅ Simplified: uses single bucketAllowed flag (matches PlotSettings)
  * ✅ Only owners + admins should flip flags (canEdit check inside GUIManager)
- * ✅ Preserves all other logic
+ * ✅ Plays sound when toggling instead of spamming chat
  */
 public class FlagsListener implements Listener {
 
@@ -42,7 +43,7 @@ public class FlagsListener implements Listener {
 
         switch (name.toLowerCase()) {
             case "explosions" -> toggleFlag(player, item, settings.isExplosionsAllowed(), settings::setExplosionsAllowed);
-            case "buckets" -> toggleFlag(player, item, settings.isBucketAllowed(), settings::setBucketAllowed); // ✅ single toggle
+            case "buckets" -> toggleFlag(player, item, settings.isBucketAllowed(), settings::setBucketAllowed);
             case "item frames" -> toggleFlag(player, item, settings.isItemFramesAllowed(), settings::setItemFramesAllowed);
             case "armor stands" -> toggleFlag(player, item, settings.isArmorStandsAllowed(), settings::setArmorStandsAllowed);
             case "animals" -> toggleFlag(player, item, settings.isAnimalAccessAllowed(), settings::setAnimalAccessAllowed);
@@ -63,7 +64,8 @@ public class FlagsListener implements Listener {
     }
 
     /* -------------------------------------------------------
-     * Helper to toggle a boolean flag and update item lore
+     * Helper to toggle a boolean flag, update item lore,
+     * and play a sound for feedback
      * ------------------------------------------------------- */
     private void toggleFlag(Player player, ItemStack item, boolean current, java.util.function.Consumer<Boolean> setter) {
         boolean newState = !current;
@@ -77,6 +79,7 @@ public class FlagsListener implements Listener {
             item.setItemMeta(meta);
         }
 
-        player.sendMessage(ChatColor.YELLOW + "Flag updated: " + ChatColor.AQUA + meta.getDisplayName());
+        // 🔊 Play toggle sound instead of spamming chat
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, newState ? 1.2f : 0.8f);
     }
 }

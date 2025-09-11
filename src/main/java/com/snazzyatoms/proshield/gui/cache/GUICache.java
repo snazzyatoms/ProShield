@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/cache/GUICache.java
 package com.snazzyatoms.proshield.gui.cache;
 
 import org.bukkit.entity.Player;
@@ -7,59 +8,39 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * GUICache
- *
- * Tracks which players have which GUIs open.
- * - Supports Player menus
- * - Supports Admin menus
- * Prevents conflicts and makes listeners simpler.
- */
 public class GUICache {
+
+    public enum Origin { PLAYER, ADMIN }
 
     private final Map<UUID, Inventory> playerMenus = new HashMap<>();
     private final Map<UUID, Inventory> adminMenus = new HashMap<>();
+    private final Map<UUID, Origin> origins = new HashMap<>();
 
-    /* -------------------------
-     * Player Menus
-     * ------------------------- */
     public void setPlayerMenu(Player player, Inventory inv) {
         playerMenus.put(player.getUniqueId(), inv);
+        origins.put(player.getUniqueId(), Origin.PLAYER);
+    }
+
+    public void setAdminMenu(Player player, Inventory inv) {
+        adminMenus.put(player.getUniqueId(), inv);
+        origins.put(player.getUniqueId(), Origin.ADMIN);
     }
 
     public boolean isPlayerMenu(UUID uuid, Inventory inv) {
-        return playerMenus.containsKey(uuid) && playerMenus.get(uuid).equals(inv);
-    }
-
-    public void clearPlayerMenu(UUID uuid) {
-        playerMenus.remove(uuid);
-    }
-
-    /* -------------------------
-     * Admin Menus
-     * ------------------------- */
-    public void setAdminMenu(Player player, Inventory inv) {
-        adminMenus.put(player.getUniqueId(), inv);
+        return inv.equals(playerMenus.get(uuid));
     }
 
     public boolean isAdminMenu(UUID uuid, Inventory inv) {
-        return adminMenus.containsKey(uuid) && adminMenus.get(uuid).equals(inv);
+        return inv.equals(adminMenus.get(uuid));
     }
 
-    public void clearAdminMenu(UUID uuid) {
-        adminMenus.remove(uuid);
-    }
-
-    /* -------------------------
-     * Global
-     * ------------------------- */
-    public void clearAll(UUID uuid) {
-        playerMenus.remove(uuid);
-        adminMenus.remove(uuid);
+    public Origin getOrigin(UUID uuid) {
+        return origins.getOrDefault(uuid, Origin.PLAYER);
     }
 
     public void clearCache() {
         playerMenus.clear();
         adminMenus.clear();
+        origins.clear();
     }
 }

@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/FlagsListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -13,7 +12,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Collections;
 import java.util.function.Consumer;
 
 /**
@@ -21,9 +19,9 @@ import java.util.function.Consumer;
  *
  * ✅ Toggles claim flags when clicked in the Flags GUI.
  * ✅ Prevents icon movement (menu stays static).
- * ✅ Refreshes the entire GUI after toggling to reflect states.
- * ✅ Sound feedback (players hear click / toggle sounds).
- * ✅ Admins optionally get a debug chat message (config-controlled).
+ * ✅ Refreshes the GUI after toggling to reflect states.
+ * ✅ Back button returns to Admin or Player parent menus.
+ * ✅ Sound feedback + optional admin debug chat.
  */
 public class FlagsListener implements Listener {
 
@@ -55,8 +53,8 @@ public class FlagsListener implements Listener {
         if (plot == null) return;
 
         PlotSettings settings = plot.getSettings();
-
         boolean changed = true;
+
         switch (name) {
             case "explosions" -> toggleFlag(player, settings.isExplosionsAllowed(), settings::setExplosionsAllowed);
             case "buckets" -> toggleFlag(player, settings.isBucketAllowed(), settings::setBucketAllowed);
@@ -73,14 +71,17 @@ public class FlagsListener implements Listener {
             case "mob repel" -> toggleFlag(player, settings.isMobRepelEnabled(), settings::setMobRepelEnabled);
             case "mob despawn" -> toggleFlag(player, settings.isMobDespawnInsideEnabled(), settings::setMobDespawnInsideEnabled);
             case "keep items" -> toggleFlag(player, settings.isKeepItemsEnabled(), settings::setKeepItemsEnabled);
-            case "back" -> changed = false; // handled by MenuListener
+            case "back" -> {
+                boolean fromAdmin = player.hasPermission("proshield.admin");
+                if (fromAdmin) gui.openAdminMain(player); else gui.openMain(player);
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+                return; // stop here
+            }
             default -> changed = false;
         }
 
         if (changed) {
-            // ✅ Save asynchronously
             plots.saveAsync(plot);
-
             // ✅ Refresh GUI so states update
             boolean fromAdmin = player.hasPermission("proshield.admin");
             gui.openFlagsMenu(player, fromAdmin);

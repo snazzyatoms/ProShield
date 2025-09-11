@@ -27,9 +27,7 @@ protection:
   # -------------------------
   # Bucket settings
   # -------------------------
-  buckets:
-    empty: false        # 🪣 Block players emptying buckets
-    fill: false         # 🪣 Block players filling buckets
+  buckets: false        # 🪣 Single toggle (empty + fill blocked together)
 
   # -------------------------
   # Mob settings
@@ -38,8 +36,7 @@ protection:
     border-repel:
       enabled: true
       # 🔹 How far from the claim edge mobs get pushed back
-      #   Larger radius = safer "buffer zone" around claims
-      radius: 3.0       
+      radius: 3.0
       horizontal-push: 0.7
       vertical-push: 0.25
     despawn-inside: true   # 🧟 Despawn mobs that manage to enter claims
@@ -84,7 +81,7 @@ claims:
     vehicles: false
     armor-stands: false
     item-frames: false
-    buckets: false
+    buckets: false   # ✅ matches PlotSettings.get/setBucketAllowed
     pets: false
     mob-repel: true
     mob-despawn: true

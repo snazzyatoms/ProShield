@@ -39,7 +39,6 @@ public class ProShieldCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-
         if (args.length == 0) {
             messages.send(sender, "usage.proshield");
             return true;
@@ -84,7 +83,7 @@ public class ProShieldCommand implements CommandExecutor {
                     messages.send(player, "error.no-permission");
                     return true;
                 }
-                compassManager.giveCompass(player, player.isOp()); // ✅ instance method
+                compassManager.giveCompass(player, player.isOp());
                 messages.send(player, "prefix", "&aProShield compass has been given.");
             }
 

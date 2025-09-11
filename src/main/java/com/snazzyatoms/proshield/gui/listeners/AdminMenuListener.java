@@ -4,7 +4,6 @@ package com.snazzyatoms.proshield.gui.listeners;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -18,31 +17,39 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.UUID;
 
+/**
+ * AdminMenuListener
+ *
+ * ✅ Handles clicks inside the Admin GUI menu
+ * ✅ Toggles config/admin settings & runs admin tools
+ * ✅ Supports back button → returns to admin main
+ * ✅ Plays sounds for feedback
+ */
 public class AdminMenuListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager gui;
     private final GUICache cache;
-    private final PlotManager plots;
     private final MessagesUtil messages;
 
     public AdminMenuListener(ProShield plugin, GUIManager gui) {
         this.plugin = plugin;
         this.gui = gui;
         this.cache = gui.getCache();
-        this.plots = plugin.getPlotManager();
         this.messages = plugin.getMessagesUtil();
+
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler
     public void onMenuClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!player.hasPermission("proshield.admin")) return;
-
         UUID uuid = player.getUniqueId();
+
+        // Verify this is a ProShield admin menu
         if (!cache.isAdminMenu(uuid, event.getInventory())) return;
 
-        event.setCancelled(true);
+        event.setCancelled(true); // Prevent item movement
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
@@ -53,77 +60,56 @@ public class AdminMenuListener implements Listener {
         String name = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
 
         switch (name) {
-            // Admin also has player actions
-            case "claim chunk" -> {
-                player.closeInventory();
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.7f, 1.2f);
-                player.performCommand("claim");
-            }
-            case "unclaim chunk" -> {
-                player.closeInventory();
-                player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.7f, 1.0f);
-                player.performCommand("unclaim");
-            }
-            case "trust menu" -> {
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.0f);
-                gui.openTrustMenu(player);
-            }
-            case "flags" -> {
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.0f);
-                gui.openFlagsMenu(player);
-            }
-            case "roles" -> {
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.0f);
-                gui.openRolesGUI(player, plots.getPlot(player.getLocation()));
-            }
-            case "transfer claim" -> {
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.0f);
-                gui.openTransferMenu(player);
-            }
-
-            // Admin-only tools (dispatch or toggle config)
-            case "teleport to claim" -> {
-                player.closeInventory();
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.0f);
-                player.sendMessage(ChatColor.YELLOW + "Use /proshield tp <owner> to teleport to claims.");
-            }
-            case "force unclaim" -> {
-                player.closeInventory();
-                player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.7f, 1.0f);
-                player.performCommand("proshield forceunclaim");
-            }
-            case "toggle keep-items" -> {
-                boolean current = plugin.getConfig().getBoolean("claims.keep-items.enabled", false);
-                plugin.getConfig().set("claims.keep-items.enabled", !current);
-                plugin.saveConfig();
-                player.playSound(player.getLocation(), Sound.BLOCK_LEVER_CLICK, 0.7f, 1.1f);
-                messages.send(player, "prefix", "&eKeep-drops: " + (!current ? "&aENABLED" : "&cDISABLED"));
-            }
-            case "wilderness tools" -> {
-                boolean current = plugin.getConfig().getBoolean("messages.show-wilderness", false);
-                plugin.getConfig().set("messages.show-wilderness", !current);
-                plugin.saveConfig();
-                player.playSound(player.getLocation(), Sound.BLOCK_LEVER_CLICK, 0.7f, 1.1f);
-                messages.send(player, "prefix", "&eWilderness messages: " + (!current ? "&aENABLED" : "&cDISABLED"));
-            }
+            // --- Admin Toggles ---
             case "debug logging" -> {
                 boolean state = plugin.toggleDebug();
-                player.playSound(player.getLocation(), Sound.BLOCK_LEVER_CLICK, 0.7f, 1.0f);
-                messages.send(player, "prefix", "&eDebug logging: " + (state ? "&aENABLED" : "&cDISABLED"));
+                if (plugin.isDebugEnabled()) {
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 2f);
+                } else {
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
+                }
+                messages.send(player, "prefix", "&bDebug logging: " + (state ? "&aENABLED" : "&cDISABLED"));
+            }
+            case "wilderness tools" -> {
+                player.performCommand("proshield wilderness");
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+            }
+            case "admin flag chat" -> {
+                boolean current = plugin.getConfig().getBoolean("messages.admin-flag-chat", true);
+                plugin.getConfig().set("messages.admin-flag-chat", !current);
+                plugin.saveConfig();
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+                messages.send(player, "prefix", "&eAdmin flag chat " + (!current ? "&aENABLED" : "&cDISABLED"));
+            }
+
+            // --- Admin Tools ---
+            case "force unclaim" -> {
+                player.closeInventory();
+                player.performCommand("proshield forceunclaim");
+                player.playSound(player.getLocation(), Sound.ENTITY_WITHER_DEATH, 1f, 0.5f);
+            }
+            case "transfer claim" -> {
+                player.closeInventory();
+                player.performCommand("transfer");
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+            }
+            case "teleport to claim" -> {
+                player.closeInventory();
+                player.sendMessage(ChatColor.YELLOW + "Use /proshield tp <owner> to teleport to claims.");
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.2f);
             }
             case "purge expired claims" -> {
                 player.closeInventory();
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.0f);
                 player.performCommand("proshield purge");
+                player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
             }
 
             case "back" -> {
-                player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 0.7f, 1.0f);
                 gui.openAdminMain(player);
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
             }
-
             default -> {
-                // no-op
+                // No action
             }
         }
     }

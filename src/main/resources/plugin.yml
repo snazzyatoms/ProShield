@@ -46,7 +46,14 @@ commands:
     description: Open the claim flags menu
     usage: /<command>
     permission: proshield.flags
-    aliases: [cf]   # ✅ Added shorthand alias for claim flags
+    aliases: [cf]   # ✅ shorthand alias for claim flags
+
+  # New Admin Menu command
+  adminmenu:
+    description: Open the ProShield Admin Menu
+    usage: /<command>
+    permission: proshield.admin
+    aliases: [am, psa]
 
   # Trust & Roles
   trust:
@@ -111,7 +118,7 @@ permissions:
 
   # Admin Core
   proshield.admin:
-    description: Access admin tools (compass, bypass, force unclaim, purge)
+    description: Access admin tools (compass, bypass, force unclaim, purge, admin menu)
     default: op
 
   proshield.admin.tp:

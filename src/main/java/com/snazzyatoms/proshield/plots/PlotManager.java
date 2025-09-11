@@ -21,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Async saving
  * - Lookups by Location/Chunk
  * - Claim/unclaim support
+ * - Helpers for ownership/trust checks
+ * - Expired purge & reload hooks
  */
 public class PlotManager {
 
@@ -60,6 +62,11 @@ public class PlotManager {
         return plots.get(key(loc));
     }
 
+    /** Alias for backwards compatibility */
+    public Plot getClaim(Location loc) {
+        return getPlot(loc);
+    }
+
     public boolean hasAnyClaim(UUID playerId) {
         for (Plot plot : plots.values()) {
             if (plot.isOwner(playerId)) return true;
@@ -70,6 +77,20 @@ public class PlotManager {
     public String getClaimName(Location loc) {
         Plot plot = getPlot(loc);
         return (plot != null) ? plot.getDisplayNameSafe() : null;
+    }
+
+    /* -------------------------------------------------------
+     * Ownership / Trust helpers
+     * ------------------------------------------------------- */
+
+    public boolean isOwner(UUID playerId, Location loc) {
+        Plot plot = getPlot(loc);
+        return plot != null && plot.isOwner(playerId);
+    }
+
+    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
+        Plot plot = getPlot(loc);
+        return plot != null && (plot.isOwner(playerId) || plot.getTrusted().containsKey(playerId));
     }
 
     /* -------------------------------------------------------
@@ -137,5 +158,32 @@ public class PlotManager {
 
     public Collection<Plot> getAllPlots() {
         return plots.values();
+    }
+
+    /* -------------------------------------------------------
+     * Extra Management
+     * ------------------------------------------------------- */
+
+    /** Purge claims older than X days */
+    public int purgeExpired(int days, boolean save) {
+        long cutoff = System.currentTimeMillis() - (days * 24L * 60L * 60L * 1000L);
+        int removed = 0;
+        Iterator<Map.Entry<String, Plot>> it = plots.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Plot> e = it.next();
+            Plot plot = e.getValue();
+            if (plot.getCreated() < cutoff) {
+                it.remove();
+                config.set(e.getKey(), null);
+                removed++;
+            }
+        }
+        if (save) saveFile();
+        return removed;
+    }
+
+    /** Reload from config (stub for expansion) */
+    public void reloadFromConfig() {
+        // Reload default settings from config.yml if required
     }
 }

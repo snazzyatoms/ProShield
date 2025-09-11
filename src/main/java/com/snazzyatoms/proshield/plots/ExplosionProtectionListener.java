@@ -53,7 +53,7 @@ public class ExplosionProtectionListener implements Listener {
             return;
         }
 
-        // If explosions allowed, filter affected blocks so they can’t grief claims
+        // If explosions are allowed, filter affected blocks so they can’t grief claims
         Iterator<org.bukkit.block.Block> it = event.blockList().iterator();
         while (it.hasNext()) {
             org.bukkit.block.Block block = it.next();

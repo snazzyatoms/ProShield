@@ -125,10 +125,10 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
 
-        // ✅ New interactive GUI listeners
+        // ✅ New interactive GUI listeners (with proper back + refresh support)
         Bukkit.getPluginManager().registerEvents(new RolesListener(this, plotManager, roleManager, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new TrustListener(plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new UntrustListener(plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new TrustListener(this, plotManager, roleManager, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new UntrustListener(this, plotManager, roleManager, guiManager), this);
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {

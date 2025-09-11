@@ -15,15 +15,14 @@ import org.bukkit.inventory.meta.ItemMeta;
  * RolesMenuListener
  *
  * ✅ Handles clicks in the Roles menu.
- * ✅ Back button returns to the correct parent (player or admin).
- * ✅ Static menu (items can’t be moved).
+ * ✅ Back button returns to Player or Admin parent menu.
  */
 public class RolesMenuListener implements Listener {
 
-    private final GUIManager gui;
+    private final GUIManager guiManager;
 
-    public RolesMenuListener(ProShield plugin, GUIManager gui) {
-        this.gui = gui;
+    public RolesMenuListener(ProShield plugin, GUIManager guiManager) {
+        this.guiManager = guiManager;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -32,8 +31,10 @@ public class RolesMenuListener implements Listener {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         if (e.getCurrentItem() == null) return;
 
-        // ✅ Prevent item movement
-        e.setCancelled(true);
+        String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
+        if (!title.contains("claim roles")) return;
+
+        e.setCancelled(true); // no item movement
 
         ItemStack item = e.getCurrentItem();
         ItemMeta meta = item.getItemMeta();
@@ -41,18 +42,11 @@ public class RolesMenuListener implements Listener {
 
         String name = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
 
-        switch (name) {
-            case "back" -> {
-                boolean fromAdmin = player.hasPermission("proshield.admin");
-                if (fromAdmin) gui.openAdminMain(player);
-                else gui.openMain(player);
-
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            }
-            default -> {
-                // Later: implement role assignment logic
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            }
+        if (name.equals("back")) {
+            boolean fromAdmin = title.contains("admin");
+            if (fromAdmin) guiManager.openAdminMain(player); else guiManager.openMain(player);
         }
+
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
     }
 }

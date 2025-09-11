@@ -1,6 +1,7 @@
 // src/main/java/com/snazzyatoms/proshield/plots/FlagsListener.java
 package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -17,13 +18,15 @@ import org.bukkit.inventory.meta.ItemMeta;
  * ✅ Single toggle for buckets (matches PlotSettings)
  * ✅ Only owners + admins can flip flags (canEdit is checked via GUIManager)
  * ✅ Players hear a sound effect when toggling
- * ✅ Admins additionally get a debug chat message
+ * ✅ Admins optionally get a debug chat message (config-controlled)
  */
 public class FlagsListener implements Listener {
 
     private final PlotManager plots;
+    private final ProShield plugin;
 
-    public FlagsListener(PlotManager plots) {
+    public FlagsListener(ProShield plugin, PlotManager plots) {
+        this.plugin = plugin;
         this.plots = plots;
     }
 
@@ -83,8 +86,9 @@ public class FlagsListener implements Listener {
         // 🔊 Sound feedback (always for players)
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, newState ? 1.2f : 0.8f);
 
-        // 🛠️ Chat message only for admins
-        if (player.hasPermission("proshield.admin")) {
+        // 🛠️ Chat message only if admin + config allows
+        if (player.hasPermission("proshield.admin")
+                && plugin.getConfig().getBoolean("messages.admin-flag-chat", true)) {
             player.sendMessage(ChatColor.YELLOW + "Flag updated: " + ChatColor.AQUA + meta.getDisplayName());
         }
     }

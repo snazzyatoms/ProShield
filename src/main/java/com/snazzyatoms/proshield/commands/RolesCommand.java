@@ -17,10 +17,7 @@ import org.bukkit.entity.Player;
 /**
  * /roles command — opens the role management GUI for the current claim.
  *
- * ✅ Fixed:
- * - Uses correct messages.yml keys (error.*, not errors.*).
- * - Constructor matches ProShield.java registration.
- * - Consistent plot lookup (Chunk-based).
+ * ✅ Fixed for new GUIManager.openRolesGUI signature.
  */
 public class RolesCommand implements CommandExecutor {
 
@@ -60,7 +57,8 @@ public class RolesCommand implements CommandExecutor {
             return true;
         }
 
-        guiManager.openRolesGUI(player, plot);
+        boolean fromAdmin = player.hasPermission("proshield.admin");
+        guiManager.openRolesGUI(player, plot, fromAdmin);
         return true;
     }
 }

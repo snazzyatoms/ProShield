@@ -1,7 +1,6 @@
 // src/main/java/com/snazzyatoms/proshield/commands/CompassCommand.java
 package com.snazzyatoms.proshield.commands;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
@@ -18,14 +17,12 @@ import org.bukkit.entity.Player;
  */
 public class CompassCommand implements CommandExecutor {
 
-    private final ProShield plugin;
     private final CompassManager compassManager;
     private final MessagesUtil messages;
 
-    public CompassCommand(ProShield plugin, CompassManager compassManager) {
-        this.plugin = plugin;
+    public CompassCommand(CompassManager compassManager, MessagesUtil messages) {
         this.compassManager = compassManager;
-        this.messages = plugin.getMessagesUtil();
+        this.messages = messages;
     }
 
     @Override

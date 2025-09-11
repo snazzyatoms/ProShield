@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5
+# Version: 1.2.5+
 # ==========================================================
 # All protection features can be globally toggled here.
 # Individual claims may override via /flags GUI.
@@ -56,13 +56,18 @@ messages:
   prefix: "&3[ProShield] &r"
   debug-prefix: "&8[Debug] &r"
 
-  # Toggle whether players see "Entering Wilderness" messages.
-  # Prevents spam when roaming. Admins can also toggle this via GUI.
+  # 🔹 Wilderness entry toggle
+  # If true → players see "Entering Wilderness" when leaving claims.
+  # If false → wilderness entry messages are hidden to reduce chat spam.
+  # Admins can toggle this via /proshield or Admin GUI.
   show-wilderness: false
 
 gui:
   flags:
     title: "§dClaim Flags"
+  admin:
+    wilderness:
+      toggle-messages: true   # 🔹 Shows wilderness toggle in Admin GUI (new)
 
 # ==========================================================
 # Claim Defaults

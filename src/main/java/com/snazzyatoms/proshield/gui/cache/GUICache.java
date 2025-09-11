@@ -1,5 +1,6 @@
 package com.snazzyatoms.proshield.gui.cache;
 
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 
 import java.util.HashMap;
@@ -9,46 +10,55 @@ import java.util.UUID;
 /**
  * GUICache
  *
- * ✅ Tracks both Player and Admin menus per-player
- * ✅ Prevents duplicate inventories from being created repeatedly
- * ✅ Safe clearing when players quit
+ * Tracks which players have which GUIs open.
+ * - Supports Player menus
+ * - Supports Admin menus
+ * Prevents conflicts and makes listeners simpler.
  */
 public class GUICache {
 
     private final Map<UUID, Inventory> playerMenus = new HashMap<>();
     private final Map<UUID, Inventory> adminMenus = new HashMap<>();
 
-    /* -------------------------------------------------------
-     * PLAYER MENU
-     * ------------------------------------------------------- */
-    public void setPlayerMenu(UUID uuid, Inventory inv) {
-        playerMenus.put(uuid, inv);
+    /* -------------------------
+     * Player Menus
+     * ------------------------- */
+    public void setPlayerMenu(Player player, Inventory inv) {
+        playerMenus.put(player.getUniqueId(), inv);
     }
 
-    public Inventory getPlayerMenu(UUID uuid) {
-        return playerMenus.get(uuid);
+    public boolean isPlayerMenu(UUID uuid, Inventory inv) {
+        return playerMenus.containsKey(uuid) && playerMenus.get(uuid).equals(inv);
     }
 
-    /* -------------------------------------------------------
-     * ADMIN MENU
-     * ------------------------------------------------------- */
-    public void setAdminMenu(UUID uuid, Inventory inv) {
-        adminMenus.put(uuid, inv);
+    public void clearPlayerMenu(UUID uuid) {
+        playerMenus.remove(uuid);
     }
 
-    public Inventory getAdminMenu(UUID uuid) {
-        return adminMenus.get(uuid);
+    /* -------------------------
+     * Admin Menus
+     * ------------------------- */
+    public void setAdminMenu(Player player, Inventory inv) {
+        adminMenus.put(player.getUniqueId(), inv);
     }
 
-    /* -------------------------------------------------------
-     * CLEANUP
-     * ------------------------------------------------------- */
-    public void clear(UUID uuid) {
+    public boolean isAdminMenu(UUID uuid, Inventory inv) {
+        return adminMenus.containsKey(uuid) && adminMenus.get(uuid).equals(inv);
+    }
+
+    public void clearAdminMenu(UUID uuid) {
+        adminMenus.remove(uuid);
+    }
+
+    /* -------------------------
+     * Global
+     * ------------------------- */
+    public void clearAll(UUID uuid) {
         playerMenus.remove(uuid);
         adminMenus.remove(uuid);
     }
 
-    public void clearAll() {
+    public void clearCache() {
         playerMenus.clear();
         adminMenus.clear();
     }

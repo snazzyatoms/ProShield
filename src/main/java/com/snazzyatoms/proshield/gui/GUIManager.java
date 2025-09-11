@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.gui;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -15,15 +16,11 @@ import java.util.Arrays;
 /**
  * GUIManager
  *
- * Handles all menus:
- * - Main menu (player)
- * - Flags menu
- * - Roles menu
- * - Trust/untrust menus
- * - Transfer ownership
- * - Admin menu
- *
- * Uses GUICache to track which menu a player is viewing.
+ * ✅ Central place for opening ProShield GUIs.
+ * ✅ Handles both player & admin menus.
+ * ✅ All methods used by commands/listeners exist here:
+ *    - openMain, openFlagsMenu, openRolesMenu, openTransferMenu
+ *    - openTrustMenu, openUntrustMenu
  */
 public class GUIManager {
 
@@ -35,113 +32,107 @@ public class GUIManager {
         this.cache = cache;
     }
 
-    /* -------------------------
-     * Main Menu
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * MAIN MENU
+     * ------------------------------------------------------- */
     public void openMain(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§dProShield Menu");
+        Inventory inv = Bukkit.createInventory(null, 27, "§aProShield Menu");
 
-        inv.setItem(11, menuItem(Material.PAPER, "§eFlags", "Toggle claim flags"));
-        inv.setItem(13, menuItem(Material.BOOK, "§bRoles", "Manage claim roles"));
-        inv.setItem(15, menuItem(Material.ENDER_PEARL, "§aTransfer", "Transfer ownership"));
+        inv.setItem(10, createItem(Material.BOOK, "§eFlags", "§7Manage your claim flags"));
+        inv.setItem(12, createItem(Material.PLAYER_HEAD, "§bTrust", "§7Trust a player into your claim"));
+        inv.setItem(14, createItem(Material.BARRIER, "§cUntrust", "§7Remove a trusted player"));
+        inv.setItem(16, createItem(Material.PAPER, "§dRoles", "§7Assign roles to trusted players"));
+        inv.setItem(22, createItem(Material.CHEST, "§6Transfer", "§7Transfer claim ownership"));
 
+        cache.setPlayerMenu(player.getUniqueId(), inv);
         player.openInventory(inv);
-        cache.setPlayerMenu(player, inv);
     }
 
-    /* -------------------------
-     * Flags Menu
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * FLAGS MENU
+     * ------------------------------------------------------- */
     public void openFlagsMenu(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, "§dClaim Flags");
 
-        inv.setItem(11, menuItem(Material.REDSTONE_TORCH, "§cPvP", "Toggle PvP inside this claim"));
-        inv.setItem(13, menuItem(Material.TNT, "§cExplosions", "Toggle explosions inside this claim"));
-        inv.setItem(15, menuItem(Material.FLINT_AND_STEEL, "§cFire", "Toggle fire inside this claim"));
+        inv.setItem(11, createItem(Material.IRON_SWORD, "§cPvP", "§7Toggle PvP inside claim"));
+        inv.setItem(13, createItem(Material.TNT, "§cExplosions", "§7Allow or block TNT/creeper explosions"));
+        inv.setItem(15, createItem(Material.FLINT_AND_STEEL, "§6Fire", "§7Allow or block fire spread/ignite"));
 
+        cache.setPlayerMenu(player.getUniqueId(), inv);
         player.openInventory(inv);
-        cache.setPlayerMenu(player, inv);
     }
 
-    /* -------------------------
-     * Roles Menu
-     * ------------------------- */
-    public void openRolesGUI(Player player, Plot plot) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§dClaim Roles");
+    /* -------------------------------------------------------
+     * ROLES MENU
+     * ------------------------------------------------------- */
+    public void openRolesMenu(Player player, Plot plot) {
+        Inventory inv = Bukkit.createInventory(null, 27, "§bClaim Roles");
 
-        inv.setItem(11, menuItem(Material.IRON_SWORD, "§bBuilders", "Players who can build"));
-        inv.setItem(13, menuItem(Material.CHEST, "§aContainers", "Players who can open containers"));
-        inv.setItem(15, menuItem(Material.NAME_TAG, "§eManagers", "Players who can manage claim"));
+        inv.setItem(10, createItem(Material.WOODEN_PICKAXE, "§7Builder", "§7Trusted player can build"));
+        inv.setItem(12, createItem(Material.CHEST, "§6Container Access", "§7Open/use containers"));
+        inv.setItem(14, createItem(Material.IRON_DOOR, "§aRedstone Access", "§7Use buttons/levers/doors"));
+        inv.setItem(16, createItem(Material.NETHER_STAR, "§dAdmin Role", "§7Full trusted access"));
 
+        cache.setPlayerMenu(player.getUniqueId(), inv);
         player.openInventory(inv);
-        cache.setPlayerMenu(player, inv);
     }
 
-    /* -------------------------
-     * Transfer Menu
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * TRANSFER MENU
+     * ------------------------------------------------------- */
     public void openTransferMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§dTransfer Ownership");
+        Inventory inv = Bukkit.createInventory(null, 9, "§6Transfer Claim");
 
-        inv.setItem(13, menuItem(Material.PAPER, "§aTransfer", "Select a player to transfer ownership"));
+        inv.setItem(4, createItem(Material.NAME_TAG, "§eTransfer Ownership",
+                "§7Transfer this claim to another player"));
 
+        cache.setPlayerMenu(player.getUniqueId(), inv);
         player.openInventory(inv);
-        cache.setPlayerMenu(player, inv);
     }
 
-    /* -------------------------
-     * Trust Menu
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * TRUST MENU
+     * ------------------------------------------------------- */
     public void openTrustMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§dTrust Player");
+        Inventory inv = Bukkit.createInventory(null, 9, "§bTrust Player");
 
-        inv.setItem(13, menuItem(Material.PLAYER_HEAD, "§aTrust", "Trust a player"));
+        inv.setItem(4, createItem(Material.PLAYER_HEAD, "§aTrust Player",
+                "§7Trust someone into your claim"));
 
+        cache.setPlayerMenu(player.getUniqueId(), inv);
         player.openInventory(inv);
-        cache.setPlayerMenu(player, inv);
     }
 
-    /* -------------------------
-     * Untrust Menu
-     * ------------------------- */
+    /* -------------------------------------------------------
+     * UNTRUST MENU
+     * ------------------------------------------------------- */
     public void openUntrustMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§dUntrust Player");
+        Inventory inv = Bukkit.createInventory(null, 9, "§cUntrust Player");
 
-        inv.setItem(13, menuItem(Material.PLAYER_HEAD, "§cUntrust", "Remove a player’s trust"));
+        inv.setItem(4, createItem(Material.BARRIER, "§cUntrust Player",
+                "§7Remove someone from your trusted list"));
 
+        cache.setPlayerMenu(player.getUniqueId(), inv);
         player.openInventory(inv);
-        cache.setPlayerMenu(player, inv);
     }
 
-    /* -------------------------
-     * Admin Menu
-     * ------------------------- */
-    public void openAdminMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§4Admin Menu");
-
-        inv.setItem(11, menuItem(Material.COMPASS, "§cTeleport", "Teleport to claims"));
-        inv.setItem(13, menuItem(Material.BARRIER, "§cForce Unclaim", "Unclaim land as admin"));
-        inv.setItem(15, menuItem(Material.BOOK, "§cFlags", "Toggle claim flags as admin"));
-
-        player.openInventory(inv);
-        cache.setAdminMenu(player, inv);
-    }
-
-    /* -------------------------
-     * Utilities
-     * ------------------------- */
-    private ItemStack menuItem(Material mat, String name, String... lore) {
+    /* -------------------------------------------------------
+     * HELPERS
+     * ------------------------------------------------------- */
+    private ItemStack createItem(Material mat, String name, String... lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(name);
-            meta.setLore(Arrays.asList(lore));
+            if (lore.length > 0) {
+                meta.setLore(Arrays.asList(lore));
+            }
             item.setItemMeta(meta);
         }
         return item;
     }
 
-    public void clearCache() {
-        cache.clearCache();
+    public GUICache getCache() {
+        return cache;
     }
 }

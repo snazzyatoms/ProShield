@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -187,22 +188,17 @@ public class GUIManager implements Listener {
         p.openInventory(inv);
     }
 
-    private void openRolesInternal(Player p, Plot plot) {
-        openRolesInternal(p); // Expand later for per-plot GUI
-    }
-
+    private void openRolesInternal(Player p, Plot plot) { openRolesInternal(p); }
     private void openTrustInternal(Player p) {
         Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_TRUST);
         set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to Roles")));
         p.openInventory(inv);
     }
-
     private void openUntrustInternal(Player p) {
         Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_UNTRUST);
         set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to Roles")));
         p.openInventory(inv);
     }
-
     private void openTransferInternal(Player p) {
         Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_TRANSFER);
         set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to main menu")));
@@ -277,10 +273,18 @@ public class GUIManager implements Listener {
         switch (name) {
             case "wilderness messages" -> {
                 boolean current = plugin.getConfig().getBoolean("messages.show-wilderness", false);
-                boolean next = !current;
-                plugin.getConfig().set("messages.show-wilderness", next);
+                plugin.getConfig().set("messages.show-wilderness", !current);
                 plugin.saveConfig();
-                msg.send(p, next ? "admin.wilderness-toggle-on" : "admin.wilderness-toggle-off");
+                p.sendMessage(ChatColor.YELLOW + "Wilderness messages: " +
+                        (!current ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
+                openAdminWilderness(p);
+            }
+            case "flag chat debug" -> {
+                boolean current = plugin.getConfig().getBoolean("messages.admin-flag-chat", true);
+                plugin.getConfig().set("messages.admin-flag-chat", !current);
+                plugin.saveConfig();
+                p.sendMessage(ChatColor.YELLOW + "Admin flag chat debug: " +
+                        (!current ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
                 openAdminWilderness(p);
             }
             case "back" -> openAdminInternal(p);
@@ -322,11 +326,15 @@ public class GUIManager implements Listener {
         set(inv, 14, make(Material.BARRIER, "Unclaim Here", List.of("Remove the claim in this chunk.")));
 
         // Wilderness message toggle
-        boolean enabled = plugin.getConfig().getBoolean("messages.show-wilderness", false);
-        set(inv, 15, toggleItem(Material.OAK_SIGN, "Wilderness Messages", enabled));
+        boolean wildMsgEnabled = plugin.getConfig().getBoolean("messages.show-wilderness", false);
+        set(inv, 15, toggleItem(Material.OAK_SIGN, "Wilderness Messages", wildMsgEnabled));
+
+        // 🔹 NEW: Admin flag-chat debug toggle
+        boolean flagChatEnabled = plugin.getConfig().getBoolean("messages.admin-flag-chat", true);
+        set(inv, 16, toggleItem(Material.PAPER, "Flag Chat Debug", flagChatEnabled));
 
         // Back
-        set(inv, 16, make(Material.OAK_DOOR, "Back", List.of("Return to Admin")));
+        set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to Admin")));
 
         p.openInventory(inv);
     }

@@ -85,34 +85,24 @@ public class ProShield extends JavaPlugin {
         registerCommand("flags", new FlagsCommand(guiManager)); // ✅ FIXED constructor
     }
 
-private void registerListeners() {
-    Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager), this);
-    Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
-    Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
+    private void registerListeners() {
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
 
-    Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager, messages), this);
-    Bukkit.getPluginManager().registerEvents(new FireProtectionListener(this, plotManager, messages), this);
-    Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
-    Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this);
-    Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
-    Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new FireProtectionListener(this, plotManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager, messages), this);
 
-    // only once ✅
-    Bukkit.getPluginManager().registerEvents(new DamageProtectionListener(plotManager, messages), this);
+        // ✅ only once
+        Bukkit.getPluginManager().registerEvents(new DamageProtectionListener(plotManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this);
 
-    Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this);
-    Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
-    Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
-    Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
-}
-
-
-        // ✅ Fixed ClaimMessageListener args
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
-
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
-
-        // ✅ Fixed FlagsListener args (ProShield, PlotManager)
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
     }
 

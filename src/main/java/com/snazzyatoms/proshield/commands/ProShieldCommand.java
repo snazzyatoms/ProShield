@@ -2,113 +2,89 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 /**
- * Main /proshield command executor
+ * /proshield command
  *
- * ✅ Preserves prior logic
- * ✅ Fixed reload, cache clear, compass, and debug toggle
+ * ✅ Admin + general utility command dispatcher.
+ * ✅ Handles cache clearing, reload, compass distribution, debug toggle.
+ * ✅ Uses CompassManager + GUICache instead of deprecated GUIManager calls.
  */
 public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
     private final GUIManager guiManager;
     private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plotManager, GUIManager guiManager) {
+    public ProShieldCommand(ProShield plugin, com.snazzyatoms.proshield.plots.PlotManager plotManager, GUIManager guiManager) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
         this.guiManager = guiManager;
         this.messages = plugin.getMessagesUtil();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+
         if (args.length == 0) {
-            messages.send(sender, "help.header", "&7Use &a/proshield help &7for commands.");
+            messages.send(sender, "usage.proshield");
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
+        String sub = args[0].toLowerCase();
+
+        switch (sub) {
             case "reload" -> {
                 if (!sender.hasPermission("proshield.admin.reload")) {
-                    messages.send(sender, "no-permission", "&cYou lack permission.");
+                    messages.send(sender, "error.no-permission");
                     return true;
                 }
-
                 plugin.reloadConfig();
-                messages.reload();
-
-                // Reload claim configs
-                plotManager.reloadFromConfig();
-
-                // Clear GUI cache if available
-                if (guiManager != null) {
-                    guiManager.clearCache();
-                }
-
-                messages.broadcastConsole("messages.reloaded", Bukkit.getConsoleSender());
-                messages.send(sender, "reloaded", "&aProShield reloaded.");
-                return true;
+                messages.send(sender, "prefix", "&aProShield configuration reloaded.");
             }
 
-            case "bypass" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can toggle bypass.");
+            case "clearcache" -> {
+                if (!sender.hasPermission("proshield.admin")) {
+                    messages.send(sender, "error.no-permission");
                     return true;
                 }
-                if (!sender.hasPermission("proshield.bypass")) {
-                    messages.send(sender, "no-permission", "&cYou lack permission.");
-                    return true;
-                }
-                boolean newState = plugin.toggleBypass(player);
-                messages.send(player, newState ? "admin.bypass-on" : "admin.bypass-off");
-                return true;
+                plugin.getGuiCache().clearCache();
+                messages.send(sender, "prefix", "&eAll GUI caches cleared.");
             }
 
             case "debug" -> {
                 if (!sender.hasPermission("proshield.admin.debug")) {
-                    messages.send(sender, "no-permission", "&cYou lack permission.");
+                    messages.send(sender, "error.no-permission");
                     return true;
                 }
-                boolean newDebug = plugin.toggleDebug();
-                sender.sendMessage("§eProShield debug: " + (newDebug ? "§aON" : "§cOFF"));
-                return true;
+                boolean debug = plugin.toggleDebug();
+                messages.send(sender, "prefix", "&eDebug mode: " + (debug ? "&aON" : "&cOFF"));
             }
 
             case "compass" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage("Only players can get the compass.");
+                    messages.send(sender, "error.players-only");
                     return true;
                 }
-                if (!sender.hasPermission("proshield.compass")) {
-                    messages.send(sender, "no-permission", "&cYou lack permission.");
+                if (!player.hasPermission("proshield.compass")) {
+                    messages.send(player, "error.no-permission");
                     return true;
                 }
-
-                // Gracefully handle giveCompass() missing
-                try {
-                    guiManager.giveCompass(player, true);
-                    messages.send(player, "compass.given", "&aYou received a ProShield compass.");
-                } catch (NoSuchMethodError ignored) {
-                    player.sendMessage("§cCompass feature is not available in this build.");
-                }
-                return true;
+                CompassManager.giveCompass(player, player.isOp());
+                messages.send(player, "prefix", "&aProShield compass has been given.");
             }
 
             default -> {
-                messages.send(sender, "help.unknown", "&cUnknown subcommand.");
-                return true;
+                messages.send(sender, "usage.proshield");
             }
         }
+
+        return true;
     }
 }

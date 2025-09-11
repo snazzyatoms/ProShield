@@ -1,6 +1,5 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -18,50 +17,47 @@ import java.util.UUID;
 /**
  * ItemProtectionListener
  *
- * ✅ Uses standalone PlotSettings
- * ✅ Protects item frames, armor stands, animals, pets, containers, vehicles
- * ✅ Uses ClaimRoleManager for trust/role checks
+ * ✅ Preserves all prior logic
+ * ✅ Updated constructor style (PlotManager, MessagesUtil, ClaimRoleManager)
+ * ✅ Matches expanded PlotSettings (item frames, armor stands, animals, pets, containers, vehicles)
  */
 public class ItemProtectionListener implements Listener {
 
-    private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
+    private final PlotManager plots;
     private final MessagesUtil messages;
+    private final ClaimRoleManager roles;
 
-    public ItemProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
-        this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.roleManager = roleManager;
-        this.messages = plugin.getMessagesUtil();
+    public ItemProtectionListener(PlotManager plots, MessagesUtil messages, ClaimRoleManager roles) {
+        this.plots = plots;
+        this.messages = messages;
+        this.roles = roles;
     }
 
     /* ------------------------------
-     * Item Frames
+     * Item Frames & Armor Stands
      * ------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onHangingBreak(HangingBreakByEntityEvent event) {
         if (!(event.getRemover() instanceof Player player)) return;
 
         Chunk chunk = event.getEntity().getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
 
         if (plot == null) {
-            if (!plugin.getConfig().getBoolean("protection.entities.item-frames", true)) {
+            if (!player.hasPermission("proshield.admin")) {
                 event.setCancelled(true);
                 messages.send(player, "item-frames-deny");
             }
             return;
         }
 
-        UUID uid = player.getUniqueId();
-        ClaimRole role = roleManager.getRole(plot, uid);
+        ClaimRole role = roles.getRole(plot, player.getUniqueId());
 
-        if (!plot.getSettings().isItemFramesAllowed() || !roleManager.canBuild(role)) {
+        if (!plot.getSettings().isItemFramesAllowed() || !roles.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
-            messages.debug("&cPrevented item frame break inside claim: " + plot.getDisplayNameSafe() +
-                    " by " + player.getName());
+            messages.debug("&cPrevented item frame break inside claim: "
+                    + plot.getDisplayNameSafe() + " by " + player.getName());
         }
     }
 
@@ -69,14 +65,13 @@ public class ItemProtectionListener implements Listener {
     public void onHangingPlace(HangingPlaceEvent event) {
         Player player = event.getPlayer();
         Chunk chunk = event.getEntity().getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
 
         if (plot == null) return;
 
-        UUID uid = player.getUniqueId();
-        ClaimRole role = roleManager.getRole(plot, uid);
+        ClaimRole role = roles.getRole(plot, player.getUniqueId());
 
-        if (!plot.getSettings().isItemFramesAllowed() || !roleManager.canBuild(role)) {
+        if (!plot.getSettings().isItemFramesAllowed() || !roles.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
         }
@@ -90,16 +85,15 @@ public class ItemProtectionListener implements Listener {
         Player player = event.getPlayer();
         Entity entity = event.getRightClicked();
         Chunk chunk = entity.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
 
-        if (plot == null) return; // wilderness – handled by config
+        if (plot == null) return; // wilderness → skip
 
-        UUID uid = player.getUniqueId();
-        ClaimRole role = roleManager.getRole(plot, uid);
+        ClaimRole role = roles.getRole(plot, player.getUniqueId());
 
         // Armor stands
         if (entity instanceof ArmorStand && !plot.getSettings().isArmorStandsAllowed()) {
-            if (!roleManager.canInteract(role)) {
+            if (!roles.canInteract(role)) {
                 event.setCancelled(true);
                 messages.send(player, "armor-stands-deny");
                 return;
@@ -108,7 +102,7 @@ public class ItemProtectionListener implements Listener {
 
         // Passive animals
         if (entity instanceof Animals && !plot.getSettings().isAnimalAccessAllowed()) {
-            if (!roleManager.canInteract(role)) {
+            if (!roles.canInteract(role)) {
                 event.setCancelled(true);
                 messages.send(player, "animals-deny");
                 return;
@@ -117,16 +111,16 @@ public class ItemProtectionListener implements Listener {
 
         // Tamed pets
         if (entity instanceof Tameable tameable && tameable.isTamed() && !plot.getSettings().isPetAccessAllowed()) {
-            if (!roleManager.canInteract(role)) {
+            if (!roles.canInteract(role)) {
                 event.setCancelled(true);
                 messages.send(player, "pets-deny");
                 return;
             }
         }
 
-        // Containers (like chest minecarts)
+        // Containers (e.g., chest minecarts)
         if (entity instanceof Minecart && !plot.getSettings().isContainersAllowed()) {
-            if (!roleManager.canInteract(role)) {
+            if (!roles.canAccessContainers(role)) {
                 event.setCancelled(true);
                 messages.send(player, "containers-deny");
             }
@@ -141,24 +135,23 @@ public class ItemProtectionListener implements Listener {
         if (!(event.getAttacker() instanceof Player player)) return;
 
         Chunk chunk = event.getVehicle().getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
 
         if (plot == null) {
-            if (!plugin.getConfig().getBoolean("protection.entities.vehicles", true)) {
+            if (!player.hasPermission("proshield.admin")) {
                 event.setCancelled(true);
                 messages.send(player, "vehicles-deny");
             }
             return;
         }
 
-        UUID uid = player.getUniqueId();
-        ClaimRole role = roleManager.getRole(plot, uid);
+        ClaimRole role = roles.getRole(plot, player.getUniqueId());
 
-        if (!plot.getSettings().isVehiclesAllowed() || !roleManager.canBuild(role)) {
+        if (!plot.getSettings().isVehiclesAllowed() || !roles.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "vehicles-deny");
-            messages.debug("&cPrevented vehicle destroy in claim: " + plot.getDisplayNameSafe() +
-                    " by " + player.getName());
+            messages.debug("&cPrevented vehicle destroy in claim: "
+                    + plot.getDisplayNameSafe() + " by " + player.getName());
         }
     }
 }

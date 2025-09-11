@@ -25,6 +25,7 @@ import java.util.UUID;
  * ✅ Assigns ClaimRole from enum (Visitor → Manager).
  * ✅ Prevents moving items.
  * ✅ Feedback via sounds + updated GUI refresh.
+ * ✅ Supports back button (returns to correct parent menu).
  */
 public class RolesListener implements Listener {
 
@@ -56,6 +57,14 @@ public class RolesListener implements Listener {
         Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) return;
 
+        // ✅ Handle back button
+        if (name.equals("back")) {
+            boolean fromAdmin = player.hasPermission("proshield.admin");
+            gui.openMain(player);
+            if (fromAdmin) gui.openAdminMain(player);
+            return;
+        }
+
         // Only owner or admin can assign roles
         if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
@@ -68,14 +77,7 @@ public class RolesListener implements Listener {
             return;
         }
 
-        ClaimRole chosen = null;
-        for (ClaimRole role : ClaimRole.values()) {
-            if (name.contains(role.name().toLowerCase())) {
-                chosen = role;
-                break;
-            }
-        }
-
+        ClaimRole chosen = matchRole(name);
         if (chosen == null || chosen == ClaimRole.OWNER) return; // skip invalid or owner
 
         // ✅ Assign role
@@ -90,5 +92,18 @@ public class RolesListener implements Listener {
         // ✅ Refresh GUI
         boolean fromAdmin = player.hasPermission("proshield.admin");
         gui.openRolesGUI(player, plot, fromAdmin);
+    }
+
+    /* ----------------------------------------
+     * Helper: Match item name to ClaimRole enum
+     * ---------------------------------------- */
+    private ClaimRole matchRole(String name) {
+        for (ClaimRole role : ClaimRole.values()) {
+            if (name.equalsIgnoreCase(role.name()) ||
+                name.contains(role.getDisplayName().toLowerCase())) {
+                return role;
+            }
+        }
+        return null;
     }
 }

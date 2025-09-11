@@ -1,67 +1,141 @@
-/* -------------------------------------------------------
-     * Claim CRUD
+package com.snazzyatoms.proshield.plots;
+
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * PlotManager - central storage and persistence for plots.
+ *
+ * Preserves prior logic:
+ * - Loads/saves plots
+ * - Async saving
+ * - Lookups by Location/Chunk
+ * - Claim/unclaim support
+ */
+public class PlotManager {
+
+    private final ProShield plugin;
+    private final Map<String, Plot> plots = new ConcurrentHashMap<>();
+    private final File file;
+    private final FileConfiguration config;
+
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
+        this.file = new File(plugin.getDataFolder(), "plots.yml");
+        this.config = YamlConfiguration.loadConfiguration(file);
+        loadAll();
+    }
+
+    /* -------------------------------------------------------
+     * Keys & Helpers
+     * ------------------------------------------------------- */
+
+    private String key(Chunk chunk) {
+        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
+    }
+
+    private String key(Location loc) {
+        return loc.getWorld().getName() + "," + loc.getChunk().getX() + "," + loc.getChunk().getZ();
+    }
+
+    /* -------------------------------------------------------
+     * Getters
      * ------------------------------------------------------- */
 
     public Plot getPlot(Chunk chunk) {
-        if (chunk == null) return null;
-        return getPlot(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+        return plots.get(key(chunk));
     }
 
-    public Plot getPlot(String world, int x, int z) {
-        return claims.getOrDefault(world, Collections.emptyMap()).get(key(x, z));
+    public Plot getPlot(Location loc) {
+        return plots.get(key(loc));
     }
 
-    public Plot getClaim(Location loc) {
-        if (loc == null) return null;
-        return getPlot(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ());
-    }
-
-    public boolean isClaimed(Location loc) {
-        return getClaim(loc) != null;
-    }
-
-    public boolean isOwner(UUID playerId, Plot plot) {
-        return plot != null && playerId != null && playerId.equals(plot.getOwner());
-    }
-
-    public Collection<Plot> getClaims() {
-        List<Plot> list = new ArrayList<>();
-        for (Map<String, Plot> perWorld : claims.values()) {
-            list.addAll(perWorld.values());
+    public boolean hasAnyClaim(UUID playerId) {
+        for (Plot plot : plots.values()) {
+            if (plot.isOwner(playerId)) return true;
         }
-        return list;
+        return false;
     }
 
-    public void addPlot(Plot plot) {
-        claims.computeIfAbsent(plot.getWorldName(), w -> new ConcurrentHashMap<>())
-                .put(key(plot.getX(), plot.getZ()), plot);
-        saveAsync(plot);
+    public String getClaimName(Location loc) {
+        Plot plot = getPlot(loc);
+        return (plot != null) ? plot.getDisplayNameSafe() : null;
     }
 
-    public void removePlot(Plot plot) {
-        Map<String, Plot> worldClaims = claims.get(plot.getWorldName());
-        if (worldClaims != null) {
-            worldClaims.remove(key(plot.getX(), plot.getZ()));
-        }
-        saveAsync();
-    }
+    /* -------------------------------------------------------
+     * Claim / Unclaim
+     * ------------------------------------------------------- */
 
-    /**
-     * Create a new claim at the given location if unclaimed.
-     * 
-     * @param owner Player UUID
-     * @param loc   Location to claim (uses its chunk)
-     * @return new Plot if created, or null if already claimed/invalid
-     */
     public Plot createClaim(UUID owner, Location loc) {
-        if (owner == null || loc == null) return null;
-
         Chunk chunk = loc.getChunk();
-        if (getPlot(chunk) != null) {
-            return null; // already claimed
-        }
+        String k = key(chunk);
+        if (plots.containsKey(k)) return plots.get(k);
 
         Plot plot = new Plot(chunk, owner);
-        addPlot(plot);
+        plots.put(k, plot);
+        saveAsync(plot);
         return plot;
     }
+
+    public void unclaim(Chunk chunk) {
+        String k = key(chunk);
+        plots.remove(k);
+        config.set(k, null);
+        saveFile();
+    }
+
+    /* -------------------------------------------------------
+     * Persistence
+     * ------------------------------------------------------- */
+
+    public void saveAsync(Plot plot) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> save(plot));
+    }
+
+    private void save(Plot plot) {
+        String k = plot.getWorldName() + "," + plot.getX() + "," + plot.getZ();
+        config.set(k, plot.serialize());
+        saveFile();
+    }
+
+    private void saveFile() {
+        try {
+            config.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadAll() {
+        if (config.getKeys(false).isEmpty()) return;
+        for (String key : config.getKeys(false)) {
+            String[] parts = key.split(",");
+            if (parts.length < 3) continue;
+            String worldName = parts[0];
+            int x = Integer.parseInt(parts[1]);
+            int z = Integer.parseInt(parts[2]);
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) continue;
+
+            Chunk chunk = world.getChunkAt(x, z);
+            Plot plot = Plot.deserialize(config.getConfigurationSection(key));
+            if (plot != null) {
+                plots.put(key, plot);
+            }
+        }
+    }
+
+    public Collection<Plot> getAllPlots() {
+        return plots.values();
+    }
+}

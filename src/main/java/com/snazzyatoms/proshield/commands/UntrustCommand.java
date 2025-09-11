@@ -48,7 +48,7 @@ public class UntrustCommand implements CommandExecutor {
             return true;
         }
 
-        // Resolve target (allow offline)
+        // Resolve target (offline safe)
         OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
         if (targetOP == null) {
             targetOP = Bukkit.getOfflinePlayer(args[0]);
@@ -60,7 +60,7 @@ public class UntrustCommand implements CommandExecutor {
 
         UUID target = targetOP.getUniqueId();
 
-        // Must be in a claim
+        // Must be inside a claim
         Optional<Plot> claimOpt = plotManager.getClaim(player.getLocation());
         if (claimOpt.isEmpty()) {
             messages.send(player, "error.not-in-claim");
@@ -68,7 +68,7 @@ public class UntrustCommand implements CommandExecutor {
         }
         Plot plot = claimOpt.get();
 
-        // Only owner/admin can modify trust
+        // Only owner/admin can untrust
         if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
             messages.send(player, "error.cannot-modify-claim");
             return true;
@@ -81,7 +81,7 @@ public class UntrustCommand implements CommandExecutor {
             return true;
         }
 
-        // Delegate to role manager (handles removal + async save)
+        // Delegate removal to role manager (saves via PlotManager)
         roles.untrustPlayer(plot, target);
 
         // Feedback

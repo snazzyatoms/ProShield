@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotSettings.java
 package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -11,7 +10,8 @@ import java.util.Map;
  * Stores all per-claim toggles.
  *
  * ✅ Preserves all prior logic
- * ✅ Expanded with missing flags (animalInteractAllowed, fireSpreadAllowed, etc.)
+ * ✅ Expanded with missing flags to fix build errors
+ * ✅ Includes fireSpreadAllowed for FireProtectionListener
  */
 public class PlotSettings {
 
@@ -29,7 +29,7 @@ public class PlotSettings {
 
     // Fire / redstone / grief
     private boolean fireAllowed = false;
-    private boolean fireSpreadAllowed = false; // 🔥 newly added
+    private boolean fireSpreadAllowed = false; // 🔥 NEW
     private boolean redstoneAllowed = true;
     private boolean entityGriefingAllowed = false;
 
@@ -54,9 +54,6 @@ public class PlotSettings {
     // Keep drops
     private boolean keepItemsEnabled = false;
 
-    // Interaction
-    private boolean animalInteractAllowed = false; // 🐑 newly added
-
     /* -----------------
      * Getters
      * ----------------- */
@@ -70,7 +67,7 @@ public class PlotSettings {
     public boolean isVehiclesAllowed() { return vehiclesAllowed; }
 
     public boolean isFireAllowed() { return fireAllowed; }
-    public boolean isFireSpreadAllowed() { return fireSpreadAllowed; }
+    public boolean isFireSpreadAllowed() { return fireSpreadAllowed; } // 🔥 NEW
     public boolean isRedstoneAllowed() { return redstoneAllowed; }
     public boolean isEntityGriefingAllowed() { return entityGriefingAllowed; }
 
@@ -92,8 +89,6 @@ public class PlotSettings {
 
     public boolean isKeepItemsEnabled() { return keepItemsEnabled; }
 
-    public boolean isAnimalInteractAllowed() { return animalInteractAllowed; }
-
     /* -----------------
      * Setters
      * ----------------- */
@@ -107,7 +102,7 @@ public class PlotSettings {
     public void setVehiclesAllowed(boolean b) { vehiclesAllowed = b; }
 
     public void setFireAllowed(boolean b) { fireAllowed = b; }
-    public void setFireSpreadAllowed(boolean b) { fireSpreadAllowed = b; }
+    public void setFireSpreadAllowed(boolean b) { fireSpreadAllowed = b; } // 🔥 NEW
     public void setRedstoneAllowed(boolean b) { redstoneAllowed = b; }
     public void setEntityGriefingAllowed(boolean b) { entityGriefingAllowed = b; }
 
@@ -129,8 +124,6 @@ public class PlotSettings {
 
     public void setKeepItemsEnabled(boolean b) { keepItemsEnabled = b; }
 
-    public void setAnimalInteractAllowed(boolean b) { animalInteractAllowed = b; }
-
     /* -----------------
      * Serialization
      * ----------------- */
@@ -146,7 +139,7 @@ public class PlotSettings {
         map.put("vehicles", vehiclesAllowed);
 
         map.put("fire", fireAllowed);
-        map.put("fireSpread", fireSpreadAllowed);
+        map.put("fireSpread", fireSpreadAllowed); // 🔥 NEW
         map.put("redstone", redstoneAllowed);
         map.put("entityGriefing", entityGriefingAllowed);
 
@@ -167,8 +160,6 @@ public class PlotSettings {
         map.put("mobDespawnInside", mobDespawnInsideEnabled);
 
         map.put("keepItems", keepItemsEnabled);
-
-        map.put("animalInteract", animalInteractAllowed);
         return map;
     }
 
@@ -185,7 +176,7 @@ public class PlotSettings {
         vehiclesAllowed = sec.getBoolean("vehicles", vehiclesAllowed);
 
         fireAllowed = sec.getBoolean("fire", fireAllowed);
-        fireSpreadAllowed = sec.getBoolean("fireSpread", fireSpreadAllowed);
+        fireSpreadAllowed = sec.getBoolean("fireSpread", fireSpreadAllowed); // 🔥 NEW
         redstoneAllowed = sec.getBoolean("redstone", redstoneAllowed);
         entityGriefingAllowed = sec.getBoolean("entityGriefing", entityGriefingAllowed);
 
@@ -206,7 +197,5 @@ public class PlotSettings {
         mobDespawnInsideEnabled = sec.getBoolean("mobDespawnInside", mobDespawnInsideEnabled);
 
         keepItemsEnabled = sec.getBoolean("keepItems", keepItemsEnabled);
-
-        animalInteractAllowed = sec.getBoolean("animalInteract", animalInteractAllowed);
     }
 }

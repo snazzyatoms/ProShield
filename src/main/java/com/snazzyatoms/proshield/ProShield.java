@@ -29,47 +29,54 @@ public class ProShield extends JavaPlugin {
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
 
+    // Repel tasks
+    private EntityMobRepelTask mobRepelTask;
+    private EntityBorderRepelTask borderRepelTask;
+
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
 
+        // Managers
         messages = new MessagesUtil(this);
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
-        guiCache = new GUICache(new GUIManager(this)); // GUIManager still manages GUIs
-        guiManager = guiCache.getGuiManager();
+        guiCache = new GUICache(guiManager); // tie GUI cache
+        guiManager = new GUIManager(this, guiCache);
 
         registerCommands();
         registerListeners();
 
-        // ✅ Schedule mob repel task (runs every 5 seconds)
-        Bukkit.getScheduler().runTaskTimer(this,
-                new EntityMobRepelTask(this, plotManager),
-                20L * 5, 20L * 5
-        );
+        // Start repel tasks
+        mobRepelTask = new EntityMobRepelTask(this, plotManager);
+        mobRepelTask.start();
 
-        messages.send(getServer().getConsoleSender(), "prefix", "&aProShield v" + getDescription().getVersion() + " enabled!");
+        borderRepelTask = new EntityBorderRepelTask(this, plotManager);
+        borderRepelTask.start();
+
+        messages.send(getServer().getConsoleSender(), "prefix",
+                "&aProShield v" + getDescription().getVersion() + " enabled!");
     }
 
     @Override
     public void onDisable() {
-        plotManager.saveAll(); // ✅ corrected method name
+        // Stop repel tasks cleanly
+        if (mobRepelTask != null) mobRepelTask.stop();
+        if (borderRepelTask != null) borderRepelTask.stop();
+
+        // Save plots
+        plotManager.saveAll();
+
         messages.send(getServer().getConsoleSender(), "prefix", "&cProShield disabled.");
     }
 
     private void registerCommands() {
-        registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager));
-        registerCommand("claim", new ClaimSubCommand(this, plotManager));
-        registerCommand("unclaim", new UnclaimSubCommand(this, plotManager));
-        registerCommand("info", new InfoSubCommand(this, plotManager, roleManager));
+        registerCommand("proshield", new ProShieldCommand(this, plotManager, roleManager, guiManager));
         registerCommand("trust", new TrustCommand(this, plotManager, roleManager));
-        registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
-        registerCommand("trusted", new TrustedListCommand(this, plotManager, roleManager));
+        registerCommand("untrust", new UntrustCommand(this, plotManager));
         registerCommand("roles", new RolesCommand(this, plotManager, roleManager));
         registerCommand("transfer", new TransferCommand(this, plotManager));
-        registerCommand("preview", new PreviewSubCommand(this, plotManager));
-        registerCommand("compass", new CompassSubCommand(this, guiManager));
     }
 
     private void registerListeners() {
@@ -85,9 +92,6 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
-
-        // Optionally, we could register border repel here too:
-        // Bukkit.getScheduler().runTaskTimer(this, new EntityBorderRepelTask(this, plotManager), 20L * 10, 20L * 10);
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {

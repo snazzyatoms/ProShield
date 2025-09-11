@@ -13,9 +13,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 /**
  * FlagsListener
  *
- * ✅ Simplified: uses single bucketAllowed flag (matches PlotSettings)
- * ✅ Only owners + admins should flip flags (canEdit check inside GUIManager)
- * ✅ Plays sound when toggling instead of spamming chat
+ * ✅ Uses single bucketAllowed flag (matches PlotSettings)
+ * ✅ Plays sound for all players
+ * ✅ Sends chat messages only to admins (toggleable via permission/config)
  */
 public class FlagsListener implements Listener {
 
@@ -64,8 +64,8 @@ public class FlagsListener implements Listener {
     }
 
     /* -------------------------------------------------------
-     * Helper to toggle a boolean flag, update item lore,
-     * and play a sound for feedback
+     * Toggle flag → update lore + play sound
+     * Admins get chat message if permission granted
      * ------------------------------------------------------- */
     private void toggleFlag(Player player, ItemStack item, boolean current, java.util.function.Consumer<Boolean> setter) {
         boolean newState = !current;
@@ -79,7 +79,17 @@ public class FlagsListener implements Listener {
             item.setItemMeta(meta);
         }
 
-        // 🔊 Play toggle sound instead of spamming chat
+        // 🔊 Sound feedback for all
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, newState ? 1.2f : 0.8f);
+
+        // 🛠 Debug/chat feedback only for admins (configurable)
+        if (player.hasPermission("proshield.admin.flags") &&
+            player.getServer().getPluginManager().isPluginEnabled("ProShield") &&
+            ProShield.getInstance().getConfig().getBoolean("messages.admin-flag-chat", true)) {
+
+            player.sendMessage(ChatColor.YELLOW + "Flag updated: " +
+                    ChatColor.AQUA + meta.getDisplayName() +
+                    ChatColor.GRAY + " → " + (newState ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
+        }
     }
 }

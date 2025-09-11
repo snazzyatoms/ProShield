@@ -4,6 +4,7 @@ package com.snazzyatoms.proshield.commands;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -20,15 +21,17 @@ import org.bukkit.entity.Player;
 public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
+    private final PlotManager plotManager;
     private final GUIManager guiManager;
     private final CompassManager compassManager;
     private final MessagesUtil messages;
 
     public ProShieldCommand(ProShield plugin,
-                            com.snazzyatoms.proshield.plots.PlotManager plotManager,
+                            PlotManager plotManager,
                             GUIManager guiManager,
                             CompassManager compassManager) {
         this.plugin = plugin;
+        this.plotManager = plotManager;
         this.guiManager = guiManager;
         this.compassManager = compassManager;
         this.messages = plugin.getMessagesUtil();

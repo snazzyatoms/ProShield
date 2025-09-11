@@ -4,80 +4,106 @@ import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
-import java.io.File;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Centralized messages loader + helpers.
- * Preserves previous keys and adds utility overloads used across code.
+ * Utility for sending messages to players/console with placeholder support.
+ *
+ * Preserves prior logic and extends:
+ * - debug(ProShield, String) overload (fixes compile errors in listeners)
+ * - colorizing, placeholders, and lists
+ * - on/off helpers for flags
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private FileConfiguration messages;
+    private final FileConfiguration messages;
 
-    public MessagesUtil(ProShield plugin) {
+    public MessagesUtil(ProShield plugin, FileConfiguration messages) {
         this.plugin = plugin;
-        load();
+        this.messages = messages;
     }
 
-    private void load() {
-        File file = new File(plugin.getDataFolder(), "messages.yml");
-        if (!file.exists()) {
-            plugin.saveResource("messages.yml", false);
+    /* -------------------------------------------------------
+     * Message Sending
+     * ------------------------------------------------------- */
+
+    public void send(CommandSender sender, String path, Object... placeholders) {
+        String msg = get(path, placeholders);
+        if (msg != null && !msg.isEmpty()) {
+            sender.sendMessage(color(msg));
         }
-        messages = YamlConfiguration.loadConfiguration(file);
     }
 
-    public void reload() {
-        load();
+    public void sendList(CommandSender sender, String path, Object... placeholders) {
+        List<String> list = messages.getStringList(path);
+        if (list == null || list.isEmpty()) return;
+        for (String line : list) {
+            sender.sendMessage(color(applyPlaceholders(line, placeholders)));
+        }
     }
 
-    public FileConfiguration getMessagesConfig() {
-        return messages;
+    public void broadcast(String path, Object... placeholders) {
+        String msg = get(path, placeholders);
+        if (msg != null && !msg.isEmpty()) {
+            plugin.getServer().broadcastMessage(color(msg));
+        }
     }
 
-    /* -------------------------
-     * Sending helpers
-     * ------------------------- */
-    public void send(CommandSender to, String key) {
-        to.sendMessage(colorize(get(key)));
+    /* -------------------------------------------------------
+     * Debug Logging
+     * ------------------------------------------------------- */
+
+    /** Debug log to console (single arg). */
+    public void debug(String message) {
+        if (plugin.getConfig().getBoolean("debug", false)) {
+            plugin.getLogger().info(color(message));
+        }
     }
 
-    public void send(CommandSender to, String key, String... params) {
-        to.sendMessage(colorize(format(get(key), params)));
+    /** Debug log overload used by many listeners (accepts plugin + msg). */
+    public void debug(ProShield plugin, String message) {
+        if (plugin.getConfig().getBoolean("debug", false)) {
+            plugin.getLogger().info(color(message));
+        }
     }
 
-    public void broadcastConsole(String key, CommandSender console) {
-        console.sendMessage(colorize(get(key)));
+    /* -------------------------------------------------------
+     * Internal Helpers
+     * ------------------------------------------------------- */
+
+    public String get(String path, Object... placeholders) {
+        String raw = messages.getString(path);
+        if (raw == null) return null;
+        return applyPlaceholders(raw, placeholders);
     }
 
-    public String get(String key) {
-        String def = "&7" + key;
-        return messages.getString(key, def);
+    public String color(String msg) {
+        if (msg == null) return "";
+        return ChatColor.translateAlternateColorCodes('&', msg);
     }
+
+    private String applyPlaceholders(String msg, Object... placeholders) {
+        if (msg == null || placeholders == null) return msg;
+        String result = msg;
+        for (int i = 0; i + 1 < placeholders.length; i += 2) {
+            Object key = placeholders[i];
+            Object val = placeholders[i + 1];
+            if (key != null && val != null) {
+                result = result.replace("{" + key + "}", val.toString());
+            }
+        }
+        return result;
+    }
+
+    /* -------------------------------------------------------
+     * Flag Helpers
+     * ------------------------------------------------------- */
 
     public String onOff(boolean value) {
-        return value ? ChatColor.GREEN + "ON" + ChatColor.RESET : ChatColor.RED + "OFF" + ChatColor.RESET;
-    }
-
-    public void debug(String msg) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().info(ChatColor.translateAlternateColorCodes('&', "[DEBUG] " + msg));
-        }
-    }
-
-    public static String colorize(String in) {
-        return ChatColor.translateAlternateColorCodes('&', in);
-    }
-
-    private String format(String base, String... params) {
-        String out = base;
-        // Replace {0}..{n}
-        for (int i = 0; i < params.length; i++) {
-            out = out.replace("{" + i + "}", String.valueOf(params[i]));
-        }
-        return out;
+        return value ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF";
     }
 }

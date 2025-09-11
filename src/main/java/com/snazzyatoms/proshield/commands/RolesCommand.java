@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/RolesCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -7,6 +8,7 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Chunk;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -15,10 +17,10 @@ import org.bukkit.entity.Player;
 /**
  * /roles command — opens the role management GUI for the current claim.
  *
- * Preserves prior logic, extended to:
- * - Match expected constructor signature (ProShield, PlotManager, ClaimRoleManager, GUIManager).
- * - Ensure consistent Plot lookup (uses Location).
- * - Send proper error messages if not in a claim or not owner.
+ * ✅ Fixed:
+ * - Uses correct messages.yml keys (error.*, not errors.*).
+ * - Constructor matches ProShield.java registration.
+ * - Consistent plot lookup (Chunk-based).
  */
 public class RolesCommand implements CommandExecutor {
 
@@ -39,11 +41,13 @@ public class RolesCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            messages.send(sender, "error.players-only");
+            sender.sendMessage("§cOnly players may use this command.");
             return true;
         }
 
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Chunk chunk = player.getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
+
         if (plot == null) {
             messages.send(player, "error.not-in-claim");
             return true;
@@ -52,7 +56,7 @@ public class RolesCommand implements CommandExecutor {
         // Only owners/co-owners may open role GUI
         ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
         if (!roleManager.isOwnerOrCoOwner(role)) {
-            messages.send(player, "error.cannot-modify-claim");
+            messages.send(player, "error.not-owner");
             return true;
         }
 

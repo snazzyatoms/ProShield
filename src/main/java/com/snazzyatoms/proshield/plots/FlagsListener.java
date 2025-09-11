@@ -13,7 +13,8 @@ import org.bukkit.inventory.meta.ItemMeta;
  * FlagsListener
  *
  * ✅ Preserves prior logic
- * ✅ Updated to match PlotSettings (bucketAllowed instead of bucketsAllowed)
+ * ✅ Updated to match PlotSettings (bucketEmpty + bucketFill)
+ * ✅ Displays/toggles both emptying and filling buckets
  */
 public class FlagsListener implements Listener {
 
@@ -41,7 +42,11 @@ public class FlagsListener implements Listener {
 
         switch (name.toLowerCase()) {
             case "explosions" -> toggleFlag(player, item, settings.isExplosionsAllowed(), settings::setExplosionsAllowed);
-            case "buckets" -> toggleFlag(player, item, settings.isBucketAllowed(), settings::setBucketAllowed); // ✅ fixed
+
+            // ✅ new: separate bucket flags
+            case "bucket empty" -> toggleFlag(player, item, settings.isBucketEmptyAllowed(), settings::setBucketEmptyAllowed);
+            case "bucket fill" -> toggleFlag(player, item, settings.isBucketFillAllowed(), settings::setBucketFillAllowed);
+
             case "item frames" -> toggleFlag(player, item, settings.isItemFramesAllowed(), settings::setItemFramesAllowed);
             case "armor stands" -> toggleFlag(player, item, settings.isArmorStandsAllowed(), settings::setArmorStandsAllowed);
             case "animals" -> toggleFlag(player, item, settings.isAnimalAccessAllowed(), settings::setAnimalAccessAllowed);

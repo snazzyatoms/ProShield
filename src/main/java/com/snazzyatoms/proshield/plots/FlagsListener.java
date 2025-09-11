@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/FlagsListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -14,15 +15,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.function.Consumer;
 
-/**
- * FlagsListener
- *
- * ✅ Toggles claim flags when clicked in the Flags GUI.
- * ✅ Prevents icon movement (menu stays static).
- * ✅ Refreshes the GUI after toggling to reflect states.
- * ✅ Back button returns to Admin or Player parent menus.
- * ✅ Sound feedback + optional admin debug chat.
- */
 public class FlagsListener implements Listener {
 
     private final PlotManager plots;
@@ -38,9 +30,12 @@ public class FlagsListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onFlagMenuClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
+        if (e.getClickedInventory() == null || e.getClickedInventory() != e.getView().getTopInventory()) return;
         if (e.getCurrentItem() == null) return;
 
-        // ✅ Prevent item movement
+        String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
+        if (!title.contains("flag")) return;
+
         e.setCancelled(true);
 
         ItemStack item = e.getCurrentItem();
@@ -72,36 +67,26 @@ public class FlagsListener implements Listener {
             case "mob despawn" -> toggleFlag(player, settings.isMobDespawnInsideEnabled(), settings::setMobDespawnInsideEnabled);
             case "keep items" -> toggleFlag(player, settings.isKeepItemsEnabled(), settings::setKeepItemsEnabled);
             case "back" -> {
-                boolean fromAdmin = player.hasPermission("proshield.admin");
-                if (fromAdmin) gui.openAdminMain(player); else gui.openMain(player);
+                if (player.hasPermission("proshield.admin")) gui.openAdminMain(player);
+                else gui.openMain(player);
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-                return; // stop here
+                return;
             }
             default -> changed = false;
         }
 
         if (changed) {
             plots.saveAsync(plot);
-            // ✅ Refresh GUI so states update
             boolean fromAdmin = player.hasPermission("proshield.admin");
             gui.openFlagsMenu(player, fromAdmin);
         }
     }
 
-    /* -------------------------------------------------------
-     * Toggle flag helper
-     * ------------------------------------------------------- */
     private void toggleFlag(Player player, boolean current, Consumer<Boolean> setter) {
         boolean newState = !current;
         setter.accept(newState);
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, newState ? 1.2f : 0.8f);
 
-        // 🔊 Player feedback (sound only)
-        player.playSound(player.getLocation(),
-                Sound.UI_BUTTON_CLICK,
-                1f,
-                newState ? 1.2f : 0.8f);
-
-        // 🛠️ Admin debug chat (if enabled in config)
         if (player.hasPermission("proshield.admin")
                 && plugin.getConfig().getBoolean("messages.admin-flag-chat", true)) {
             player.sendMessage(ChatColor.YELLOW + "Flag updated: " +

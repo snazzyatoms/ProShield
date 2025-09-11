@@ -66,10 +66,14 @@ public class ProShield extends JavaPlugin {
         if (mobRepelTask != null) mobRepelTask.stop();
         if (borderRepelTask != null) borderRepelTask.stop();
 
-        // ✅ Fixed: Save plots explicitly
-        plotManager.saveAll();
+        // ✅ Explicitly save plots
+        if (plotManager != null) {
+            plotManager.saveAll();
+        }
 
-        messages.send(getServer().getConsoleSender(), "prefix", "&cProShield disabled.");
+        if (messages != null) {
+            messages.send(getServer().getConsoleSender(), "prefix", "&cProShield disabled.");
+        }
     }
 
     private void registerCommands() {
@@ -116,6 +120,14 @@ public class ProShield extends JavaPlugin {
 
     public ClaimRoleManager getRoleManager() {
         return roleManager;
+    }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+
+    public GUICache getGuiCache() {
+        return guiCache;
     }
 
     public boolean toggleBypass(Player player) {

@@ -17,10 +17,10 @@ import java.util.UUID;
 /**
  * ItemProtectionListener
  *
- * ✅ Preserves all prior logic
- * ✅ Updated constructor style (PlotManager, ClaimRoleManager, MessagesUtil)
- * ✅ Protects item frames, armor stands, animals, pets, containers, vehicles
- * ✅ Uses per-claim PlotSettings + role checks
+ * ✅ Clean constructor: (PlotManager, ClaimRoleManager, MessagesUtil)
+ * ✅ Protects item frames, armor stands, animals, pets, containers, and vehicles
+ * ✅ Uses per-claim PlotSettings + global config
+ * ✅ Respects claim roles via ClaimRoleManager
  */
 public class ItemProtectionListener implements Listener {
 
@@ -45,7 +45,10 @@ public class ItemProtectionListener implements Listener {
         Plot plot = plots.getPlot(chunk);
 
         if (plot == null) {
-            if (!plots.getPlugin().getConfig().getBoolean("protection.entities.item-frames", true)) {
+            // Wilderness: use global toggle
+            if (!player.hasPermission("proshield.admin") &&
+                !player.getServer().getPluginManager().getPlugin("ProShield")
+                      .getConfig().getBoolean("protection.entities.item-frames", true)) {
                 event.setCancelled(true);
                 messages.send(player, "item-frames-deny");
             }
@@ -58,8 +61,7 @@ public class ItemProtectionListener implements Listener {
         if (!plot.getSettings().isItemFramesAllowed() || !roles.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
-            messages.debug("&cPrevented item frame break in claim " + plot.getDisplayNameSafe() +
-                    " by " + player.getName());
+            messages.debug("&cPrevented item frame break in claim [" + plot.getName() + "] by " + player.getName());
         }
     }
 
@@ -81,7 +83,7 @@ public class ItemProtectionListener implements Listener {
     }
 
     /* ------------------------------
-     * Entity Interactions
+     * Interacting (Armor Stands, Animals, Pets, Containers)
      * ------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
@@ -90,7 +92,7 @@ public class ItemProtectionListener implements Listener {
         Chunk chunk = entity.getLocation().getChunk();
         Plot plot = plots.getPlot(chunk);
 
-        if (plot == null) return; // wilderness handled by config
+        if (plot == null) return; // wilderness → config handles it
 
         UUID uid = player.getUniqueId();
         ClaimRole role = roles.getRole(plot, uid);
@@ -122,7 +124,7 @@ public class ItemProtectionListener implements Listener {
             }
         }
 
-        // Containers (minecarts with chest, hopper, etc.)
+        // Container entities (like chest minecarts)
         if (entity instanceof Minecart && !plot.getSettings().isContainersAllowed()) {
             if (!roles.canInteract(role)) {
                 event.setCancelled(true);
@@ -132,7 +134,7 @@ public class ItemProtectionListener implements Listener {
     }
 
     /* ------------------------------
-     * Vehicles
+     * Vehicle Protections
      * ------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onVehicleDestroy(VehicleDestroyEvent event) {
@@ -142,7 +144,10 @@ public class ItemProtectionListener implements Listener {
         Plot plot = plots.getPlot(chunk);
 
         if (plot == null) {
-            if (!plots.getPlugin().getConfig().getBoolean("protection.entities.vehicles", true)) {
+            // Wilderness vehicle protection
+            if (!player.hasPermission("proshield.admin") &&
+                !player.getServer().getPluginManager().getPlugin("ProShield")
+                      .getConfig().getBoolean("protection.entities.vehicles", true)) {
                 event.setCancelled(true);
                 messages.send(player, "vehicles-deny");
             }
@@ -155,8 +160,7 @@ public class ItemProtectionListener implements Listener {
         if (!plot.getSettings().isVehiclesAllowed() || !roles.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "vehicles-deny");
-            messages.debug("&cPrevented vehicle destroy in claim " + plot.getDisplayNameSafe() +
-                    " by " + player.getName());
+            messages.debug("&cPrevented vehicle destroy in claim [" + plot.getName() + "] by " + player.getName());
         }
     }
 }

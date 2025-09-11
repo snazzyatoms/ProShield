@@ -3,81 +3,71 @@ package com.snazzyatoms.proshield.gui.listeners;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.UUID;
 
 /**
  * PlayerMenuListener
  *
- * - Handles player menu clicks (flags, trust, claim tools).
- * - Uses GUICache to track open menus.
- * - Clears cache on close to prevent stale state.
+ * ✅ Handles clicks inside the Player GUI menu
+ * ✅ Runs corresponding commands (/claim, /unclaim, /info, /trust, /flags)
+ * ✅ Uses GUICache to verify correct inventory
  */
 public class PlayerMenuListener implements Listener {
 
     private final ProShield plugin;
     private final GUICache cache;
     private final PlotManager plots;
+    private final MessagesUtil messages;
 
-    public PlayerMenuListener(ProShield plugin, GUICache cache, PlotManager plots) {
+    public PlayerMenuListener(ProShield plugin, GUICache cache) {
         this.plugin = plugin;
         this.cache = cache;
-        this.plots = plots;
+        this.plots = plugin.getPlotManager();
+        this.messages = plugin.getMessagesUtil();
+
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    /* -------------------------
-     * Handle menu interactions
-     * ------------------------- */
-    @EventHandler(ignoreCancelled = true)
-    public void onMenuClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        if (e.getCurrentItem() == null) return;
+    @EventHandler
+    public void onMenuClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        UUID uuid = player.getUniqueId();
 
-        String menu = cache.getOpenMenu(player.getUniqueId());
-        if (menu == null) return; // not a ProShield menu
-        e.setCancelled(true);
+        // Verify this inventory belongs to our player GUI
+        if (!cache.isPlayerMenu(uuid, event.getInventory())) return;
 
-        ItemStack item = e.getCurrentItem();
-        if (item.getType() == Material.AIR || !item.hasItemMeta()) return;
+        event.setCancelled(true); // Prevent item pickup/movement
 
-        String name = ChatColor.stripColor(item.getItemMeta().getDisplayName());
-        if (name == null) return;
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        switch (menu.toLowerCase()) {
-            case "main" -> handleMainMenu(player, name);
-            case "flags" -> handleFlagsMenu(player, name);
-            default -> { /* future menus */ }
-        }
-    }
+        ItemMeta meta = clicked.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
 
-    private void handleMainMenu(Player player, String name) {
+        String name = ChatColor.stripColor(meta.getDisplayName());
+
         switch (name.toLowerCase()) {
             case "claim chunk" -> player.performCommand("claim");
             case "unclaim chunk" -> player.performCommand("unclaim");
             case "claim info" -> player.performCommand("info");
+            case "trust players" -> {
+                player.closeInventory();
+                player.sendMessage(ChatColor.YELLOW + "Use /trust <player> [role] to add players.");
+            }
             case "flags" -> player.performCommand("flags");
-            case "roles" -> player.performCommand("roles");
-            case "trusted players" -> player.performCommand("trusted");
-            default -> player.sendMessage(ChatColor.RED + "Unknown option: " + name);
+            default -> {
+                // Do nothing if it’s not one of ours
+            }
         }
-    }
-
-    private void handleFlagsMenu(Player player, String name) {
-        // Delegated to FlagsListener; here we just prevent dragging
-    }
-
-    /* -------------------------
-     * Cleanup on close
-     * ------------------------- */
-    @EventHandler
-    public void onMenuClose(InventoryCloseEvent e) {
-        if (!(e.getPlayer() instanceof Player player)) return;
-        cache.clearOpenMenu(player);
     }
 }

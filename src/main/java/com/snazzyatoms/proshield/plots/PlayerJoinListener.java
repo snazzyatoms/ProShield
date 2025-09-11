@@ -8,13 +8,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
 
 /**
  * PlayerJoinListener
  *
- * ✅ Ensures players automatically receive the ProShield compass on join.
+ * ✅ Ensures players automatically receive the ProShield compass on join (first time).
  * ✅ Uses CompassManager (no static calls).
- * ✅ Prevents duplicate compasses.
+ * ✅ Prevents duplicate compasses by checking inventory first.
  */
 public class PlayerJoinListener implements Listener {
 
@@ -37,7 +38,13 @@ public class PlayerJoinListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // ✅ Give compass safely (avoid duplicates)
+        // ✅ Only give compass if the player doesn’t already have one
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (compassManager.isProShieldCompass(item)) {
+                return; // Already has a compass → do nothing
+            }
+        }
+
         compassManager.giveCompass(player, player.isOp());
     }
 }

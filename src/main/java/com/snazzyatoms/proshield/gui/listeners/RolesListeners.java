@@ -16,16 +16,13 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.UUID;
-
 /**
  * RolesListener
  *
  * ✅ Handles clicks in the Roles GUI.
- * ✅ Assigns ClaimRole from enum (Visitor → Manager).
  * ✅ Prevents moving items.
- * ✅ Feedback via sounds + updated GUI refresh.
  * ✅ Supports back button (returns to correct parent menu).
+ * ⚠ Role assignment via GUI postponed until v2.0 (pending target system).
  */
 public class RolesListener implements Listener {
 
@@ -65,45 +62,8 @@ public class RolesListener implements Listener {
             return;
         }
 
-        // Only owner or admin can assign roles
-        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-            return;
-        }
-
-        UUID target = roleManager.getPendingTarget(player);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "⚠ No player selected for role assignment.");
-            return;
-        }
-
-        ClaimRole chosen = matchRole(name);
-        if (chosen == null || chosen == ClaimRole.OWNER) return; // skip invalid or owner
-
-        // ✅ Assign role
-        roleManager.setRole(plot, target, chosen);
-
-        // ✅ Feedback
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
-        player.sendMessage(ChatColor.GREEN + "✔ Assigned " +
-                ChatColor.AQUA + chosen.getDisplayName() +
-                ChatColor.GREEN + " to player.");
-
-        // ✅ Refresh GUI
-        boolean fromAdmin = player.hasPermission("proshield.admin");
-        gui.openRolesGUI(player, plot, fromAdmin);
-    }
-
-    /* ----------------------------------------
-     * Helper: Match item name to ClaimRole enum
-     * ---------------------------------------- */
-    private ClaimRole matchRole(String name) {
-        for (ClaimRole role : ClaimRole.values()) {
-            if (name.equalsIgnoreCase(role.name()) ||
-                name.contains(role.getDisplayName().toLowerCase())) {
-                return role;
-            }
-        }
-        return null;
+        // ⚠ Postponed role assignment until v2.0
+        player.sendMessage(ChatColor.YELLOW + "ℹ Role assignment via GUI is coming in v2.0. Use /trust <player> [role] for now.");
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.5f);
     }
 }

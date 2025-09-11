@@ -12,6 +12,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 
+import java.util.UUID;
+
 /**
  * Handles block placement and breaking protections inside claims.
  * - Uses PlotSettings for per-claim rules
@@ -49,7 +51,8 @@ public class BlockProtectionListener implements Listener {
             return;
         }
 
-        ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
+        UUID uid = player.getUniqueId();
+        ClaimRole role = roleManager.getRole(plot, uid);
 
         if (role == null || !roleManager.canBuild(role)) {
             event.setCancelled(true);
@@ -76,7 +79,8 @@ public class BlockProtectionListener implements Listener {
             return;
         }
 
-        ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
+        UUID uid = player.getUniqueId();
+        ClaimRole role = roleManager.getRole(plot, uid);
 
         if (role == null || !roleManager.canBuild(role)) {
             event.setCancelled(true);

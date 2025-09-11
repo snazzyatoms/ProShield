@@ -1,39 +1,39 @@
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.Sound;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import static com.snazzyatoms.proshield.compass.CompassManager.*;
-
 /**
- * Handles right-clicking the ProShield compass.
- * - Right-click: opens Main menu for all
- * - SHIFT + Right-click (Admin compass only): opens Admin menu
+ * CompassListener
+ *
+ * Listens for players right-clicking the ProShield compass
+ * and opens the correct GUI via CompassManager.
  */
 public class CompassListener implements Listener {
 
-    @EventHandler(ignoreCancelled = true)
-    public void onInteract(PlayerInteractEvent e) {
-        // Only care about main hand interactions to avoid double-firing
-        if (e.getHand() != EquipmentSlot.HAND) return;
+    private final CompassManager compassManager;
 
-        Player p = e.getPlayer();
-        ItemStack it = p.getInventory().getItemInMainHand();
-        if (!CompassManager.isProShieldCompass(it)) return;
+    public CompassListener(ProShield plugin, CompassManager compassManager) {
+        this.compassManager = compassManager;
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+    }
 
-        // Block default compass behavior
-        e.setCancelled(true);
+    @EventHandler
+    public void onCompassUse(PlayerInteractEvent event) {
+        // Only handle main-hand interactions
+        if (event.getHand() != EquipmentSlot.HAND) return;
 
-        // Open menus based on type/sneak
-        CompassManager.openFromCompass(p, it);
+        Player player = event.getPlayer();
+        ItemStack item = event.getItem();
 
-        // Soft auditory feedback
-        p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, p.isSneaking() ? 0.85f : 1.15f);
+        if (compassManager.isProShieldCompass(item)) {
+            event.setCancelled(true); // Prevent default compass behavior
+            compassManager.openFromCompass(player, item);
+        }
     }
 }

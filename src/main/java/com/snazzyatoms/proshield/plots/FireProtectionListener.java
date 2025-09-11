@@ -1,6 +1,5 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.block.Block;
@@ -12,82 +11,73 @@ import org.bukkit.event.block.BlockSpreadEvent;
 /**
  * FireProtectionListener
  *
- * ✅ Handles spread + ignition (lava, flint & steel, lightning)
- * ✅ Global wilderness config
- * ✅ Per-claim flags (fireAllowed, fireSpreadAllowed)
- * ✅ Debug output for admins
+ * ✅ Protects claims from fire spread, lava ignition, flint & steel, and lightning
+ * ✅ Controlled by both global config + per-claim flags
+ * ✅ Uses MessagesUtil for debug + player feedback
  */
 public class FireProtectionListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
     private final MessagesUtil messages;
 
-    public FireProtectionListener(ProShield plugin, PlotManager plots, MessagesUtil messages) {
-        this.plugin = plugin;
+    public FireProtectionListener(PlotManager plots, MessagesUtil messages) {
         this.plots = plots;
         this.messages = messages;
     }
 
+    /* -------------------------------------------------------
+     * Fire Spread (natural or block-to-block)
+     * ------------------------------------------------------- */
     @EventHandler(ignoreCancelled = true)
     public void onFireSpread(BlockSpreadEvent event) {
         Block block = event.getBlock();
         Chunk chunk = block.getChunk();
         Plot plot = plots.getPlot(chunk);
+        if (plot == null) return; // wilderness → controlled by global config
 
-        // Wilderness → global only
-        if (plot == null) {
-            if (!plugin.getConfig().getBoolean("protection.fire.spread", false)) {
-                event.setCancelled(true);
-                messages.debug("&cFire spread blocked in wilderness.");
-            }
-            return;
-        }
-
-        // Claim → per-claim toggle
         if (!plot.getSettings().isFireSpreadAllowed()) {
             event.setCancelled(true);
             messages.debug("&cFire spread blocked in claim: " + plot.getDisplayNameSafe());
         }
     }
 
+    /* -------------------------------------------------------
+     * Fire Ignition (lava, lightning, flint & steel)
+     * ------------------------------------------------------- */
     @EventHandler(ignoreCancelled = true)
     public void onFireIgnite(BlockIgniteEvent event) {
         Block block = event.getBlock();
         Chunk chunk = block.getChunk();
         Plot plot = plots.getPlot(chunk);
+        if (plot == null) return;
 
-        BlockIgniteEvent.IgniteCause cause = event.getCause();
+        PlotSettings s = plot.getSettings();
 
-        // Wilderness
-        if (plot == null) {
-            if (!isIgniteAllowedGlobal(cause)) {
-                event.setCancelled(true);
-                messages.debug("&cFire ignition (" + cause + ") blocked in wilderness.");
+        switch (event.getCause()) {
+            case FLINT_AND_STEEL -> {
+                if (!s.isFireAllowed()) {
+                    event.setCancelled(true);
+                    messages.debug("&cFlint & steel fire blocked in claim: " + plot.getDisplayNameSafe());
+                }
             }
-            return;
-        }
-
-        // Claim
-        if (!plot.getSettings().isFireAllowed()) {
-            event.setCancelled(true);
-            messages.debug("&cFire ignition (" + cause + ") blocked in claim: " + plot.getDisplayNameSafe());
-        }
-    }
-
-    /**
-     * Checks wilderness ignite rules from config.yml
-     */
-    private boolean isIgniteAllowedGlobal(BlockIgniteEvent.IgniteCause cause) {
-        switch (cause) {
-            case FLINT_AND_STEEL:
-                return plugin.getConfig().getBoolean("protection.fire.ignite.flint_and_steel", false);
-            case LAVA:
-                return plugin.getConfig().getBoolean("protection.fire.ignite.lava", false);
-            case LIGHTNING:
-                return plugin.getConfig().getBoolean("protection.fire.ignite.lightning", false);
-            default:
-                return plugin.getConfig().getBoolean("protection.fire.burn", false);
+            case LAVA -> {
+                if (!s.isFireAllowed()) {
+                    event.setCancelled(true);
+                    messages.debug("&cLava ignition blocked in claim: " + plot.getDisplayNameSafe());
+                }
+            }
+            case LIGHTNING -> {
+                if (!s.isFireAllowed()) {
+                    event.setCancelled(true);
+                    messages.debug("&cLightning fire blocked in claim: " + plot.getDisplayNameSafe());
+                }
+            }
+            default -> {
+                if (!s.isFireAllowed()) {
+                    event.setCancelled(true);
+                    messages.debug("&cFire ignition blocked in claim: " + plot.getDisplayNameSafe());
+                }
+            }
         }
     }
 }

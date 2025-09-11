@@ -16,15 +16,11 @@ import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import java.util.UUID;
 
 /**
- * Handles protections for entities inside claims:
- * - Item frames
- * - Armor stands
- * - Animals & pets
- * - Containers (via interact)
- * - Vehicles (boats, minecarts)
+ * ItemProtectionListener
  *
- * Uses global + per-claim rules from PlotSettings.
- * RoleManager ensures only trusted roles can interact.
+ * ✅ Uses standalone PlotSettings
+ * ✅ Protects item frames, armor stands, animals, pets, containers, vehicles
+ * ✅ Uses ClaimRoleManager for trust/role checks
  */
 public class ItemProtectionListener implements Listener {
 
@@ -41,7 +37,7 @@ public class ItemProtectionListener implements Listener {
     }
 
     /* ------------------------------
-     * Item Frames & Armor Stands
+     * Item Frames
      * ------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onHangingBreak(HangingBreakByEntityEvent event) {

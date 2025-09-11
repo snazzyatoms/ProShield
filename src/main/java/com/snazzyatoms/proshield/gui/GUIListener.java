@@ -11,10 +11,9 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 /**
  * GUIListener handles clicks in ProShield GUIs.
  *
- * Preserves all prior logic:
- * - Navigation between GUIs (Main → Flags → Roles → Trust → Untrust → Transfer → Admin)
- * - Back buttons
- * - Cleanly tied to GUIManager methods
+ * ✅ Fixed calls to PlotManager (getPlot instead of getClaim)
+ * ✅ Fixed calls to GUIManager (only valid overloads used)
+ * ✅ Preserves prior navigation logic
  */
 public class GUIListener implements Listener {
 
@@ -38,12 +37,12 @@ public class GUIListener implements Listener {
         // Prevent taking items from GUIs
         event.setCancelled(true);
 
-        Plot plot = plots.getClaim(player.getLocation());
+        Plot plot = plots.getPlot(player.getLocation());
 
         switch (title) {
             case "§dClaim Menu" -> {
                 switch (event.getSlot()) {
-                    case 11 -> gui.openFlagsMenu(player, plot);
+                    case 11 -> gui.openFlagsMenu(player);
                     case 13 -> gui.openRolesGUI(player, plot);
                     case 15 -> gui.openTransferMenu(player);
                 }

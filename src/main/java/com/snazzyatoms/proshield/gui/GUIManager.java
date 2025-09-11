@@ -127,4 +127,15 @@ public class GUIManager {
     public void clearCache() {
         cache.clearCache();
     }
+
+    /* ---------------------------------------------------------
+     * FIX FOR LISTENERS
+     * --------------------------------------------------------- */
+    public GUICache getCache() {
+        return cache;
+    }
+
+    public ProShield getPlugin() {
+        return plugin;
+    }
 }

@@ -12,10 +12,15 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 /**
  * EntityGriefProtectionListener
  *
- * ✅ Blocks Enderman, Ravager, Silverfish, Wither, and EnderDragon grief
- * ✅ Global wilderness toggle (config.yml)
- * ✅ Per-claim toggle (PlotSettings.isEntityGriefingAllowed)
- * ✅ Debug feedback for admins
+ * ✅ Blocks griefing from:
+ *    - Endermen (block pickup)
+ *    - Ravagers (crop trampling)
+ *    - Silverfish (infestation)
+ *    - Wither (block destruction)
+ *    - EnderDragon (block destruction)
+ *
+ * ✅ Global wilderness config + per-claim flags
+ * ✅ Debug logging for admins
  */
 public class EntityGriefProtectionListener implements Listener {
 
@@ -35,46 +40,45 @@ public class EntityGriefProtectionListener implements Listener {
         Chunk chunk = event.getBlock().getChunk();
         Plot plot = plots.getPlot(chunk);
 
-        FileConfiguration cfg = plugin.getConfig();
-        boolean global = cfg.getBoolean("protection.entity-grief.enabled", true);
+        FileConfiguration config = plugin.getConfig();
 
-        // Wilderness
+        boolean globalGrief = config.getBoolean("protection.entity-grief.enabled", false);
+        boolean perClaimAllowed = plot != null && plot.getSettings().isEntityGriefingAllowed();
+
+        // Wilderness check
         if (plot == null) {
-            if (!global && isProtectedEntity(entity, cfg)) {
+            if (!globalGrief && isProtectedEntity(entity, config)) {
                 event.setCancelled(true);
-                messages.debug("&cEntity grief blocked in wilderness: " + entity.getType());
+                messages.debug("&cEntity grief blocked in wilderness by: " + entity.getType());
             }
             return;
         }
 
-        // Inside claim
-        if (!plot.getSettings().isEntityGriefingAllowed()) {
-            if (isProtectedEntity(entity, cfg)) {
-                event.setCancelled(true);
-                messages.debug("&cEntity grief blocked in claim [" + plot.getDisplayNameSafe() +
-                        "] by " + entity.getType());
-            }
+        // Inside a claim → controlled by per-claim setting
+        if (!perClaimAllowed && isProtectedEntity(entity, config)) {
+            event.setCancelled(true);
+            messages.debug("&cEntity grief blocked in claim [" + plot.getDisplayNameSafe() + "] by: " + entity.getType());
         }
     }
 
     /**
-     * Check if this entity type is configured to be blocked.
+     * Checks if entity type is protected according to config.
      */
-    private boolean isProtectedEntity(Entity entity, FileConfiguration cfg) {
+    private boolean isProtectedEntity(Entity entity, FileConfiguration config) {
         if (entity instanceof Enderman) {
-            return cfg.getBoolean("protection.entity-grief.enderman", true);
+            return config.getBoolean("protection.entity-grief.enderman", true);
         }
         if (entity instanceof Ravager) {
-            return cfg.getBoolean("protection.entity-grief.ravager", true);
+            return config.getBoolean("protection.entity-grief.ravager", true);
         }
         if (entity instanceof Silverfish) {
-            return cfg.getBoolean("protection.entity-grief.silverfish", true);
+            return config.getBoolean("protection.entity-grief.silverfish", true);
         }
         if (entity instanceof Wither) {
-            return cfg.getBoolean("protection.entity-grief.wither", true);
+            return config.getBoolean("protection.entity-grief.wither", true);
         }
         if (entity instanceof EnderDragon) {
-            return cfg.getBoolean("protection.entity-grief.ender-dragon", true);
+            return config.getBoolean("protection.entity-grief.ender-dragon", true);
         }
         return false;
     }

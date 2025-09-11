@@ -1,85 +1,38 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.Plot;
-import com.snazzyatoms.proshield.plots.PlotManager;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
+import com.snazzyatoms.proshield.gui.listeners.AdminMenuListener;
+import com.snazzyatoms.proshield.gui.listeners.PlayerMenuListener;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
 
 /**
- * GUIListener handles clicks in ProShield GUIs.
+ * GUIListener
  *
- * ✅ Fixed calls to PlotManager (getPlot instead of getClaim)
- * ✅ Fixed calls to GUIManager (only valid overloads used)
- * ✅ Preserves prior navigation logic
+ * ✅ Central hook for registering both Player & Admin menu listeners.
+ * ✅ Prevents missing method calls by deferring all logic to GUIManager + dedicated listeners.
+ * ✅ Keeps menus consistent with CompassManager (player vs admin).
  */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager gui;
-    private final PlotManager plots;
+    private final GUIManager guiManager;
+    private final PlayerMenuListener playerMenuListener;
+    private final AdminMenuListener adminMenuListener;
 
-    public GUIListener(ProShield plugin, GUIManager gui, PlotManager plots) {
+    public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.gui = gui;
-        this.plots = plots;
+        this.guiManager = guiManager;
+
+        // Attach player + admin menu listeners
+        this.playerMenuListener = new PlayerMenuListener(plugin, guiManager);
+        this.adminMenuListener = new AdminMenuListener(plugin, guiManager);
+
+        // Register them into Bukkit
+        plugin.getServer().getPluginManager().registerEvents(playerMenuListener, plugin);
+        plugin.getServer().getPluginManager().registerEvents(adminMenuListener, plugin);
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-
-        String title = event.getView().getTitle();
-        if (title == null) return;
-
-        // Prevent taking items from GUIs
-        event.setCancelled(true);
-
-        Plot plot = plots.getPlot(player.getLocation());
-
-        switch (title) {
-            case "§dClaim Menu" -> {
-                switch (event.getSlot()) {
-                    case 11 -> gui.openFlagsMenu(player);
-                    case 13 -> gui.openRolesGUI(player, plot);
-                    case 15 -> gui.openTransferMenu(player);
-                }
-            }
-            case "§dClaim Flags" -> {
-                if (event.getSlot() == 22) {
-                    gui.openMain(player);
-                }
-            }
-            case "§dClaim Roles" -> {
-                switch (event.getSlot()) {
-                    case 11 -> gui.openTrustMenu(player);
-                    case 13 -> gui.openUntrustMenu(player);
-                    case 15 -> gui.openRolesGUI(player, plot); // re-open roles for assignments
-                    case 22 -> gui.openMain(player);
-                }
-            }
-            case "§dTrust Player" -> {
-                if (event.getSlot() == 22) {
-                    gui.openRolesGUI(player, plot);
-                }
-            }
-            case "§dUntrust Player" -> {
-                if (event.getSlot() == 22) {
-                    gui.openRolesGUI(player, plot);
-                }
-            }
-            case "§dTransfer Claim" -> {
-                if (event.getSlot() == 22) {
-                    gui.openMain(player);
-                }
-            }
-            case "§dAdmin Menu" -> {
-                if (event.getSlot() == 22) {
-                    gui.openMain(player);
-                }
-            }
-        }
+    public GUIManager getGuiManager() {
+        return guiManager;
     }
 }

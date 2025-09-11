@@ -9,11 +9,14 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.Arrays;
+
 /**
  * CompassManager
  *
  * Handles giving players/admins the ProShield compass.
  * - Distinguishes between normal and admin compasses
+ * - Prevents duplicates in inventory
  * - Provides checks to see if an ItemStack is a ProShield compass
  * - Opens the correct GUI when right-clicked
  */
@@ -28,37 +31,51 @@ public class CompassManager {
     }
 
     /**
-     * Give a compass to a player.
+     * Give a compass to a player if they don't already have one.
+     *
      * @param player Target player
-     * @param admin If true → admin style compass
+     * @param admin  If true → admin style compass
      */
     public void giveCompass(Player player, boolean admin) {
+        // Prevent duplicates
+        if (hasCompass(player)) {
+            return;
+        }
+
         ItemStack compass = new ItemStack(Material.COMPASS);
         ItemMeta meta = compass.getItemMeta();
 
         if (meta != null) {
             if (admin) {
                 meta.setDisplayName("§cAdmin Compass");
-                meta.setLore(java.util.Arrays.asList(
+                meta.setLore(Arrays.asList(
                         "§7Right-click to open Admin tools",
                         "§7Includes all normal player menus"
                 ));
             } else {
                 meta.setDisplayName("§aProShield Compass");
-                meta.setLore(java.util.Arrays.asList(
+                meta.setLore(Arrays.asList(
                         "§7Right-click to manage claims",
                         "§7Open menus for trust, flags, roles"
                 ));
             }
 
             // Cosmetic enchant to make it glow
-            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+            meta.addEnchant(Enchantment.DURABILITY, 1, true); // ✅ safe cross-version
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 
             compass.setItemMeta(meta);
         }
 
         player.getInventory().addItem(compass);
+    }
+
+    /**
+     * Check if player already has a ProShield compass.
+     */
+    public boolean hasCompass(Player player) {
+        return Arrays.stream(player.getInventory().getContents())
+                .anyMatch(this::isProShieldCompass);
     }
 
     /**

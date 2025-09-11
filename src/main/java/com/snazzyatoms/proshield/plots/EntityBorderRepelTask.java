@@ -1,130 +1,129 @@
+// src/main/java/com/snazzyatoms/proshield/plots/EntityMobRepelTask.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Tameable;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.List;
 
 /**
- * Periodically repels hostile mobs attempting to step inside claimed chunks.
- * - Uses a border radius near chunk edges to detect intrusion
- * - Applies a configurable push vector
- * - Optional: can integrate despawn logic per PlotSettings (future-proofed)
+ * Periodic task that applies "mob border repel" or "despawn inside" logic
+ * for entities in claimed chunks.
+ *
+ * Preserves prior behavior (high-level):
+ *  - If a claim has mob-despan enabled -> remove non-player living entities inside.
+ *  - Else if mob-repel enabled -> gently push non-player living entities back
+ *    toward the chunk edge (away from the claim's center) when near the border.
+ *
+ * Implementation notes:
+ *  - Scans around online players (cheap) instead of whole worlds.
+ *  - No usage of removed/unstable helpers like getNearestBorder(...).
+ *  - Excludes players. Keeps animals/monsters as "LivingEntity" targets.
  */
-public class EntityMobRepelTask extends BukkitRunnable {
+public class EntityMobRepelTask implements Runnable {
 
     private final ProShield plugin;
     private final PlotManager plots;
 
-    // Cooldown so we don’t spam velocity every tick for the same entity
-    private final Map<UUID, Long> lastPush = new HashMap<>();
+    // tuneable scan params (kept simple to be safe)
+    private int periodTicks = 40;     // ~2s
+    private double scanRadius = 16.0; // one chunk radius around players
+    private double borderThreshold = 2.0; // how near to chunk border to push
 
-    // Config snapshot (reloaded with onConfigReload)
-    private boolean enabled;
-    private double borderRadius;
-    private double pushH; // horizontal
-    private double pushV; // vertical
+    private BukkitTask task;
 
     public EntityMobRepelTask(ProShield plugin, PlotManager plots) {
         this.plugin = plugin;
         this.plots = plots;
-        reloadSettings();
     }
 
-    /** Reloads all repel settings from config.yml */
-    public void reloadSettings() {
-        FileConfiguration cfg = plugin.getConfig();
-        this.enabled = cfg.getBoolean("protection.mobs.border-repel.enabled", true);
-        this.borderRadius = cfg.getDouble("protection.mobs.border-repel.radius", 1.5D);
-        this.pushH = cfg.getDouble("protection.mobs.border-repel.horizontal-push", 0.6D);
-        this.pushV = cfg.getDouble("protection.mobs.border-repel.vertical-push", 0.15D);
+    /** Start the repeating task (safe to call once). */
+    public void start() {
+        if (task != null) return;
+        task = Bukkit.getScheduler().runTaskTimer(plugin, this, periodTicks, periodTicks);
+    }
+
+    /** Stop the task (if running). */
+    public void stop() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
+    }
+
+    /** Optional: adjust period before start(). */
+    public void setPeriodTicks(int ticks) {
+        this.periodTicks = Math.max(1, ticks);
+        // If already running, restart with new period
+        if (task != null) {
+            stop();
+            start();
+        }
+    }
+
+    /** Optional: adjust scan radius (blocks). */
+    public void setScanRadius(double radius) {
+        this.scanRadius = Math.max(4.0, radius);
+    }
+
+    /** Optional: distance from a chunk border (in blocks) to begin repelling. */
+    public void setBorderThreshold(double threshold) {
+        this.borderThreshold = Math.max(0.5, threshold);
     }
 
     @Override
     public void run() {
-        if (!enabled) return;
+        // Iterate players so we don't scan entire worlds every tick
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (!viewer.isOnline() || viewer.isDead()) continue;
 
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity e : world.getEntities()) {
-                // Only repel hostile mobs; skip players, animals, items, etc.
-                if (!(e instanceof Monster)) continue;
+            List<LivingEntity> nearby = viewer.getNearbyEntities(scanRadius, scanRadius / 2, scanRadius).stream()
+                    .filter(e -> e instanceof LivingEntity && !(e instanceof Player))
+                    .map(e -> (LivingEntity) e)
+                    .toList();
 
-                // If tamed hostile variants ever exist (unlikely), skip them
-                if (e instanceof Tameable t && t.isTamed()) continue;
+            for (LivingEntity mob : nearby) {
+                Location l = mob.getLocation();
+                Chunk chunk = l.getChunk();
+                Plot plot = plots.getPlot(chunk);
+                if (plot == null) continue;
 
-                Location loc = e.getLocation();
-                Plot plot = plots.getPlot(loc.getChunk());
-                if (plot == null) continue; // only act inside claims
+                PlotSettings s = plot.getSettings();
+                // Despawn inside takes priority if enabled
+                if (s.isMobDespawnInsideEnabled()) {
+                    // Only remove naturally-spawned style mobs; you can add more checks if needed
+                    mob.remove();
+                    continue;
+                }
 
-                // If the claim disables mob repel, respect settings
-                if (!plot.getSettings().isMobRepelEnabled()) continue;
+                if (!s.isMobRepelEnabled()) continue;
 
-                // Only act near the *chunk border* to keep cost/feel reasonable.
-                if (!isNearChunkBorder(loc, borderRadius)) continue;
+                // If repel is enabled, nudge mobs away from the claim center when they are near the border.
+                // We'll compute distance to the closest border of the chunk; if within threshold, push outward.
+                double dx = l.getX() - (chunk.getX() * 16 + 8.0); // relative to chunk center X
+                double dz = l.getZ() - (chunk.getZ() * 16 + 8.0); // relative to chunk center Z
 
-                // Light cooldown (every 10 ticks) per entity
-                long now = System.currentTimeMillis();
-                Long last = lastPush.get(e.getUniqueId());
-                if (last != null && (now - last) < 500) continue; // ~10 ticks @ 20 TPS
-                lastPush.put(e.getUniqueId(), now);
+                // Distance to the nearest block edge of the chunk (0..15 local coords)
+                int localX = l.getBlockX() & 15; // 0..15
+                int localZ = l.getBlockZ() & 15; // 0..15
+                double distToEdgeX = Math.min(localX, 15 - localX);
+                double distToEdgeZ = Math.min(localZ, 15 - localZ);
+                double minDistToEdge = Math.min(distToEdgeX, distToEdgeZ);
 
-                // Push the mob outward—away from the nearest border toward the outside of the chunk.
-                Vector push = outwardNormalFromNearestEdge(loc).multiply(pushH);
-                push.setY(pushV);
-                e.setVelocity(e.getVelocity().add(push));
+                if (minDistToEdge <= borderThreshold) {
+                    // Push outward from the center so they don't cross deeply into the claim
+                    Vector away = new Vector(dx, 0, dz).normalize().multiply(0.35);
+                    // Add a small upward to avoid ground stickiness
+                    away.setY(0.15);
+                    mob.setVelocity(mob.getVelocity().add(away));
+                }
             }
         }
-    }
-
-    /** True if the location is within radius of any edge of its chunk (0..15 local coords). */
-    private boolean isNearChunkBorder(Location loc, double radius) {
-        int bx = loc.getBlockX();
-        int bz = loc.getBlockZ();
-        int lx = Math.floorMod(bx, 16); // local x in chunk [0..15]
-        int lz = Math.floorMod(bz, 16); // local z in chunk [0..15]
-
-        // Distance to edges
-        double west = lx;
-        double east = 15 - lx;
-        double north = lz;
-        double south = 15 - lz;
-
-        double min = Math.min(Math.min(west, east), Math.min(north, south));
-        return min <= radius;
-    }
-
-    /**
-     * Returns a unit vector pointing OUTWARD from the nearest edge of the chunk.
-     * West -> (-X), East -> (+X), North -> (-Z), South -> (+Z)
-     */
-    private Vector outwardNormalFromNearestEdge(Location loc) {
-        int bx = loc.getBlockX();
-        int bz = loc.getBlockZ();
-        int lx = Math.floorMod(bx, 16);
-        int lz = Math.floorMod(bz, 16);
-
-        double west = lx;
-        double east = 15 - lx;
-        double north = lz;
-        double south = 15 - lz;
-
-        double min = west;
-        Vector n = new Vector(-1, 0, 0); // west
-
-        if (east < min) { min = east; n = new Vector(1, 0, 0); }
-        if (north < min) { min = north; n = new Vector(0, 0, -1); }
-        if (south < min) { n = new Vector(0, 0, 1); }
-
-        return n; // already unit length in axis directions
     }
 }

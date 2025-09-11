@@ -1,10 +1,8 @@
 // src/main/java/com/snazzyatoms/proshield/gui/listeners/UntrustListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -12,46 +10,43 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.UUID;
 
+/**
+ * UntrustListener
+ *
+ * ✅ Removes a trusted player from the claim.
+ */
 public class UntrustListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
-    private final ClaimRoleManager roleManager;
+    private final ClaimRoleManager roles;
 
-    public UntrustListener(ProShield plugin, PlotManager plots, ClaimRoleManager roleManager) {
-        this.plugin = plugin;
+    public UntrustListener(PlotManager plots, ClaimRoleManager roles) {
         this.plots = plots;
-        this.roleManager = roleManager;
+        this.roles = roles;
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onUntrustMenuClick(InventoryClickEvent e) {
+    public void onUntrustClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         if (e.getCurrentItem() == null) return;
 
         e.setCancelled(true);
-        ItemStack item = e.getCurrentItem();
-
-        if (!(item.getItemMeta() instanceof SkullMeta skull)) return;
-        if (!skull.hasOwner()) return;
-
-        String targetName = skull.getOwnerProfile().getName();
-        if (targetName == null) return;
 
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) return;
 
-        UUID targetUUID = plugin.getServer().getOfflinePlayer(targetName).getUniqueId();
+        UUID target = roles.getPendingTarget(player);
+        if (target == null) {
+            player.sendMessage(ChatColor.RED + "⚠ No player selected to untrust.");
+            return;
+        }
 
-        roleManager.setRole(plot, targetUUID, ClaimRole.VISITOR); // reset to Visitor
-        plot.saveAsync();
+        roles.removeRole(plot, target);
 
-        player.sendMessage(ChatColor.RED + "Untrusted " + targetName + " from your claim.");
-        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.8f);
+        player.sendMessage(ChatColor.YELLOW + "✖ Untrusted player.");
     }
 }

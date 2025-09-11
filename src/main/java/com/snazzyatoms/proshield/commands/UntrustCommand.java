@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/UntrustCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,68 +13,89 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.Optional;
 import java.util.UUID;
 
-/**
- * /untrust <player>
- *
- * Removes a player's trust from your current claim.
- */
 public class UntrustCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final ClaimRoleManager roles;
-    private final MessagesUtil msg;
+    private final MessagesUtil messages;
 
-    public UntrustCommand(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
+    public UntrustCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
         this.plugin = plugin;
-        this.plots = plots;
+        this.plotManager = plotManager;
         this.roles = roles;
-        this.msg = plugin.getMessagesUtil();
+        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+
         if (!(sender instanceof Player player)) {
-            msg.send(sender, "error.player-only");
+            messages.send(sender, "error.players-only");
+            return true;
+        }
+
+        if (!player.hasPermission("proshield.use")) {
+            messages.send(player, "error.no-permission");
             return true;
         }
 
         if (args.length < 1) {
-            msg.send(player, "untrust.usage");
+            messages.send(player, "usage.untrust", "/" + label + " <player>");
             return true;
         }
 
-        // Resolve target UUID
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
-        UUID targetId = target.getUniqueId();
-        if (targetId.equals(player.getUniqueId())) {
-            msg.send(player, "untrust.cannot-self");
+        // Resolve target (allow offline)
+        OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
+        if (targetOP == null) {
+            targetOP = Bukkit.getOfflinePlayer(args[0]);
+            if (targetOP == null || targetOP.getUniqueId() == null) {
+                messages.send(player, "error.player-not-found", args[0]);
+                return true;
+            }
+        }
+
+        UUID target = targetOP.getUniqueId();
+
+        // Must be in a claim
+        Optional<Plot> claimOpt = plotManager.getClaim(player.getLocation());
+        if (claimOpt.isEmpty()) {
+            messages.send(player, "error.not-in-claim");
+            return true;
+        }
+        Plot plot = claimOpt.get();
+
+        // Only owner/admin can modify trust
+        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
+            messages.send(player, "error.cannot-modify-claim");
             return true;
         }
 
-        // Ensure player is standing in a claim
-        Plot plot = plots.getPlot(player.getLocation());
-        if (plot == null) {
-            msg.send(player, "untrust.no-claim");
+        // Ensure target is trusted
+        if (!plot.getTrusted().containsKey(target)) {
+            String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();
+            messages.send(player, "untrust.not-trusted", targetName);
             return true;
         }
 
-        // Must be owner
-        if (!plot.isOwner(player.getUniqueId())) {
-            msg.send(player, "untrust.not-owner", plot.getDisplayNameSafe());
-            return true;
+        // Delegate to role manager (handles removal + async save)
+        roles.untrustPlayer(plot, target);
+
+        // Feedback
+        String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();
+        messages.send(player, "untrust.removed", targetName);
+
+        // Notify target if online
+        if (targetOP.isOnline()) {
+            Player tp = targetOP.getPlayer();
+            if (tp != null) {
+                messages.send(tp, "untrust.you-were-untrusted", plot.getDisplayNameSafe());
+            }
         }
 
-        // Remove trust
-        boolean removed = roles.untrustPlayer(plot, targetId);
-        if (!removed) {
-            msg.send(player, "untrust.not-trusted", target.getName());
-            return true;
-        }
-
-        msg.send(player, "untrust.success", target.getName());
         return true;
     }
 }

@@ -2,76 +2,99 @@ package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.UUID;
 
 /**
  * AdminMenuListener
  *
- * - Handles admin GUI interactions (bypass, force unclaim, teleport, etc).
- * - Uses GUICache to track open admin menus.
- * - Clears state when inventory is closed.
+ * ✅ Handles clicks inside the Admin GUI menu
+ * ✅ Toggles config/admin settings & runs admin tools
+ * ✅ Uses GUICache to verify correct inventory
  */
 public class AdminMenuListener implements Listener {
 
     private final ProShield plugin;
     private final GUICache cache;
+    private final PlotManager plots;
+    private final MessagesUtil messages;
 
     public AdminMenuListener(ProShield plugin, GUICache cache) {
         this.plugin = plugin;
         this.cache = cache;
+        this.plots = plugin.getPlotManager();
+        this.messages = plugin.getMessagesUtil();
+
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    /* -------------------------
-     * Handle menu interactions
-     * ------------------------- */
-    @EventHandler(ignoreCancelled = true)
-    public void onMenuClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        if (e.getCurrentItem() == null) return;
+    @EventHandler
+    public void onMenuClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        UUID uuid = player.getUniqueId();
 
-        String menu = cache.getOpenMenu(player.getUniqueId());
-        if (menu == null || !menu.equalsIgnoreCase("admin")) return; // not admin GUI
-        e.setCancelled(true);
+        // Verify this inventory belongs to our Admin GUI
+        if (!cache.isAdminMenu(uuid, event.getInventory())) return;
 
-        ItemStack item = e.getCurrentItem();
-        if (item.getType() == Material.AIR || !item.hasItemMeta()) return;
+        event.setCancelled(true); // Prevent item movement
 
-        String name = ChatColor.stripColor(item.getItemMeta().getDisplayName());
-        if (name == null) return;
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
+
+        ItemMeta meta = clicked.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
+
+        String name = ChatColor.stripColor(meta.getDisplayName());
 
         switch (name.toLowerCase()) {
-            case "toggle bypass" -> player.performCommand("proshield bypass");
-            case "force unclaim" -> player.performCommand("proshield forceunclaim");
-            case "transfer claim" -> player.performCommand("transfer <player>");
-            case "teleport to claim" -> player.performCommand("proshield tp");
-            case "purge expired" -> player.performCommand("proshield purge");
-            case "reload" -> player.performCommand("reload");
-            case "flags" -> player.performCommand("flags");
-            case "debug toggle" -> player.performCommand("proshield debug");
-            case "wilderness messages" -> {
-                boolean enabled = plugin.getConfig().getBoolean("messages.wilderness.enabled", true);
-                plugin.getConfig().set("messages.wilderness.enabled", !enabled);
-                plugin.saveConfig();
-                player.sendMessage(ChatColor.YELLOW + "Wilderness messages: " +
-                        (enabled ? ChatColor.RED + "DISABLED" : ChatColor.GREEN + "ENABLED"));
+            // --- Admin Toggles ---
+            case "debug logging" -> {
+                boolean state = plugin.toggleDebug();
+                player.sendMessage(ChatColor.AQUA + "Debug logging: " + (state ? "ENABLED" : "DISABLED"));
             }
-            default -> player.sendMessage(ChatColor.RED + "Unknown admin option: " + name);
-        }
-    }
+            case "wilderness messages" -> {
+                boolean current = plugin.getConfig().getBoolean("messages.show-wilderness", false);
+                plugin.getConfig().set("messages.show-wilderness", !current);
+                plugin.saveConfig();
+                player.sendMessage(ChatColor.GREEN + "Wilderness messages " + (!current ? "ENABLED" : "DISABLED"));
+            }
+            case "admin flag chat" -> {
+                boolean current = plugin.getConfig().getBoolean("messages.admin-flag-chat", true);
+                plugin.getConfig().set("messages.admin-flag-chat", !current);
+                plugin.saveConfig();
+                player.sendMessage(ChatColor.GREEN + "Admin flag chat " + (!current ? "ENABLED" : "DISABLED"));
+            }
 
-    /* -------------------------
-     * Cleanup on close
-     * ------------------------- */
-    @EventHandler
-    public void onMenuClose(InventoryCloseEvent e) {
-        if (!(e.getPlayer() instanceof Player player)) return;
-        cache.clearOpenMenu(player);
+            // --- Admin Tools ---
+            case "force unclaim" -> {
+                player.closeInventory();
+                player.performCommand("proshield forceunclaim");
+            }
+            case "transfer claim" -> {
+                player.closeInventory();
+                player.sendMessage(ChatColor.YELLOW + "Use /transfer <player> to transfer ownership.");
+            }
+            case "teleport to claim" -> {
+                player.closeInventory();
+                player.sendMessage(ChatColor.YELLOW + "Use /proshield tp <owner> to teleport to claims.");
+            }
+            case "purge expired claims" -> {
+                player.closeInventory();
+                player.performCommand("proshield purge");
+            }
+            default -> {
+                // No action
+            }
+        }
     }
 }

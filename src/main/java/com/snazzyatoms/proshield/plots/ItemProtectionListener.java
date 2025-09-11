@@ -13,15 +13,18 @@ import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
 
+import java.util.UUID;
+
 /**
  * Handles protections for entities inside claims:
  * - Item frames
  * - Armor stands
- * - Containers (via PlayerInteractEntityEvent)
+ * - Animals & pets
+ * - Containers (via interact)
  * - Vehicles (boats, minecarts)
- * - Passive animals & pets
  *
  * Uses global + per-claim rules from PlotSettings.
+ * RoleManager ensures only trusted roles can interact.
  */
 public class ItemProtectionListener implements Listener {
 
@@ -55,10 +58,14 @@ public class ItemProtectionListener implements Listener {
             return;
         }
 
-        if (!plot.getSettings().isItemFramesAllowed()) {
+        UUID uid = player.getUniqueId();
+        ClaimRole role = roleManager.getRole(plot, uid);
+
+        if (!plot.getSettings().isItemFramesAllowed() || !roleManager.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
-            messages.debug("&cPrevented item frame break inside claim: " + plot.getDisplayNameSafe());
+            messages.debug("&cPrevented item frame break inside claim: " + plot.getDisplayNameSafe() +
+                    " by " + player.getName());
         }
     }
 
@@ -70,14 +77,17 @@ public class ItemProtectionListener implements Listener {
 
         if (plot == null) return;
 
-        if (!plot.getSettings().isItemFramesAllowed()) {
+        UUID uid = player.getUniqueId();
+        ClaimRole role = roleManager.getRole(plot, uid);
+
+        if (!plot.getSettings().isItemFramesAllowed() || !roleManager.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
         }
     }
 
     /* ------------------------------
-     * Interacting with entities (Armor Stands, Animals, Containers)
+     * Interacting with entities (Armor Stands, Animals, Pets, Containers)
      * ------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
@@ -86,36 +96,44 @@ public class ItemProtectionListener implements Listener {
         Chunk chunk = entity.getLocation().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        if (plot == null) return; // wilderness - handled by config elsewhere
+        if (plot == null) return; // wilderness – handled by config
 
-        // Role currently unused, but left for expansion (e.g., allow builders to access containers)
-        ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
+        UUID uid = player.getUniqueId();
+        ClaimRole role = roleManager.getRole(plot, uid);
 
         // Armor stands
         if (entity instanceof ArmorStand && !plot.getSettings().isArmorStandsAllowed()) {
-            event.setCancelled(true);
-            messages.send(player, "armor-stands-deny");
-            return;
+            if (!roleManager.canInteract(role)) {
+                event.setCancelled(true);
+                messages.send(player, "armor-stands-deny");
+                return;
+            }
         }
 
         // Passive animals
         if (entity instanceof Animals && !plot.getSettings().isAnimalAccessAllowed()) {
-            event.setCancelled(true);
-            messages.send(player, "animals-deny");
-            return;
+            if (!roleManager.canInteract(role)) {
+                event.setCancelled(true);
+                messages.send(player, "animals-deny");
+                return;
+            }
         }
 
         // Tamed pets
         if (entity instanceof Tameable tameable && tameable.isTamed() && !plot.getSettings().isPetAccessAllowed()) {
-            event.setCancelled(true);
-            messages.send(player, "pets-deny");
-            return;
+            if (!roleManager.canInteract(role)) {
+                event.setCancelled(true);
+                messages.send(player, "pets-deny");
+                return;
+            }
         }
 
-        // Containers (minecarts with chest, etc.)
+        // Containers (like chest minecarts)
         if (entity instanceof Minecart && !plot.getSettings().isContainersAllowed()) {
-            event.setCancelled(true);
-            messages.send(player, "containers-deny");
+            if (!roleManager.canInteract(role)) {
+                event.setCancelled(true);
+                messages.send(player, "containers-deny");
+            }
         }
     }
 
@@ -137,10 +155,14 @@ public class ItemProtectionListener implements Listener {
             return;
         }
 
-        if (!plot.getSettings().isVehiclesAllowed()) {
+        UUID uid = player.getUniqueId();
+        ClaimRole role = roleManager.getRole(plot, uid);
+
+        if (!plot.getSettings().isVehiclesAllowed() || !roleManager.canBuild(role)) {
             event.setCancelled(true);
             messages.send(player, "vehicles-deny");
-            messages.debug("&cPrevented vehicle destroy in claim: " + plot.getDisplayNameSafe());
+            messages.debug("&cPrevented vehicle destroy in claim: " + plot.getDisplayNameSafe() +
+                    " by " + player.getName());
         }
     }
 }

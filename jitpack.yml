@@ -1,22 +1,8 @@
-# ==================================================
-# 🛡️ ProShield - JitPack Build Configuration
-# Ensures Java 17 + Maven build works correctly
-# ==================================================
 jdk:
-  - openjdk17
+  - openjdk21
 
 before_install:
-  - echo "Using Java 17 for ProShield build"
+  - echo "Using Java 21 for ProShield build"
 
 install:
-  - mvn clean install -DskipTests=true -B
-
-# Optional: cache Maven dependencies for faster builds
-cache:
-  paths:
-    - $HOME/.m2
-
-# Build output
-build:
-  commands:
-    - mvn -B package --file pom.xml
+  - mvn clean install -DskipTests

@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/FireProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -12,10 +11,8 @@ import org.bukkit.event.block.BlockSpreadEvent;
 /**
  * Handles fire protections inside claims and wilderness.
  *
- * Preserves prior logic:
- * ✅ Cancel uncontrolled fire spread if disabled
- * ✅ Cancel fire ignition (lightning, lava, flint & steel) if disabled
- * ✅ Respects per-claim settings
+ * ✅ Preserves prior logic
+ * ✅ Fixed missing method (now backed by PlotSettings.fireSpreadAllowed)
  */
 public class FireProtectionListener implements Listener {
 

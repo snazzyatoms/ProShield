@@ -1,9 +1,9 @@
-// src/main/java/com/snazzyatoms/proshield/gui/listeners/AdminMenuListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -18,13 +18,17 @@ import java.util.UUID;
 public class AdminMenuListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager gui;
     private final GUICache cache;
+    private final GUIManager guiManager;
+    private final MessagesUtil messages;
 
     public AdminMenuListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.gui = guiManager;
         this.cache = guiManager.getCache();
+        this.guiManager = guiManager;
+        this.messages = plugin.getMessagesUtil();
+
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler
@@ -32,10 +36,9 @@ public class AdminMenuListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         UUID uuid = player.getUniqueId();
 
-        // Only our admin menu
         if (!cache.isAdminMenu(uuid, event.getInventory())) return;
 
-        event.setCancelled(true); // ✅ make items static/unmovable
+        event.setCancelled(true);
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
@@ -46,29 +49,9 @@ public class AdminMenuListener implements Listener {
         String name = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
 
         switch (name) {
-            // Give admins player-level actions too
-            case "claim chunk" -> player.performCommand("claim");
-            case "unclaim chunk" -> player.performCommand("unclaim");
-            case "claim info" -> player.performCommand("info");
-
-            // Admin tools
-            case "teleport to claim" -> {
-                player.closeInventory();
-                player.sendMessage(ChatColor.YELLOW + "Use /proshield tp <owner> to teleport to claims.");
-            }
-            case "force unclaim" -> {
-                player.closeInventory();
-                player.performCommand("proshield forceunclaim");
-            }
-            case "manage flags (admin)" -> {
-                // Use the existing flags GUI for now; admins have override power anyway
-                gui.openFlagsMenu(player);
-            }
-            case "toggle keep-items" -> {
-                boolean current = plugin.getConfig().getBoolean("keep-items.enabled", false);
-                plugin.getConfig().set("keep-items.enabled", !current);
-                plugin.saveConfig();
-                player.sendMessage(ChatColor.GREEN + "Keep-Items is now " + (!current ? "ENABLED" : "DISABLED"));
+            case "debug logging" -> {
+                boolean state = plugin.toggleDebug();
+                player.sendMessage(ChatColor.AQUA + "Debug logging: " + (state ? "ENABLED" : "DISABLED"));
             }
             case "wilderness tools" -> {
                 boolean current = plugin.getConfig().getBoolean("messages.show-wilderness", false);
@@ -76,8 +59,16 @@ public class AdminMenuListener implements Listener {
                 plugin.saveConfig();
                 player.sendMessage(ChatColor.GREEN + "Wilderness messages " + (!current ? "ENABLED" : "DISABLED"));
             }
-            case "back to player menu" -> gui.openMain(player);
-            default -> { /* ignore filler clicks */ }
+            case "force unclaim" -> player.performCommand("proshield forceunclaim");
+            case "transfer claim" -> guiManager.openTransferMenu(player);
+            case "teleport to claim" -> player.sendMessage(ChatColor.YELLOW + "Use /proshield tp <owner> to teleport to claims.");
+            case "purge expired claims" -> player.performCommand("proshield purge");
+
+            // ✅ Player tools for admins
+            case "claim chunk" -> player.performCommand("claim");
+            case "unclaim chunk" -> player.performCommand("unclaim");
+
+            case "back" -> guiManager.openAdminMain(player); // ✅ Back button
         }
     }
 }

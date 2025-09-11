@@ -1,11 +1,10 @@
-// src/main/java/com/snazzyatoms/proshield/plots/EntityMobRepelTask.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -16,7 +15,7 @@ import java.util.Collection;
  * EntityMobRepelTask
  *
  * ✅ Preserves all prior logic
- * ✅ Keeps backwards compatibility (start() still works)
+ * ✅ Uses PlotSettings.isMobRepelEnabled()
  * ✅ Runs periodically via Bukkit scheduler
  */
 public class EntityMobRepelTask extends BukkitRunnable {
@@ -32,7 +31,6 @@ public class EntityMobRepelTask extends BukkitRunnable {
 
     /**
      * Schedules this task using Bukkit's scheduler.
-     * Backward compatible so existing `.start()` calls still work.
      */
     public void start() {
         if (runningTask != null) {
@@ -53,20 +51,30 @@ public class EntityMobRepelTask extends BukkitRunnable {
     }
 
     private void repelMobs(Plot plot) {
-        Chunk chunk = Bukkit.getWorld(plot.getWorldName()).getChunkAt(plot.getX(), plot.getZ());
+        World world = Bukkit.getWorld(plot.getWorldName());
+        if (world == null) return;
+
+        Chunk chunk = world.getChunkAt(plot.getX(), plot.getZ());
         if (chunk == null || !chunk.isLoaded()) return;
 
         for (Entity e : chunk.getEntities()) {
             if (e instanceof Monster monster) {
                 // Push mobs away from the center of the chunk
-                double dx = monster.getLocation().getX() - (chunk.getX() * 16 + 8);
-                double dz = monster.getLocation().getZ() - (chunk.getZ() * 16 + 8);
+                double centerX = (chunk.getX() << 4) + 8;
+                double centerZ = (chunk.getZ() << 4) + 8;
+
+                double dx = monster.getLocation().getX() - centerX;
+                double dz = monster.getLocation().getZ() - centerZ;
                 double distance = Math.sqrt(dx * dx + dz * dz);
+
                 if (distance < 16) { // inside claim radius
                     double strength = 0.4;
-                    monster.setVelocity(monster.getVelocity().add(
-                            monster.getLocation().toVector().subtract(chunk.getBlock(8, monster.getLocation().getBlockY(), 8).getLocation().toVector()).normalize().multiply(strength)
-                    ));
+                    monster.setVelocity(
+                        monster.getLocation().toVector()
+                                .subtract(chunk.getBlock(8, monster.getLocation().getBlockY(), 8).getLocation().toVector())
+                                .normalize()
+                                .multiply(strength)
+                    );
                 }
             }
         }

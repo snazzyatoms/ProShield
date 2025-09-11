@@ -36,7 +36,7 @@
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
 
-        <!-- Sonatype for snapshots -->
+        <!-- Sonatype Snapshots -->
         <repository>
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
@@ -44,7 +44,7 @@
     </repositories>
 
     <dependencies>
-        <!-- Spigot API (compile only, provided by server) -->
+        <!-- Spigot API -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
@@ -52,7 +52,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Paper API (compile only, provided by server) -->
+        <!-- Paper API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
@@ -63,7 +63,7 @@
 
     <build>
         <plugins>
-            <!-- Compiler Plugin -->
+            <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -73,6 +73,29 @@
                 </configuration>
             </plugin>
 
-            <!-- Shade Plugin for creating fat JAR -->
+            <!-- Shade -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.google.common</pattern>
+                                    <shadedPattern>com.snazzyatoms.proshield.libs.guava</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

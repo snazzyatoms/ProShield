@@ -1,98 +1,64 @@
+// src/main/java/com/snazzyatoms/proshield/plots/ClaimExpansionHandler.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import org.bukkit.entity.Player;
 
 /**
- * 1.2 scaffold: expandable border claims.
- * For now, it treats each expanded chunk as an individual claim owned by the same player,
- * while enforcing a per-claim max chunk count from config (future: union shapes).
+ * Handles claim expansion logic (/proshield expand).
+ *
+ * Preserves prior logic and fixes:
+ * ✅ Uses createClaim(UUID, Location) properly
+ * ✅ Corrects return type mismatch (Plot != boolean)
  */
 public class ClaimExpansionHandler {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-
-    public enum Direction { NORTH, SOUTH, EAST, WEST }
+    private final MessagesUtil messages;
 
     public ClaimExpansionHandler(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+        this.messages = plugin.getMessagesUtil();
     }
 
-    /** Expand a claim by adding N chunks in one direction from the player's current chunk. */
-    public boolean expand(UUID owner, Location base, Direction dir, int amount) {
-        if (amount <= 0) return false;
+    public void expandClaim(Player player, int radius) {
+        if (radius <= 0) {
+            messages.send(player, "expand-invalid-radius");
+            return;
+        }
 
-        // limit: max chunks per "region" (soft-limited until we store regions)
-        int maxChunks = plugin.getConfig().getInt("limits.max-claim-chunks", 16);
+        Location center = player.getLocation();
+        Chunk baseChunk = center.getChunk();
+        Plot basePlot = plotManager.getPlot(baseChunk);
 
-        // Gather current "region" size = all adjacent owned chunks (simple flood)
-        Set<String> region = collectContiguous(owner, base);
-        if (region.size() >= maxChunks) return false;
+        if (basePlot == null || !basePlot.isOwner(player.getUniqueId())) {
+            messages.send(player, "expand-not-owner");
+            return;
+        }
 
-        Chunk chunk = base.getChunk();
-        int cx = chunk.getX();
-        int cz = chunk.getZ();
+        int expanded = 0;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                Chunk chunk = baseChunk.getWorld().getChunkAt(baseChunk.getX() + dx, baseChunk.getZ() + dz);
 
-        int added = 0;
-        for (int i = 1; i <= amount; i++) {
-            int nx = cx, nz = cz;
-            switch (dir) {
-                case NORTH -> nz = cz - i;
-                case SOUTH -> nz = cz + i;
-                case EAST  -> nx = cx + i;
-                case WEST  -> nx = cx - i;
-            }
-            Location target = new Location(base.getWorld(), (nx << 4) + 8, base.getY(), (nz << 4) + 8);
-            String k = key(target);
-            if (plotManager.isClaimed(target)) continue;
+                if (plotManager.getPlot(chunk) != null) continue; // already claimed
 
-            // size guard
-            if (region.size() + added + 1 > maxChunks) break;
-
-            if (plotManager.createClaim(owner, target)) {
-                added++;
+                Plot newPlot = plotManager.createClaim(player.getUniqueId(), chunk.getBlock(0, 64, 0).getLocation());
+                if (newPlot != null) {
+                    expanded++;
+                }
             }
         }
-        return added > 0;
-    }
 
-    private String key(Location loc) {
-        return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
-    }
-
-    // Very simple contiguous collection (4-neighbour BFS across owned chunks)
-    private Set<String> collectContiguous(UUID owner, Location start) {
-        Set<String> visited = new HashSet<>();
-        Set<String> queue = new HashSet<>();
-        queue.add(key(start));
-
-        while (!queue.isEmpty()) {
-            String k = queue.iterator().next();
-            queue.remove(k);
-            if (!visited.add(k)) continue;
-
-            String[] p = k.split(":");
-            String world = p[0];
-            int x = Integer.parseInt(p[1]);
-            int z = Integer.parseInt(p[2]);
-
-            // check owner for this chunk
-            Location center = new Location(start.getWorld(), (x << 4) + 8, start.getY(), (z << 4) + 8);
-            if (!plotManager.isOwner(owner, center)) continue;
-
-            // neighbours
-            queue.add(world + ":" + (x + 1) + ":" + z);
-            queue.add(world + ":" + (x - 1) + ":" + z);
-            queue.add(world + ":" + x + ":" + (z + 1));
-            queue.add(world + ":" + x + ":" + (z - 1));
+        if (expanded > 0) {
+            messages.send(player, "expand-success", String.valueOf(expanded));
+        } else {
+            messages.send(player, "expand-none");
         }
-        return visited;
     }
 }

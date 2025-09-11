@@ -15,15 +15,14 @@ import org.bukkit.inventory.meta.ItemMeta;
  * UntrustMenuListener
  *
  * ✅ Handles clicks in the Untrust menu.
- * ✅ Back button returns to the correct parent (player or admin).
- * ✅ Static menu (items can’t be moved).
+ * ✅ Back button returns to Player or Admin parent menu.
  */
 public class UntrustMenuListener implements Listener {
 
-    private final GUIManager gui;
+    private final GUIManager guiManager;
 
-    public UntrustMenuListener(ProShield plugin, GUIManager gui) {
-        this.gui = gui;
+    public UntrustMenuListener(ProShield plugin, GUIManager guiManager) {
+        this.guiManager = guiManager;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -31,6 +30,9 @@ public class UntrustMenuListener implements Listener {
     public void onUntrustClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         if (e.getCurrentItem() == null) return;
+
+        String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
+        if (!title.contains("untrust player")) return;
 
         e.setCancelled(true);
 
@@ -40,18 +42,11 @@ public class UntrustMenuListener implements Listener {
 
         String name = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
 
-        switch (name) {
-            case "back" -> {
-                boolean fromAdmin = player.hasPermission("proshield.admin");
-                if (fromAdmin) gui.openAdminMain(player);
-                else gui.openMain(player);
-
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            }
-            default -> {
-                // Placeholder: Untrust is handled by /untrust command
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            }
+        if (name.equals("back")) {
+            boolean fromAdmin = title.contains("admin");
+            if (fromAdmin) guiManager.openAdminMain(player); else guiManager.openMain(player);
         }
+
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
     }
 }

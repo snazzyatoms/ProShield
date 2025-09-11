@@ -16,27 +16,6 @@ commands:
     aliases: [ps, shield]
     permission: proshield.use
 
-  # Core Claim Commands
-  claim:
-    description: Claim your current chunk
-    usage: /<command>
-    permission: proshield.use
-
-  unclaim:
-    description: Unclaim your current chunk
-    usage: /<command>
-    permission: proshield.use
-
-  info:
-    description: Show info about the current claim
-    usage: /<command>
-    permission: proshield.use
-
-  preview:
-    description: Preview claim borders with particles
-    usage: /<command>
-    permission: proshield.preview
-
   compass:
     description: Get the ProShield compass
     usage: /<command>
@@ -46,16 +25,8 @@ commands:
     description: Open the claim flags menu
     usage: /<command>
     permission: proshield.flags
-    aliases: [cf]   # ✅ shorthand alias for claim flags
+    aliases: [cf]   # shorthand alias for claim flags
 
-  # New Admin Menu command
-  adminmenu:
-    description: Open the ProShield Admin Menu
-    usage: /<command>
-    permission: proshield.admin
-    aliases: [am, psa]
-
-  # Trust & Roles
   trust:
     description: Trust a player with optional role
     usage: /<command> <player> [role]
@@ -68,11 +39,6 @@ commands:
     permission: proshield.use
     aliases: [removetrust]
 
-  trusted:
-    description: List trusted players in your claim
-    usage: /<command>
-    permission: proshield.use
-
   roles:
     description: Manage claim roles via GUI
     usage: /<command>
@@ -83,20 +49,10 @@ commands:
     usage: /<command> <player>
     permission: proshield.use
 
-  # Admin
-  reload:
-    description: Reload ProShield configuration & messages
-    usage: /<command>
-    permission: proshield.admin.reload
-
 permissions:
   # General Use
   proshield.use:
     description: Use ProShield commands & GUI
-    default: true
-
-  proshield.preview:
-    description: Preview claim borders with particles
     default: true
 
   proshield.flags:
@@ -121,34 +77,6 @@ permissions:
     description: Access admin tools (compass, bypass, force unclaim, purge, admin menu)
     default: op
 
-  proshield.admin.tp:
-    description: Teleport to claims via admin tools
-    default: op
-
   proshield.admin.reload:
     description: Reload ProShield config
-    default: op
-
-  proshield.admin.expired.purge:
-    description: Manage expired claims
-    default: op
-
-  proshield.admin.keepitems:
-    description: Toggle item-keep inside claims
-    default: op
-
-  proshield.admin.transfer:
-    description: Transfer claim ownership
-    default: op
-
-  proshield.admin.debug:
-    description: Toggle debug logging
-    default: op
-
-  proshield.admin.flags:
-    description: Manage claim flags (PvP, explosions, fire, redstone, etc.)
-    default: op
-
-  proshield.admin.wilderness:
-    description: Toggle wilderness entry messages and manage wilderness tools
     default: op

@@ -1,59 +1,55 @@
 package com.snazzyatoms.proshield.gui.cache;
 
-import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * GUICache
  *
- * - Tracks open menus for each player (so listeners know context).
- * - Extendable for later caching (role selections, paging, etc.).
+ * ✅ Tracks both Player and Admin menus per-player
+ * ✅ Prevents duplicate inventories from being created repeatedly
+ * ✅ Safe clearing when players quit
  */
 public class GUICache {
 
-    // Maps <Player UUID, menuKey>
-    private final Map<UUID, String> openMenus = new ConcurrentHashMap<>();
+    private final Map<UUID, Inventory> playerMenus = new HashMap<>();
+    private final Map<UUID, Inventory> adminMenus = new HashMap<>();
 
-    /**
-     * Record which menu a player has open.
-     * @param playerId player UUID
-     * @param menuKey short key (ex: "main", "flags", "admin")
-     */
-    public void setOpenMenu(UUID playerId, String menuKey) {
-        if (playerId != null && menuKey != null) {
-            openMenus.put(playerId, menuKey);
-        }
+    /* -------------------------------------------------------
+     * PLAYER MENU
+     * ------------------------------------------------------- */
+    public void setPlayerMenu(UUID uuid, Inventory inv) {
+        playerMenus.put(uuid, inv);
     }
 
-    /**
-     * Retrieve the last recorded menu for a player.
-     * @param playerId player UUID
-     * @return menu key (or null if none)
-     */
-    public String getOpenMenu(UUID playerId) {
-        if (playerId == null) return null;
-        return openMenus.get(playerId);
+    public Inventory getPlayerMenu(UUID uuid) {
+        return playerMenus.get(uuid);
     }
 
-    /**
-     * Remove player from cache (ex: when they close inv or logout).
-     * @param playerId player UUID
-     */
-    public void clearOpenMenu(UUID playerId) {
-        if (playerId != null) {
-            openMenus.remove(playerId);
-        }
+    /* -------------------------------------------------------
+     * ADMIN MENU
+     * ------------------------------------------------------- */
+    public void setAdminMenu(UUID uuid, Inventory inv) {
+        adminMenus.put(uuid, inv);
     }
 
-    /**
-     * Convenience: clear when Player object is available.
-     */
-    public void clearOpenMenu(Player player) {
-        if (player != null) {
-            clearOpenMenu(player.getUniqueId());
-        }
+    public Inventory getAdminMenu(UUID uuid) {
+        return adminMenus.get(uuid);
+    }
+
+    /* -------------------------------------------------------
+     * CLEANUP
+     * ------------------------------------------------------- */
+    public void clear(UUID uuid) {
+        playerMenus.remove(uuid);
+        adminMenus.remove(uuid);
+    }
+
+    public void clearAll() {
+        playerMenus.clear();
+        adminMenus.clear();
     }
 }

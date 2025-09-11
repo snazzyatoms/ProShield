@@ -17,11 +17,11 @@ import java.util.Iterator;
  */
 public class ExplosionProtectionListener implements Listener {
 
-    private final PlotManager plotManager;
+    private final PlotManager plots;
     private final MessagesUtil messages;
 
-    public ExplosionProtectionListener(PlotManager plotManager, MessagesUtil messages) {
-        this.plotManager = plotManager;
+    public ExplosionProtectionListener(PlotManager plots, MessagesUtil messages) {
+        this.plots = plots;
         this.messages = messages;
     }
 
@@ -29,15 +29,13 @@ public class ExplosionProtectionListener implements Listener {
     public void onEntityExplode(EntityExplodeEvent event) {
         Entity entity = event.getEntity();
         Chunk chunk = entity.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
 
         String explosionType = entity.getType().name();
 
         // Wilderness explosions → global toggle
         if (plot == null) {
-            // use global default wilderness protection
-            boolean allowExplosions = plotManager.getPlugin().getConfig()
-                    .getBoolean("protection.explosions.wilderness", true);
+            boolean allowExplosions = plots.getPlugin().getConfig().getBoolean("protection.explosions.wilderness", true);
             if (!allowExplosions) {
                 event.setCancelled(true);
                 messages.debug("&cExplosion cancelled in wilderness: " + explosionType);
@@ -45,18 +43,18 @@ public class ExplosionProtectionListener implements Listener {
             return;
         }
 
-        // Inside claim → per-claim flag
+        // Inside claim → per-claim flags
         if (!plot.getSettings().isExplosionsAllowed()) {
             event.setCancelled(true);
             messages.debug("&cExplosion cancelled in claim: " + explosionType + " @ " + plot.getDisplayNameSafe());
             return;
         }
 
-        // If explosions allowed, filter affected blocks (prevent griefing across claims)
+        // If explosions allowed, filter blocks so they don’t break claim structures
         Iterator<org.bukkit.block.Block> it = event.blockList().iterator();
         while (it.hasNext()) {
             org.bukkit.block.Block block = it.next();
-            if (plotManager.getPlot(block.getChunk()) != null) {
+            if (plots.getPlot(block.getChunk()) != null) {
                 it.remove();
             }
         }

@@ -119,3 +119,7 @@ permissions:
   proshield.admin.flags:
     description: Manage claim flags (PvP, explosions, fire, redstone, etc.)
     default: op
+
+  proshield.admin.wilderness:
+    description: Toggle wilderness entry messages and manage wilderness tools
+    default: op

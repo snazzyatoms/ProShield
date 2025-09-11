@@ -1,9 +1,6 @@
-// src/main/java/com/snazzyatoms/proshield/commands/FlagsCommand.java
 package com.snazzyatoms.proshield.commands;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -12,33 +9,31 @@ import org.bukkit.entity.Player;
 /**
  * /flags command
  *
- * ✅ Opens the flags GUI for players
- * ✅ Requires "proshield.flags" permission
- * ✅ Admins bypass ownership restrictions
+ * ✅ Opens the claim flags GUI
+ * ✅ Players need "proshield.flags"
+ * ✅ Admins with "proshield.admin.flags" can use anywhere
  */
 public class FlagsCommand implements CommandExecutor {
 
-    private final ProShield plugin;
-    private final GUIManager guiManager;
+    private final GUIManager gui;
 
-    public FlagsCommand(ProShield plugin, GUIManager guiManager) {
-        this.plugin = plugin;
-        this.guiManager = guiManager;
+    public FlagsCommand(GUIManager gui) {
+        this.gui = gui;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+            sender.sendMessage("§cOnly players can use this command.");
             return true;
         }
 
         if (!player.hasPermission("proshield.flags")) {
-            player.sendMessage(ChatColor.RED + "You don’t have permission to toggle claim flags.");
+            player.sendMessage("§cYou don’t have permission to use this command.");
             return true;
         }
 
-        guiManager.openFlagsMenu(player);
+        gui.openFlagsMenu(player);
         return true;
     }
 }

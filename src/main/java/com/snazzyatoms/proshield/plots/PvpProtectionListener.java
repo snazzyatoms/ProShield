@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PvpProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -9,12 +8,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
 /**
- * Handles PvP inside plots.
+ * PvpProtectionListener
  *
- * Preserves all prior logic:
- * ✅ Checks per-claim PvP flag
- * ✅ Protects trusted/owner if configured
- * ✅ UUID mismatch issues fixed
+ * ✅ Uses standalone PlotSettings
+ * ✅ Cancels PvP if disabled per-claim
+ * ✅ Protects owner/trusted players if configured
  */
 public class PvpProtectionListener implements Listener {
 
@@ -36,6 +34,7 @@ public class PvpProtectionListener implements Listener {
         if (plot == null) return; // wilderness not handled here
 
         PlotSettings s = plot.getSettings();
+        if (s == null) return;
 
         // Check PvP flag
         if (!s.isDamagePvpEnabled()) {

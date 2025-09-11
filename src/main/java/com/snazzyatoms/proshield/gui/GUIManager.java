@@ -15,6 +15,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class GUIManager {
 
@@ -105,10 +107,23 @@ public class GUIManager {
 
         fill(inv);
 
-        inv.setItem(11, itemFromConfig("gui.tooltips.builder", Material.STONE_PICKAXE, "§aBuilder"));
-        inv.setItem(12, itemFromConfig("gui.tooltips.moderator", Material.IRON_SWORD, "§cModerator"));
-        inv.setItem(13, itemFromConfig("gui.tooltips.manager", Material.DIAMOND, "§eManager"));
-        inv.setItem(15, itemFromConfig("gui.tooltips.trust", Material.BOOK, "§aTrusted List"));
+        // Load roles from config
+        Map<String, Material> roleSlots = new LinkedHashMap<>();
+        roleSlots.put("visitor", Material.BARRIER);
+        roleSlots.put("member", Material.PAPER);
+        roleSlots.put("trusted", Material.BOOK);
+        roleSlots.put("builder", Material.STONE_PICKAXE);
+        roleSlots.put("container", Material.CHEST);
+        roleSlots.put("moderator", Material.IRON_SWORD);
+        roleSlots.put("manager", Material.DIAMOND);
+
+        int slot = 10;
+        for (Map.Entry<String, Material> entry : roleSlots.entrySet()) {
+            inv.setItem(slot, itemFromConfig("gui.tooltips." + entry.getKey(), entry.getValue(),
+                    ChatColor.YELLOW + entry.getKey().substring(0, 1).toUpperCase() + entry.getKey().substring(1)));
+            slot++;
+        }
+
         inv.setItem(22, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
 
         if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);

@@ -12,18 +12,18 @@ import org.bukkit.event.entity.EntityDamageEvent;
 /**
  * DamageProtectionListener
  *
- * Preserves all prior logic and fixes:
- * ✅ Aligned with new PlotSettings flags
- * ✅ UUID vs Player mismatch fixed
- * ✅ Enum switch cases cleaned up
+ * ✅ Protects players inside claims from all types of damage
+ * ✅ Configurable per-claim flags (PvP, PvE, fall, fire, lava, explosions, drowning, etc.)
+ * ✅ Trusted + owner protection rules respected
+ * ✅ Global + per-claim distinction
  */
 public class DamageProtectionListener implements Listener {
 
-    private final PlotManager plotManager;
+    private final PlotManager plots;
     private final MessagesUtil messages;
 
-    public DamageProtectionListener(PlotManager plotManager, MessagesUtil messages) {
-        this.plotManager = plotManager;
+    public DamageProtectionListener(PlotManager plots, MessagesUtil messages) {
+        this.plots = plots;
         this.messages = messages;
     }
 
@@ -32,63 +32,44 @@ public class DamageProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) return;
 
         Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
         if (plot == null) return;
 
         PlotSettings s = plot.getSettings();
 
-        // Cancel all damage if toggled
+        // Cancel all damage outright
         if (s.isDamageCancelAll()) {
             event.setCancelled(true);
             return;
         }
 
-        // Specific checks
         switch (event.getCause()) {
             case ENTITY_ATTACK -> {
-                if (!s.isDamagePveEnabled()) {
-                    event.setCancelled(true);
-                }
+                if (!s.isDamagePveEnabled()) event.setCancelled(true);
             }
             case PROJECTILE -> {
-                if (!s.isDamageProjectilesEnabled()) {
-                    event.setCancelled(true);
-                }
+                if (!s.isDamageProjectilesEnabled()) event.setCancelled(true);
             }
             case LAVA, FIRE, FIRE_TICK, HOT_FLOOR -> {
-                if (!s.isDamageFireLavaEnabled()) {
-                    event.setCancelled(true);
-                }
+                if (!s.isDamageFireLavaEnabled()) event.setCancelled(true);
             }
             case FALL -> {
-                if (!s.isDamageFallEnabled()) {
-                    event.setCancelled(true);
-                }
+                if (!s.isDamageFallEnabled()) event.setCancelled(true);
             }
             case BLOCK_EXPLOSION, ENTITY_EXPLOSION -> {
-                if (!s.isDamageExplosionsEnabled()) {
-                    event.setCancelled(true);
-                }
+                if (!s.isDamageExplosionsEnabled()) event.setCancelled(true);
             }
             case VOID, DROWNING, SUFFOCATION -> {
-                if (!s.isDamageDrownVoidSuffocateEnabled()) {
-                    event.setCancelled(true);
-                }
+                if (!s.isDamageDrownVoidSuffocateEnabled()) event.setCancelled(true);
             }
             case POISON, WITHER -> {
-                if (!s.isDamagePoisonWitherEnabled()) {
-                    event.setCancelled(true);
-                }
+                if (!s.isDamagePoisonWitherEnabled()) event.setCancelled(true);
             }
-            case CONTACT, CRAMMING, DRAGON_BREATH, MAGIC, LIGHTNING, STARVATION,
-                 THORNS, FLY_INTO_WALL, DRYOUT -> {
-                if (!s.isDamageEnvironmentEnabled()) {
-                    event.setCancelled(true);
-                }
+            case CONTACT, CRAMMING, DRAGON_BREATH, MAGIC, LIGHTNING,
+                 STARVATION, THORNS, FLY_INTO_WALL, DRYOUT -> {
+                if (!s.isDamageEnvironmentEnabled()) event.setCancelled(true);
             }
-            default -> {
-                // Allow other causes
-            }
+            default -> { /* allow other damage causes */ }
         }
     }
 
@@ -97,22 +78,24 @@ public class DamageProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player victim)) return;
 
         Chunk chunk = victim.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
         if (plot == null) return;
 
         PlotSettings s = plot.getSettings();
 
         if (event.getDamager() instanceof Player attacker) {
-            // PvP protection
+            // PvP
             if (!s.isDamagePvpEnabled()) {
                 event.setCancelled(true);
+                messages.debug("&cPvP prevented in claim: " + plot.getDisplayNameSafe());
                 return;
             }
 
-            // Protect trusted players if configured
+            // Protect owner & trusted players
             if (s.isDamageProtectOwnerAndTrusted()) {
                 if (plot.isOwner(attacker.getUniqueId()) || plot.getTrusted().containsKey(attacker.getUniqueId())) {
                     event.setCancelled(true);
+                    return;
                 }
                 if (plot.isOwner(victim.getUniqueId()) || plot.getTrusted().containsKey(victim.getUniqueId())) {
                     event.setCancelled(true);
@@ -120,7 +103,7 @@ public class DamageProtectionListener implements Listener {
             }
         }
 
-        // Handle mob vs player damage
+        // Non-player attackers (PvE)
         if (event.getDamager().getType() != EntityType.PLAYER && !s.isDamagePveEnabled()) {
             event.setCancelled(true);
         }

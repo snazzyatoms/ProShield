@@ -5,7 +5,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.plots.PlotSettings;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
@@ -15,42 +15,26 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.*;
+
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class GUIManager implements Listener {
 
-    private static final String TITLE_MAIN        = ChatColor.DARK_AQUA + "ProShield";
-    private static final String TITLE_FLAGS       = ChatColor.BLUE + "Flags";
-    private static final String TITLE_ROLES       = ChatColor.BLUE + "Roles";
-    private static final String TITLE_TRUST       = ChatColor.BLUE + "Trust Player";
-    private static final String TITLE_UNTRUST     = ChatColor.BLUE + "Untrust Player";
-    private static final String TITLE_TRANSFER    = ChatColor.BLUE + "Transfer Ownership";
-    private static final String TITLE_ADMIN       = ChatColor.DARK_RED + "Admin";
-    private static final String TITLE_ADMIN_WILD  = ChatColor.DARK_RED + "Admin • Wilderness";
-    private static final String TITLE_PICK_PLAYER = ChatColor.GOLD + "Pick Player • ";
+    private static final String TITLE_MAIN  = ChatColor.DARK_AQUA + "ProShield";
+    private static final String TITLE_FLAGS = ChatColor.BLUE + "Flags";
 
     private final ProShield plugin;
     private final GUICache cache;
     private final PlotManager plots;
-    private final ClaimRoleManager roles;
     private final MessagesUtil msg;
-
-    private final Map<UUID, java.util.function.Consumer<UUID>> pendingPickers = new ConcurrentHashMap<>();
-    private final Map<UUID, Runnable> backActions = new ConcurrentHashMap<>();
 
     public GUIManager(ProShield plugin, GUICache cache) {
         this.plugin = plugin;
         this.cache = cache;
         this.plots = plugin.getPlotManager();
-        this.roles = plugin.getRoleManager();
         this.msg   = plugin.getMessagesUtil();
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -64,7 +48,6 @@ public class GUIManager implements Listener {
         boolean has = player.getInventory().containsAtLeast(compass, 1);
         if (force || !has) {
             player.getInventory().addItem(compass);
-            if (plugin.isDebugEnabled()) plugin.getLogger().info("Gave compass to " + player.getName());
         }
     }
 
@@ -98,18 +81,8 @@ public class GUIManager implements Listener {
     /* ========================================================
      * PUBLIC API
      * ======================================================== */
-    public void openMain(Player p)        { openMainInternal(p); }
-    public void openAdmin(Player p)       { openAdminInternal(p); }
-    public void openFlagsMenu(Player p)   { openFlagsInternal(p); }
-    public void openRolesMenu(Player p)   { openRolesInternal(p); }
-    public void openTrustMenu(Player p)   { openTrustInternal(p); }
-    public void openUntrustMenu(Player p) { openUntrustInternal(p); }
-    public void openTransferMenu(Player p){ openTransferInternal(p); }
-
-    public void openRolesGUI(Player p, Plot plot) { openRolesInternal(p, plot); }
-
-    public GUICache getCache() { return cache; }
-    public void clearCache()   { cache.clearCache(); }
+    public void openMain(Player p)      { openMainInternal(p); }
+    public void openFlagsMenu(Player p) { openFlagsInternal(p); }
 
     /* ========================================================
      * INVENTORY CLICK ROUTER
@@ -119,37 +92,12 @@ public class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player p)) return;
         String title = e.getView().getTitle();
 
-        try {
-            if (TITLE_MAIN.equals(title)) {
-                e.setCancelled(true);
-                handleMainClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_FLAGS.equals(title)) {
-                e.setCancelled(true);
-                handleFlagsClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_ROLES.equals(title)) {
-                e.setCancelled(true);
-                handleRolesClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_TRUST.equals(title)) {
-                e.setCancelled(true);
-                handleTrustClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_UNTRUST.equals(title)) {
-                e.setCancelled(true);
-                handleUntrustClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_TRANSFER.equals(title)) {
-                e.setCancelled(true);
-                handleTransferClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_ADMIN.equals(title)) {
-                e.setCancelled(true);
-                handleAdminClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_ADMIN_WILD.equals(title)) {
-                e.setCancelled(true);
-                handleAdminWildernessClick(p, e.getCurrentItem(), e.getClick());
-            } else if (title.startsWith(TITLE_PICK_PLAYER)) {
-                e.setCancelled(true);
-                handlePickPlayerClick(p, e.getCurrentItem(), e.getClick());
-            }
-        } catch (Throwable t) {
-            plugin.getLogger().warning("GUI click error: " + t.getMessage());
+        if (TITLE_MAIN.equals(title)) {
+            e.setCancelled(true);
+            handleMainClick(p, e.getCurrentItem());
+        } else if (TITLE_FLAGS.equals(title)) {
+            e.setCancelled(true);
+            handleFlagsClick(p, e.getCurrentItem(), e.getSlot());
         }
     }
 
@@ -164,188 +112,106 @@ public class GUIManager implements Listener {
         p.openInventory(inv);
     }
 
-    private void openAdminInternal(Player p) {
-        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_ADMIN);
-        set(inv, 11, make(Material.MAP, "Teleport", List.of("Admin teleport to claims")));
-        set(inv, 13, make(Material.BARRIER, "Force Unclaim", List.of("Remove any claim")));
-        set(inv, 15, make(Material.OAK_SIGN, "Wilderness Tools", List.of("Manage wilderness options")));
-        p.openInventory(inv);
-    }
-
     private void openFlagsInternal(Player p) {
+        Plot plot = plots.getPlot(p.getLocation());
+        PlotSettings s = (plot != null) ? plot.getSettings() : new PlotSettings();
+
         Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_FLAGS);
 
-        // --- Claim flags ---
-        set(inv, 10, make(Material.TNT, "Explosions", List.of("Toggle explosions in this claim")));
-        set(inv, 11, make(Material.BUCKET, "Buckets (Place/Use)", List.of("Toggle bucket usage (place/fill)")));
-        set(inv, 12, make(Material.ITEM_FRAME, "Item Frames", List.of("Toggle item frame protection")));
-        set(inv, 13, make(Material.ARMOR_STAND, "Armor Stands", List.of("Toggle armor stand interaction")));
-        set(inv, 14, make(Material.WHEAT, "Animals", List.of("Toggle animal interaction")));
-        set(inv, 15, make(Material.BONE, "Pets", List.of("Toggle tamed pet interaction")));
-        set(inv, 16, make(Material.CHEST, "Containers", List.of("Toggle container access")));
-        set(inv, 19, make(Material.MINECART, "Vehicles", List.of("Toggle vehicle usage")));
-        set(inv, 20, make(Material.FLINT_AND_STEEL, "Fire", List.of("Toggle fire ignition/spread")));
-        set(inv, 21, make(Material.REDSTONE, "Redstone", List.of("Toggle redstone use")));
+        set(inv, 10, toggleItem(Material.TNT, "Explosions", s.isExplosionsAllowed()));
+        set(inv, 11, toggleItem(Material.BUCKET, "Buckets", s.isBucketAllowed()));
+        set(inv, 12, toggleItem(Material.ITEM_FRAME, "Item Frames", s.isItemFramesAllowed()));
+        set(inv, 13, toggleItem(Material.ARMOR_STAND, "Armor Stands", s.isArmorStandsAllowed()));
+        set(inv, 14, toggleItem(Material.WHEAT, "Animals", s.isAnimalAccessAllowed()));
+        set(inv, 15, toggleItem(Material.BONE, "Pets", s.isPetAccessAllowed()));
+        set(inv, 16, toggleItem(Material.CHEST, "Containers", s.isContainersAllowed()));
+        set(inv, 19, toggleItem(Material.MINECART, "Vehicles", s.isVehiclesAllowed()));
+        set(inv, 20, toggleItem(Material.FLINT_AND_STEEL, "Fire", s.isFireAllowed()));
+        set(inv, 21, toggleItem(Material.REDSTONE, "Redstone", s.isRedstoneAllowed()));
         set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to main menu")));
-        set(inv, 23, make(Material.CREEPER_HEAD, "Entity Griefing", List.of("Toggle mob griefing (endermen, wither, etc.)")));
-        set(inv, 24, make(Material.DIAMOND_SWORD, "PvP", List.of("Toggle player-vs-player combat")));
-        set(inv, 25, make(Material.BARRIER, "Mob Repel", List.of("Repel mobs near your claim")));
-        set(inv, 26, make(Material.ROTTEN_FLESH, "Mob Despawn", List.of("Despawn mobs that enter claim")));
+        set(inv, 23, toggleItem(Material.CREEPER_HEAD, "Entity Griefing", s.isEntityGriefingAllowed()));
+        set(inv, 24, toggleItem(Material.DIAMOND_SWORD, "PvP", s.isPvpEnabled()));
+        set(inv, 25, toggleItem(Material.BARRIER, "Mob Repel", s.isMobRepelEnabled()));
+        set(inv, 26, toggleItem(Material.ROTTEN_FLESH, "Mob Despawn", s.isMobDespawnInsideEnabled()));
 
-        p.openInventory(inv);
-    }
-
-    private void openRolesInternal(Player p) {
-        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_ROLES);
-        set(inv, 11, make(Material.PLAYER_HEAD, "Trust", List.of("Trust a player")));
-        set(inv, 13, make(Material.BARRIER, "Untrust", List.of("Remove trust")));
-        set(inv, 15, make(Material.BOOK, "Assign Roles", List.of("Change roles of trusted players")));
-        set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to main menu")));
-        p.openInventory(inv);
-    }
-
-    private void openRolesInternal(Player p, Plot plot) {
-        openRolesInternal(p);
-    }
-
-    private void openTrustInternal(Player p) {
-        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_TRUST);
-        set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to Roles")));
-        p.openInventory(inv);
-    }
-
-    private void openUntrustInternal(Player p) {
-        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_UNTRUST);
-        set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to Roles")));
-        p.openInventory(inv);
-    }
-
-    private void openTransferInternal(Player p) {
-        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_TRANSFER);
-        set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to main menu")));
         p.openInventory(inv);
     }
 
     /* ========================================================
      * CLICK HANDLERS
      * ======================================================== */
-    private void handleMainClick(Player p, ItemStack it, ClickType click) {
+    private void handleMainClick(Player p, ItemStack it) {
         if (!valid(it)) return;
         String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase();
-        switch (name) {
-            case "flags" -> openFlagsInternal(p);
-            case "roles" -> openRolesInternal(p);
-            case "transfer" -> openTransferInternal(p);
+        if ("flags".equals(name)) {
+            openFlagsInternal(p);
         }
     }
 
-    private void handleFlagsClick(Player p, ItemStack it, ClickType click) {
+    private void handleFlagsClick(Player p, ItemStack it, int slot) {
         if (!valid(it)) return;
-        if ("back".equalsIgnoreCase(ChatColor.stripColor(it.getItemMeta().getDisplayName()))) {
-            openMainInternal(p);
-        }
-    }
-
-    private void handleRolesClick(Player p, ItemStack it, ClickType click) {
-        if (!valid(it)) return;
-        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase();
-        switch (name) {
-            case "trust" -> openTrustInternal(p);
-            case "untrust" -> openUntrustInternal(p);
-            case "assign roles" -> openRolesInternal(p);
-            case "back" -> openMainInternal(p);
-        }
-    }
-
-    private void handleTrustClick(Player p, ItemStack it, ClickType click) {
-        if (!valid(it)) return;
-        if ("back".equalsIgnoreCase(ChatColor.stripColor(it.getItemMeta().getDisplayName()))) {
-            openRolesInternal(p);
-        }
-    }
-
-    private void handleUntrustClick(Player p, ItemStack it, ClickType click) {
-        if (!valid(it)) return;
-        if ("back".equalsIgnoreCase(ChatColor.stripColor(it.getItemMeta().getDisplayName()))) {
-            openRolesInternal(p);
-        }
-    }
-
-    private void handleTransferClick(Player p, ItemStack it, ClickType click) {
-        if (!valid(it)) return;
-        if ("back".equalsIgnoreCase(ChatColor.stripColor(it.getItemMeta().getDisplayName()))) {
-            openMainInternal(p);
-        }
-    }
-
-    private void handleAdminClick(Player p, ItemStack it, ClickType click) {
-        if (!valid(it)) return;
-        if ("wilderness tools".equalsIgnoreCase(ChatColor.stripColor(it.getItemMeta().getDisplayName()))) {
-            openAdminWilderness(p);
-        } else if ("back".equalsIgnoreCase(ChatColor.stripColor(it.getItemMeta().getDisplayName()))) {
-            openMainInternal(p);
-        }
-    }
-
-    private void handleAdminWildernessClick(Player p, ItemStack it, ClickType click) {
-        if (!valid(it)) return;
-        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase();
-
-        switch (name) {
-            case "wilderness messages" -> {
-                boolean current = plugin.getConfig().getBoolean("messages.show-wilderness", false);
-                boolean next = !current;
-                plugin.getConfig().set("messages.show-wilderness", next);
-                plugin.saveConfig();
-                msg.send(p, next ? "admin.wilderness-toggle-on" : "admin.wilderness-toggle-off");
-                openAdminWilderness(p);
-            }
-            case "back" -> openAdminInternal(p);
-        }
-    }
-
-    private void handlePickPlayerClick(Player p, ItemStack it, ClickType click) {
-        if (!valid(it)) return;
-        UUID skullOwner = skullOwner(it);
-        if (skullOwner != null) {
-            java.util.function.Consumer<UUID> action = pendingPickers.remove(p.getUniqueId());
-            if (action != null) action.accept(skullOwner);
-        }
-    }
-
-    /* ========================================================
-     * ADMIN WILDERNESS
-     * ======================================================== */
-    private void openAdminWilderness(Player p) {
-        if (!p.hasPermission("proshield.admin")) {
-            p.sendMessage(ChatColor.RED + "No permission.");
+        Plot plot = plots.getPlot(p.getLocation());
+        if (plot == null) {
+            p.sendMessage(ChatColor.RED + "You must be inside a claim to edit flags.");
             return;
         }
 
-        Plot plot = plots.getPlot(p.getLocation());
-        boolean claimed = plot != null;
+        // Permission check: only owner or admin can edit
+        UUID uid = p.getUniqueId();
+        if (!p.hasPermission("proshield.admin") && !uid.equals(plot.getOwner())) {
+            p.sendMessage(ChatColor.RED + "Only the claim owner or admins can change flags.");
+            return;
+        }
 
-        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_ADMIN_WILD);
+        PlotSettings s = plot.getSettings();
+        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase();
 
-        // Status
-        String status = claimed
-                ? ChatColor.GREEN + "Claimed by " + nameOf(plot.getOwner())
-                : ChatColor.RED + "Wilderness";
-        set(inv, 10, make(Material.MAP, "Status", List.of(status)));
+        switch (name) {
+            case "explosions" -> s.setExplosionsAllowed(!s.isExplosionsAllowed());
+            case "buckets" -> s.setBucketAllowed(!s.isBucketAllowed());
+            case "item frames" -> s.setItemFramesAllowed(!s.isItemFramesAllowed());
+            case "armor stands" -> s.setArmorStandsAllowed(!s.isArmorStandsAllowed());
+            case "animals" -> s.setAnimalAccessAllowed(!s.isAnimalAccessAllowed());
+            case "pets" -> s.setPetAccessAllowed(!s.isPetAccessAllowed());
+            case "containers" -> s.setContainersAllowed(!s.isContainersAllowed());
+            case "vehicles" -> s.setVehiclesAllowed(!s.isVehiclesAllowed());
+            case "fire" -> s.setFireAllowed(!s.isFireAllowed());
+            case "redstone" -> s.setRedstoneAllowed(!s.isRedstoneAllowed());
+            case "entity griefing" -> s.setEntityGriefingAllowed(!s.isEntityGriefingAllowed());
+            case "pvp" -> s.setPvpEnabled(!s.isPvpEnabled());
+            case "mob repel" -> s.setMobRepelEnabled(!s.isMobRepelEnabled());
+            case "mob despawn" -> s.setMobDespawnInsideEnabled(!s.isMobDespawnInsideEnabled());
+            case "back" -> {
+                openMainInternal(p);
+                return;
+            }
+            default -> { return; }
+        }
 
-        // Actions
-        set(inv, 12, make(Material.EMERALD, "Claim Here (Self)", List.of("Make yourself the owner of this chunk.")));
-        set(inv, 13, make(Material.PLAYER_HEAD, "Claim Here (For Player)", List.of("Open player picker to assign owner.")));
-        set(inv, 14, make(Material.BARRIER, "Unclaim Here", List.of("Remove the claim in this chunk.")));
+        // Update GUI instantly
+        boolean enabled = switch (name) {
+            case "explosions" -> s.isExplosionsAllowed();
+            case "buckets" -> s.isBucketAllowed();
+            case "item frames" -> s.isItemFramesAllowed();
+            case "armor stands" -> s.isArmorStandsAllowed();
+            case "animals" -> s.isAnimalAccessAllowed();
+            case "pets" -> s.isPetAccessAllowed();
+            case "containers" -> s.isContainersAllowed();
+            case "vehicles" -> s.isVehiclesAllowed();
+            case "fire" -> s.isFireAllowed();
+            case "redstone" -> s.isRedstoneAllowed();
+            case "entity griefing" -> s.isEntityGriefingAllowed();
+            case "pvp" -> s.isPvpEnabled();
+            case "mob repel" -> s.isMobRepelEnabled();
+            case "mob despawn" -> s.isMobDespawnInsideEnabled();
+            default -> false;
+        };
 
-        // Wilderness message toggle
-        boolean enabled = plugin.getConfig().getBoolean("messages.show-wilderness", false);
-        set(inv, 15, toggleItem(Material.OAK_SIGN, "Wilderness Messages", enabled));
-
-        // Back
-        set(inv, 16, make(Material.OAK_DOOR, "Back", List.of("Return to Admin")));
-
-        p.openInventory(inv);
+        p.getOpenInventory().getTopInventory().setItem(
+                slot,
+                toggleItem(it.getType(), it.getItemMeta().getDisplayName(), enabled)
+        );
+        plots.saveAsync(plot);
     }
 
     /* ========================================================
@@ -391,26 +257,7 @@ public class GUIManager implements Listener {
         return it;
     }
 
-    private String nameOf(UUID id) {
-        OfflinePlayer op = Bukkit.getOfflinePlayer(id);
-        String n = op != null ? op.getName() : null;
-        return n != null ? n : id.toString().substring(0, 8);
-    }
-
-    private UUID skullOwner(ItemStack skull) {
-        if (skull == null || skull.getType() != Material.PLAYER_HEAD) return null;
-        ItemMeta m = skull.getItemMeta();
-        if (!(m instanceof SkullMeta sm)) return null;
-        OfflinePlayer op = sm.getOwningPlayer();
-        return (op != null) ? op.getUniqueId() : null;
-    }
-
     private InventoryHolder dummyHolder() {
         return () -> null;
-    }
-
-    private boolean canEdit(Player p, Plot plot) {
-        UUID id = p.getUniqueId();
-        return (plot.getOwner() != null && plot.getOwner().equals(id)) || p.hasPermission("proshield.admin");
     }
 }

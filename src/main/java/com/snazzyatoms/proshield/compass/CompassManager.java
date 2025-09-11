@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/compass/CompassManager.java
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,14 +11,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
 
-/**
- * CompassManager
- *
- * Handles giving players/admins the ProShield compass.
- * - Distinguishes between normal and admin compasses
- * - Provides checks to see if an ItemStack is a ProShield compass
- * - Opens the correct GUI when right-clicked
- */
 public class CompassManager {
 
     private final ProShield plugin;
@@ -30,13 +21,14 @@ public class CompassManager {
         this.guiManager = guiManager;
     }
 
-    /**
-     * Give a compass to a player.
-     *
-     * @param player Target player
-     * @param admin  If true → admin style compass
-     */
     public void giveCompass(Player player, boolean admin) {
+        // ✅ Prevent duplicate compasses
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (isProShieldCompass(item)) {
+                return; // Already has one
+            }
+        }
+
         ItemStack compass = new ItemStack(Material.COMPASS);
         ItemMeta meta = compass.getItemMeta();
 
@@ -55,7 +47,6 @@ public class CompassManager {
                 ));
             }
 
-            // Cosmetic glow
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 
@@ -65,9 +56,6 @@ public class CompassManager {
         player.getInventory().addItem(compass);
     }
 
-    /**
-     * Check if an ItemStack is a ProShield compass.
-     */
     public boolean isProShieldCompass(ItemStack item) {
         if (item == null || item.getType() != Material.COMPASS) return false;
         if (!item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) return false;
@@ -76,20 +64,13 @@ public class CompassManager {
         return name.contains("ProShield Compass") || name.contains("Admin Compass");
     }
 
-    /**
-     * Open the correct GUI when right-clicked with compass.
-     */
     public void openFromCompass(Player player, ItemStack item) {
         if (!isProShieldCompass(item)) return;
 
-        // ✅ Always open the main menu first
-        guiManager.openMain(player);
-
-        // ✅ Admins will see the "Admin Tab" inside the main GUI
         if (player.isOp() || player.hasPermission("proshield.admin")) {
-            // Optionally highlight the admin tab or send a message
-            plugin.getMessagesUtil().send(player, "prefix",
-                    "&eOpened ProShield menu &7(Admin features available).");
+            guiManager.openAdminMain(player);
+        } else {
+            guiManager.openMain(player);
         }
     }
 }

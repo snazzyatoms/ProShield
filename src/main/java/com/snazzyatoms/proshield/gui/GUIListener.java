@@ -4,9 +4,9 @@ package com.snazzyatoms.proshield.gui;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.listeners.AdminMenuListener;
 import com.snazzyatoms.proshield.gui.listeners.PlayerMenuListener;
-import com.snazzyatoms.proshield.gui.listeners.RolesMenuListener;
-import com.snazzyatoms.proshield.gui.listeners.TrustMenuListener;
-import com.snazzyatoms.proshield.gui.listeners.UntrustMenuListener;
+import com.snazzyatoms.proshield.gui.listeners.RolesListener;
+import com.snazzyatoms.proshield.gui.listeners.TrustListener;
+import com.snazzyatoms.proshield.gui.listeners.UntrustListener;
 import org.bukkit.event.Listener;
 
 /**
@@ -26,9 +26,9 @@ public class GUIListener implements Listener {
         // Register all listeners
         plugin.getServer().getPluginManager().registerEvents(new PlayerMenuListener(plugin, guiManager), plugin);
         plugin.getServer().getPluginManager().registerEvents(new AdminMenuListener(plugin, guiManager), plugin);
-        plugin.getServer().getPluginManager().registerEvents(new RolesMenuListener(plugin, guiManager), plugin);
-        plugin.getServer().getPluginManager().registerEvents(new TrustMenuListener(plugin, guiManager), plugin);
-        plugin.getServer().getPluginManager().registerEvents(new UntrustMenuListener(plugin, guiManager), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new RolesListener(plugin, plugin.getPlotManager(), plugin.getRoleManager(), guiManager), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new TrustListener(plugin, plugin.getPlotManager(), plugin.getRoleManager(), guiManager), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new UntrustListener(plugin, plugin.getPlotManager(), plugin.getRoleManager(), guiManager), plugin);
     }
 
     public GUIManager getGuiManager() {

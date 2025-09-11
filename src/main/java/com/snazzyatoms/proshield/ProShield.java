@@ -78,6 +78,7 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerCommands() {
+        // ✅ Now matches updated command constructors
         registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager, compassManager));
         registerCommand("trust", new TrustCommand(this, plotManager, roleManager));
         registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
@@ -90,8 +91,6 @@ public class ProShield extends JavaPlugin {
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(
                 new PlayerJoinListener(this, guiManager, plotManager, compassManager), this);
-        Bukkit.getPluginManager().registerEvents(
-                new CompassListener(this, compassManager), this); // ✅ COMPASS LISTENER REGISTERED
         Bukkit.getPluginManager().registerEvents(
                 new BlockProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(
@@ -114,6 +113,9 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
+
+        // ✅ Compass right-click listener
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {

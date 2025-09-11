@@ -43,8 +43,9 @@ public class ProShield extends JavaPlugin {
         roleManager = new ClaimRoleManager(this);
 
         // GUI
-        guiCache = new GUICache(guiManager);
+        guiCache = new GUICache(null); // placeholder, will link after GUIManager init
         guiManager = new GUIManager(this, guiCache);
+        guiCache = new GUICache(guiManager); // now link properly
 
         registerCommands();
         registerListeners();
@@ -62,10 +63,14 @@ public class ProShield extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Stop repel tasks cleanly
         if (mobRepelTask != null) mobRepelTask.stop();
-        if (borderRepelTask != null) mobRepelTask.stop();
+        if (borderRepelTask != null) borderRepelTask.stop();
 
-        if (plotManager != null) plotManager.saveAll();
+        // Save plots
+        if (plotManager != null) {
+            plotManager.saveAll();
+        }
 
         if (messages != null) {
             messages.send(getServer().getConsoleSender(), "prefix", "&cProShield disabled.");
@@ -84,28 +89,48 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new FireProtectionListener(plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager, messages), this); // ✅ Fixed
+        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
+        Bukkit.getPluginManager().registerEvents(guiManager, this); // GUIManager is also a listener
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {
         PluginCommand cmd = getCommand(name);
-        if (cmd != null) cmd.setExecutor(executor);
+        if (cmd != null) {
+            cmd.setExecutor(executor);
+        }
     }
 
-    public static ProShield getInstance() { return instance; }
-    public MessagesUtil getMessagesUtil() { return messages; }
-    public PlotManager getPlotManager() { return plotManager; }
-    public ClaimRoleManager getRoleManager() { return roleManager; }
-    public GUIManager getGuiManager() { return guiManager; }
-    public GUICache getGuiCache() { return guiCache; }
+    public static ProShield getInstance() {
+        return instance;
+    }
+
+    public MessagesUtil getMessagesUtil() {
+        return messages;
+    }
+
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
+    }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+
+    public GUICache getGuiCache() {
+        return guiCache;
+    }
 
     public boolean toggleBypass(Player player) {
         if (bypassing.contains(player.getUniqueId())) {
@@ -126,5 +151,7 @@ public class ProShield extends JavaPlugin {
         return debugEnabled;
     }
 
-    public boolean isDebugEnabled() { return debugEnabled; }
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
 }

@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -18,12 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * PlotManager handles all claim storage, lookup, and persistence.
  *
  * Preserves prior logic and enhances:
- * - Adds saveAsync(plot) + saveAsync() overloads
+ * - Adds saveAsync(plot), saveAsync(), saveNow()
+ * - Adds getClaimName, hasAnyClaim, createClaim, isOwner(Location), isTrustedOrOwner(Location)
  * - Restores getX(), getZ() usage from Plot
- * - Fixes world lookups (use names/UUID, not Optional)
- * - Adds purgeExpired for /proshield purge
- * - Standardized getPlot/getClaim overloads for Location + Chunk
- * - Added helpers for ownership and trust lookups with both Location and Chunk
  */
 public class PlotManager {
 
@@ -51,7 +49,6 @@ public class PlotManager {
         return getPlot(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
     }
 
-    /** Overload for Location (to fix mismatches). */
     public Plot getPlot(Location loc) {
         if (loc == null) return null;
         return getPlot(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ());
@@ -61,43 +58,27 @@ public class PlotManager {
         return claims.getOrDefault(world, Collections.emptyMap()).get(key(x, z));
     }
 
-    /** Alias for readability when working with claims. */
     public Plot getClaim(Location loc) {
         return getPlot(loc);
     }
 
     public boolean isClaimed(Location loc) {
-        return getPlot(loc) != null;
+        return getClaim(loc) != null;
     }
 
-    public boolean isClaimed(Chunk chunk) {
-        return getPlot(chunk) != null;
+    public boolean isOwner(UUID playerId, Plot plot) {
+        return plot != null && playerId != null && playerId.equals(plot.getOwner());
     }
 
-    /** Ownership check by Location. */
     public boolean isOwner(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        return plot != null && playerId != null && playerId.equals(plot.getOwner());
+        return isOwner(playerId, getPlot(loc));
     }
 
-    /** Ownership check by Chunk. */
-    public boolean isOwner(UUID playerId, Chunk chunk) {
-        Plot plot = getPlot(chunk);
-        return plot != null && playerId != null && playerId.equals(plot.getOwner());
-    }
-
-    /** Trusted or owner check (Location). */
     public boolean isTrustedOrOwner(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null || playerId == null) return false;
-        return playerId.equals(plot.getOwner()) || plot.getTrusted().containsKey(playerId);
-    }
-
-    /** Trusted or owner check (Chunk). */
-    public boolean isTrustedOrOwner(UUID playerId, Chunk chunk) {
-        Plot plot = getPlot(chunk);
-        if (plot == null || playerId == null) return false;
-        return playerId.equals(plot.getOwner()) || plot.getTrusted().containsKey(playerId);
+        if (isOwner(playerId, plot)) return true;
+        return plot.getTrusted().containsKey(playerId);
     }
 
     public Collection<Plot> getClaims() {
@@ -120,6 +101,33 @@ public class PlotManager {
             worldClaims.remove(key(plot.getX(), plot.getZ()));
         }
         saveAsync();
+    }
+
+    /* -------------------------------------------------------
+     * Convenience Helpers
+     * ------------------------------------------------------- */
+
+    /** Does this player own any claims? */
+    public boolean hasAnyClaim(UUID playerId) {
+        if (playerId == null) return false;
+        return getClaims().stream().anyMatch(p -> playerId.equals(p.getOwner()));
+    }
+
+    /** Get a safe name for the claim at this location. */
+    public String getClaimName(Location loc) {
+        Plot plot = getPlot(loc);
+        return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
+    }
+
+    /** Create a new claim for a player at a given location. */
+    public Plot createClaim(UUID owner, Location loc) {
+        if (owner == null || loc == null) return null;
+        Chunk chunk = loc.getChunk();
+        if (isClaimed(loc)) return null;
+
+        Plot plot = new Plot(chunk, owner);
+        addPlot(plot);
+        return plot;
     }
 
     /* -------------------------------------------------------
@@ -160,10 +168,13 @@ public class PlotManager {
         }.runTaskAsynchronously(plugin);
     }
 
+    /** Public immediate save (blocking, not async). */
+    public synchronized void saveNow() {
+        saveAll();
+    }
+
     private synchronized void saveAll() {
-        for (String key : new HashSet<>(yaml.getKeys(false))) {
-            yaml.set(key, null); // wipe
-        }
+        yaml.getKeys(false).forEach(k -> yaml.set(k, null)); // wipe
         for (Map.Entry<String, Map<String, Plot>> worldEntry : claims.entrySet()) {
             String world = worldEntry.getKey();
             for (Plot plot : worldEntry.getValue().values()) {
@@ -177,7 +188,8 @@ public class PlotManager {
         }
     }
 
-    private synchronized void savePlot(Plot plot) {
+    /** Private single plot save */
+    synchronized void savePlot(Plot plot) {
         String path = plot.getWorldName() + "." + key(plot.getX(), plot.getZ());
         yaml.createSection(path, plot.serialize());
         try {
@@ -192,7 +204,6 @@ public class PlotManager {
      * ------------------------------------------------------- */
 
     public void reloadFromConfig() {
-        // Currently no dynamic values per claim, placeholder for future
         plugin.getLogger().info("[ProShield] PlotManager reloaded settings.");
     }
 

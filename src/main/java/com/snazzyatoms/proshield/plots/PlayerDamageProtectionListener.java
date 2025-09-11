@@ -1,83 +1,112 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Location;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Chunk;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 
-import java.util.UUID;
-
 /**
- * PlayerDamageProtectionListener
+ * DamageProtectionListener
  *
- * ✅ Preserves prior protection logic
- * ✅ Fixed to use PlotManager.getPlot(Location)
- * ✅ Replaces missing isOwner/isTrustedOrOwner calls
+ * ✅ Preserves all prior logic
+ * ✅ Uses PlotSettings damage flags
+ * ✅ Protects trusted/owner players if enabled
+ * ✅ Unified constructor style (PlotManager, MessagesUtil)
  */
-public class PlayerDamageProtectionListener implements Listener {
+public class DamageProtectionListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
+    private final MessagesUtil messages;
 
-    public PlayerDamageProtectionListener(ProShield plugin, PlotManager plots) {
-        this.plugin = plugin;
+    public DamageProtectionListener(PlotManager plots, MessagesUtil messages) {
         this.plots = plots;
-    }
-
-    private boolean shouldProtect(Player p) {
-        if (!plugin.getConfig().getBoolean("protection.damage.enabled", true)) return false;
-
-        Location loc = p.getLocation();
-        Plot plot = plots.getPlot(loc); // ✅ use existing method
-        if (plot == null) return false;
-
-        if (!plugin.getConfig().getBoolean("protection.damage.protect-owner-and-trusted", true))
-            return false;
-
-        UUID u = p.getUniqueId();
-        // ✅ check owner/trusted directly via Plot
-        return plot.isOwner(u) || plot.getTrusted().containsKey(u);
+        this.messages = messages;
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onAnyDamage(EntityDamageEvent e) {
-        if (!(e.getEntity() instanceof Player p)) return;
-        if (!shouldProtect(p)) return;
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
 
-        if (plugin.getConfig().getBoolean("protection.damage.cancel-all", true)) {
-            e.setCancelled(true);
+        Chunk chunk = player.getLocation().getChunk();
+        Plot plot = plots.getPlot(chunk);
+        if (plot == null) return;
+
+        PlotSettings s = plot.getSettings();
+
+        // Cancel all damage if toggled
+        if (s.isDamageCancelAll()) {
+            event.setCancelled(true);
             return;
         }
-        switch (e.getCause()) {
-            case FALL -> cancelIf("protection.damage.fall", e);
-            case FIRE, FIRE_TICK, LAVA -> cancelIf("protection.damage.fire-lava", e);
-            case BLOCK_EXPLOSION, ENTITY_EXPLOSION -> cancelIf("protection.damage.explosions", e);
-            case DROWNING, SUFFOCATION, VOID -> cancelIf("protection.damage.drown-void-suffocate", e);
-            case CONTACT, HOT_FLOOR, ENTITY_SWEEP_ATTACK, THORNS -> cancelIf("protection.damage.environment", e);
-            case WITHER, POISON, MAGIC -> cancelIf("protection.damage.poison-wither", e);
-            default -> {}
+
+        // Specific cause checks
+        switch (event.getCause()) {
+            case ENTITY_ATTACK -> {
+                if (!s.isDamagePveEnabled()) event.setCancelled(true);
+            }
+            case PROJECTILE -> {
+                if (!s.isDamageProjectilesEnabled()) event.setCancelled(true);
+            }
+            case LAVA, FIRE, FIRE_TICK, HOT_FLOOR -> {
+                if (!s.isDamageFireLavaEnabled()) event.setCancelled(true);
+            }
+            case FALL -> {
+                if (!s.isDamageFallEnabled()) event.setCancelled(true);
+            }
+            case BLOCK_EXPLOSION, ENTITY_EXPLOSION -> {
+                if (!s.isDamageExplosionsEnabled()) event.setCancelled(true);
+            }
+            case VOID, DROWNING, SUFFOCATION -> {
+                if (!s.isDamageDrownVoidSuffocateEnabled()) event.setCancelled(true);
+            }
+            case POISON, WITHER -> {
+                if (!s.isDamagePoisonWitherEnabled()) event.setCancelled(true);
+            }
+            case CONTACT, CRAMMING, DRAGON_BREATH, MAGIC, LIGHTNING,
+                 STARVATION, THORNS, FLY_INTO_WALL, DRYOUT -> {
+                if (!s.isDamageEnvironmentEnabled()) event.setCancelled(true);
+            }
+            default -> {
+                // other causes left untouched
+            }
         }
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onPvEDamage(EntityDamageByEntityEvent e) {
-        if (!(e.getEntity() instanceof Player p)) return;
-        if (!shouldProtect(p)) return;
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) return;
 
-        // projectiles & melee from mobs
-        switch (e.getCause()) {
-            case PROJECTILE -> cancelIf("protection.damage.projectiles", e);
-            case ENTITY_ATTACK -> cancelIf("protection.damage.pve", e);
-            default -> {}
+        Chunk chunk = victim.getLocation().getChunk();
+        Plot plot = plots.getPlot(chunk);
+        if (plot == null) return;
+
+        PlotSettings s = plot.getSettings();
+
+        if (event.getDamager() instanceof Player attacker) {
+            // PvP protection
+            if (!s.isDamagePvpEnabled()) {
+                event.setCancelled(true);
+                return;
+            }
+
+            // Protect trusted/owner players if configured
+            if (s.isDamageProtectOwnerAndTrusted()) {
+                if (plot.isOwner(attacker.getUniqueId()) || plot.getTrusted().containsKey(attacker.getUniqueId())) {
+                    event.setCancelled(true);
+                }
+                if (plot.isOwner(victim.getUniqueId()) || plot.getTrusted().containsKey(victim.getUniqueId())) {
+                    event.setCancelled(true);
+                }
+            }
         }
-    }
 
-    private void cancelIf(String path, EntityDamageEvent e) {
-        if (plugin.getConfig().getBoolean(path, true)) {
-            e.setCancelled(true);
+        // Player vs Mob (PvE)
+        if (event.getDamager().getType() != EntityType.PLAYER && !s.isDamagePveEnabled()) {
+            event.setCancelled(true);
         }
     }
 }

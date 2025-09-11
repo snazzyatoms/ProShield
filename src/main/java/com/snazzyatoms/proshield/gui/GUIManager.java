@@ -165,22 +165,23 @@ public class GUIManager implements Listener {
 
         PlotSettings s = plot.getSettings();
         String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase();
+        boolean newState = false;
 
         switch (name) {
-            case "explosions" -> s.setExplosionsAllowed(!s.isExplosionsAllowed());
-            case "buckets" -> s.setBucketAllowed(!s.isBucketAllowed());
-            case "item frames" -> s.setItemFramesAllowed(!s.isItemFramesAllowed());
-            case "armor stands" -> s.setArmorStandsAllowed(!s.isArmorStandsAllowed());
-            case "animals" -> s.setAnimalAccessAllowed(!s.isAnimalAccessAllowed());
-            case "pets" -> s.setPetAccessAllowed(!s.isPetAccessAllowed());
-            case "containers" -> s.setContainersAllowed(!s.isContainersAllowed());
-            case "vehicles" -> s.setVehiclesAllowed(!s.isVehiclesAllowed());
-            case "fire" -> s.setFireAllowed(!s.isFireAllowed());
-            case "redstone" -> s.setRedstoneAllowed(!s.isRedstoneAllowed());
-            case "entity griefing" -> s.setEntityGriefingAllowed(!s.isEntityGriefingAllowed());
-            case "pvp" -> s.setPvpEnabled(!s.isPvpEnabled());
-            case "mob repel" -> s.setMobRepelEnabled(!s.isMobRepelEnabled());
-            case "mob despawn" -> s.setMobDespawnInsideEnabled(!s.isMobDespawnInsideEnabled());
+            case "explosions" -> { s.setExplosionsAllowed(!s.isExplosionsAllowed()); newState = s.isExplosionsAllowed(); }
+            case "buckets" -> { s.setBucketAllowed(!s.isBucketAllowed()); newState = s.isBucketAllowed(); }
+            case "item frames" -> { s.setItemFramesAllowed(!s.isItemFramesAllowed()); newState = s.isItemFramesAllowed(); }
+            case "armor stands" -> { s.setArmorStandsAllowed(!s.isArmorStandsAllowed()); newState = s.isArmorStandsAllowed(); }
+            case "animals" -> { s.setAnimalAccessAllowed(!s.isAnimalAccessAllowed()); newState = s.isAnimalAccessAllowed(); }
+            case "pets" -> { s.setPetAccessAllowed(!s.isPetAccessAllowed()); newState = s.isPetAccessAllowed(); }
+            case "containers" -> { s.setContainersAllowed(!s.isContainersAllowed()); newState = s.isContainersAllowed(); }
+            case "vehicles" -> { s.setVehiclesAllowed(!s.isVehiclesAllowed()); newState = s.isVehiclesAllowed(); }
+            case "fire" -> { s.setFireAllowed(!s.isFireAllowed()); newState = s.isFireAllowed(); }
+            case "redstone" -> { s.setRedstoneAllowed(!s.isRedstoneAllowed()); newState = s.isRedstoneAllowed(); }
+            case "entity griefing" -> { s.setEntityGriefingAllowed(!s.isEntityGriefingAllowed()); newState = s.isEntityGriefingAllowed(); }
+            case "pvp" -> { s.setPvpEnabled(!s.isPvpEnabled()); newState = s.isPvpEnabled(); }
+            case "mob repel" -> { s.setMobRepelEnabled(!s.isMobRepelEnabled()); newState = s.isMobRepelEnabled(); }
+            case "mob despawn" -> { s.setMobDespawnInsideEnabled(!s.isMobDespawnInsideEnabled()); newState = s.isMobDespawnInsideEnabled(); }
             case "back" -> {
                 openMainInternal(p);
                 return;
@@ -189,28 +190,14 @@ public class GUIManager implements Listener {
         }
 
         // Update GUI instantly
-        boolean enabled = switch (name) {
-            case "explosions" -> s.isExplosionsAllowed();
-            case "buckets" -> s.isBucketAllowed();
-            case "item frames" -> s.isItemFramesAllowed();
-            case "armor stands" -> s.isArmorStandsAllowed();
-            case "animals" -> s.isAnimalAccessAllowed();
-            case "pets" -> s.isPetAccessAllowed();
-            case "containers" -> s.isContainersAllowed();
-            case "vehicles" -> s.isVehiclesAllowed();
-            case "fire" -> s.isFireAllowed();
-            case "redstone" -> s.isRedstoneAllowed();
-            case "entity griefing" -> s.isEntityGriefingAllowed();
-            case "pvp" -> s.isPvpEnabled();
-            case "mob repel" -> s.isMobRepelEnabled();
-            case "mob despawn" -> s.isMobDespawnInsideEnabled();
-            default -> false;
-        };
-
         p.getOpenInventory().getTopInventory().setItem(
                 slot,
-                toggleItem(it.getType(), it.getItemMeta().getDisplayName(), enabled)
+                toggleItem(it.getType(), it.getItemMeta().getDisplayName(), newState)
         );
+
+        // Debug log
+        plugin.getLogger().info(p.getName() + " toggled flag '" + name + "' in claim " + plot.getDisplayNameSafe() + " -> " + (newState ? "ENABLED" : "DISABLED"));
+
         plots.saveAsync(plot);
     }
 

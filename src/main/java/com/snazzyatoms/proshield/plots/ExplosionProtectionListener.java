@@ -3,7 +3,6 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Explosive;
 import org.bukkit.event.EventHandler;
@@ -15,9 +14,10 @@ import java.util.Iterator;
 /**
  * ExplosionProtectionListener
  *
- * ✅ Global wilderness explosion toggle
- * ✅ Per-claim explosion flag
- * ✅ Filters block list → explosions never damage protected claims
+ * ✅ Handles TNT, creepers, wither, beds, respawn anchors, etc.
+ * ✅ Global wilderness config + per-claim flags
+ * ✅ Prevents block damage inside claims unless allowed
+ * ✅ Debug logging for admins
  */
 public class ExplosionProtectionListener implements Listener {
 
@@ -41,35 +41,36 @@ public class ExplosionProtectionListener implements Listener {
 
         // Wilderness → global config
         if (plot == null) {
-            boolean allow = plugin.getConfig().getBoolean("protection.explosions.enabled", false);
-            if (!allow) {
+            boolean enabled = plugin.getConfig().getBoolean("protection.explosions.enabled", false);
+            if (!enabled) {
                 event.setCancelled(true);
-                messages.debug("&cExplosion blocked in wilderness: " + explosionType);
+                messages.debug("&cExplosion cancelled in wilderness: " + explosionType);
             }
             return;
         }
 
-        // Inside claim → per-claim toggle
+        // Claim → per-claim flag
         if (!plot.getSettings().isExplosionsAllowed()) {
             event.setCancelled(true);
-            messages.debug("&cExplosion blocked in claim: " + plot.getDisplayNameSafe() +
+            messages.debug("&cExplosion cancelled in claim: " + plot.getDisplayNameSafe() +
                     " (" + explosionType + ")");
             return;
         }
 
-        // Explosions allowed → filter block list
-        Iterator<Block> it = event.blockList().iterator();
+        // If explosions are allowed, trim block damage so other nearby claims are safe
+        Iterator<org.bukkit.block.Block> it = event.blockList().iterator();
         while (it.hasNext()) {
-            Block block = it.next();
-            Plot blockPlot = plots.getPlot(block.getChunk());
-            if (blockPlot != null && !blockPlot.getSettings().isExplosionsAllowed()) {
-                it.remove(); // don’t damage protected claim blocks
+            org.bukkit.block.Block block = it.next();
+            Plot affectedPlot = plots.getPlot(block.getChunk());
+            if (affectedPlot != null && !affectedPlot.equals(plot)) {
+                // Prevent cross-claim grief
+                it.remove();
             }
         }
 
         if (entity instanceof Explosive) {
-            messages.debug("&eExplosion processed in claim: " +
-                    plot.getDisplayNameSafe() + " (" + explosionType + ")");
+            messages.debug("&eExplosion processed in claim: " + plot.getDisplayNameSafe() +
+                    " (" + explosionType + ")");
         }
     }
 }

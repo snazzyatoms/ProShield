@@ -11,9 +11,9 @@ protection:
   # Fire settings
   # -------------------------
   fire:
-    burn: false         # 🔥 Allow blocks/entities to burn
-    spread: false       # 🔥 Allow fire to spread
-    ignite:             # 🔥 Sources of ignition
+    burn: false
+    spread: false
+    ignite:
       flint_and_steel: false
       lava: false
       lightning: false
@@ -22,12 +22,12 @@ protection:
   # Explosion settings
   # -------------------------
   explosions:
-    enabled: false      # 💥 Global explosion toggle (TNT, creepers, beds, etc.)
+    enabled: false
 
   # -------------------------
   # Bucket settings
   # -------------------------
-  buckets: false        # 🪣 Single toggle (empty + fill blocked together)
+  buckets: false   # 🪣 Single toggle (empty + fill blocked together)
 
   # -------------------------
   # Mob settings
@@ -35,11 +35,10 @@ protection:
   mobs:
     border-repel:
       enabled: true
-      # 🔹 How far from the claim edge mobs get pushed back
       radius: 3.0
       horizontal-push: 0.7
       vertical-push: 0.25
-    despawn-inside: true   # 🧟 Despawn mobs that manage to enter claims
+    despawn-inside: true
 
   # -------------------------
   # Wilderness entity settings
@@ -56,15 +55,17 @@ messages:
   prefix: "&3[ProShield] &r"
   debug-prefix: "&8[Debug] &r"
 
-  # 🔹 Wilderness entry toggle
   show-wilderness: false   # "Entering Wilderness" shown when leaving claims?
+  admin-flag-chat: true    # 💬 Show flag toggle messages to admins?
 
 gui:
   flags:
     title: "§dClaim Flags"
   admin:
     wilderness:
-      toggle-messages: true   # 🔹 Shows wilderness toggle in Admin GUI
+      toggle-messages: true
+    debug:
+      toggle-flag-chat: true   # ✅ show flag-chat toggle in Admin GUI
 
 # ==========================================================
 # Claim Defaults
@@ -81,7 +82,7 @@ claims:
     vehicles: false
     armor-stands: false
     item-frames: false
-    buckets: false   # ✅ matches PlotSettings.get/setBucketAllowed
+    buckets: false
     pets: false
     mob-repel: true
     mob-despawn: true

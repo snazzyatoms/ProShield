@@ -13,14 +13,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
-import java.util.UUID;
-
 /**
  * UntrustListener
  *
  * ✅ Removes a trusted player from the claim.
  * ✅ Back button returns to correct parent menu.
  * ✅ Feedback with sounds + refresh.
+ * ⚠ GUI selection of target postponed until v2.0 (use /untrust <player>).
  */
 public class UntrustListener implements Listener {
 
@@ -60,21 +59,8 @@ public class UntrustListener implements Listener {
             return;
         }
 
-        UUID target = roles.getPendingTarget(player);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "⚠ No player selected to untrust.");
-            return;
-        }
-
-        // ✅ Remove role
-        roles.removeRole(plot, target);
-
-        // ✅ Feedback
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.8f);
-        player.sendMessage(ChatColor.YELLOW + "✖ Untrusted player.");
-
-        // ✅ Refresh GUI
-        boolean fromAdmin = player.hasPermission("proshield.admin");
-        gui.openUntrustMenu(player, fromAdmin);
+        // ⚠ GUI untrust not implemented yet
+        player.sendMessage(ChatColor.YELLOW + "ℹ Use /untrust <player> to remove someone from your claim.");
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.5f);
     }
 }

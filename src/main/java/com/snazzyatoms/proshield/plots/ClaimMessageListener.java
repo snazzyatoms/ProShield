@@ -11,8 +11,8 @@ import org.bukkit.event.player.PlayerMoveEvent;
  * Handles claim entry/exit messages.
  *
  * ✅ Preserves prior logic (notify when claim changes)
- * ✅ Expanded: now also shows "leaving" message before entering the next claim
- * ✅ Uses MessagesUtil (no more ProShield.PREFIX)
+ * ✅ Expanded: shows "leaving" + "entering" messages
+ * ✅ Uses MessagesUtil with placeholders: %claim%
  */
 public class ClaimMessageListener implements Listener {
 

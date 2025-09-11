@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -11,8 +10,8 @@ import java.util.UUID;
  * ClaimRoleManager
  *
  * ✅ Preserves prior logic
- * ✅ Fixed to use plotManager.saveAsync() correctly
- * ✅ Handles trust/untrust with roles
+ * ✅ Expanded to use PlotManager.saveAsync() correctly
+ * ✅ Supports saving per-plot or all plots
  */
 public class ClaimRoleManager {
 
@@ -28,28 +27,30 @@ public class ClaimRoleManager {
      * Trust Management
      * ------------------------------------------------------- */
 
-    public void trustPlayer(Plot plot, UUID playerId, ClaimRole role) {
-        plot.getRoles().put(playerId, role);
-        plotManager.saveAsync(plot); // save just this plot
+    public void addTrusted(Plot plot, UUID player, String role) {
+        if (plot == null || player == null) return;
+
+        plot.getTrusted().put(player, role);
+        plotManager.saveAsync(plot); // preserve prior per-plot logic
     }
 
-    public void untrustPlayer(Plot plot, UUID playerId) {
-        plot.getRoles().remove(playerId);
-        plotManager.saveAsync(plot); // save just this plot
-    }
+    public void removeTrusted(Plot plot, UUID player) {
+        if (plot == null || player == null) return;
 
-    public ClaimRole getRole(Plot plot, UUID playerId) {
-        return plot.getRoles().get(playerId);
+        plot.getTrusted().remove(player);
+        plotManager.saveAsync(plot); // preserve prior per-plot logic
     }
 
     /* -------------------------------------------------------
      * Reload Support
      * ------------------------------------------------------- */
 
-    /** Reloads role settings across all plots (called on plugin reload). */
+    /**
+     * Reloads role-related settings from config and ensures plots are persisted.
+     * This now calls PlotManager.saveAsync() (all plots) instead of failing.
+     */
     public void reloadFromConfig() {
-        // Currently roles are per-plot and already deserialized in Plot
-        // Future: global role defaults could be reloaded here.
-        plotManager.saveAsync(); // ✅ save all plots safely
+        // TODO: extend with role limits / default role loading if needed
+        plotManager.saveAsync(); // save ALL plots async, new safe method
     }
 }

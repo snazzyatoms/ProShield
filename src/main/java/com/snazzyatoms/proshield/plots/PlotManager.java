@@ -23,8 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
  *    - Lookups by Location/Chunk
  *    - Claim/unclaim support
  * ✅ Expanded:
- *    - saveAll()
- *    - getClaim(Location)
  *    - isOwner / isTrustedOrOwner
  *    - reloadFromConfig hook
  */
@@ -66,11 +64,6 @@ public class PlotManager {
         return plots.get(key(loc));
     }
 
-    /** Alias for getPlot(Location) – used by commands/listeners. */
-    public Optional<Plot> getClaim(Location loc) {
-        return Optional.ofNullable(getPlot(loc));
-    }
-
     public Collection<Plot> getAllPlots() {
         return plots.values();
     }
@@ -84,7 +77,7 @@ public class PlotManager {
 
     public String getClaimName(Location loc) {
         Plot plot = getPlot(loc);
-        return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
+        return (plot != null) ? plot.getDisplayNameSafe() : null;
     }
 
     /* -------------------------------------------------------
@@ -113,7 +106,6 @@ public class PlotManager {
      * Persistence
      * ------------------------------------------------------- */
 
-    /** Save a single plot asynchronously. */
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> save(plot));
     }
@@ -124,20 +116,10 @@ public class PlotManager {
         saveFile();
     }
 
-    /** Save all plots synchronously (used onDisable). */
-    public void saveAll() {
-        for (Plot plot : plots.values()) {
-            String k = plot.getWorldName() + "," + plot.getX() + "," + plot.getZ();
-            config.set(k, plot.serialize());
-        }
-        saveFile();
-    }
-
     private void saveFile() {
         try {
             config.save(file);
         } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save plots.yml: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -174,7 +156,9 @@ public class PlotManager {
     /** Check if player is trusted OR the owner at a given location. */
     public boolean isTrustedOrOwner(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
-        return plot != null && (plot.isOwner(playerId) || plot.isTrusted(playerId));
+        return plot != null &&
+                (plot.isOwner(playerId) ||
+                 (plot.getTrusted() != null && plot.getTrusted().containsKey(playerId)));
     }
 
     /** Reload plots.yml into memory (used on /proshield reload). */
@@ -186,5 +170,12 @@ public class PlotManager {
             plugin.getLogger().warning("Failed to reload plots.yml: " + e.getMessage());
         }
         loadAll();
+    }
+
+    /** Save all plots synchronously (called on plugin disable). */
+    public void saveAll() {
+        for (Plot plot : plots.values()) {
+            save(plot);
+        }
     }
 }

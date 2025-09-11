@@ -1,8 +1,10 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotSettings;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -75,12 +77,23 @@ public class GUIManager {
 
         fill(inv);
 
-        inv.setItem(10, itemFromConfig("gui.tooltips.pvp", Material.IRON_SWORD, "§cPvP"));
-        inv.setItem(11, itemFromConfig("gui.tooltips.explosions", Material.TNT, "§4Explosions"));
-        inv.setItem(12, itemFromConfig("gui.tooltips.fire", Material.FLINT_AND_STEEL, "§6Fire"));
-        inv.setItem(13, itemFromConfig("gui.tooltips.redstone", Material.REDSTONE, "§cRedstone"));
-        inv.setItem(14, itemFromConfig("gui.tooltips.containers", Material.CHEST, "§aContainers"));
-        inv.setItem(22, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
+        Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+        PlotSettings settings = plot != null ? plot.getSettings() : new PlotSettings();
+
+        inv.setItem(10, statefulItem("gui.tooltips.pvp", Material.IRON_SWORD, "§cPvP", settings.isPvpEnabled()));
+        inv.setItem(11, statefulItem("gui.tooltips.explosions", Material.TNT, "§4Explosions", settings.isExplosionsAllowed()));
+        inv.setItem(12, statefulItem("gui.tooltips.fire", Material.FLINT_AND_STEEL, "§6Fire", settings.isFireAllowed()));
+        inv.setItem(13, statefulItem("gui.tooltips.redstone", Material.REDSTONE, "§cRedstone", settings.isRedstoneAllowed()));
+        inv.setItem(14, statefulItem("gui.tooltips.containers", Material.CHEST, "§aContainers", settings.isContainersAllowed()));
+        inv.setItem(15, statefulItem("gui.tooltips.buckets", Material.BUCKET, "§bBuckets", settings.isBucketAllowed()));
+        inv.setItem(16, statefulItem("gui.tooltips.itemframes", Material.ITEM_FRAME, "§6Item Frames", settings.isItemFramesAllowed()));
+        inv.setItem(20, statefulItem("gui.tooltips.armorstands", Material.ARMOR_STAND, "§eArmor Stands", settings.isArmorStandsAllowed()));
+        inv.setItem(21, statefulItem("gui.tooltips.animals", Material.SADDLE, "§aAnimals", settings.isAnimalAccessAllowed()));
+        inv.setItem(22, statefulItem("gui.tooltips.pets", Material.BONE, "§dPets", settings.isPetAccessAllowed()));
+        inv.setItem(23, statefulItem("gui.tooltips.vehicles", Material.MINECART, "§2Vehicles", settings.isVehiclesAllowed()));
+        inv.setItem(24, statefulItem("gui.tooltips.entitygrief", Material.ROTTEN_FLESH, "§4Entity Griefing", settings.isEntityGriefingAllowed()));
+
+        inv.setItem(26, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
 
         if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
         player.openInventory(inv);
@@ -143,6 +156,18 @@ public class GUIManager {
         }
 
         return createItem(fallbackMat, name, lore);
+    }
+
+    private ItemStack statefulItem(String path, Material mat, String fallbackName, boolean enabled) {
+        ItemStack item = itemFromConfig(path, mat, fallbackName);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setLore(Arrays.asList(
+                    ChatColor.GRAY + "Now: " + (enabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED")
+            ));
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     private ItemStack createItem(Material mat, String name, String... lore) {

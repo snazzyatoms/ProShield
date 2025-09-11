@@ -15,7 +15,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Locale;
-import java.util.Optional;
 import java.util.UUID;
 
 public class TrustCommand implements CommandExecutor {
@@ -79,12 +78,11 @@ public class TrustCommand implements CommandExecutor {
         }
 
         // Must be inside a claim
-        Optional<Plot> claimOpt = plotManager.getClaim(player.getLocation());
-        if (claimOpt.isEmpty()) {
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) {
             messages.send(player, "error.not-in-claim");
             return true;
         }
-        Plot plot = claimOpt.get();
 
         // Only owner/admin can manage trust
         if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {

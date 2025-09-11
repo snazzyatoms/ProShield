@@ -16,6 +16,7 @@ import java.util.logging.Level;
  * MessagesUtil
  * - Handles message loading, prefixing, placeholders, broadcasting
  * - Expanded with multiple send(...) overloads to match all plugin calls
+ * - Expanded with debug(...) overloads used across listeners
  * - Preserves reload() and broadcastConsole() logic
  */
 public class MessagesUtil {
@@ -112,6 +113,42 @@ public class MessagesUtil {
             for (String line : lines) {
                 sender.sendMessage(PREFIX + ChatColor.translateAlternateColorCodes('&', line));
             }
+        }
+    }
+
+    /* ======================================================
+     * DEBUG SUPPORT
+     * ====================================================== */
+
+    private String getDebugPrefix() {
+        if (config != null && config.isString("messages.debug-prefix")) {
+            return ChatColor.translateAlternateColorCodes('&',
+                    config.getString("messages.debug-prefix", "&8[Debug] &r"));
+        }
+        return ChatColor.DARK_GRAY + "[Debug] " + ChatColor.RESET;
+    }
+
+    /** Debug with plugin context (kept for calls like debug(plugin, msg)) */
+    public void debug(ProShield plugin, String message) {
+        if (plugin == null || message == null) return;
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info(ChatColor.stripColor(message));
+        }
+    }
+
+    /** Debug simple string (to console only). */
+    public void debug(String message) {
+        if (message == null) return;
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info(ChatColor.stripColor(message));
+        }
+    }
+
+    /** Debug to a CommandSender (player or console). */
+    public void debug(CommandSender sender, String message) {
+        if (sender == null || message == null) return;
+        if (plugin.isDebugEnabled()) {
+            sender.sendMessage(getDebugPrefix() + ChatColor.translateAlternateColorCodes('&', message));
         }
     }
 }

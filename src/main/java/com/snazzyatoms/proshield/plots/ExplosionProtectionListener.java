@@ -14,10 +14,10 @@ import java.util.Iterator;
 /**
  * ExplosionProtectionListener
  *
- * ✅ Handles TNT, creepers, wither, beds, respawn anchors, etc.
- * ✅ Global wilderness config + per-claim flags
- * ✅ Prevents block damage inside claims unless allowed
- * ✅ Debug logging for admins
+ * ✅ Cancels or filters explosions in wilderness + claims
+ * ✅ Uses both global config + per-claim flags
+ * ✅ Prevents grief from TNT, creepers, wither, etc.
+ * ✅ Debug messages included
  */
 public class ExplosionProtectionListener implements Listener {
 
@@ -39,38 +39,41 @@ public class ExplosionProtectionListener implements Listener {
 
         String explosionType = entity.getType().name();
 
-        // Wilderness → global config
+        /* -------------------------------------------------------
+         * Wilderness explosions (no claim found)
+         * ------------------------------------------------------- */
         if (plot == null) {
-            boolean enabled = plugin.getConfig().getBoolean("protection.explosions.enabled", false);
-            if (!enabled) {
+            boolean allowExplosions = plugin.getConfig().getBoolean("protection.explosions.enabled", false);
+            if (!allowExplosions) {
                 event.setCancelled(true);
-                messages.debug("&cExplosion cancelled in wilderness: " + explosionType);
+                messages.debug("&cExplosion blocked in wilderness: " + explosionType);
             }
             return;
         }
 
-        // Claim → per-claim flag
+        /* -------------------------------------------------------
+         * Claimed land explosions
+         * ------------------------------------------------------- */
         if (!plot.getSettings().isExplosionsAllowed()) {
             event.setCancelled(true);
-            messages.debug("&cExplosion cancelled in claim: " + plot.getDisplayNameSafe() +
-                    " (" + explosionType + ")");
+            messages.debug("&cExplosion blocked in claim: " + explosionType + " @ " + plot.getDisplayNameSafe());
             return;
         }
 
-        // If explosions are allowed, trim block damage so other nearby claims are safe
+        /* -------------------------------------------------------
+         * If explosions are allowed, filter blocks to avoid grief
+         * ------------------------------------------------------- */
         Iterator<org.bukkit.block.Block> it = event.blockList().iterator();
         while (it.hasNext()) {
             org.bukkit.block.Block block = it.next();
-            Plot affectedPlot = plots.getPlot(block.getChunk());
-            if (affectedPlot != null && !affectedPlot.equals(plot)) {
-                // Prevent cross-claim grief
-                it.remove();
+            Plot blockPlot = plots.getPlot(block.getChunk());
+            if (blockPlot != null && !blockPlot.getSettings().isExplosionsAllowed()) {
+                it.remove(); // block won’t be destroyed
             }
         }
 
         if (entity instanceof Explosive) {
-            messages.debug("&eExplosion processed in claim: " + plot.getDisplayNameSafe() +
-                    " (" + explosionType + ")");
+            messages.debug("&eExplosion processed: " + explosionType + " in claim: " + plot.getDisplayNameSafe());
         }
     }
 }

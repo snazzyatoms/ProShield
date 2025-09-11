@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -9,7 +10,7 @@ import org.bukkit.event.Listener;
  * GUIListener
  *
  * ✅ Central hook for registering both Player & Admin menu listeners.
- * ✅ Prevents missing method calls by deferring all logic to GUIManager + dedicated listeners.
+ * ✅ Defers all logic to GUIManager + dedicated listeners.
  * ✅ Keeps menus consistent with CompassManager (player vs admin).
  */
 public class GUIListener implements Listener {
@@ -23,11 +24,11 @@ public class GUIListener implements Listener {
         this.plugin = plugin;
         this.guiManager = guiManager;
 
-        // Attach player + admin menu listeners
+        // Attach listeners (✅ now use GUIManager, not GUICache)
         this.playerMenuListener = new PlayerMenuListener(plugin, guiManager);
         this.adminMenuListener = new AdminMenuListener(plugin, guiManager);
 
-        // Register them into Bukkit
+        // Register with Bukkit
         plugin.getServer().getPluginManager().registerEvents(playerMenuListener, plugin);
         plugin.getServer().getPluginManager().registerEvents(adminMenuListener, plugin);
     }

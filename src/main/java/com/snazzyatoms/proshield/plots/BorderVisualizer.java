@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/BorderVisualizer.java
 package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.Color;
@@ -10,9 +9,8 @@ import org.bukkit.entity.Player;
 /**
  * BorderVisualizer
  *
- * ✅ Fixes:
- * - Replaced deprecated/missing Particle.REDSTONE usage with DustOptions.
- * - Keeps prior border visualization logic intact.
+ * ✅ Uses Particle.DUST with DustOptions (modern Spigot/Paper API).
+ * ✅ Keeps prior border visualization logic intact.
  */
 public class BorderVisualizer {
 
@@ -26,7 +24,7 @@ public class BorderVisualizer {
         int x = plot.getX() << 4;
         int z = plot.getZ() << 4;
 
-        // Use DustOptions for redstone particle
+        // Use DustOptions for colored particle
         Particle.DustOptions redDust = new Particle.DustOptions(Color.RED, 1.0f);
 
         // Outline the 16x16 chunk edges
@@ -44,6 +42,7 @@ public class BorderVisualizer {
     }
 
     private static void spawnParticle(Player player, Location loc, Particle.DustOptions dust) {
-        player.spawnParticle(Particle.REDSTONE, loc, 1, 0, 0, 0, 0, dust);
+        // ✅ Use DUST instead of REDSTONE
+        player.spawnParticle(Particle.DUST, loc, 1, 0, 0, 0, 0, dust);
     }
 }

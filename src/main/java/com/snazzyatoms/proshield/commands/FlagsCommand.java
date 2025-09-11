@@ -41,7 +41,8 @@ public class FlagsCommand implements CommandExecutor {
         }
 
         // ✅ Open the Claim Flags menu
-        guiManager.openFlagsMenu(player);
+        boolean fromAdmin = player.hasPermission("proshield.admin");
+        guiManager.openFlagsMenu(player, fromAdmin);
         return true;
     }
 }

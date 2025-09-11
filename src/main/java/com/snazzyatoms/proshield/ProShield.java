@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
@@ -43,9 +42,9 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
 
-        // ✅ Fixed initialization order
-        guiCache = new GUICache();
-        guiManager = new GUIManager(this, guiCache);
+        // ✅ Fixed initialization order: GUIManager first, then GUICache
+        guiManager = new GUIManager(this);
+        guiCache = new GUICache(guiManager);
 
         registerCommands();
         registerListeners();

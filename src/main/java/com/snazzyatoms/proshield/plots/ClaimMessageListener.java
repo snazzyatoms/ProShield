@@ -9,42 +9,40 @@ import org.bukkit.event.player.PlayerMoveEvent;
 /**
  * Handles claim entry/exit messages.
  *
- * ✅ Simplified constructor (PlotManager + MessagesUtil)
- * ✅ Consistent with other listeners
- * ✅ Wilderness messages still controlled by config
+ * ✅ Uses MessagesUtil for clean placeholder output
+ * ✅ Config toggle for wilderness messages
  */
 public class ClaimMessageListener implements Listener {
 
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    public ClaimMessageListener(PlotManager plots, MessagesUtil messages) {
-        this.plots = plots;
+    public ClaimMessageListener(PlotManager plotManager, MessagesUtil messages) {
+        this.plotManager = plotManager;
         this.messages = messages;
     }
 
     @EventHandler
-    public void onMove(PlayerMoveEvent e) {
-        Player p = e.getPlayer();
+    public void onMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
 
-        String fromClaim = plots.getClaimName(e.getFrom());
-        String toClaim   = plots.getClaimName(e.getTo());
+        String fromClaim = plotManager.getClaimName(event.getFrom());
+        String toClaim   = plotManager.getClaimName(event.getTo());
 
         if (!fromClaim.equals(toClaim)) {
-            // Leaving message
+            // Leaving
             if (fromClaim != null && !fromClaim.isEmpty() && !"Wilderness".equalsIgnoreCase(fromClaim)) {
-                messages.send(p, "claim.leaving", fromClaim);
+                messages.send(player, "claim.leaving", fromClaim);
             }
 
-            // Entering message
+            // Entering
             if (toClaim != null && !toClaim.isEmpty()) {
                 if ("Wilderness".equalsIgnoreCase(toClaim)) {
-                    if (p.getServer().getPluginManager().getPlugin("ProShield")
-                            .getConfig().getBoolean("messages.wilderness.enabled", true)) {
-                        messages.send(p, "claim.entering", toClaim);
+                    if (plotManager.getPlugin().getConfig().getBoolean("messages.wilderness.enabled", true)) {
+                        messages.send(player, "claim.entering", toClaim);
                     }
                 } else {
-                    messages.send(p, "claim.entering", toClaim);
+                    messages.send(player, "claim.entering", toClaim);
                 }
             }
         }

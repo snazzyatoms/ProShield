@@ -12,14 +12,9 @@ import java.util.*;
 /**
  * Represents a claimed chunk of land.
  *
- * ✅ Fixed:
- * - Removed invalid "implements" on class.
- * - Cleaned @Override usage (only on true overrides).
- * - Corrected DummyChunk wrapper for Chunk compatibility.
- * - Added getNearestBorder(Location) for MobBorderRepelListener.
- * - Added PlotSettings + getSettings() for per-claim configuration.
- * - Added getName() as a safe display name accessor.
- * - Switched trusted map to use ClaimRole instead of String.
+ * ✅ Uses external PlotSettings class instead of duplicate inner class.
+ * ✅ Fixed serialization to save/load full settings map.
+ * ✅ Added getSettings() to expose the standalone PlotSettings object.
  */
 public class Plot {
 
@@ -31,7 +26,7 @@ public class Plot {
     private final Map<UUID, ClaimRole> trusted = new HashMap<>();
     private String displayName;
 
-    // Per-plot settings
+    // Per-plot settings (standalone class)
     private final PlotSettings settings = new PlotSettings();
 
     public Plot(Chunk chunk, UUID owner) {
@@ -61,16 +56,12 @@ public class Plot {
         this.displayName = displayName;
     }
 
-    /**
-     * Returns a user-facing name for debug/logging.
-     */
+    /** Returns a user-facing name for debug/logging. */
     public String getName() {
         return getDisplayNameSafe();
     }
 
-    /**
-     * Returns the per-plot settings object.
-     */
+    /** Returns the per-plot settings object. */
     public PlotSettings getSettings() {
         return settings;
     }
@@ -104,8 +95,8 @@ public class Plot {
         }
         data.put("trusted", trustedList);
 
-        // Save settings
-        data.put("keep-items", settings.isKeepItemsEnabled());
+        // Save full settings
+        data.put("settings", settings.serialize());
 
         return data;
     }
@@ -132,13 +123,16 @@ public class Plot {
             String[] parts = entry.split(":");
             if (parts.length == 2) {
                 try {
-                    plot.trusted.put(UUID.fromString(parts[0]), com.snazzyatoms.proshield.roles.ClaimRole.fromString(parts[1]));
+                    plot.trusted.put(UUID.fromString(parts[0]), ClaimRole.fromString(parts[1]));
                 } catch (IllegalArgumentException ignored) {}
             }
         }
 
         // Load settings
-        plot.getSettings().setKeepItemsEnabled(section.getBoolean("keep-items", false));
+        ConfigurationSection settingsSec = section.getConfigurationSection("settings");
+        if (settingsSec != null) {
+            plot.getSettings().deserialize(settingsSec);
+        }
 
         return plot;
     }
@@ -152,10 +146,7 @@ public class Plot {
         return new Location(w, (x << 4) + 8, w.getHighestBlockYAt(x << 4, z << 4), (z << 4) + 8);
     }
 
-    /**
-     * Returns the nearest border block location (simple placeholder).
-     * Used by MobBorderRepelListener.
-     */
+    /** Returns the nearest border block location (simple placeholder). */
     public Location getNearestBorder(Location loc) {
         World w = Bukkit.getWorld(worldName);
         if (w == null) return loc;
@@ -186,20 +177,5 @@ public class Plot {
         public String getWorld() { return world; }
         public int getX() { return x; }
         public int getZ() { return z; }
-    }
-
-    /* -------------------------------------------------------
-     * Inner class: PlotSettings
-     * ------------------------------------------------------- */
-    public static class PlotSettings {
-        private boolean keepItemsEnabled;
-
-        public boolean isKeepItemsEnabled() {
-            return keepItemsEnabled;
-        }
-
-        public void setKeepItemsEnabled(boolean keepItemsEnabled) {
-            this.keepItemsEnabled = keepItemsEnabled;
-        }
     }
 }

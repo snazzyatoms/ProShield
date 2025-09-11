@@ -2,16 +2,17 @@ package com.snazzyatoms.proshield;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import org.jetbrains.annotations.NotNull;
 
-/** Fired by ProShield after /proshield reload or Admin GUI reload. */
+/**
+ * Fired by ProShield after /proshield reload or Admin GUI reload.
+ */
 public class ProShieldReloadEvent extends Event {
 
     private static final HandlerList HANDLERS = new HandlerList();
     private final ProShield plugin;
 
     public ProShieldReloadEvent(ProShield plugin) {
-        super(true); // async=false would also be fine; true marks it as synchronous=false
+        super(false); // false = synchronous event
         this.plugin = plugin;
     }
 
@@ -20,11 +21,11 @@ public class ProShieldReloadEvent extends Event {
     }
 
     @Override
-    public @NotNull HandlerList getHandlers() {
+    public HandlerList getHandlers() {
         return HANDLERS;
     }
 
-    public static @NotNull HandlerList getHandlerList() {
+    public static HandlerList getHandlerList() {
         return HANDLERS;
     }
 }

@@ -4,8 +4,6 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.plots.PlotSettings;
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.*;
@@ -188,7 +186,7 @@ public class GUIManager implements Listener {
         set(inv, 14, make(Material.BARRIER, "Unclaim Here", List.of("Remove the claim in this chunk.")));
 
         // Wilderness message toggle
-        boolean enabled = plugin.getConfig().getBoolean("messages.wilderness.enabled", true);
+        boolean enabled = plugin.getConfig().getBoolean("messages.show-wilderness", false);
         set(inv, 15, toggleItem(Material.OAK_SIGN, "Wilderness Messages", enabled));
 
         // Back
@@ -203,16 +201,15 @@ public class GUIManager implements Listener {
 
         switch (name) {
             case "wilderness messages" -> {
-                boolean current = plugin.getConfig().getBoolean("messages.wilderness.enabled", true);
+                boolean current = plugin.getConfig().getBoolean("messages.show-wilderness", false);
                 boolean next = !current;
-                plugin.getConfig().set("messages.wilderness.enabled", next);
+                plugin.getConfig().set("messages.show-wilderness", next);
                 plugin.saveConfig();
                 msg.send(p, next ? "admin.wilderness-toggle-on" : "admin.wilderness-toggle-off");
                 openAdminWilderness(p);
             }
             case "back" -> openAdminInternal(p);
-            // 🔹 Other wilderness actions (claim, unclaim, pick player, etc.)
-            // remain as in your prior version, unchanged.
+            // other wilderness actions remain unchanged
         }
     }
 

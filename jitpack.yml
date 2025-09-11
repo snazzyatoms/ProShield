@@ -5,4 +5,4 @@ before_install:
   - echo "Using Java 21 for ProShield build"
 
 install:
-  - mvn clean install -DskipTests
+  - mvn -B clean install -DskipTests

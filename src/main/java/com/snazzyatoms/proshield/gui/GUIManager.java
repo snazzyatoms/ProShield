@@ -25,182 +25,126 @@ public class GUIManager {
     }
 
     /* ---------------------------------------------------------
-     * MAIN MENUS (Player + Admin parity)
+     * MAIN MENUS
      * --------------------------------------------------------- */
 
     public void openMain(Player player) {
-        Inventory inv = Bukkit.createInventory(player, 27, ChatColor.AQUA + "⚔ ProShield Menu");
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
+        Inventory inv = Bukkit.createInventory(player, 27, ChatColor.AQUA + "★ ProShield Menu");
 
-        // Fill everything with placeholders (static look)
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
+        fill(inv);
 
-        // Action buttons (kept centered / consistent)
         inv.setItem(10, createItem(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk",
-                "§7Secure and protect your current chunk.",
-                "§eLeft-click: Claim this chunk"));
-
+                "§7Protect this land from griefers.", "§eClick to claim your current chunk."));
         inv.setItem(11, createItem(Material.BARRIER, ChatColor.RED + "Unclaim Chunk",
-                "§7Release your claim on this chunk.",
-                "§cLeft-click: Unclaim current chunk"));
-
-        inv.setItem(12, createItem(Material.BOOK, ChatColor.BLUE + "Trust Menu",
-                "§7Trust friends to build with you.",
-                "§7Assign roles for permissions."));
-
-        inv.setItem(13, createItem(Material.IRON_SWORD, ChatColor.YELLOW + "Flags",
-                "§7Toggle claim settings:",
-                "§ePvP, explosions, fire, redstone, containers."));
-
-        inv.setItem(14, createItem(Material.NAME_TAG, ChatColor.GOLD + "Roles",
-                "§7Manage who can build, fight, or manage your claim."));
-
-        inv.setItem(15, createItem(Material.ENDER_PEARL, ChatColor.LIGHT_PURPLE + "Transfer Claim",
-                "§7Give ownership of this claim to another player."));
-
-        inv.setItem(16, createItem(Material.NETHER_STAR, ChatColor.DARK_PURPLE + "Coming in ProShield 2.0",
-                "§8★ Global claim map with markers",
-                "§8★ Player statistics",
-                "§8★ More flags & utilities"));
-
-        // Back (always present for consistency)
-        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back",
-                "§7Return to the previous menu."));
+                "§7Release your land back to the wilderness.", "§eClick to unclaim your chunk."));
+        inv.setItem(12, createItem(Material.BOOK, ChatColor.YELLOW + "Claim Info",
+                "§7View information about this claim.", "§eOwner, trusted players, roles."));
+        inv.setItem(13, createItem(Material.PAPER, ChatColor.GOLD + "Trust Menu",
+                "§7Trust new players to your land.", "§eClick to manage trust."));
+        inv.setItem(14, createItem(Material.BOOKSHELF, ChatColor.RED + "Untrust Menu",
+                "§7Remove trusted players.", "§eClick to manage untrust."));
+        inv.setItem(15, createItem(Material.IRON_SWORD, ChatColor.DARK_RED + "Flags",
+                "§7Toggle claim settings.", "§ePvP, explosions, fire, redstone, etc."));
+        inv.setItem(16, createItem(Material.NAME_TAG, ChatColor.LIGHT_PURPLE + "Roles",
+                "§7Assign roles to trusted players.", "§eBuilder, Moderator, Manager."));
 
         cache.setPlayerMenu(player, inv);
         player.openInventory(inv);
     }
 
     public void openAdminMain(Player player) {
-        Inventory inv = Bukkit.createInventory(player, 27, ChatColor.DARK_RED + "⚙ ProShield Admin");
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
+        Inventory inv = Bukkit.createInventory(player, 27, ChatColor.DARK_RED + "★ ProShield Admin Menu");
 
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
+        fill(inv);
 
-        // Admin still gets player tools (parity)
-        inv.setItem(9, createItem(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Chunk",
-                "§7Admins can also claim land for themselves."));
-        inv.setItem(10, createItem(Material.BARRIER, ChatColor.RED + "Unclaim Chunk",
-                "§7Unclaim your current chunk."));
-        inv.setItem(11, createItem(Material.BOOK, ChatColor.BLUE + "Trust Menu",
-                "§7Manage trust the same as players."));
-        inv.setItem(12, createItem(Material.IRON_SWORD, ChatColor.YELLOW + "Flags",
-                "§7Open claim flags menu."));
-        inv.setItem(13, createItem(Material.NAME_TAG, ChatColor.GOLD + "Roles",
-                "§7Open claim roles menu."));
-        inv.setItem(14, createItem(Material.ENDER_PEARL, ChatColor.LIGHT_PURPLE + "Transfer Claim",
-                "§7Transfer claim ownership."));
+        // Admins also have player actions
+        openMain(player);
+        player.closeInventory(); // reset back to admin menu
 
-        // Admin-only tools
-        inv.setItem(15, createItem(Material.COMPASS, ChatColor.AQUA + "Teleport to Claim",
-                "§7Admin-only teleport tools (via commands)."));
-        inv.setItem(16, createItem(Material.TNT, ChatColor.RED + "Force Unclaim",
-                "§7Force-remove any claim (command dispatched)."));
-        inv.setItem(17, createItem(Material.HOPPER, ChatColor.YELLOW + "Toggle Keep-Items",
-                "§7Toggle global keep-drops in config."));
-
-        inv.setItem(22, createItem(Material.BOOK, ChatColor.DARK_PURPLE + "Wilderness Tools",
-                "§7Manage wilderness settings (messages, etc)."));
-
-        inv.setItem(23, createItem(Material.BONE, ChatColor.GRAY + "Debug Logging",
-                "§7Toggle plugin debug mode."));
-
-        inv.setItem(25, createItem(Material.LAVA_BUCKET, ChatColor.DARK_RED + "Purge Expired Claims",
-                "§7Clean up claims marked as expired."));
-
-        // Back
-        inv.setItem(26, createItem(Material.ARROW, ChatColor.RED + "Back",
-                "§7Return to the previous menu."));
+        inv.setItem(10, createItem(Material.COMPASS, ChatColor.AQUA + "Teleport to Claim",
+                "§7Teleport directly to a player’s claim.", "§eUse admin powers to jump around."));
+        inv.setItem(11, createItem(Material.TNT, ChatColor.RED + "Force Unclaim",
+                "§7Remove a claim without permission.", "§eAdmin-only tool."));
+        inv.setItem(12, createItem(Material.CHEST, ChatColor.GOLD + "Manage Flags",
+                "§7Override flags in any claim.", "§eForce changes as admin."));
+        inv.setItem(13, createItem(Material.HOPPER, ChatColor.YELLOW + "Toggle Keep-Items",
+                "§7Force keep-drops mode.", "§eEnable/disable drops in claims."));
+        inv.setItem(14, createItem(Material.BOOK, ChatColor.DARK_PURPLE + "Wilderness Tools",
+                "§7Manage wilderness settings.", "§eAdmin controls for wilderness."));
 
         cache.setAdminMenu(player, inv);
         player.openInventory(inv);
     }
 
     /* ---------------------------------------------------------
-     * SUB MENUS (always include Back)
+     * SUB MENUS
      * --------------------------------------------------------- */
 
-    public void openFlagsMenu(Player player) {
+    public void openFlagsMenu(Player player, boolean fromAdmin) {
         Inventory inv = Bukkit.createInventory(player, 27, ChatColor.YELLOW + "⚑ Claim Flags");
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
+
+        fill(inv);
 
         inv.setItem(10, createItem(Material.IRON_SWORD, ChatColor.RED + "PvP",
-                "§7Toggle player vs player combat in this claim."));
+                "§7Toggle combat between players.", "§eClick to toggle PvP."));
         inv.setItem(11, createItem(Material.TNT, ChatColor.DARK_RED + "Explosions",
-                "§7Toggle TNT/creeper damage in this claim."));
+                "§7Toggle TNT & creeper damage.", "§eClick to toggle explosions."));
         inv.setItem(12, createItem(Material.FLINT_AND_STEEL, ChatColor.GOLD + "Fire",
-                "§7Toggle fire spread & ignition."));
+                "§7Toggle fire spread & ignition.", "§eClick to toggle fire."));
         inv.setItem(13, createItem(Material.REDSTONE, ChatColor.RED + "Redstone",
-                "§7Toggle redstone mechanics."));
+                "§7Toggle redstone mechanics.", "§eClick to toggle redstone."));
         inv.setItem(14, createItem(Material.CHEST, ChatColor.GREEN + "Containers",
-                "§7Toggle chest/furnace access."));
+                "§7Toggle chest/furnace/hopper access.", "§eClick to toggle container access."));
 
-        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to main."));
+        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to previous menu."));
 
-        cache.setPlayerMenu(player, inv);
+        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
         player.openInventory(inv);
     }
 
-    public void openRolesGUI(Player player, Plot plot) {
+    public void openRolesGUI(Player player, Plot plot, boolean fromAdmin) {
         Inventory inv = Bukkit.createInventory(player, 27, ChatColor.AQUA + "♜ Claim Roles");
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
 
-        inv.setItem(10, createItem(Material.STONE_PICKAXE, ChatColor.GREEN + "Builder",
-                "§7Build & break blocks, use doors, buttons."));
-        inv.setItem(11, createItem(Material.IRON_SWORD, ChatColor.RED + "Moderator",
-                "§7Combat & entity interactions."));
-        inv.setItem(12, createItem(Material.DIAMOND, ChatColor.GOLD + "Manager",
-                "§7Full management of the claim."));
-        inv.setItem(14, createItem(Material.BOOK, ChatColor.YELLOW + "Trusted List",
-                "§7View all trusted players."));
+        fill(inv);
 
-        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to main."));
+        inv.setItem(11, createItem(Material.STONE_PICKAXE, ChatColor.GREEN + "Builder",
+                "§7Build inside this claim.", "§eTrusted player rights."));
+        inv.setItem(12, createItem(Material.IRON_SWORD, ChatColor.RED + "Moderator",
+                "§7PvP & entity rights.", "§eEnforce rules inside claims."));
+        inv.setItem(13, createItem(Material.DIAMOND, ChatColor.GOLD + "Manager",
+                "§7Full management rights.", "§eNearly full owner powers."));
+        inv.setItem(15, createItem(Material.BOOK, ChatColor.YELLOW + "Trusted List",
+                "§7View all trusted players.", "§eShows current trust list."));
 
-        cache.setPlayerMenu(player, inv);
+        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to previous menu."));
+
+        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
         player.openInventory(inv);
     }
 
-    public void openTransferMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(player, 27, ChatColor.LIGHT_PURPLE + "⇄ Transfer Claim");
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
+    public void openTrustMenu(Player player, boolean fromAdmin) {
+        Inventory inv = Bukkit.createInventory(player, 9, ChatColor.GREEN + "Trust Player");
 
-        inv.setItem(13, createItem(Material.ENDER_PEARL, ChatColor.AQUA + "Transfer Claim",
-                "§7Use /transfer <player> to confirm."));
+        fill(inv);
 
-        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to main."));
+        inv.setItem(4, createItem(Material.BOOK, ChatColor.GREEN + "Trust Player",
+                "§7Use /trust <name> [role]", "§eGrant rights to another player."));
+        inv.setItem(8, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to previous menu."));
 
-        cache.setPlayerMenu(player, inv);
+        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
         player.openInventory(inv);
     }
 
-    public void openTrustMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(player, 27, ChatColor.GREEN + "✔ Trust Player");
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
+    public void openUntrustMenu(Player player, boolean fromAdmin) {
+        Inventory inv = Bukkit.createInventory(player, 9, ChatColor.RED + "Untrust Player");
 
-        inv.setItem(13, createItem(Material.BOOK, ChatColor.GREEN + "Trust Player",
-                "§7Use /trust <name> [role] to add players."));
+        fill(inv);
 
-        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to main."));
+        inv.setItem(4, createItem(Material.BARRIER, ChatColor.RED + "Untrust Player",
+                "§7Use /untrust <name>", "§eRemove trust from a player."));
+        inv.setItem(8, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to previous menu."));
 
-        cache.setPlayerMenu(player, inv);
-        player.openInventory(inv);
-    }
-
-    public void openUntrustMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(player, 27, ChatColor.RED + "✖ Untrust Player");
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
-
-        inv.setItem(13, createItem(Material.BARRIER, ChatColor.RED + "Untrust Player",
-                "§7Use /untrust <name> to remove trust."));
-
-        inv.setItem(22, createItem(Material.ARROW, ChatColor.RED + "Back", "§7Return to main."));
-
-        cache.setPlayerMenu(player, inv);
+        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
         player.openInventory(inv);
     }
 
@@ -217,6 +161,13 @@ public class GUIManager {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private void fill(Inventory inv) {
+        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
+        for (int i = 0; i < inv.getSize(); i++) {
+            inv.setItem(i, filler);
+        }
     }
 
     public void clearCache() {

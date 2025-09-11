@@ -67,23 +67,56 @@ messages:
   debug-prefix: "&8[Debug] &r"
 
   # 🌲 Wilderness entry messages
-  # If true → players see "Entering Wilderness" when leaving a claim.
-  # If false → no message is shown when stepping into Wilderness.
   show-wilderness: false
 
   # 💬 Admin debug flag chat
-  # If true → admins get a chat message every time a claim flag is toggled.
-  # If false → no chat messages, but sound feedback still plays.
   admin-flag-chat: true
 
 gui:
+  # Menu titles
+  main:
+    title: "§bProShield Menu"
   flags:
     title: "§dClaim Flags"
+  roles:
+    title: "§6Claim Roles"
+  trust:
+    title: "§aTrust Players"
+  untrust:
+    title: "§cUntrust Players"
+  transfer:
+    title: "§dTransfer Claim"
   admin:
+    title: "§4ProShield Admin Menu"
     wilderness:
       toggle-messages: true
     debug:
-      toggle-flag-chat: true   # ✅ Lets admins flip `admin-flag-chat` in-game
+      toggle-flag-chat: true
+
+  # Hover tooltips for GUI items
+  tooltips:
+    claim: "&aClaim this chunk.\n&7Protect it from griefing!"
+    unclaim: "&cUnclaim this chunk.\n&7Releases it back to wilderness."
+    info: "&bView claim information.\n&7Owner & trusted players."
+    trust: "&aTrust another player.\n&7Use GUI or /trust <name>."
+    untrust: "&cUntrust a player.\n&7Remove their access."
+    roles: "&6Assign roles to trusted players.\n&7Builder, Moderator, Manager."
+    flags: "&eToggle protections.\n&7PvP, fire, explosions, containers, etc."
+    transfer: "&dTransfer ownership of this claim."
+    admin-teleport: "&bTeleport to any player’s claim."
+    admin-unclaim: "&cForce unclaim a claim."
+    admin-purge: "&4Purge expired claims."
+    back: "&7Return to the previous menu."
+
+# ==========================================================
+# Sounds
+# ==========================================================
+sounds:
+  button-click: "UI_BUTTON_CLICK"
+  claim-success: "ENTITY_PLAYER_LEVELUP"
+  unclaim-success: "ENTITY_ITEM_BREAK"
+  flag-toggle: "BLOCK_NOTE_BLOCK_PLING"
+  admin-action: "ENTITY_EXPERIENCE_ORB_PICKUP"
 
 # ==========================================================
 # Claim Defaults

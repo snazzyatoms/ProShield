@@ -33,7 +33,7 @@ public class ClaimMessageListener implements Listener {
 
             if (toClaim != null && !toClaim.isEmpty()) {
                 if ("Wilderness".equalsIgnoreCase(toClaim)) {
-                    if (plugin.getConfig().getBoolean("messages.wilderness.enabled", true)) {
+                    if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
                         messages.send(p, "claim.entering", toClaim);
                     }
                 } else {

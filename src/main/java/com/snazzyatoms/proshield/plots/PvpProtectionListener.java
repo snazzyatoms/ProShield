@@ -10,10 +10,10 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 /**
  * PvpProtectionListener
  *
- * ✅ Preserves prior logic
- * ✅ Updated constructor style (PlotManager, MessagesUtil)
- * ✅ Checks per-claim PvP toggle
- * ✅ Protects trusted/owner if enabled in PlotSettings
+ * ✅ Constructor cleaned (PlotManager, MessagesUtil)
+ * ✅ Uses per-claim settings (damagePvpEnabled + damageProtectOwnerAndTrusted)
+ * ✅ Protects owners & trusted players if configured
+ * ✅ Debug messages preserved
  */
 public class PvpProtectionListener implements Listener {
 
@@ -32,18 +32,18 @@ public class PvpProtectionListener implements Listener {
 
         Chunk chunk = victim.getLocation().getChunk();
         Plot plot = plots.getPlot(chunk);
-        if (plot == null) return; // wilderness
+        if (plot == null) return; // wilderness handled separately by config
 
         PlotSettings s = plot.getSettings();
 
-        // Check PvP flag
+        // PvP disabled inside this claim
         if (!s.isDamagePvpEnabled()) {
             event.setCancelled(true);
             messages.debug("&cPvP prevented in claim: " + plot.getDisplayNameSafe());
             return;
         }
 
-        // Protect owner & trusted players if configured
+        // Protect trusted/owners if configured
         if (s.isDamageProtectOwnerAndTrusted()) {
             if (plot.isOwner(attacker.getUniqueId()) || plot.getTrusted().containsKey(attacker.getUniqueId())) {
                 event.setCancelled(true);

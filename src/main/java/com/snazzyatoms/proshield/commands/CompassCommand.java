@@ -1,6 +1,7 @@
 // src/main/java/com/snazzyatoms/proshield/commands/CompassCommand.java
 package com.snazzyatoms.proshield.commands;
 
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
@@ -17,12 +18,14 @@ import org.bukkit.entity.Player;
  */
 public class CompassCommand implements CommandExecutor {
 
+    private final ProShield plugin;
     private final CompassManager compassManager;
     private final MessagesUtil messages;
 
-    public CompassCommand(CompassManager compassManager, MessagesUtil messages) {
+    public CompassCommand(ProShield plugin, CompassManager compassManager) {
+        this.plugin = plugin;
         this.compassManager = compassManager;
-        this.messages = messages;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
@@ -37,7 +40,7 @@ public class CompassCommand implements CommandExecutor {
             return true;
         }
 
-        // ✅ Use CompassManager instance, no static calls
+        // ✅ Give the compass through CompassManager
         compassManager.giveCompass(player, player.isOp());
 
         messages.send(player, "prefix", "&aYou have been given the ProShield compass!");

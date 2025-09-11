@@ -12,47 +12,44 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.UUID;
 
+/**
+ * TrustListener
+ *
+ * ✅ Handles trust GUI actions.
+ * ✅ Sets trusted players to default role (e.g. MEMBER).
+ */
 public class TrustListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
-    private final ClaimRoleManager roleManager;
+    private final ClaimRoleManager roles;
 
-    public TrustListener(ProShield plugin, PlotManager plots, ClaimRoleManager roleManager) {
-        this.plugin = plugin;
+    public TrustListener(PlotManager plots, ClaimRoleManager roles) {
         this.plots = plots;
-        this.roleManager = roleManager;
+        this.roles = roles;
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onTrustMenuClick(InventoryClickEvent e) {
+    public void onTrustClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         if (e.getCurrentItem() == null) return;
 
         e.setCancelled(true);
-        ItemStack item = e.getCurrentItem();
-
-        if (!(item.getItemMeta() instanceof SkullMeta skull)) return;
-        if (!skull.hasOwner()) return;
-
-        String targetName = skull.getOwnerProfile().getName();
-        if (targetName == null) return;
 
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) return;
 
-        UUID targetUUID = plugin.getServer().getOfflinePlayer(targetName).getUniqueId();
+        UUID target = roles.getPendingTarget(player);
+        if (target == null) {
+            player.sendMessage(ChatColor.RED + "⚠ No player selected to trust.");
+            return;
+        }
 
-        // default role Trusted
-        roleManager.setRole(plot, targetUUID, ClaimRole.TRUSTED);
-        plot.saveAsync();
+        roles.setRole(plot, target, ClaimRole.MEMBER);
 
-        player.sendMessage(ChatColor.GREEN + "Trusted " + targetName + " in your claim.");
-        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+        player.sendMessage(ChatColor.GREEN + "✔ Trusted player as " + ClaimRole.MEMBER.getDisplayName());
     }
 }

@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/DamageProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -13,10 +12,9 @@ import org.bukkit.event.entity.EntityDamageEvent;
 /**
  * DamageProtectionListener
  *
- * Preserves all prior logic and fixes:
- * ✅ Aligned with new PlotSettings flags
- * ✅ UUID vs Player mismatch fixed
- * ✅ Enum switch cases cleaned up
+ * ✅ Uses standalone PlotSettings
+ * ✅ Aligned with all damage-related flags
+ * ✅ Cancels damage cleanly per-claim
  */
 public class DamageProtectionListener implements Listener {
 
@@ -37,6 +35,7 @@ public class DamageProtectionListener implements Listener {
         if (plot == null) return;
 
         PlotSettings s = plot.getSettings();
+        if (s == null) return;
 
         // Cancel all damage if toggled
         if (s.isDamageCancelAll()) {
@@ -81,7 +80,8 @@ public class DamageProtectionListener implements Listener {
                     event.setCancelled(true);
                 }
             }
-            case CONTACT, CRAMMING, DRAGON_BREATH, MAGIC, LIGHTNING, STARVATION, THORNS, FLY_INTO_WALL, DRYOUT -> {
+            case CONTACT, CRAMMING, DRAGON_BREATH, MAGIC, LIGHTNING,
+                 STARVATION, THORNS, FLY_INTO_WALL, DRYOUT -> {
                 if (!s.isDamageEnvironmentEnabled()) {
                     event.setCancelled(true);
                 }
@@ -101,6 +101,7 @@ public class DamageProtectionListener implements Listener {
         if (plot == null) return;
 
         PlotSettings s = plot.getSettings();
+        if (s == null) return;
 
         if (event.getDamager() instanceof Player attacker) {
             // PvP protection

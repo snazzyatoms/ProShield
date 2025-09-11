@@ -12,7 +12,7 @@ public class ProShieldReloadEvent extends Event {
     private final ProShield plugin;
 
     public ProShieldReloadEvent(ProShield plugin) {
-        super(false); // false = synchronous event
+        super(true); // synchronous = false, safe for reload
         this.plugin = plugin;
     }
 

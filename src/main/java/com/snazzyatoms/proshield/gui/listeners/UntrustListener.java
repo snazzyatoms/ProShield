@@ -4,6 +4,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -21,11 +22,13 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 public class UntrustListener implements Listener {
 
     private final PlotManager plots;
+    private final ClaimRoleManager roles;
     private final GUIManager gui;
 
-    public UntrustListener(ProShield plugin, PlotManager plots, GUIManager gui) {
+    public UntrustListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles, GUIManager gui) {
         this.plots = plots;
-        this.gui = plugin.getGuiManager();
+        this.roles = roles;
+        this.gui = gui;
     }
 
     @EventHandler(ignoreCancelled = true)

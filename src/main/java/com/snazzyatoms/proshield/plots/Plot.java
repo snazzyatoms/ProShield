@@ -1,7 +1,6 @@
+// src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.roles.ClaimRole;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -10,202 +9,146 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.util.*;
 
 /**
- * Represents a claimed chunk of land.
- *
- * Preserves all prior logic:
- * - Owner UUID
- * - Trusted players with ClaimRole
- * - Settings object
- * - Display name safe helper
- * - Added created timestamp
- * - Added serialize/deserialize for persistence
- * - Added isEmpty() and getNearestBorder(Location) for listeners
+ * Plot
+ * - Represents a claimed chunk
+ * - Holds owner, trusted players, settings
+ * - Preserves prior logic
  */
 public class Plot {
 
-    private final String worldName;
+    private final String world;
     private final int x;
     private final int z;
 
     private UUID owner;
-    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
-    private final PlotSettings settings;
-
     private String name;
-    private long created; // timestamp of creation
+
+    private final Map<UUID, com.snazzyatoms.proshield.roles.ClaimRole> trusted = new HashMap<>();
+    private final PlotSettings settings = new PlotSettings();
 
     public Plot(Chunk chunk, UUID owner) {
-        this.worldName = chunk.getWorld().getName();
+        this.world = chunk.getWorld().getName();
         this.x = chunk.getX();
         this.z = chunk.getZ();
         this.owner = owner;
-        this.settings = new PlotSettings();
-        this.name = "Claim@" + x + "," + z;
-        this.created = System.currentTimeMillis();
     }
 
-    public String getWorldName() {
-        return worldName;
-    }
+    // -------------------------------------------------------
+    // Core Getters
+    // -------------------------------------------------------
 
-    public World getWorld() {
-        return Bukkit.getWorld(worldName);
-    }
+    public String getWorldName() { return world; }
+    public int getX() { return x; }
+    public int getZ() { return z; }
+    public UUID getOwner() { return owner; }
+    public String getName() { return name; }
+    public Map<UUID, com.snazzyatoms.proshield.roles.ClaimRole> getTrusted() { return trusted; }
+    public PlotSettings getSettings() { return settings; }
 
-    public int getX() {
-        return x;
-    }
+    public void setOwner(UUID owner) { this.owner = owner; }
+    public void setName(String name) { this.name = name; }
 
-    public int getZ() {
-        return z;
-    }
-
-    public UUID getOwner() {
-        return owner;
-    }
-
-    public void setOwner(UUID newOwner) {
-        this.owner = newOwner;
-    }
-
-    public Map<UUID, ClaimRole> getTrusted() {
-        return trusted;
-    }
-
-    public PlotSettings getSettings() {
-        return settings;
-    }
-
-    public String getName() {
-        return name != null ? name : "Claim@" + x + "," + z;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDisplayNameSafe() {
-        return (name != null && !name.isEmpty()) ? name : "Claim@" + x + "," + z;
-    }
+    // -------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------
 
     public boolean isOwner(UUID playerId) {
         return owner != null && owner.equals(playerId);
     }
 
-    public void addTrusted(UUID playerId, ClaimRole role) {
-        if (playerId != null && role != null) {
-            trusted.put(playerId, role);
-        }
+    /** ✅ Added: check if a player is trusted (any role). */
+    public boolean isTrusted(UUID playerId) {
+        return trusted.containsKey(playerId);
     }
 
-    public void removeTrusted(UUID playerId) {
-        if (playerId != null) {
-            trusted.remove(playerId);
-        }
+    public String getDisplayNameSafe() {
+        return (name != null && !name.isEmpty()) ? name : (owner != null ? owner.toString() : "Unowned");
     }
 
-    public long getCreated() {
-        return created;
+    public Location getCenter(World world) {
+        int bx = x << 4;
+        int bz = z << 4;
+        return new Location(world, bx + 8, world.getHighestBlockYAt(bx + 8, bz + 8), bz + 8);
     }
 
-    /* -------------------------------------------------------
-     * Helpers for listeners
-     * ------------------------------------------------------- */
+    // -------------------------------------------------------
+    // Serialization
+    // -------------------------------------------------------
 
-    /**
-     * Whether this claim is effectively "empty".
-     * Used by listeners that expect Optional-like behavior.
-     */
-    public boolean isEmpty() {
-        return owner == null && trusted.isEmpty();
-    }
-
-    /**
-     * Stub for border distance checks (used in MobBorderRepelListener).
-     * Returns the chunk edge location closest to the given point.
-     */
-    public Location getNearestBorder(Location loc) {
-        if (loc == null || !loc.getWorld().getName().equalsIgnoreCase(worldName)) {
-            return null;
-        }
-        World w = getWorld();
-        if (w == null) return null;
-
-        int blockX = loc.getBlockX();
-        int blockZ = loc.getBlockZ();
-
-        int minX = x << 4;
-        int minZ = z << 4;
-        int maxX = minX + 15;
-        int maxZ = minZ + 15;
-
-        // clamp to nearest edge
-        int nearestX = Math.min(Math.max(blockX, minX), maxX);
-        int nearestZ = Math.min(Math.max(blockZ, minZ), maxZ);
-
-        return new Location(w, nearestX, loc.getBlockY(), nearestZ);
-    }
-
-    /* -------------------------------------------------------
-     * Serialization
-     * ------------------------------------------------------- */
     public Map<String, Object> serialize() {
-        Map<String, Object> map = new HashMap<>();
-        map.put("owner", owner != null ? owner.toString() : null);
-        map.put("trusted", serializeTrusted());
-        map.put("settings", settings.serialize());
-        map.put("name", name);
-        map.put("created", created);
-        return map;
+        Map<String, Object> data = new HashMap<>();
+        data.put("world", world);
+        data.put("x", x);
+        data.put("z", z);
+        if (owner != null) data.put("owner", owner.toString());
+        if (name != null) data.put("name", name);
+
+        Map<String, String> trustData = new HashMap<>();
+        for (Map.Entry<UUID, com.snazzyatoms.proshield.roles.ClaimRole> e : trusted.entrySet()) {
+            trustData.put(e.getKey().toString(), e.getValue().name());
+        }
+        data.put("trusted", trustData);
+
+        data.put("settings", settings.serialize());
+        return data;
     }
 
-    private Map<String, String> serializeTrusted() {
-        Map<String, String> out = new HashMap<>();
-        for (Map.Entry<UUID, ClaimRole> e : trusted.entrySet()) {
-            out.put(e.getKey().toString(), e.getValue().name());
-        }
-        return out;
-    }
+    @SuppressWarnings("unchecked")
+    public static Plot deserialize(ConfigurationSection section) {
+        if (section == null) return null;
 
-    public static Plot deserialize(ConfigurationSection sec) {
-        if (sec == null) return null;
+        String world = section.getString("world");
+        int x = section.getInt("x");
+        int z = section.getInt("z");
+        UUID owner = section.contains("owner") ? UUID.fromString(section.getString("owner")) : null;
 
-        String[] coords = sec.getName().split(",");
-        if (coords.length != 2) return null;
+        Plot plot = new Plot(new DummyChunk(world, x, z), owner);
+        plot.name = section.getString("name", null);
 
-        String world = sec.getParent().getName();
-        int x = Integer.parseInt(coords[0]);
-        int z = Integer.parseInt(coords[1]);
-
-        UUID owner = null;
-        if (sec.isString("owner")) {
-            try {
-                owner = UUID.fromString(sec.getString("owner"));
-            } catch (IllegalArgumentException ignored) {}
-        }
-
-        Plot plot = new Plot(Bukkit.getWorld(world).getChunkAt(x, z), owner);
-
-        plot.name = sec.getString("name", "Claim@" + x + "," + z);
-        plot.created = sec.getLong("created", System.currentTimeMillis());
-
-        // trusted
-        ConfigurationSection trustedSec = sec.getConfigurationSection("trusted");
-        if (trustedSec != null) {
-            for (String key : trustedSec.getKeys(false)) {
+        // Trusted
+        ConfigurationSection trustSec = section.getConfigurationSection("trusted");
+        if (trustSec != null) {
+            for (String key : trustSec.getKeys(false)) {
                 try {
                     UUID id = UUID.fromString(key);
-                    ClaimRole role = ClaimRole.fromString(trustedSec.getString(key));
+                    com.snazzyatoms.proshield.roles.ClaimRole role =
+                            com.snazzyatoms.proshield.roles.ClaimRole.valueOf(trustSec.getString(key, "VISITOR"));
                     plot.trusted.put(id, role);
                 } catch (Exception ignored) {}
             }
         }
 
-        // settings
-        if (sec.isConfigurationSection("settings")) {
-            plot.settings.deserialize(sec.getConfigurationSection("settings"));
+        // Settings
+        ConfigurationSection settingsSec = section.getConfigurationSection("settings");
+        if (settingsSec != null) {
+            plot.settings.deserialize(settingsSec);
         }
 
         return plot;
+    }
+
+    // -------------------------------------------------------
+    // Dummy Chunk (used only for loading)
+    // -------------------------------------------------------
+    private static class DummyChunk extends Chunk {
+        private final String world;
+        private final int x, z;
+
+        public DummyChunk(String world, int x, int z) {
+            this.world = world;
+            this.x = x;
+            this.z = z;
+        }
+
+        @Override public World getWorld() { return null; }
+        @Override public int getX() { return x; }
+        @Override public int getZ() { return z; }
+        @Override public boolean isLoaded() { return false; }
+        @Override public boolean load(boolean generate) { return false; }
+        @Override public boolean load() { return false; }
+        @Override public boolean unload() { return false; }
+        @Override public boolean unload(boolean save) { return false; }
+        @Override public boolean equals(Object o) { return (o instanceof DummyChunk dc) && dc.x == x && dc.z == z && dc.world.equals(world); }
+        @Override public int hashCode() { return Objects.hash(world, x, z); }
     }
 }

@@ -1,9 +1,9 @@
-// src/main/java/com/snazzyatoms/proshield/gui/listeners/PlayerMenuListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -18,13 +18,17 @@ import java.util.UUID;
 public class PlayerMenuListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager gui;
     private final GUICache cache;
+    private final GUIManager guiManager;
+    private final MessagesUtil messages;
 
     public PlayerMenuListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.gui = guiManager;
         this.cache = guiManager.getCache();
+        this.guiManager = guiManager;
+        this.messages = plugin.getMessagesUtil();
+
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler
@@ -32,10 +36,10 @@ public class PlayerMenuListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         UUID uuid = player.getUniqueId();
 
-        // Only handle our player menu
+        // Verify this inventory belongs to our player GUI
         if (!cache.isPlayerMenu(uuid, event.getInventory())) return;
 
-        event.setCancelled(true); // ✅ make items static/unmovable
+        event.setCancelled(true); // Prevent item pickup/movement
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
@@ -49,19 +53,11 @@ public class PlayerMenuListener implements Listener {
             case "claim chunk" -> player.performCommand("claim");
             case "unclaim chunk" -> player.performCommand("unclaim");
             case "claim info" -> player.performCommand("info");
-            case "trust menu" -> gui.openTrustMenu(player);
-            case "untrust menu" -> gui.openUntrustMenu(player);
-            case "flags" -> gui.openFlagsMenu(player);
-            case "roles" -> player.performCommand("roles"); // lets command do in-claim check
-            case "transfer claim" -> gui.openTransferMenu(player);
-            case "admin tools" -> {
-                if (player.isOp() || player.hasPermission("proshield.admin")) {
-                    gui.openAdminMain(player);
-                } else {
-                    plugin.getMessagesUtil().send(player, "error.no-permission");
-                }
-            }
-            default -> { /* ignore filler clicks */ }
+            case "trust menu" -> guiManager.openTrustMenu(player);
+            case "flags" -> guiManager.openFlagsMenu(player);
+            case "roles" -> guiManager.openRolesGUI(player, plugin.getPlotManager().getPlot(player.getLocation()));
+            case "transfer claim" -> guiManager.openTransferMenu(player);
+            case "back" -> guiManager.openMain(player); // ✅ Back button
         }
     }
 }

@@ -1,7 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.snazzyatoms</groupId>
@@ -10,7 +9,11 @@
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>ProShield is a lightweight yet powerful land & plot protection plugin for Paper servers.</description>
+    <description>
+        ProShield is a lightweight yet powerful land &amp; plot protection plugin
+        for Spigot and Paper servers. Protects claims, manages roles, and
+        provides intuitive GUIs for players and admins.
+    </description>
     <url>https://github.com/snazzyatoms/ProShield</url>
 
     <properties>
@@ -21,15 +24,35 @@
     </properties>
 
     <repositories>
-        <!-- PaperMC Maven repo -->
+        <!-- SpigotMC -->
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+
+        <!-- PaperMC -->
         <repository>
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+
+        <!-- Sonatype for snapshots -->
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
     </repositories>
 
     <dependencies>
-        <!-- Paper API (compile against, not bundled) -->
+        <!-- Spigot API (compile only, provided by server) -->
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.20.6-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Paper API (compile only, provided by server) -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
@@ -40,35 +63,16 @@
 
     <build>
         <plugins>
-            <!-- Java compiler setup -->
+            <!-- Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>${maven.compiler.source}</source>
-                    <target>${maven.compiler.target}</target>
                     <release>${java.version}</release>
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin (optional, keeps plugin self-contained) -->
+            <!-- Shade Plugin for creating fat JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <minimizeJar>false</minimizeJar>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
-</project>

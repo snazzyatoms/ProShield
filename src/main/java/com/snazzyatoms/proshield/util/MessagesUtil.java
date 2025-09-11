@@ -2,91 +2,84 @@
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
- * MessagesUtil - Handles sending and formatting messages.
+ * MessagesUtil
  *
- * ✅ Preserves prior logic (send to players, console)
- * ✅ Added reload() to fix build errors
- * ✅ Added broadcastConsole() to fix build errors
+ * ✅ Preserves prior logic
+ * ✅ Expanded with reload() and broadcastConsole()
+ * ✅ Provides message lookup, formatting, and debug helpers
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private FileConfiguration messagesConfig;
-    private File file;
+    private FileConfiguration config;
+    private final File file;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        load();
+        this.file = new File(plugin.getDataFolder(), "messages.yml");
+        this.config = YamlConfiguration.loadConfiguration(file);
     }
 
-    /** Load or reload messages.yml */
-    private void load() {
-        file = new File(plugin.getDataFolder(), "messages.yml");
+    /* -------------------------------------------------------
+     * Reload Support
+     * ------------------------------------------------------- */
+
+    /** Reloads messages.yml into memory. */
+    public void reload() {
         if (!file.exists()) {
             plugin.saveResource("messages.yml", false);
         }
-        messagesConfig = YamlConfiguration.loadConfiguration(file);
+        this.config = YamlConfiguration.loadConfiguration(file);
     }
 
-    /** Reload messages.yml (used in /proshield reload). */
-    public void reload() {
-        load();
-    }
+    /* -------------------------------------------------------
+     * Messaging API
+     * ------------------------------------------------------- */
 
-    /** Send a message by key, or fallback if not found. */
-    public void send(CommandSender sender, String key, String fallback) {
-        String msg = messagesConfig.getString(key, fallback);
+    /** Send a formatted message from messages.yml to a sender. */
+    public void send(CommandSender sender, String path, String def) {
+        String msg = config.getString(path, def);
         if (msg != null && !msg.isEmpty()) {
-            sender.sendMessage(color(msg));
+            sender.sendMessage(colorize(msg));
         }
     }
 
-    /** Convenience: send message only by key (no fallback). */
-    public void send(CommandSender sender, String key) {
-        send(sender, key, key);
-    }
-
-    /** Broadcast to console (used after reloads, etc.). */
-    public void broadcastConsole(String key, ConsoleCommandSender console) {
-        String msg = messagesConfig.getString(key, key);
-        if (msg != null && !msg.isEmpty()) {
-            console.sendMessage(color(msg));
+    /** Send a raw message directly (with color codes). */
+    public void sendRaw(CommandSender sender, String raw) {
+        if (raw != null && !raw.isEmpty()) {
+            sender.sendMessage(colorize(raw));
         }
     }
 
-    /** Debug logging (if enabled). */
-    public void debug(String msg) {
+    /** Broadcast a message to console (with key + fallback). */
+    public void broadcastConsole(String path, ConsoleCommandSender console) {
+        String msg = config.getString(path, "&e[ProShield] " + path);
+        if (msg != null && !msg.isEmpty()) {
+            console.sendMessage(colorize(msg));
+        }
+    }
+
+    /** Debug logging to console only. */
+    public void debug(String message) {
         if (plugin.isDebugEnabled()) {
-            Bukkit.getLogger().info("[ProShield Debug] " + msg);
+            plugin.getLogger().info("[DEBUG] " + ChatColor.stripColor(message));
         }
     }
 
-    /** Apply Bukkit color codes. */
-    private String color(String input) {
-        return input.replace("&", "§");
-    }
+    /* -------------------------------------------------------
+     * Utility
+     * ------------------------------------------------------- */
 
-    /** Save changes back to file (if plugin ever edits messages). */
-    public void save() {
-        try {
-            messagesConfig.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public FileConfiguration getConfig() {
-        return messagesConfig;
+    private String colorize(String input) {
+        return ChatColor.translateAlternateColorCodes('&', input);
     }
 }

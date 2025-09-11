@@ -6,8 +6,8 @@ author: snazzyatoms
 website: https://github.com/snazzyatoms/ProShield
 description: >
   ProShield is a lightweight yet powerful land & plot protection plugin 
-  for Spigot and Paper servers. Protects claims, manages roles, and 
-  provides intuitive GUIs for players and admins.
+  for Spigot and Paper servers. Secure claims, manage trust & roles, 
+  repel mobs, protect items, and provide intuitive GUIs for players and admins.
 
 commands:
   proshield:
@@ -35,7 +35,7 @@ commands:
   preview:
     description: Preview claim borders with particles
     usage: /<command>
-    permission: proshield.use
+    permission: proshield.preview
 
   compass:
     description: Get the ProShield compass
@@ -68,10 +68,20 @@ commands:
     usage: /<command> <player>
     permission: proshield.use
 
+  # Admin
+  reload:
+    description: Reload ProShield configuration & messages
+    usage: /<command>
+    permission: proshield.admin.reload
+
 permissions:
   # General Use
   proshield.use:
     description: Use ProShield commands & GUI
+    default: true
+
+  proshield.preview:
+    description: Preview claim borders with particles
     default: true
 
   # Compass & Tools

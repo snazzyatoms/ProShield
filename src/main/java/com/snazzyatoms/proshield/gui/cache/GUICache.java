@@ -1,7 +1,6 @@
 // src/main/java/com/snazzyatoms/proshield/gui/cache/GUICache.java
 package com.snazzyatoms.proshield.gui.cache;
 
-import com.snazzyatoms.proshield.gui.GUIManager;
 import org.bukkit.entity.Player;
 
 import java.util.Map;
@@ -11,16 +10,15 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * GUICache - lightweight cache for storing temporary player GUI states.
  *
- * ✅ Keeps prior logic
- * ✅ Fixed so it no longer declares ProShield as a public class
+ * ✅ No longer depends on GUIManager
+ * ✅ Pure no-args cache class
  */
 public class GUICache {
 
-    private final GUIManager guiManager;
     private final Map<UUID, Object> playerCache = new ConcurrentHashMap<>();
 
-    public GUICache(GUIManager guiManager) {
-        this.guiManager = guiManager;
+    public GUICache() {
+        // no-args constructor
     }
 
     /** Store arbitrary GUI-related state for a player. */
@@ -50,9 +48,5 @@ public class GUICache {
     /** Check if player has cached GUI state. */
     public boolean has(Player player) {
         return player != null && playerCache.containsKey(player.getUniqueId());
-    }
-
-    public GUIManager getGuiManager() {
-        return guiManager;
     }
 }

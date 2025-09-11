@@ -1,6 +1,5 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.entity.Entity;
@@ -14,18 +13,16 @@ import java.util.Iterator;
 /**
  * Handles explosion protection inside claims and wilderness.
  * - Respects global config and per-claim settings
- * - Uses MessagesUtil for player/admin debug feedback
+ * - Uses MessagesUtil for debug feedback
  */
 public class ExplosionProtectionListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    public ExplosionProtectionListener(ProShield plugin, PlotManager plotManager) {
-        this.plugin = plugin;
+    public ExplosionProtectionListener(PlotManager plotManager, MessagesUtil messages) {
         this.plotManager = plotManager;
-        this.messages = plugin.getMessagesUtil();
+        this.messages = messages;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -38,7 +35,9 @@ public class ExplosionProtectionListener implements Listener {
 
         // Wilderness explosions → global toggle
         if (plot == null) {
-            boolean allowExplosions = plugin.getConfig().getBoolean("protection.explosions.wilderness", true);
+            // use global default wilderness protection
+            boolean allowExplosions = plotManager.getPlugin().getConfig()
+                    .getBoolean("protection.explosions.wilderness", true);
             if (!allowExplosions) {
                 event.setCancelled(true);
                 messages.debug("&cExplosion cancelled in wilderness: " + explosionType);
@@ -46,14 +45,14 @@ public class ExplosionProtectionListener implements Listener {
             return;
         }
 
-        // Inside claim → per-claim flags
+        // Inside claim → per-claim flag
         if (!plot.getSettings().isExplosionsAllowed()) {
             event.setCancelled(true);
             messages.debug("&cExplosion cancelled in claim: " + explosionType + " @ " + plot.getDisplayNameSafe());
             return;
         }
 
-        // If explosions are allowed, filter affected blocks so they can’t grief claims
+        // If explosions allowed, filter affected blocks (prevent griefing across claims)
         Iterator<org.bukkit.block.Block> it = event.blockList().iterator();
         while (it.hasNext()) {
             org.bukkit.block.Block block = it.next();

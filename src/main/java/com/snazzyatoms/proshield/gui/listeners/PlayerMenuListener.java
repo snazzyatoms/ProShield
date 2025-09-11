@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/gui/listeners/PlayerMenuListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -17,27 +16,18 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.UUID;
 
-/**
- * PlayerMenuListener
- *
- * ✅ Handles clicks inside the Player GUI menu
- * ✅ Runs corresponding commands (/claim, /unclaim, /info, /trust, /flags, /roles)
- * ✅ Supports back button → returns to main menu
- * ✅ Plays sounds for feedback
- */
 public class PlayerMenuListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager gui;
     private final GUICache cache;
+    private final GUIManager guiManager;
     private final MessagesUtil messages;
 
-    public PlayerMenuListener(ProShield plugin, GUIManager gui) {
+    public PlayerMenuListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.gui = gui;
-        this.cache = gui.getCache();
+        this.guiManager = guiManager;
+        this.cache = guiManager.getCache();
         this.messages = plugin.getMessagesUtil();
-
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -46,10 +36,10 @@ public class PlayerMenuListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         UUID uuid = player.getUniqueId();
 
-        // Verify this is a ProShield player menu
+        // ✅ Only handle player menus
         if (!cache.isPlayerMenu(uuid, event.getInventory())) return;
 
-        event.setCancelled(true); // Prevent moving/removing items
+        event.setCancelled(true); // Prevent movement of icons
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
@@ -62,43 +52,44 @@ public class PlayerMenuListener implements Listener {
         switch (name) {
             case "claim chunk" -> {
                 player.performCommand("claim");
-                player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+                playClick(player, true);
             }
             case "unclaim chunk" -> {
                 player.performCommand("unclaim");
-                player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1f, 1f);
+                playClick(player, true);
             }
             case "claim info" -> {
                 player.performCommand("info");
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+                playClick(player, true);
             }
             case "trust menu" -> {
-                gui.openTrustMenu(player, false);
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+                guiManager.openTrustMenu(player, false);
+                playClick(player, false);
             }
             case "untrust menu" -> {
-                gui.openUntrustMenu(player, false);
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+                guiManager.openUntrustMenu(player, false);
+                playClick(player, false);
             }
             case "flags" -> {
-                gui.openFlagsMenu(player, false);
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+                guiManager.openFlagsMenu(player, false);
+                playClick(player, false);
             }
             case "roles" -> {
-                gui.openRolesGUI(player, plugin.getPlotManager().getPlot(player.getLocation()), false);
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            }
-            case "transfer claim" -> {
-                player.performCommand("transfer");
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+                guiManager.openRolesGUI(player, plugin.getPlotManager().getPlotAt(player.getLocation()), false);
+                playClick(player, false);
             }
             case "back" -> {
-                gui.openMain(player);
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+                guiManager.openMain(player);
+                playClick(player, false);
             }
-            default -> {
-                // Do nothing
-            }
+            default -> {}
+        }
+    }
+
+    private void playClick(Player player, boolean notify) {
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+        if (notify && plugin.getConfig().getBoolean("messages.admin-flag-chat", false) && player.hasPermission("proshield.admin")) {
+            messages.send(player, "prefix", "&7Action executed successfully.");
         }
     }
 }

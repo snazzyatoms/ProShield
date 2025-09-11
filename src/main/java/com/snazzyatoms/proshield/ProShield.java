@@ -88,15 +88,14 @@ public class ProShield extends JavaPlugin {
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
+Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
 
-        // ✅ Fixed constructor args (need MessagesUtil too)
-        Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new FireProtectionListener(this, plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager, messages), this);
+Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager, messages), this);
+Bukkit.getPluginManager().registerEvents(new FireProtectionListener(this, plotManager, messages), this);
+Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
+Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this);
+Bukkit.getPluginManager().registerEvents(new KeepDropsListener(plotManager), this); // ✅ fixed
+Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager, messages), this);
 
         // ✅ Fixed mismatched ProShield instead of PlotManager
         Bukkit.getPluginManager().registerEvents(new DamageProtectionListener(plotManager, messages), this);

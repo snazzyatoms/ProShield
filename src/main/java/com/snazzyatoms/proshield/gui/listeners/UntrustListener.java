@@ -13,13 +13,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
-/**
- * UntrustListener
- *
- * ✅ Handles untrust GUI actions.
- * ✅ Back button works.
- * ⚠ Actual untrust assignment postponed until v2.0.
- */
 public class UntrustListener implements Listener {
 
     private final PlotManager plots;
@@ -35,24 +28,25 @@ public class UntrustListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onUntrustClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
+        if (e.getClickedInventory() == null || e.getClickedInventory() != e.getView().getTopInventory()) return;
         if (e.getCurrentItem() == null || !e.getCurrentItem().hasItemMeta()) return;
 
-        // ✅ Prevent item movement
+        String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
+        if (!title.contains("untrust")) return;
+
         e.setCancelled(true);
 
         String name = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName()).toLowerCase();
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) return;
 
-        // ✅ Handle back button
         if (name.equals("back")) {
-            boolean fromAdmin = player.hasPermission("proshield.admin");
-            if (fromAdmin) gui.openAdminMain(player);
+            if (player.hasPermission("proshield.admin")) gui.openAdminMain(player);
             else gui.openMain(player);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             return;
         }
 
-        // ⚠ Postponed untrust assignment
         player.sendMessage(ChatColor.YELLOW + "ℹ Untrust via GUI is coming in v2.0. Use /untrust <player> instead.");
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.5f);
     }

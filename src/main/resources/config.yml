@@ -35,10 +35,10 @@ protection:
   mobs:
     border-repel:
       enabled: true
-      radius: 3.0
-      horizontal-push: 0.7
-      vertical-push: 0.25
-    despawn-inside: true
+      radius: 3.0          # 🔹 Distance mobs are pushed away from claim edge
+      horizontal-push: 0.7 # 🔹 Strength of sideways push
+      vertical-push: 0.25  # 🔹 Strength of upward push
+    despawn-inside: true   # 🧟 Despawn mobs that manage to enter claims
 
   # -------------------------
   # Wilderness entity settings
@@ -55,8 +55,15 @@ messages:
   prefix: "&3[ProShield] &r"
   debug-prefix: "&8[Debug] &r"
 
-  show-wilderness: false   # "Entering Wilderness" shown when leaving claims?
-  admin-flag-chat: true    # 💬 Show flag toggle messages to admins?
+  # 🌲 Wilderness entry messages
+  # If true → players see "Entering Wilderness" when leaving a claim.
+  # If false → no message is shown when stepping into Wilderness.
+  show-wilderness: false
+
+  # 💬 Admin debug flag chat
+  # If true → admins get a chat message every time a claim flag is toggled.
+  # If false → no chat messages, but sound feedback still plays.
+  admin-flag-chat: true
 
 gui:
   flags:
@@ -65,7 +72,7 @@ gui:
     wilderness:
       toggle-messages: true
     debug:
-      toggle-flag-chat: true   # ✅ show flag-chat toggle in Admin GUI
+      toggle-flag-chat: true   # ✅ Lets admins flip `admin-flag-chat` in-game
 
 # ==========================================================
 # Claim Defaults

@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/listeners/RolesListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -25,10 +26,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class RolesListener implements Listener {
 
     private final PlotManager plotManager;
+    private final ClaimRoleManager roles;
     private final GUIManager gui;
 
-    public RolesListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, GUIManager gui) {
+    public RolesListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles, GUIManager gui) {
         this.plotManager = plotManager;
+        this.roles = roles;
         this.gui = gui;
     }
 

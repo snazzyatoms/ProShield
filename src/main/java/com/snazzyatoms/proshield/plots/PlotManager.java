@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *    - Lookups by Location/Chunk
  *    - Claim/unclaim support
  * ✅ Expanded:
+ *    - saveAll()
+ *    - getClaim(Location)
  *    - isOwner / isTrustedOrOwner
  *    - reloadFromConfig hook
  */
@@ -64,6 +66,11 @@ public class PlotManager {
         return plots.get(key(loc));
     }
 
+    /** Alias for getPlot(Location) – used by commands/listeners. */
+    public Optional<Plot> getClaim(Location loc) {
+        return Optional.ofNullable(getPlot(loc));
+    }
+
     public Collection<Plot> getAllPlots() {
         return plots.values();
     }
@@ -77,7 +84,7 @@ public class PlotManager {
 
     public String getClaimName(Location loc) {
         Plot plot = getPlot(loc);
-        return (plot != null) ? plot.getDisplayNameSafe() : null;
+        return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
     }
 
     /* -------------------------------------------------------
@@ -106,6 +113,7 @@ public class PlotManager {
      * Persistence
      * ------------------------------------------------------- */
 
+    /** Save a single plot asynchronously. */
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> save(plot));
     }
@@ -116,10 +124,20 @@ public class PlotManager {
         saveFile();
     }
 
+    /** Save all plots synchronously (used onDisable). */
+    public void saveAll() {
+        for (Plot plot : plots.values()) {
+            String k = plot.getWorldName() + "," + plot.getX() + "," + plot.getZ();
+            config.set(k, plot.serialize());
+        }
+        saveFile();
+    }
+
     private void saveFile() {
         try {
             config.save(file);
         } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save plots.yml: " + e.getMessage());
             e.printStackTrace();
         }
     }

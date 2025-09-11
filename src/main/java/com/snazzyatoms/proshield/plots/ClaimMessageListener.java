@@ -1,6 +1,5 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,21 +9,18 @@ import org.bukkit.event.player.PlayerMoveEvent;
 /**
  * Handles claim entry/exit messages.
  *
- * ✅ Preserves prior logic (notify when claim changes)
- * ✅ Expanded: "leaving" + "entering" messages
- * ✅ Skips Wilderness entry unless enabled in config
- * ✅ Uses MessagesUtil placeholders
+ * ✅ Simplified constructor (PlotManager + MessagesUtil)
+ * ✅ Consistent with other listeners
+ * ✅ Wilderness messages still controlled by config
  */
 public class ClaimMessageListener implements Listener {
 
     private final PlotManager plots;
     private final MessagesUtil messages;
-    private final ProShield plugin;
 
-    public ClaimMessageListener(ProShield plugin, PlotManager plots) {
-        this.plugin = plugin;
+    public ClaimMessageListener(PlotManager plots, MessagesUtil messages) {
         this.plots = plots;
-        this.messages = plugin.getMessagesUtil();
+        this.messages = messages;
     }
 
     @EventHandler
@@ -43,8 +39,8 @@ public class ClaimMessageListener implements Listener {
             // Entering message
             if (toClaim != null && !toClaim.isEmpty()) {
                 if ("Wilderness".equalsIgnoreCase(toClaim)) {
-                    // Controlled by config
-                    if (plugin.getConfig().getBoolean("messages.wilderness.enabled", true)) {
+                    if (p.getServer().getPluginManager().getPlugin("ProShield")
+                            .getConfig().getBoolean("messages.wilderness.enabled", true)) {
                         messages.send(p, "claim.entering", toClaim);
                     }
                 } else {

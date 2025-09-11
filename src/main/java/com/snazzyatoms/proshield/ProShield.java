@@ -84,7 +84,7 @@ public class ProShield extends JavaPlugin {
         registerCommand("roles", new RolesCommand(this, plotManager, roleManager, guiManager));
         registerCommand("transfer", new TransferCommand(this, plotManager));
         registerCommand("flags", new FlagsCommand(this, guiManager));
-        // ✅ Fixed: Pass plugin + compassManager, not compassManager + messages
+        // ✅ Fixed order: plugin first, compass manager second
         registerCommand("compass", new CompassCommand(this, compassManager));
     }
 
@@ -114,7 +114,7 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
 
-        // ✅ Register CompassListener so compass right-click opens GUI
+        // ✅ Register compass listener to handle right-click GUI opening
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
     }
 

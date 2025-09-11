@@ -6,6 +6,17 @@
 # Individual claims may override via /flags GUI.
 # ==========================================================
 
+# ==========================================================
+# General Settings
+# ==========================================================
+settings:
+  # 🧭 Automatically give players a ProShield compass on join.
+  # If false → players must use /compass manually.
+  give-compass-on-join: true
+
+# ==========================================================
+# Protection Settings
+# ==========================================================
 protection:
   # -------------------------
   # Fire settings

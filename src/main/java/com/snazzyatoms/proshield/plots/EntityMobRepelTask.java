@@ -3,7 +3,7 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
-import org.bukkit.World;
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -14,9 +14,10 @@ import java.util.Collection;
 /**
  * EntityMobRepelTask
  *
- * ✅ Preserves all prior logic
- * ✅ Uses PlotSettings.isMobRepelEnabled()
- * ✅ Runs periodically via Bukkit scheduler
+ * ✅ Repels mobs OUT of claims
+ * ✅ Adds buffer zone (configurable) → mobs can’t loiter near claims
+ * ✅ Uses PlotSettings to check per-claim toggle
+ * ✅ Runs every few seconds via Bukkit scheduler
  */
 public class EntityMobRepelTask extends BukkitRunnable {
 
@@ -24,14 +25,22 @@ public class EntityMobRepelTask extends BukkitRunnable {
     private final PlotManager plotManager;
     private BukkitTask runningTask;
 
+    // Pull from config
+    private final double bufferRadius;
+    private final double pushStrengthX;
+    private final double pushStrengthY;
+
     public EntityMobRepelTask(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+
+        // Config values
+        this.bufferRadius   = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 2.5);
+        this.pushStrengthX  = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.6);
+        this.pushStrengthY  = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.2);
     }
 
-    /**
-     * Schedules this task using Bukkit's scheduler.
-     */
+    /** Start task (runs every 5s). */
     public void start() {
         if (runningTask != null) {
             runningTask.cancel();
@@ -41,7 +50,6 @@ public class EntityMobRepelTask extends BukkitRunnable {
 
     @Override
     public void run() {
-        // Check all plots with mob repel enabled
         Collection<Plot> plots = plotManager.getAllPlots();
         for (Plot plot : plots) {
             if (plot.getSettings().isMobRepelEnabled()) {
@@ -51,38 +59,38 @@ public class EntityMobRepelTask extends BukkitRunnable {
     }
 
     private void repelMobs(Plot plot) {
-        World world = Bukkit.getWorld(plot.getWorldName());
-        if (world == null) return;
-
-        Chunk chunk = world.getChunkAt(plot.getX(), plot.getZ());
+        Chunk chunk = Bukkit.getWorld(plot.getWorldName()).getChunkAt(plot.getX(), plot.getZ());
         if (chunk == null || !chunk.isLoaded()) return;
 
         for (Entity e : chunk.getEntities()) {
             if (e instanceof Monster monster) {
-                // Push mobs away from the center of the chunk
-                double centerX = (chunk.getX() << 4) + 8;
-                double centerZ = (chunk.getZ() << 4) + 8;
+                Location mobLoc = monster.getLocation();
+                Location center = new Location(chunk.getWorld(),
+                        chunk.getX() * 16 + 8,
+                        mobLoc.getY(),
+                        chunk.getZ() * 16 + 8);
 
-                double dx = monster.getLocation().getX() - centerX;
-                double dz = monster.getLocation().getZ() - centerZ;
+                // Distance from claim center
+                double dx = mobLoc.getX() - center.getX();
+                double dz = mobLoc.getZ() - center.getZ();
                 double distance = Math.sqrt(dx * dx + dz * dz);
 
-                if (distance < 16) { // inside claim radius
-                    double strength = 0.4;
-                    monster.setVelocity(
-                        monster.getLocation().toVector()
-                                .subtract(chunk.getBlock(8, monster.getLocation().getBlockY(), 8).getLocation().toVector())
-                                .normalize()
-                                .multiply(strength)
-                    );
+                // If inside claim OR within buffer zone → repel outward
+                double claimRadius = 8.0; // half chunk size
+                if (distance < claimRadius + bufferRadius) {
+                    double strength = pushStrengthX;
+                    monster.setVelocity(monster.getVelocity().add(
+                            mobLoc.toVector().subtract(center.toVector())
+                                    .normalize()
+                                    .multiply(strength)
+                                    .setY(pushStrengthY) // add slight upward push
+                    ));
                 }
             }
         }
     }
 
-    /**
-     * Stop this task cleanly (if active).
-     */
+    /** Stop task cleanly. */
     public void stop() {
         if (runningTask != null) {
             runningTask.cancel();

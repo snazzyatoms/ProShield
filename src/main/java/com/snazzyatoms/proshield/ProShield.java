@@ -1,8 +1,8 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
-import com.snazzyatoms.proshield.compass.CompassListener;
 import com.snazzyatoms.proshield.compass.CompassManager;
+import com.snazzyatoms.proshield.compass.CompassListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.*;
@@ -78,13 +78,13 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerCommands() {
-        // ✅ Now matches updated command constructors
         registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager, compassManager));
         registerCommand("trust", new TrustCommand(this, plotManager, roleManager));
         registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
         registerCommand("roles", new RolesCommand(this, plotManager, roleManager, guiManager));
         registerCommand("transfer", new TransferCommand(this, plotManager));
         registerCommand("flags", new FlagsCommand(this, guiManager));
+        // ✅ Fixed: Pass plugin + compassManager, not compassManager + messages
         registerCommand("compass", new CompassCommand(this, compassManager));
     }
 
@@ -114,7 +114,7 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
 
-        // ✅ Compass right-click listener
+        // ✅ Register CompassListener so compass right-click opens GUI
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
     }
 

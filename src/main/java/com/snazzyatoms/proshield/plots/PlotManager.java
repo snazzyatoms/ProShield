@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -17,15 +16,17 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * PlotManager - central storage and persistence for plots.
  *
- * ✅ Preserves prior logic (async saving, load, chunk/loc keys)
- * ✅ Expanded with missing APIs (saveAll, reloadFromConfig, Optional getClaim)
+ * ✅ Preserves prior logic
+ * ✅ Expanded with global async saveAll support
+ * ✅ Supports lookups by Location/Chunk
+ * ✅ Claim/unclaim management
  */
 public class PlotManager {
 
     private final ProShield plugin;
     private final Map<String, Plot> plots = new ConcurrentHashMap<>();
     private final File file;
-    private FileConfiguration config;
+    private final FileConfiguration config;
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
@@ -37,6 +38,7 @@ public class PlotManager {
     /* -------------------------------------------------------
      * Keys & Helpers
      * ------------------------------------------------------- */
+
     private String key(Chunk chunk) {
         return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
     }
@@ -48,17 +50,13 @@ public class PlotManager {
     /* -------------------------------------------------------
      * Getters
      * ------------------------------------------------------- */
+
     public Plot getPlot(Chunk chunk) {
         return plots.get(key(chunk));
     }
 
     public Plot getPlot(Location loc) {
         return plots.get(key(loc));
-    }
-
-    /** New: Optional-returning claim getter (used in listeners). */
-    public Optional<Plot> getClaim(Location loc) {
-        return Optional.ofNullable(getPlot(loc));
     }
 
     public boolean hasAnyClaim(UUID playerId) {
@@ -76,6 +74,7 @@ public class PlotManager {
     /* -------------------------------------------------------
      * Claim / Unclaim
      * ------------------------------------------------------- */
+
     public Plot createClaim(UUID owner, Location loc) {
         Chunk chunk = loc.getChunk();
         String k = key(chunk);
@@ -97,16 +96,29 @@ public class PlotManager {
     /* -------------------------------------------------------
      * Persistence
      * ------------------------------------------------------- */
+
+    /** Save a single plot asynchronously. */
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> save(plot));
     }
 
+    /** Save all plots asynchronously. */
+    public void saveAsync() {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            for (Plot plot : plots.values()) {
+                save(plot);
+            }
+        });
+    }
+
+    /** Internal: save a single plot synchronously. */
     private void save(Plot plot) {
         String k = plot.getWorldName() + "," + plot.getX() + "," + plot.getZ();
         config.set(k, plot.serialize());
         saveFile();
     }
 
+    /** Persist YAML file safely. */
     private void saveFile() {
         try {
             config.save(file);
@@ -115,6 +127,7 @@ public class PlotManager {
         }
     }
 
+    /** Load all claims from plots.yml. */
     private void loadAll() {
         if (config.getKeys(false).isEmpty()) return;
         for (String key : config.getKeys(false)) {
@@ -132,37 +145,6 @@ public class PlotManager {
                 plots.put(key, plot);
             }
         }
-    }
-
-    /* -------------------------------------------------------
-     * Expanded (fixes build errors)
-     * ------------------------------------------------------- */
-    /** Save all plots to disk. */
-    public void saveAll() {
-        for (Plot plot : plots.values()) {
-            String k = plot.getWorldName() + "," + plot.getX() + "," + plot.getZ();
-            config.set(k, plot.serialize());
-        }
-        saveFile();
-    }
-
-    /** Reload plots from config (used in /proshield reload). */
-    public void reloadFromConfig() {
-        this.config = YamlConfiguration.loadConfiguration(file);
-        plots.clear();
-        loadAll();
-    }
-
-    /** Check if a player is the claim owner at a location. */
-    public boolean isOwner(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        return plot != null && plot.isOwner(playerId);
-    }
-
-    /** Check if a player is trusted or owner at a location. */
-    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        return plot != null && (plot.isOwner(playerId) || plot.isTrusted(playerId));
     }
 
     public Collection<Plot> getAllPlots() {

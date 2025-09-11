@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
@@ -67,7 +68,7 @@ public class ProShield extends JavaPlugin {
         if (borderRepelTask != null) borderRepelTask.stop();
 
         // ✅ Fixed: Save plots explicitly
-        plotManager.saveAllClaims();
+        plotManager.saveAll();
 
         messages.send(getServer().getConsoleSender(), "prefix", "&cProShield disabled.");
     }

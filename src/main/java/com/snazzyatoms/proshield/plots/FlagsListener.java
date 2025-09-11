@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/FlagsListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,13 +11,16 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.Collections;
+import java.util.function.Consumer;
+
 /**
  * FlagsListener
  *
- * ✅ Single toggle for buckets (matches PlotSettings)
- * ✅ Only owners + admins can flip flags (canEdit is checked via GUIManager)
- * ✅ Players hear a sound effect when toggling
- * ✅ Admins optionally get a debug chat message (config-controlled)
+ * ✅ Toggles claim flags when clicked in the Flags GUI.
+ * ✅ Prevents icon movement (menu stays static).
+ * ✅ Sound feedback (players hear click / toggle sounds).
+ * ✅ Admins optionally get a debug chat message (config-controlled).
  */
 public class FlagsListener implements Listener {
 
@@ -35,18 +37,21 @@ public class FlagsListener implements Listener {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         if (e.getCurrentItem() == null) return;
 
+        // ✅ Prevent item movement
+        e.setCancelled(true);
+
         ItemStack item = e.getCurrentItem();
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
-        String name = ChatColor.stripColor(meta.getDisplayName());
+        String name = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
         Location loc = player.getLocation();
         Plot plot = plots.getPlot(loc);
         if (plot == null) return;
 
         PlotSettings settings = plot.getSettings();
 
-        switch (name.toLowerCase()) {
+        switch (name) {
             case "explosions" -> toggleFlag(player, item, settings.isExplosionsAllowed(), settings::setExplosionsAllowed);
             case "buckets" -> toggleFlag(player, item, settings.isBucketAllowed(), settings::setBucketAllowed);
             case "item frames" -> toggleFlag(player, item, settings.isItemFramesAllowed(), settings::setItemFramesAllowed);
@@ -62,34 +67,44 @@ public class FlagsListener implements Listener {
             case "mob repel" -> toggleFlag(player, item, settings.isMobRepelEnabled(), settings::setMobRepelEnabled);
             case "mob despawn" -> toggleFlag(player, item, settings.isMobDespawnInsideEnabled(), settings::setMobDespawnInsideEnabled);
             case "keep items" -> toggleFlag(player, item, settings.isKeepItemsEnabled(), settings::setKeepItemsEnabled);
-            default -> { /* ignore unknown flag */ }
+            case "back" -> {
+                // handled by PlayerMenuListener/AdminMenuListener instead
+                return;
+            }
+            default -> { return; }
         }
 
+        // ✅ Save asynchronously
         plots.saveAsync(plot);
     }
 
     /* -------------------------------------------------------
-     * Helper to toggle a boolean flag and update item lore
+     * Toggle flag helper
      * ------------------------------------------------------- */
-    private void toggleFlag(Player player, ItemStack item, boolean current, java.util.function.Consumer<Boolean> setter) {
+    private void toggleFlag(Player player, ItemStack item, boolean current, Consumer<Boolean> setter) {
         boolean newState = !current;
         setter.accept(newState);
 
+        // Update lore to reflect new state
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setLore(java.util.Collections.singletonList(
+            meta.setLore(Collections.singletonList(
                     ChatColor.GRAY + "Now: " + (newState ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED")
             ));
             item.setItemMeta(meta);
         }
 
-        // 🔊 Sound feedback (always for players)
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, newState ? 1.2f : 0.8f);
+        // 🔊 Player feedback (sound only)
+        player.playSound(player.getLocation(),
+                Sound.UI_BUTTON_CLICK,
+                1f,
+                newState ? 1.2f : 0.8f);
 
-        // 🛠️ Chat message only if admin + config allows
+        // 🛠️ Admin debug chat (if enabled in config)
         if (player.hasPermission("proshield.admin")
                 && plugin.getConfig().getBoolean("messages.admin-flag-chat", true)) {
-            player.sendMessage(ChatColor.YELLOW + "Flag updated: " + ChatColor.AQUA + meta.getDisplayName());
+            player.sendMessage(ChatColor.YELLOW + "Flag updated: " +
+                    ChatColor.AQUA + meta.getDisplayName());
         }
     }
 }

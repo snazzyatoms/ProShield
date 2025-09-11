@@ -1,14 +1,13 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
 version: 1.2.5
-api-version: 1.18
+api-version: 1.20
 author: snazzyatoms
+website: https://github.com/snazzyatoms/ProShield
 description: >
   ProShield is a lightweight yet powerful land & plot protection plugin 
   for Spigot and Paper servers. Protects claims, manages roles, and 
   provides intuitive GUIs for players and admins.
-
-website: https://github.com/snazzyatoms/ProShield
 
 commands:
   proshield:
@@ -17,7 +16,7 @@ commands:
     aliases: [ps, shield]
     permission: proshield.use
 
-  # 🔹 Core Claim Commands
+  # Core Claim Commands
   claim:
     description: Claim your current chunk
     usage: /<command>
@@ -43,7 +42,7 @@ commands:
     usage: /<command>
     permission: proshield.compass
 
-  # 🔹 Trust & Roles
+  # Trust & Roles
   trust:
     description: Trust a player with optional role
     usage: /<command> <player> [role]
@@ -68,27 +67,6 @@ commands:
     description: Transfer claim ownership to another player
     usage: /<command> <player>
     permission: proshield.use
-
-  # 🔹 Admin & Maintenance
-  bypass:
-    description: Toggle admin bypass mode
-    usage: /<command> <on|off|toggle>
-    permission: proshield.bypass
-
-  reload:
-    description: Reload ProShield configuration
-    usage: /<command>
-    permission: proshield.admin.reload
-
-  purgeexpired:
-    description: Purge expired claims
-    usage: /<command> <days> [dryrun]
-    permission: proshield.admin.expired.purge
-
-  debug:
-    description: Toggle debug logging
-    usage: /<command> <on|off|toggle>
-    permission: proshield.admin.debug
 
 permissions:
   # General Use

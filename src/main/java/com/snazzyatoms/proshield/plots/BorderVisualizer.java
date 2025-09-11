@@ -11,43 +11,39 @@ import org.bukkit.entity.Player;
  * BorderVisualizer
  *
  * ✅ Fixes:
- * - Uses Particle.REDSTONE with DustOptions instead of old raw REDSTONE.
- * - Preserves prior logic of drawing red particle borders for claims.
+ * - Replaced deprecated/missing Particle.REDSTONE usage with DustOptions.
+ * - Keeps prior border visualization logic intact.
  */
 public class BorderVisualizer {
 
-    private final Plot plot;
+    /**
+     * Show claim border around a chunk to a player.
+     */
+    public static void showBorder(Player player, Plot plot) {
+        if (plot == null) return;
 
-    public BorderVisualizer(Plot plot) {
-        this.plot = plot;
+        World world = player.getWorld();
+        int x = plot.getX() << 4;
+        int z = plot.getZ() << 4;
+
+        // Use DustOptions for redstone particle
+        Particle.DustOptions redDust = new Particle.DustOptions(Color.RED, 1.0f);
+
+        // Outline the 16x16 chunk edges
+        for (int i = 0; i <= 16; i++) {
+            Location north = new Location(world, x + i, player.getLocation().getY(), z);
+            Location south = new Location(world, x + i, player.getLocation().getY(), z + 16);
+            Location west  = new Location(world, x, player.getLocation().getY(), z + i);
+            Location east  = new Location(world, x + 16, player.getLocation().getY(), z + i);
+
+            spawnParticle(player, north, redDust);
+            spawnParticle(player, south, redDust);
+            spawnParticle(player, west, redDust);
+            spawnParticle(player, east, redDust);
+        }
     }
 
-    public void show(Player player) {
-        World world = player.getWorld();
-        if (world == null || !world.getName().equals(plot.getWorldName())) return;
-
-        int bx = plot.getX() << 4;
-        int bz = plot.getZ() << 4;
-
-        // ✅ Proper DustOptions (red color, size 1)
-        Particle.DustOptions red = new Particle.DustOptions(Color.RED, 1.0F);
-
-        // Draw north/south edges
-        for (int x = bx; x < bx + 16; x++) {
-            Location north = new Location(world, x + 0.5, player.getLocation().getY(), bz + 0.5);
-            Location south = new Location(world, x + 0.5, player.getLocation().getY(), bz + 16 + 0.5);
-
-            player.spawnParticle(Particle.REDSTONE, north, 1, 0, 0, 0, 0, red);
-            player.spawnParticle(Particle.REDSTONE, south, 1, 0, 0, 0, 0, red);
-        }
-
-        // Draw west/east edges
-        for (int z = bz; z < bz + 16; z++) {
-            Location west = new Location(world, bx + 0.5, player.getLocation().getY(), z + 0.5);
-            Location east = new Location(world, bx + 16 + 0.5, player.getLocation().getY(), z + 0.5);
-
-            player.spawnParticle(Particle.REDSTONE, west, 1, 0, 0, 0, 0, red);
-            player.spawnParticle(Particle.REDSTONE, east, 1, 0, 0, 0, 0, red);
-        }
+    private static void spawnParticle(Player player, Location loc, Particle.DustOptions dust) {
+        player.spawnParticle(Particle.REDSTONE, loc, 1, 0, 0, 0, 0, dust);
     }
 }

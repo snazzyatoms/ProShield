@@ -42,8 +42,8 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
 
-        // ✅ Corrected order: cache first, then GUI manager
-        guiCache = new GUICache(null);
+        // ✅ Corrected GUICache (no args) + GUIManager
+        guiCache = new GUICache();
         guiManager = new GUIManager(this, guiCache);
 
         registerCommands();
@@ -82,9 +82,7 @@ public class ProShield extends JavaPlugin {
         registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
         registerCommand("roles", new RolesCommand(this, plotManager, roleManager, guiManager));
         registerCommand("transfer", new TransferCommand(this, plotManager));
-
-        // ✅ New command
-        registerCommand("flags", new FlagsCommand(this, guiManager));
+        registerCommand("flags", new FlagsCommand(guiManager)); // ✅ FIXED constructor
     }
 
     private void registerListeners() {
@@ -108,7 +106,9 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
 
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this); // ✅ register FlagsListener
+
+        // ✅ Fixed FlagsListener args (ProShield, PlotManager)
+        Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {

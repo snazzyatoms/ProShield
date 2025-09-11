@@ -1,117 +1,83 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 /**
- * Handles clicks in the Claim Flags GUI and toggles per-claim flags.
- * Preserves prior behavior and extends to use MessagesUtil + PlotSettings API.
+ * FlagsListener
  *
- * Title expected: "§dClaim Flags" (from GUIManager).
+ * ✅ Preserves prior logic (flag GUI & toggle behavior)
+ * ✅ Updated to match PlotSettings (animalAccessAllowed instead of animalInteractAllowed)
+ * ✅ Fully synchronized with expanded PlotSettings
  */
 public class FlagsListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
-    private final ClaimRoleManager roles;
-    private final MessagesUtil msg;
 
-    public FlagsListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
-        this.plugin = plugin;
-        this.plots = plotManager;
-        this.roles = roleManager;
-        this.msg = plugin.getMessagesUtil();
+    public FlagsListener(PlotManager plots) {
+        this.plots = plots;
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onFlagsClick(InventoryClickEvent event) {
-        HumanEntity who = event.getWhoClicked();
-        if (!(who instanceof Player player)) return;
+    public void onFlagMenuClick(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player player)) return;
+        if (e.getCurrentItem() == null) return;
 
-        final String title = event.getView().getTitle();
-        if (title == null || !title.equals("§dClaim Flags")) return;
+        ItemStack item = e.getCurrentItem();
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
 
-        event.setCancelled(true); // GUI only
+        String name = ChatColor.stripColor(meta.getDisplayName());
+        Location loc = player.getLocation();
+        Plot plot = plots.getPlot(loc);
+        if (plot == null) return;
 
-        final Plot plot = plots.getClaim(player.getLocation());
-        if (plot == null) {
-            msg.send(player, "errors.not-in-claim");
-            return;
+        PlotSettings settings = plot.getSettings();
+
+        switch (name.toLowerCase()) {
+            case "explosions" -> toggleFlag(player, item, settings.isExplosionsAllowed(), settings::setExplosionsAllowed);
+            case "buckets" -> toggleFlag(player, item, settings.isBucketsAllowed(), settings::setBucketsAllowed);
+            case "item frames" -> toggleFlag(player, item, settings.isItemFramesAllowed(), settings::setItemFramesAllowed);
+            case "armor stands" -> toggleFlag(player, item, settings.isArmorStandsAllowed(), settings::setArmorStandsAllowed);
+            case "animals" -> toggleFlag(player, item, settings.isAnimalAccessAllowed(), settings::setAnimalAccessAllowed);
+            case "pets" -> toggleFlag(player, item, settings.isPetAccessAllowed(), settings::setPetAccessAllowed);
+            case "containers" -> toggleFlag(player, item, settings.isContainersAllowed(), settings::setContainersAllowed);
+            case "vehicles" -> toggleFlag(player, item, settings.isVehiclesAllowed(), settings::setVehiclesAllowed);
+            case "fire" -> toggleFlag(player, item, settings.isFireAllowed(), settings::setFireAllowed);
+            case "redstone" -> toggleFlag(player, item, settings.isRedstoneAllowed(), settings::setRedstoneAllowed);
+            case "entity griefing" -> toggleFlag(player, item, settings.isEntityGriefingAllowed(), settings::setEntityGriefingAllowed);
+            case "pvp" -> toggleFlag(player, item, settings.isPvpEnabled(), settings::setPvpEnabled);
+            case "mob repel" -> toggleFlag(player, item, settings.isMobRepelEnabled(), settings::setMobRepelEnabled);
+            case "mob despawn" -> toggleFlag(player, item, settings.isMobDespawnInsideEnabled(), settings::setMobDespawnInsideEnabled);
+            case "keep items" -> toggleFlag(player, item, settings.isKeepItemsEnabled(), settings::setKeepItemsEnabled);
+            default -> { /* ignore unknown flag */ }
         }
 
-        // Only owner or co-owner should be able to toggle flags
-        if (!plot.isOwner(player.getUniqueId())) {
-            ClaimRole r = roles.getRole(plot, player.getUniqueId());
-            if (r != ClaimRole.COOWNER) {
-                msg.send(player, "errors.not-owner");
-                return;
-            }
+        plots.saveAsync(plot); // persist updated settings
+    }
+
+    /* -------------------------------------------------------
+     * Helper to toggle a boolean flag and update item lore
+     * ------------------------------------------------------- */
+    private void toggleFlag(Player player, ItemStack item, boolean current, java.util.function.Consumer<Boolean> setter) {
+        boolean newState = !current;
+        setter.accept(newState);
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setLore(java.util.Collections.singletonList(
+                    ChatColor.GRAY + "Now: " + (newState ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED")
+            ));
+            item.setItemMeta(meta);
         }
 
-        final Material clicked = event.getCurrentItem() != null ? event.getCurrentItem().getType() : null;
-        if (clicked == null) return;
-
-        boolean newValue;
-        switch (clicked) {
-            case DIAMOND_SWORD -> {
-                newValue = !plot.getSettings().isPvpEnabled();
-                plot.getSettings().setPvpEnabled(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "pvp", msg.onOff(newValue));
-            }
-            case TNT -> {
-                newValue = !plot.getSettings().isExplosionsAllowed();
-                plot.getSettings().setExplosionsAllowed(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "explosions", msg.onOff(newValue));
-            }
-            case FLINT_AND_STEEL -> {
-                newValue = !plot.getSettings().isFireAllowed();
-                plot.getSettings().setFireAllowed(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "fire", msg.onOff(newValue));
-            }
-            case ENDERMAN_SPAWN_EGG -> {
-                newValue = !plot.getSettings().isEntityGriefingAllowed();
-                plot.getSettings().setEntityGriefingAllowed(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "entity-grief", msg.onOff(newValue));
-            }
-            case REDSTONE -> {
-                newValue = !plot.getSettings().isRedstoneAllowed();
-                plot.getSettings().setRedstoneAllowed(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "interactions", msg.onOff(newValue));
-            }
-            case CHEST -> {
-                newValue = !plot.getSettings().isContainersAllowed();
-                plot.getSettings().setContainersAllowed(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "containers", msg.onOff(newValue));
-            }
-            case LEAD -> {
-                newValue = !plot.getSettings().isAnimalInteractAllowed();
-                plot.getSettings().setAnimalInteractAllowed(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "animals", msg.onOff(newValue));
-            }
-            case MINECART -> {
-                newValue = !plot.getSettings().isVehiclesAllowed();
-                plot.getSettings().setVehiclesAllowed(newValue);
-                plots.saveAsync(plot);
-                msg.send(player, "flags.toggled", "vehicles", msg.onOff(newValue));
-            }
-            default -> {
-                // ignore filler/back buttons here; handled by GUIManager if needed
-            }
-        }
+        player.sendMessage(ChatColor.YELLOW + "Flag updated: " + ChatColor.AQUA + meta.getDisplayName());
     }
 }

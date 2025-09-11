@@ -7,7 +7,6 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Chunk;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -18,8 +17,8 @@ import org.bukkit.entity.Player;
  *
  * Preserves prior logic, extended to:
  * - Match expected constructor signature (ProShield, PlotManager, ClaimRoleManager, GUIManager).
- * - Ensure consistent Plot lookup (uses Chunk, not Location).
- * - Send proper error messages if not in a claim.
+ * - Ensure consistent Plot lookup (uses Location).
+ * - Send proper error messages if not in a claim or not owner.
  */
 public class RolesCommand implements CommandExecutor {
 
@@ -40,22 +39,20 @@ public class RolesCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cOnly players may use this command.");
+            messages.send(sender, "error.players-only");
             return true;
         }
 
-        Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
-            messages.send(player, "errors.not-in-claim");
+            messages.send(player, "error.not-in-claim");
             return true;
         }
 
         // Only owners/co-owners may open role GUI
         ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
         if (!roleManager.isOwnerOrCoOwner(role)) {
-            messages.send(player, "errors.not-owner");
+            messages.send(player, "error.cannot-modify-claim");
             return true;
         }
 

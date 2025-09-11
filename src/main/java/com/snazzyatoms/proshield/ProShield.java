@@ -97,7 +97,6 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager, messages), this);
 
-        // ✅ only once
         Bukkit.getPluginManager().registerEvents(new DamageProtectionListener(plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this);
 

@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/util/ClaimPreview.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.plots.Plot;
@@ -13,7 +12,7 @@ import org.bukkit.scheduler.BukkitRunnable;
  * ClaimPreview
  *
  * ✅ Fixed:
- * - Ensures Particle.VILLAGER_HAPPY is used correctly with offsets.
+ * - Replaced legacy Particle.VILLAGER_HAPPY with Particle.HAPPY_VILLAGER.
  * - Preserves prior preview logic.
  */
 public class ClaimPreview {
@@ -57,7 +56,7 @@ public class ClaimPreview {
     private static void spawnParticle(Player player, World world, double x, double y, double z) {
         Location loc = new Location(world, x + 0.5, y, z + 0.5);
         player.spawnParticle(
-                Particle.VILLAGER_HAPPY, // ✅ correct particle type
+                Particle.HAPPY_VILLAGER, // ✅ updated to modern API
                 loc,
                 3, // count
                 0.2, 0.2, 0.2, // offsets for spread

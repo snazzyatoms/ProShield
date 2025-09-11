@@ -14,14 +14,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
-import java.util.UUID;
-
 /**
  * TrustListener
  *
  * ✅ Handles trust GUI actions.
- * ✅ Assigns trusted players to the MEMBER role by default.
+ * ✅ Uses ClaimRoleManager.trustPlayer(...) directly.
  * ✅ Back button returns to correct parent menu.
+ * ⚠ Player selection via GUI postponed until v2.0 (use /trust <player>).
  */
 public class TrustListener implements Listener {
 
@@ -38,7 +37,7 @@ public class TrustListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onTrustClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
-        if (e.getCurrentItem() == null) return;
+        if (e.getCurrentItem() == null || e.getCurrentItem().getItemMeta() == null) return;
 
         // ✅ Prevent item movement
         e.setCancelled(true);
@@ -61,21 +60,8 @@ public class TrustListener implements Listener {
             return;
         }
 
-        UUID target = roles.getPendingTarget(player);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "⚠ No player selected to trust.");
-            return;
-        }
-
-        // ✅ Assign default role
-        roles.setRole(plot, target, ClaimRole.MEMBER);
-
-        // ✅ Feedback
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
-        player.sendMessage(ChatColor.GREEN + "✔ Trusted player as " + ClaimRole.MEMBER.getDisplayName());
-
-        // ✅ Refresh GUI
-        boolean fromAdmin = player.hasPermission("proshield.admin");
-        gui.openTrustMenu(player, fromAdmin);
+        // ⚠ GUI trust not implemented yet
+        player.sendMessage(ChatColor.YELLOW + "ℹ Use /trust <player> to add someone to your claim.");
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.5f);
     }
 }

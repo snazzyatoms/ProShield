@@ -8,6 +8,7 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.*;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -111,7 +112,7 @@ public class GUIManager implements Listener {
     public void clearCache()   { cache.clearCache(); }
 
     // =========================================================
-    // INVENTORY CLICK ROUTER
+    // INVENTORY CLICK ROUTER (FIXED)
     // =========================================================
     @EventHandler(ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent e) {
@@ -119,21 +120,33 @@ public class GUIManager implements Listener {
         String title = e.getView().getTitle();
 
         try {
-            switch (title) {
-                case TITLE_MAIN -> { e.setCancelled(true); handleMainClick(p, e.getCurrentItem(), e.getClick()); }
-                case TITLE_FLAGS -> { e.setCancelled(true); handleFlagsClick(p, e.getCurrentItem(), e.getClick()); }
-                case TITLE_ROLES -> { e.setCancelled(true); handleRolesClick(p, e.getCurrentItem(), e.getClick()); }
-                case TITLE_TRUST -> { e.setCancelled(true); handleTrustClick(p, e.getCurrentItem(), e.getClick()); }
-                case TITLE_UNTRUST -> { e.setCancelled(true); handleUntrustClick(p, e.getCurrentItem(), e.getClick()); }
-                case TITLE_TRANSFER -> { e.setCancelled(true); handleTransferClick(p, e.getCurrentItem(), e.getClick()); }
-                case TITLE_ADMIN -> { e.setCancelled(true); handleAdminClick(p, e.getCurrentItem(), e.getClick()); }
-                case TITLE_ADMIN_WILD -> { e.setCancelled(true); handleAdminWildernessClick(p, e.getCurrentItem(), e.getClick()); }
-                default -> {
-                    if (title.startsWith(TITLE_PICK_PLAYER)) {
-                        e.setCancelled(true);
-                        handlePickPlayerClick(p, e.getCurrentItem(), e.getClick());
-                    }
-                }
+            if (TITLE_MAIN.equals(title)) {
+                e.setCancelled(true);
+                handleMainClick(p, e.getCurrentItem(), e.getClick());
+            } else if (TITLE_FLAGS.equals(title)) {
+                e.setCancelled(true);
+                handleFlagsClick(p, e.getCurrentItem(), e.getClick());
+            } else if (TITLE_ROLES.equals(title)) {
+                e.setCancelled(true);
+                handleRolesClick(p, e.getCurrentItem(), e.getClick());
+            } else if (TITLE_TRUST.equals(title)) {
+                e.setCancelled(true);
+                handleTrustClick(p, e.getCurrentItem(), e.getClick());
+            } else if (TITLE_UNTRUST.equals(title)) {
+                e.setCancelled(true);
+                handleUntrustClick(p, e.getCurrentItem(), e.getClick());
+            } else if (TITLE_TRANSFER.equals(title)) {
+                e.setCancelled(true);
+                handleTransferClick(p, e.getCurrentItem(), e.getClick());
+            } else if (TITLE_ADMIN.equals(title)) {
+                e.setCancelled(true);
+                handleAdminClick(p, e.getCurrentItem(), e.getClick());
+            } else if (TITLE_ADMIN_WILD.equals(title)) {
+                e.setCancelled(true);
+                handleAdminWildernessClick(p, e.getCurrentItem(), e.getClick());
+            } else if (title.startsWith(TITLE_PICK_PLAYER)) {
+                e.setCancelled(true);
+                handlePickPlayerClick(p, e.getCurrentItem(), e.getClick());
             }
         } catch (Throwable t) {
             plugin.getLogger().warning("GUI click error: " + t.getMessage());
@@ -141,60 +154,59 @@ public class GUIManager implements Listener {
     }
 
     // =========================================================
-    // MAIN GUI
+    // ADMIN WILDERNESS
     // =========================================================
-    private void openMainInternal(Player p) {
-        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_MAIN);
-        set(inv, 11, make(Material.PLAYER_HEAD, "Trust", List.of("Trust an online player.")));
-        set(inv, 12, make(Material.BARRIER, "Untrust", List.of("Remove trusted players.")));
-        set(inv, 13, make(Material.BOOK, "Roles", List.of("Manage roles in your claim.")));
-        set(inv, 14, make(Material.LEVER, "Flags", List.of("Toggle PvP, fire, explosions, etc.")));
-        set(inv, 15, make(Material.NAME_TAG, "Transfer", List.of("Transfer claim ownership.")));
-
-        if (p.hasPermission("proshield.admin")) {
-            set(inv, 16, make(Material.REDSTONE_BLOCK, "Admin", List.of("Admin tools and wilderness settings.")));
+    private void openAdminWilderness(Player p) {
+        if (!p.hasPermission("proshield.admin")) {
+            p.sendMessage(ProShield.PREFIX + ChatColor.RED + "No permission.");
+            return;
         }
+
+        Plot plot = plots.getPlot(p.getLocation());
+        boolean claimed = plot != null;
+
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_ADMIN_WILD);
+
+        // Status
+        String status = claimed
+                ? ChatColor.GREEN + "Claimed by " + nameOf(plot.getOwner())
+                : ChatColor.RED + "Wilderness";
+        set(inv, 10, make(Material.MAP, "Status", List.of(status)));
+
+        // Actions
+        set(inv, 12, make(Material.EMERALD, "Claim Here (Self)", List.of("Make yourself the owner of this chunk.")));
+        set(inv, 13, make(Material.PLAYER_HEAD, "Claim Here (For Player)", List.of("Open player picker to assign owner.")));
+        set(inv, 14, make(Material.BARRIER, "Unclaim Here", List.of("Remove the claim in this chunk.")));
+
+        // Wilderness message toggle
+        boolean enabled = plugin.getConfig().getBoolean("messages.show-wilderness", false);
+        set(inv, 15, toggleItem(Material.OAK_SIGN, "Wilderness Messages", enabled));
+
+        // Back
+        set(inv, 16, make(Material.OAK_DOOR, "Back", List.of("Return to Admin")));
+
         p.openInventory(inv);
     }
 
-    private void handleMainClick(Player p, ItemStack it, ClickType click) {
+    private void handleAdminWildernessClick(Player p, ItemStack it, ClickType click) {
         if (!valid(it)) return;
         String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase(Locale.ROOT);
+
         switch (name) {
-            case "trust"    -> openTrustInternal(p);
-            case "untrust"  -> openUntrustInternal(p);
-            case "roles"    -> openRolesInternal(p);
-            case "flags"    -> openFlagsInternal(p);
-            case "transfer" -> openTransferInternal(p);
-            case "admin"    -> openAdminInternal(p);
+            case "wilderness messages" -> {
+                boolean current = plugin.getConfig().getBoolean("messages.show-wilderness", false);
+                boolean next = !current;
+                plugin.getConfig().set("messages.show-wilderness", next);
+                plugin.saveConfig();
+                msg.send(p, next ? "admin.wilderness-toggle-on" : "admin.wilderness-toggle-off");
+                openAdminWilderness(p);
+            }
+            case "back" -> openAdminInternal(p);
         }
     }
 
     // =========================================================
-    // STUBS FOR OTHER MENUS (restored)
-    // =========================================================
-    private void openFlagsInternal(Player p) { /* existing logic */ }
-    private void handleFlagsClick(Player p, ItemStack it, ClickType click) { /* existing logic */ }
-
-    private void openRolesInternal(Player p) { /* existing logic */ }
-    private void openRolesInternal(Player p, Plot plot) { /* existing logic */ }
-    private void handleRolesClick(Player p, ItemStack it, ClickType click) { /* existing logic */ }
-
-    private void openTrustInternal(Player p) { /* existing logic */ }
-    private void handleTrustClick(Player p, ItemStack it, ClickType click) { /* existing logic */ }
-
-    private void openUntrustInternal(Player p) { /* existing logic */ }
-    private void handleUntrustClick(Player p, ItemStack it, ClickType click) { /* existing logic */ }
-
-    private void openTransferInternal(Player p) { /* existing logic */ }
-
-    private void openAdminInternal(Player p) { /* existing logic */ }
-    private void handleAdminClick(Player p, ItemStack it, ClickType click) { /* existing logic */ }
-
-    private void handlePickPlayerClick(Player p, ItemStack it, ClickType click) { /* existing logic */ }
-
-    // =========================================================
-    // HELPERS
+    // HELPERS (FIXED DURABILITY → UNBREAKING)
     // =========================================================
     private boolean valid(ItemStack it) {
         return it != null && it.getType() != Material.AIR && it.hasItemMeta() && it.getItemMeta().hasDisplayName();
@@ -229,7 +241,7 @@ public class GUIManager implements Listener {
                     ChatColor.GRAY + "State: " + (enabled ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF"),
                     ChatColor.YELLOW + "Click to toggle."
             ));
-            if (enabled) m.addEnchant(org.bukkit.enchantments.Enchantment.DURABILITY, 1, true);
+            if (enabled) m.addEnchant(Enchantment.UNBREAKING, 1, true); // ✅ fixed
             m.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
             it.setItemMeta(m);
         }

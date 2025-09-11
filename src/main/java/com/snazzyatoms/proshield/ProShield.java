@@ -7,6 +7,9 @@ import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
+import com.snazzyatoms.proshield.gui.listeners.RolesListener;
+import com.snazzyatoms.proshield.gui.listeners.TrustListener;
+import com.snazzyatoms.proshield.gui.listeners.UntrustListener;
 import com.snazzyatoms.proshield.plots.*;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -96,6 +99,7 @@ public class ProShield extends JavaPlugin {
         // ✅ GUI central listener (registers PlayerMenu & AdminMenu listeners)
         new GUIListener(this, guiManager);
 
+        // ✅ Player + protection listeners
         Bukkit.getPluginManager().registerEvents(
                 new PlayerJoinListener(this, guiManager, plotManager, compassManager), this);
         Bukkit.getPluginManager().registerEvents(
@@ -120,6 +124,11 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
+
+        // ✅ New interactive GUI listeners
+        Bukkit.getPluginManager().registerEvents(new RolesListener(this, plotManager, roleManager, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new TrustListener(plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new UntrustListener(plotManager, roleManager), this);
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {

@@ -9,11 +9,12 @@ import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
 
 /**
- * Handles fire protections inside claims and wilderness.
+ * FireProtectionListener
  *
- * ✅ Preserves all prior logic
- * ✅ Uses PlotSettings.fireSpreadAllowed
- * ✅ Consistent constructor style
+ * ✅ Constructor cleaned (PlotManager, MessagesUtil)
+ * ✅ Uses per-claim PlotSettings (fireAllowed + fireSpreadAllowed)
+ * ✅ Preserves wilderness/global behavior
+ * ✅ Debug messages for admins
  */
 public class FireProtectionListener implements Listener {
 
@@ -31,7 +32,7 @@ public class FireProtectionListener implements Listener {
         Chunk chunk = block.getChunk();
         Plot plot = plots.getPlot(chunk);
 
-        if (plot == null) return; // wilderness → use global config
+        if (plot == null) return; // wilderness – follow global config only
 
         PlotSettings s = plot.getSettings();
 
@@ -47,11 +48,11 @@ public class FireProtectionListener implements Listener {
         Chunk chunk = block.getChunk();
         Plot plot = plots.getPlot(chunk);
 
-        if (plot == null) return;
+        if (plot == null) return; // wilderness – follow global config
 
         PlotSettings s = plot.getSettings();
 
-        if (!s.isFireSpreadAllowed()) {
+        if (!s.isFireAllowed()) {
             event.setCancelled(true);
             messages.debug("&cFire ignition prevented in claim: " + plot.getDisplayNameSafe());
         }

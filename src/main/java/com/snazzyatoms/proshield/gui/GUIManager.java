@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -105,14 +104,13 @@ public class GUIManager implements Listener {
     public void openTrustMenu(Player p)   { openTrustInternal(p); }
     public void openUntrustMenu(Player p) { openUntrustInternal(p); }
     public void openTransferMenu(Player p){ openTransferInternal(p); }
-
     public void openRolesGUI(Player p, Plot plot) { openRolesInternal(p, plot); }
 
     public GUICache getCache() { return cache; }
     public void clearCache()   { cache.clearCache(); }
 
     // =========================================================
-    // INVENTORY CLICK ROUTER (FIXED)
+    // INVENTORY CLICK ROUTER
     // =========================================================
     @EventHandler(ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent e) {
@@ -154,11 +152,139 @@ public class GUIManager implements Listener {
     }
 
     // =========================================================
-    // ADMIN WILDERNESS
+    // INTERNAL OPEN METHODS
+    // =========================================================
+    private void openMainInternal(Player p) {
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_MAIN);
+        set(inv, 11, make(Material.OAK_SIGN, "Flags", List.of("Manage claim flags")));
+        set(inv, 12, make(Material.PLAYER_HEAD, "Roles", List.of("Assign claim roles")));
+        set(inv, 13, make(Material.PAPER, "Trust Player", List.of("Trust a player")));
+        set(inv, 14, make(Material.BARRIER, "Untrust Player", List.of("Remove trust")));
+        set(inv, 15, make(Material.BOOK, "Transfer Ownership", List.of("Transfer claim")));
+        if (p.hasPermission("proshield.admin")) {
+            set(inv, 22, make(Material.REDSTONE_BLOCK, "Admin", List.of("Admin tools")));
+        }
+        p.openInventory(inv);
+    }
+
+    private void openAdminInternal(Player p) {
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_ADMIN);
+        set(inv, 11, make(Material.MAP, "Manage Wilderness", List.of("Open wilderness admin tools")));
+        set(inv, 15, make(Material.OAK_DOOR, "Back", List.of("Return")));
+        p.openInventory(inv);
+    }
+
+    private void openFlagsInternal(Player p) {
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_FLAGS);
+        set(inv, 11, make(Material.TNT, "Explosion Flag", List.of("Toggle explosions")));
+        set(inv, 12, make(Material.FLINT_AND_STEEL, "Fire Flag", List.of("Toggle fire")));
+        set(inv, 15, make(Material.OAK_DOOR, "Back", List.of("Return to Main")));
+        p.openInventory(inv);
+    }
+
+    private void openRolesInternal(Player p) {
+        openRolesInternal(p, plots.getPlot(p.getLocation()));
+    }
+
+    private void openRolesInternal(Player p, Plot plot) {
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_ROLES);
+        if (plot != null) {
+            set(inv, 11, make(Material.PLAYER_HEAD, "View Trusted", List.of("See trusted players")));
+        }
+        set(inv, 15, make(Material.OAK_DOOR, "Back", List.of("Return to Main")));
+        p.openInventory(inv);
+    }
+
+    private void openTrustInternal(Player p) {
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_TRUST);
+        set(inv, 15, make(Material.OAK_DOOR, "Back", List.of("Return to Main")));
+        p.openInventory(inv);
+    }
+
+    private void openUntrustInternal(Player p) {
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_UNTRUST);
+        set(inv, 15, make(Material.OAK_DOOR, "Back", List.of("Return to Main")));
+        p.openInventory(inv);
+    }
+
+    private void openTransferInternal(Player p) {
+        Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_TRANSFER);
+        set(inv, 15, make(Material.OAK_DOOR, "Back", List.of("Return to Main")));
+        p.openInventory(inv);
+    }
+
+    // =========================================================
+    // CLICK HANDLERS
+    // =========================================================
+    private void handleMainClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName());
+        switch (name.toLowerCase()) {
+            case "flags" -> openFlagsInternal(p);
+            case "roles" -> openRolesInternal(p);
+            case "trust player" -> openTrustInternal(p);
+            case "untrust player" -> openUntrustInternal(p);
+            case "transfer ownership" -> openTransferInternal(p);
+            case "admin" -> openAdminInternal(p);
+        }
+    }
+
+    private void handleFlagsClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        if (ChatColor.stripColor(it.getItemMeta().getDisplayName()).equalsIgnoreCase("back")) {
+            openMainInternal(p);
+        }
+    }
+
+    private void handleRolesClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        if (ChatColor.stripColor(it.getItemMeta().getDisplayName()).equalsIgnoreCase("back")) {
+            openMainInternal(p);
+        }
+    }
+
+    private void handleTrustClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        if (ChatColor.stripColor(it.getItemMeta().getDisplayName()).equalsIgnoreCase("back")) {
+            openMainInternal(p);
+        }
+    }
+
+    private void handleUntrustClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        if (ChatColor.stripColor(it.getItemMeta().getDisplayName()).equalsIgnoreCase("back")) {
+            openMainInternal(p);
+        }
+    }
+
+    private void handleTransferClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        if (ChatColor.stripColor(it.getItemMeta().getDisplayName()).equalsIgnoreCase("back")) {
+            openMainInternal(p);
+        }
+    }
+
+    private void handleAdminClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase(Locale.ROOT);
+        if (name.contains("wilderness")) {
+            openAdminWilderness(p);
+        } else if (name.equals("back")) {
+            openMainInternal(p);
+        }
+    }
+
+    private void handlePickPlayerClick(Player p, ItemStack it, ClickType click) {
+        if (!valid(it)) return;
+        msg.send(p, "gui.pick-player-placeholder", "&7Player picked (placeholder).");
+    }
+
+    // =========================================================
+    // ADMIN WILDERNESS (your version preserved)
     // =========================================================
     private void openAdminWilderness(Player p) {
         if (!p.hasPermission("proshield.admin")) {
-            p.sendMessage(ProShield.PREFIX + ChatColor.RED + "No permission.");
+            p.sendMessage(ChatColor.RED + "No permission.");
             return;
         }
 
@@ -167,22 +293,18 @@ public class GUIManager implements Listener {
 
         Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_ADMIN_WILD);
 
-        // Status
         String status = claimed
                 ? ChatColor.GREEN + "Claimed by " + nameOf(plot.getOwner())
                 : ChatColor.RED + "Wilderness";
         set(inv, 10, make(Material.MAP, "Status", List.of(status)));
 
-        // Actions
         set(inv, 12, make(Material.EMERALD, "Claim Here (Self)", List.of("Make yourself the owner of this chunk.")));
-        set(inv, 13, make(Material.PLAYER_HEAD, "Claim Here (For Player)", List.of("Open player picker to assign owner.")));
+        set(inv, 13, make(Material.PLAYER_HEAD, "Claim Here (For Player)", List.of("Pick a player as owner.")));
         set(inv, 14, make(Material.BARRIER, "Unclaim Here", List.of("Remove the claim in this chunk.")));
 
-        // Wilderness message toggle
         boolean enabled = plugin.getConfig().getBoolean("messages.show-wilderness", false);
         set(inv, 15, toggleItem(Material.OAK_SIGN, "Wilderness Messages", enabled));
 
-        // Back
         set(inv, 16, make(Material.OAK_DOOR, "Back", List.of("Return to Admin")));
 
         p.openInventory(inv);
@@ -206,7 +328,7 @@ public class GUIManager implements Listener {
     }
 
     // =========================================================
-    // HELPERS (FIXED DURABILITY → UNBREAKING)
+    // HELPERS
     // =========================================================
     private boolean valid(ItemStack it) {
         return it != null && it.getType() != Material.AIR && it.hasItemMeta() && it.getItemMeta().hasDisplayName();
@@ -241,7 +363,7 @@ public class GUIManager implements Listener {
                     ChatColor.GRAY + "State: " + (enabled ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF"),
                     ChatColor.YELLOW + "Click to toggle."
             ));
-            if (enabled) m.addEnchant(Enchantment.UNBREAKING, 1, true); // ✅ fixed
+            if (enabled) m.addEnchant(Enchantment.UNBREAKING, 1, true); // ✅ updated
             m.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
             it.setItemMeta(m);
         }

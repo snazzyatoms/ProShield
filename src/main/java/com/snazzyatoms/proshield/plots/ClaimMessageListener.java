@@ -32,7 +32,7 @@ public class ClaimMessageListener implements Listener {
         Player p = e.getPlayer();
 
         String fromClaim = plots.getClaimName(e.getFrom());
-        String toClaim = plots.getClaimName(e.getTo());
+        String toClaim   = plots.getClaimName(e.getTo());
 
         if (!fromClaim.equals(toClaim)) {
             // Leaving message
@@ -43,7 +43,8 @@ public class ClaimMessageListener implements Listener {
             // Entering message
             if (toClaim != null && !toClaim.isEmpty()) {
                 if ("Wilderness".equalsIgnoreCase(toClaim)) {
-                    if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
+                    // Controlled by config
+                    if (plugin.getConfig().getBoolean("messages.wilderness.enabled", true)) {
                         messages.send(p, "claim.entering", toClaim);
                     }
                 } else {

@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -9,118 +10,81 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Iterator;
-
 /**
  * CompassManager
  *
- * ✅ Centralized compass logic
- * ✅ Player compass (normal look, aqua-themed)
- * ✅ Admin compass (golden + glowing)
- * ✅ Prevents duplicate compasses
- * ✅ Used by both /compass command & PlayerJoinListener
+ * Handles giving players the ProShield compass and routing clicks to GUIManager.
  */
 public class CompassManager {
 
-    private static final String PLAYER_COMPASS_NAME = ChatColor.AQUA + "ProShield Compass";
-    private static final String ADMIN_COMPASS_NAME = ChatColor.GOLD + "ProShield Admin Compass";
+    private final ProShield plugin;
+
+    public CompassManager(ProShield plugin) {
+        this.plugin = plugin;
+    }
 
     /**
-     * Gives the correct compass to a player.
-     * If the player is op or has proshield.admin → Admin compass.
-     * Otherwise → Player compass.
+     * Gives a compass to the player.
      *
-     * @param player Player receiving the compass
-     * @param replace If true, remove existing ProShield compasses before giving a new one
+     * @param player      the player
+     * @param adminStyled true if admin (compass styled differently)
      */
-    public static void giveCompass(Player player, boolean replace) {
-        if (replace) {
-            removeOldCompasses(player);
+    public void giveCompass(Player player, boolean adminStyled) {
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        if (meta != null) {
+            if (adminStyled) {
+                meta.setDisplayName(ChatColor.RED + "" + ChatColor.BOLD + "ProShield Admin Compass");
+                meta.setLore(java.util.List.of(
+                        ChatColor.GRAY + "Right-click to open the",
+                        ChatColor.GRAY + "ProShield admin menu."
+                ));
+            } else {
+                meta.setDisplayName(ChatColor.AQUA + "" + ChatColor.BOLD + "ProShield Compass");
+                meta.setLore(java.util.List.of(
+                        ChatColor.GRAY + "Right-click to open the",
+                        ChatColor.GRAY + "ProShield player menu."
+                ));
+            }
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true); // was DURABILITY
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            compass.setItemMeta(meta);
         }
 
-        ItemStack compass = player.isOp() || player.hasPermission("proshield.admin")
-                ? createAdminCompass()
-                : createPlayerCompass();
-
-        // Only give if player doesn’t already have it
-        if (!hasCompass(player, compass)) {
+        // Give without duplicating if already has one
+        if (!player.getInventory().contains(compass)) {
             player.getInventory().addItem(compass);
         }
     }
 
     /**
-     * Removes old ProShield compasses from the player’s inventory.
+     * Determines if the given item is a ProShield compass.
      */
-    private static void removeOldCompasses(Player player) {
-        Iterator<ItemStack> it = player.getInventory().iterator();
-        while (it.hasNext()) {
-            ItemStack stack = it.next();
-            if (stack == null || stack.getType() != Material.COMPASS) continue;
-            if (!stack.hasItemMeta()) continue;
+    public static boolean isProShieldCompass(ItemStack stack) {
+        if (stack == null || stack.getType() != Material.COMPASS) return false;
+        ItemMeta meta = stack.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return false;
 
-            ItemMeta meta = stack.getItemMeta();
-            if (meta == null || !meta.hasDisplayName()) continue;
-
-            String name = ChatColor.stripColor(meta.getDisplayName());
-            if (name.equalsIgnoreCase("ProShield Compass") ||
-                name.equalsIgnoreCase("ProShield Admin Compass")) {
-                it.remove();
-            }
-        }
+        String dn = ChatColor.stripColor(meta.getDisplayName());
+        return dn.equalsIgnoreCase("ProShield Compass")
+                || dn.equalsIgnoreCase("ProShield Admin Compass");
     }
 
     /**
-     * Checks if player already has this type of compass.
+     * Opens the GUI when a player right-clicks with the compass.
      */
-    private static boolean hasCompass(Player player, ItemStack compass) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item == null) continue;
-            if (!item.hasItemMeta() || !compass.hasItemMeta()) continue;
-            if (item.getType() == Material.COMPASS &&
-                ChatColor.stripColor(item.getItemMeta().getDisplayName())
-                        .equalsIgnoreCase(ChatColor.stripColor(compass.getItemMeta().getDisplayName()))) {
-                return true;
-            }
+    public static void openFromCompass(Player player, ItemStack stack) {
+        ProShield plugin = ProShield.getInstance();
+        GUIManager gui = plugin.getGuiManager();
+
+        if (stack == null || !isProShieldCompass(stack)) return;
+
+        boolean isAdmin = player.hasPermission("proshield.admin");
+        if (isAdmin) {
+            gui.openMain(player); // default open main first
+            // Admin can then navigate to admin menu
+        } else {
+            gui.openMain(player);
         }
-        return false;
-    }
-
-    /**
-     * Builds the normal Player Compass.
-     */
-    private static ItemStack createPlayerCompass() {
-        ItemStack compass = new ItemStack(Material.COMPASS, 1);
-        ItemMeta meta = compass.getItemMeta();
-
-        if (meta != null) {
-            meta.setDisplayName(PLAYER_COMPASS_NAME);
-            meta.setLore(java.util.Arrays.asList(
-                    ChatColor.GRAY + "Right-click to open ProShield menu",
-                    ChatColor.DARK_AQUA + "Manage claims, trust players, and flags"
-            ));
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            compass.setItemMeta(meta);
-        }
-        return compass;
-    }
-
-    /**
-     * Builds the glowing Admin Compass.
-     */
-    private static ItemStack createAdminCompass() {
-        ItemStack compass = new ItemStack(Material.COMPASS, 1);
-        ItemMeta meta = compass.getItemMeta();
-
-        if (meta != null) {
-            meta.setDisplayName(ADMIN_COMPASS_NAME);
-            meta.setLore(java.util.Arrays.asList(
-                    ChatColor.GRAY + "Right-click for ProShield menu",
-                    ChatColor.GOLD + "Includes Admin Tools & Flags"
-            ));
-            meta.addEnchant(Enchantment.DURABILITY, 1, true); // glow
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            compass.setItemMeta(meta);
-        }
-        return compass;
     }
 }

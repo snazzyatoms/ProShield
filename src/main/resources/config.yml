@@ -56,6 +56,10 @@ messages:
   prefix: "&3[ProShield] &r"
   debug-prefix: "&8[Debug] &r"
 
+  # Toggle whether players see "Entering Wilderness" messages.
+  # Prevents spam when roaming. Admins can also toggle this via GUI.
+  show-wilderness: false
+
 gui:
   flags:
     title: "§dClaim Flags"

@@ -100,13 +100,24 @@ gui:
     info: "&bView claim information.\n&7Owner & trusted players."
     trust: "&aTrust another player.\n&7Use GUI or /trust <name>."
     untrust: "&cUntrust a player.\n&7Remove their access."
-    roles: "&6Assign roles to trusted players.\n&7Builder, Moderator, Manager."
+    roles: "&6Assign roles to trusted players.\n&7Visitor → Manager."
     flags: "&eToggle protections.\n&7PvP, fire, explosions, containers, etc."
     transfer: "&dTransfer ownership of this claim."
     admin-teleport: "&bTeleport to any player’s claim."
     admin-unclaim: "&cForce unclaim a claim."
     admin-purge: "&4Purge expired claims."
     back: "&7Return to the previous menu."
+
+    # ======================================================
+    # Role-specific tooltips
+    # ======================================================
+    visitor: "&7Visitor\n&8No rights inside the claim."
+    member: "&aMember\n&7Basic rights: enter & use doors."
+    trusted: "&bTrusted\n&7Can build + interact inside claim."
+    builder: "&2Builder\n&7Full building rights + containers."
+    container: "&6Container\n&7Can access chests, furnaces, hoppers."
+    moderator: "&cModerator\n&7Entity + PvP rights.\n&7Helps enforce claim rules."
+    manager: "&dManager\n&7Nearly full control.\n&7Manage roles, trust, flags."
 
 # ==========================================================
 # Sounds

@@ -6,22 +6,15 @@ import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Handles /proshield transfer <player>
- *
- * Transfers claim ownership to another player.
- * Preserves prior logic and fixes:
- * ✅ Uses saveAsync(plot) instead of private savePlot()
- * ✅ Handles location → chunk properly
- */
 public class TransferCommand implements CommandExecutor {
 
     private final ProShield plugin;
@@ -35,43 +28,72 @@ public class TransferCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Only players can use this command.");
+            messages.send(sender, "error.players-only");
             return true;
         }
 
-        if (args.length != 1) {
-            messages.send(player, "transfer-usage");
+        if (!player.hasPermission("proshield.use")) {
+            messages.send(player, "error.no-permission");
             return true;
         }
 
-        Player target = Bukkit.getPlayerExact(args[0]);
-        if (target == null) {
-            messages.send(player, "player-not-found", args[0]);
+        if (args.length < 1) {
+            messages.send(player, "usage.transfer", "/" + label + " <player>");
             return true;
         }
 
-        Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        // Resolve target (allow offline)
+        OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
+        if (targetOP == null) {
+            targetOP = Bukkit.getOfflinePlayer(args[0]);
+            if (targetOP == null || targetOP.getUniqueId() == null) {
+                messages.send(player, "error.player-not-found", args[0]);
+                return true;
+            }
+        }
 
-        if (plot == null) {
-            messages.send(player, "not-in-claim");
+        UUID target = targetOP.getUniqueId();
+
+        // Must be in a claim
+        Optional<Plot> claimOpt = plotManager.getClaim(player.getLocation());
+        if (claimOpt.isEmpty()) {
+            messages.send(player, "error.not-in-claim");
+            return true;
+        }
+        Plot plot = claimOpt.get();
+
+        // Only owner/admin can transfer
+        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
+            messages.send(player, "error.cannot-transfer");
             return true;
         }
 
-        UUID playerId = player.getUniqueId();
-        if (!plot.isOwner(playerId)) {
-            messages.send(player, "not-owner");
+        // Prevent transferring to self
+        if (plot.isOwner(target)) {
+            messages.send(player, "transfer.already-owner");
             return true;
         }
 
-        // Transfer ownership
-        plot.setOwner(target.getUniqueId());
-        plotManager.saveAsync(plot); // ✅ FIXED: use public saveAsync()
+        // Perform transfer
+        plot.setOwner(target);
+        plot.getTrusted().remove(target); // ensure clean
+        plotManager.saveAsync(plot);
 
-        messages.send(player, "transfer-success", target.getName());
-        messages.send(target, "transfer-received", player.getName());
+        // Feedback
+        String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();
+        messages.send(player, "transfer.success", targetName);
+
+        // Notify target if online
+        if (targetOP.isOnline()) {
+            Player tp = targetOP.getPlayer();
+            if (tp != null) {
+                messages.send(tp, "transfer.you-are-owner", plot.getDisplayNameSafe());
+            }
+        }
+
         return true;
     }
 }

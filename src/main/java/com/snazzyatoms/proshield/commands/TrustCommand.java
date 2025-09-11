@@ -50,7 +50,7 @@ public class TrustCommand implements CommandExecutor {
             return true;
         }
 
-        // Resolve target player (allow offline)
+        // Resolve target (allow offline)
         OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
         if (targetOP == null) {
             targetOP = Bukkit.getOfflinePlayer(args[0]);
@@ -73,7 +73,6 @@ public class TrustCommand implements CommandExecutor {
             try {
                 role = ClaimRole.valueOf(r);
             } catch (IllegalArgumentException iae) {
-                // Keep prior logic: friendly fallback
                 messages.send(player, "trust.invalid-role", args[1]);
                 return true;
             }
@@ -95,28 +94,23 @@ public class TrustCommand implements CommandExecutor {
 
         // Already trusted?
         if (plot.getTrusted().containsKey(target)) {
-            messages.send(player, "trust.already-trusted", targetOP.getName() != null ? targetOP.getName() : target.toString());
+            messages.send(player, "trust.already-trusted",
+                    targetOP.getName() != null ? targetOP.getName() : target.toString());
             return true;
         }
 
-        // Delegate to role manager (preserves logic and triggers async save via PlotManager)
+        // Use ClaimRoleManager to apply trust & save
         roles.trustPlayer(plot, target, role);
 
         // Feedback
         String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();
-        messages.send(player, "trust.added",
-                targetName,
-                role.name()
-        );
+        messages.send(player, "trust.added", targetName, role.name());
 
-        // Optional: notify target if online
+        // Notify target if online
         if (targetOP.isOnline()) {
             Player tp = targetOP.getPlayer();
             if (tp != null) {
-                messages.send(tp, "trust.you-were-trusted",
-                        plot.getDisplayNameSafe(),
-                        role.name()
-                );
+                messages.send(tp, "trust.you-were-trusted", plot.getDisplayNameSafe(), role.name());
             }
         }
 

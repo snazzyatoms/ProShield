@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/TrustCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -13,80 +14,112 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
-/**
- * /trust <player> [role]
- *
- * Trusts a player in your current claim.
- * Default role = MEMBER if not specified.
- */
 public class TrustCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final ClaimRoleManager roles;
-    private final MessagesUtil msg;
+    private final MessagesUtil messages;
 
-    public TrustCommand(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
+    public TrustCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
         this.plugin = plugin;
-        this.plots = plots;
+        this.plotManager = plotManager;
         this.roles = roles;
-        this.msg = plugin.getMessagesUtil();
+        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+
         if (!(sender instanceof Player player)) {
-            msg.send(sender, "error.player-only");
+            messages.send(sender, "error.players-only");
+            return true;
+        }
+
+        if (!player.hasPermission("proshield.use")) {
+            messages.send(player, "error.no-permission");
             return true;
         }
 
         if (args.length < 1) {
-            msg.send(player, "trust.usage");
+            messages.send(player, "usage.trust", "/" + label + " <player> [role]");
             return true;
         }
 
-        // Resolve target player
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
-        UUID targetId = target.getUniqueId();
-        if (targetId.equals(player.getUniqueId())) {
-            msg.send(player, "trust.cannot-self");
-            return true;
-        }
-
-        // Get role (default MEMBER if not specified)
-        ClaimRole role = ClaimRole.MEMBER;
-        if (args.length >= 2) {
-            try {
-                role = ClaimRole.fromString(args[1]);
-            } catch (IllegalArgumentException ex) {
-                msg.send(player, "trust.invalid-role", args[1]);
+        // Resolve target player (allow offline)
+        OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
+        if (targetOP == null) {
+            targetOP = Bukkit.getOfflinePlayer(args[0]);
+            if (targetOP == null || targetOP.getUniqueId() == null) {
+                messages.send(player, "error.player-not-found", args[0]);
                 return true;
             }
         }
 
-        // Ensure player is standing in a claim
-        Plot plot = plots.getPlot(player.getLocation());
-        if (plot == null) {
-            msg.send(player, "trust.no-claim");
+        UUID target = targetOP.getUniqueId();
+        if (player.getUniqueId().equals(target)) {
+            messages.send(player, "trust.cannot-self");
             return true;
         }
 
-        // Must be owner of the claim
-        if (!plot.isOwner(player.getUniqueId())) {
-            msg.send(player, "trust.not-owner", plot.getDisplayNameSafe());
+        // Role (optional; default BUILDER)
+        ClaimRole role = ClaimRole.BUILDER;
+        if (args.length >= 2) {
+            String r = args[1].toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+            try {
+                role = ClaimRole.valueOf(r);
+            } catch (IllegalArgumentException iae) {
+                // Keep prior logic: friendly fallback
+                messages.send(player, "trust.invalid-role", args[1]);
+                return true;
+            }
+        }
+
+        // Must be inside a claim
+        Optional<Plot> claimOpt = plotManager.getClaim(player.getLocation());
+        if (claimOpt.isEmpty()) {
+            messages.send(player, "error.not-in-claim");
+            return true;
+        }
+        Plot plot = claimOpt.get();
+
+        // Only owner/admin can manage trust
+        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
+            messages.send(player, "error.cannot-modify-claim");
             return true;
         }
 
-        // Apply trust
-        boolean success = roles.trustPlayer(plot, targetId, role);
-        if (!success) {
-            msg.send(player, "trust.failed", target.getName());
+        // Already trusted?
+        if (plot.getTrusted().containsKey(target)) {
+            messages.send(player, "trust.already-trusted", targetOP.getName() != null ? targetOP.getName() : target.toString());
             return true;
         }
 
-        msg.send(player, "trust.success", target.getName(), role.name());
+        // Delegate to role manager (preserves logic and triggers async save via PlotManager)
+        roles.trustPlayer(plot, target, role);
+
+        // Feedback
+        String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();
+        messages.send(player, "trust.added",
+                targetName,
+                role.name()
+        );
+
+        // Optional: notify target if online
+        if (targetOP.isOnline()) {
+            Player tp = targetOP.getPlayer();
+            if (tp != null) {
+                messages.send(tp, "trust.you-were-trusted",
+                        plot.getDisplayNameSafe(),
+                        role.name()
+                );
+            }
+        }
+
         return true;
     }
 }

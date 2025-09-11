@@ -42,9 +42,9 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
 
-        // ✅ Fixed initialization order: GUIManager first, then GUICache
-        guiManager = new GUIManager(this);
-        guiCache = new GUICache(guiManager);
+        // ✅ Correct initialization order
+        guiCache   = new GUICache(null);              // create cache first
+        guiManager = new GUIManager(this, guiCache);  // pass both plugin + cache
 
         registerCommands();
         registerListeners();

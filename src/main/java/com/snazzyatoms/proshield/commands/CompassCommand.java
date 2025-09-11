@@ -1,7 +1,6 @@
 // src/main/java/com/snazzyatoms/proshield/commands/CompassCommand.java
 package com.snazzyatoms.proshield.commands;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
@@ -12,20 +11,18 @@ import org.bukkit.entity.Player;
 /**
  * /compass command
  *
- * ✅ Gives players the ProShield compass.
- * ✅ Admins get admin-style compass (different look).
- * ✅ Uses CompassManager instance from ProShield.
+ * ✅ Gives the player their ProShield compass.
+ * ✅ Uses CompassManager (injected via constructor).
+ * ✅ Handles OP/Admin vs regular players (admin compass vs normal).
  */
 public class CompassCommand implements CommandExecutor {
 
-    private final ProShield plugin;
     private final CompassManager compassManager;
     private final MessagesUtil messages;
 
-    public CompassCommand(ProShield plugin, CompassManager compassManager) {
-        this.plugin = plugin;
+    public CompassCommand(CompassManager compassManager, MessagesUtil messages) {
         this.compassManager = compassManager;
-        this.messages = plugin.getMessagesUtil();
+        this.messages = messages;
     }
 
     @Override
@@ -40,10 +37,10 @@ public class CompassCommand implements CommandExecutor {
             return true;
         }
 
-        boolean isAdmin = player.hasPermission("proshield.admin");
-        compassManager.giveCompass(player, isAdmin);
+        // ✅ Use CompassManager instance, no static calls
+        compassManager.giveCompass(player, player.isOp());
 
-        messages.send(player, "compass.given");
+        messages.send(player, "prefix", "&aYou have been given the ProShield compass!");
         return true;
     }
 }

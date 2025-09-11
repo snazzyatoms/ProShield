@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/InteractionProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -13,11 +12,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 
 /**
  * Handles protections for player interactions inside claims.
- *
- * Preserves all prior logic:
- * ✅ Checks claims via PlotManager
- * ✅ Uses ClaimRoleManager for permission checks
- * ✅ Cancels interaction if player lacks role rights
+ * - Uses PlotSettings for per-claim interaction rules
+ * - Uses ClaimRoleManager for trusted role enforcement
+ * - Falls back to wilderness config
  */
 public class InteractionProtectionListener implements Listener {
 
@@ -26,9 +23,7 @@ public class InteractionProtectionListener implements Listener {
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    public InteractionProtectionListener(ProShield plugin,
-                                         PlotManager plotManager,
-                                         ClaimRoleManager roleManager) {
+    public InteractionProtectionListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
@@ -36,22 +31,30 @@ public class InteractionProtectionListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onPlayerInteract(PlayerInteractEvent event) {
+    public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
-        if (player == null || event.getClickedBlock() == null) return;
+
+        if (event.getClickedBlock() == null) return;
 
         Chunk chunk = event.getClickedBlock().getChunk();
         Plot plot = plotManager.getPlot(chunk);
 
-        if (plot == null) return; // wilderness
+        if (plot == null) {
+            // Wilderness rules
+            if (!plugin.getConfig().getBoolean("protection.interactions.wilderness", true)) {
+                event.setCancelled(true);
+                messages.send(player, "interaction-deny");
+            }
+            return;
+        }
 
         ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
 
-        if (!roleManager.canInteract(role)) {
+        if (role == null || !roleManager.canInteract(role)) {
             event.setCancelled(true);
             messages.send(player, "interaction-deny");
-            messages.debug("&c" + player.getName() +
-                    " tried to interact inside claim: " + plot.getDisplayNameSafe());
+            messages.debug("&cPrevented interaction in claim: " + plot.getDisplayNameSafe() +
+                    " by " + player.getName());
         }
     }
 }

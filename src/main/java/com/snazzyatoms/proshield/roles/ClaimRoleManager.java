@@ -88,6 +88,12 @@ public class ClaimRoleManager {
         };
     }
 
+    /** Is this role an Owner or Co-Owner? (used in RolesCommand) */
+    public boolean isOwnerOrCoOwner(ClaimRole role) {
+        if (role == null) return false;
+        return role == ClaimRole.OWNER || role == ClaimRole.COOWNER;
+    }
+
     /* ======================================================
      * RELOAD
      * ====================================================== */

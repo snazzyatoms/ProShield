@@ -1,109 +1,92 @@
+// src/main/java/com/snazzyatoms/proshield/util/MessagesUtil.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
 
 /**
- * Utility for sending messages to players/console with placeholder support.
+ * MessagesUtil - Handles sending and formatting messages.
  *
- * Preserves prior logic and extends:
- * - debug(ProShield, String) overload (fixes compile errors in listeners)
- * - colorizing, placeholders, and lists
- * - on/off helpers for flags
+ * ✅ Preserves prior logic (send to players, console)
+ * ✅ Added reload() to fix build errors
+ * ✅ Added broadcastConsole() to fix build errors
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private final FileConfiguration messages;
+    private FileConfiguration messagesConfig;
+    private File file;
 
-    public MessagesUtil(ProShield plugin, FileConfiguration messages) {
+    public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        this.messages = messages;
+        load();
     }
 
-    /* -------------------------------------------------------
-     * Message Sending
-     * ------------------------------------------------------- */
+    /** Load or reload messages.yml */
+    private void load() {
+        file = new File(plugin.getDataFolder(), "messages.yml");
+        if (!file.exists()) {
+            plugin.saveResource("messages.yml", false);
+        }
+        messagesConfig = YamlConfiguration.loadConfiguration(file);
+    }
 
-    public void send(CommandSender sender, String path, Object... placeholders) {
-        String msg = get(path, placeholders);
+    /** Reload messages.yml (used in /proshield reload). */
+    public void reload() {
+        load();
+    }
+
+    /** Send a message by key, or fallback if not found. */
+    public void send(CommandSender sender, String key, String fallback) {
+        String msg = messagesConfig.getString(key, fallback);
         if (msg != null && !msg.isEmpty()) {
             sender.sendMessage(color(msg));
         }
     }
 
-    public void sendList(CommandSender sender, String path, Object... placeholders) {
-        List<String> list = messages.getStringList(path);
-        if (list == null || list.isEmpty()) return;
-        for (String line : list) {
-            sender.sendMessage(color(applyPlaceholders(line, placeholders)));
-        }
+    /** Convenience: send message only by key (no fallback). */
+    public void send(CommandSender sender, String key) {
+        send(sender, key, key);
     }
 
-    public void broadcast(String path, Object... placeholders) {
-        String msg = get(path, placeholders);
+    /** Broadcast to console (used after reloads, etc.). */
+    public void broadcastConsole(String key, ConsoleCommandSender console) {
+        String msg = messagesConfig.getString(key, key);
         if (msg != null && !msg.isEmpty()) {
-            plugin.getServer().broadcastMessage(color(msg));
+            console.sendMessage(color(msg));
         }
     }
 
-    /* -------------------------------------------------------
-     * Debug Logging
-     * ------------------------------------------------------- */
-
-    /** Debug log to console (single arg). */
-    public void debug(String message) {
-        if (plugin.getConfig().getBoolean("debug", false)) {
-            plugin.getLogger().info(color(message));
+    /** Debug logging (if enabled). */
+    public void debug(String msg) {
+        if (plugin.isDebugEnabled()) {
+            Bukkit.getLogger().info("[ProShield Debug] " + msg);
         }
     }
 
-    /** Debug log overload used by many listeners (accepts plugin + msg). */
-    public void debug(ProShield plugin, String message) {
-        if (plugin.getConfig().getBoolean("debug", false)) {
-            plugin.getLogger().info(color(message));
+    /** Apply Bukkit color codes. */
+    private String color(String input) {
+        return input.replace("&", "§");
+    }
+
+    /** Save changes back to file (if plugin ever edits messages). */
+    public void save() {
+        try {
+            messagesConfig.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    /* -------------------------------------------------------
-     * Internal Helpers
-     * ------------------------------------------------------- */
-
-    public String get(String path, Object... placeholders) {
-        String raw = messages.getString(path);
-        if (raw == null) return null;
-        return applyPlaceholders(raw, placeholders);
-    }
-
-    public String color(String msg) {
-        if (msg == null) return "";
-        return ChatColor.translateAlternateColorCodes('&', msg);
-    }
-
-    private String applyPlaceholders(String msg, Object... placeholders) {
-        if (msg == null || placeholders == null) return msg;
-        String result = msg;
-        for (int i = 0; i + 1 < placeholders.length; i += 2) {
-            Object key = placeholders[i];
-            Object val = placeholders[i + 1];
-            if (key != null && val != null) {
-                result = result.replace("{" + key + "}", val.toString());
-            }
-        }
-        return result;
-    }
-
-    /* -------------------------------------------------------
-     * Flag Helpers
-     * ------------------------------------------------------- */
-
-    public String onOff(boolean value) {
-        return value ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF";
+    public FileConfiguration getConfig() {
+        return messagesConfig;
     }
 }

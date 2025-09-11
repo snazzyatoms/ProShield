@@ -42,10 +42,8 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
 
-        // GUI
-        guiCache = new GUICache(null); // placeholder, will link after GUIManager init
+        guiCache = new GUICache(null); // attach GUIManager after init
         guiManager = new GUIManager(this, guiCache);
-        guiCache = new GUICache(guiManager); // now link properly
 
         registerCommands();
         registerListeners();
@@ -63,11 +61,9 @@ public class ProShield extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // Stop repel tasks cleanly
         if (mobRepelTask != null) mobRepelTask.stop();
         if (borderRepelTask != null) borderRepelTask.stop();
 
-        // Save plots
         if (plotManager != null) {
             plotManager.saveAll();
         }
@@ -89,16 +85,15 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(plotManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new FireProtectionListener(plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
         Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(plotManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(plotManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
-        Bukkit.getPluginManager().registerEvents(guiManager, this); // GUIManager is also a listener
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {

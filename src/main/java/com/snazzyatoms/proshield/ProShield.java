@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
@@ -42,7 +41,9 @@ public class ProShield extends JavaPlugin {
         messages = new MessagesUtil(this);
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
-        guiCache = new GUICache(guiManager); // tie GUI cache
+
+        // ✅ Fixed initialization order
+        guiCache = new GUICache();
         guiManager = new GUIManager(this, guiCache);
 
         registerCommands();
@@ -65,14 +66,13 @@ public class ProShield extends JavaPlugin {
         if (mobRepelTask != null) mobRepelTask.stop();
         if (borderRepelTask != null) borderRepelTask.stop();
 
-        // Save plots
-        plotManager.saveAll();
+        // ✅ Fixed: Save plots explicitly
+        plotManager.saveAllClaims();
 
         messages.send(getServer().getConsoleSender(), "prefix", "&cProShield disabled.");
     }
 
     private void registerCommands() {
-        // ✅ Fixed constructors to match actual classes
         registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager));
         registerCommand("trust", new TrustCommand(this, plotManager, roleManager));
         registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
@@ -86,11 +86,11 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new FireProtectionListener(this, plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this); // ✅ fixed
-        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this); // ✅ fixed
+        Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this); // ✅ fixed
+        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager), this);
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
     }

@@ -2,7 +2,6 @@ package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -13,78 +12,77 @@ import org.bukkit.inventory.meta.ItemMeta;
 /**
  * CompassManager
  *
- * Handles giving players the ProShield compass and routing clicks to GUIManager.
+ * Handles giving players/admins the ProShield compass.
+ * - Distinguishes between normal and admin compasses
+ * - Provides checks to see if an ItemStack is a ProShield compass
+ * - Opens the correct GUI when right-clicked
  */
 public class CompassManager {
 
     private final ProShield plugin;
+    private final GUIManager guiManager;
 
-    public CompassManager(ProShield plugin) {
+    public CompassManager(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
+        this.guiManager = guiManager;
     }
 
     /**
-     * Gives a compass to the player.
-     *
-     * @param player      the player
-     * @param adminStyled true if admin (compass styled differently)
+     * Give a compass to a player.
+     * @param player Target player
+     * @param admin If true → admin style compass
      */
-    public void giveCompass(Player player, boolean adminStyled) {
+    public void giveCompass(Player player, boolean admin) {
         ItemStack compass = new ItemStack(Material.COMPASS);
         ItemMeta meta = compass.getItemMeta();
+
         if (meta != null) {
-            if (adminStyled) {
-                meta.setDisplayName(ChatColor.RED + "" + ChatColor.BOLD + "ProShield Admin Compass");
-                meta.setLore(java.util.List.of(
-                        ChatColor.GRAY + "Right-click to open the",
-                        ChatColor.GRAY + "ProShield admin menu."
+            if (admin) {
+                meta.setDisplayName("§cAdmin Compass");
+                meta.setLore(java.util.Arrays.asList(
+                        "§7Right-click to open Admin tools",
+                        "§7Includes all normal player menus"
                 ));
             } else {
-                meta.setDisplayName(ChatColor.AQUA + "" + ChatColor.BOLD + "ProShield Compass");
-                meta.setLore(java.util.List.of(
-                        ChatColor.GRAY + "Right-click to open the",
-                        ChatColor.GRAY + "ProShield player menu."
+                meta.setDisplayName("§aProShield Compass");
+                meta.setLore(java.util.Arrays.asList(
+                        "§7Right-click to manage claims",
+                        "§7Open menus for trust, flags, roles"
                 ));
             }
-            meta.addEnchant(Enchantment.UNBREAKING, 1, true); // was DURABILITY
+
+            // Cosmetic enchant to make it glow
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
             compass.setItemMeta(meta);
         }
 
-        // Give without duplicating if already has one
-        if (!player.getInventory().contains(compass)) {
-            player.getInventory().addItem(compass);
-        }
+        player.getInventory().addItem(compass);
     }
 
     /**
-     * Determines if the given item is a ProShield compass.
+     * Check if an ItemStack is a ProShield compass.
      */
-    public static boolean isProShieldCompass(ItemStack stack) {
-        if (stack == null || stack.getType() != Material.COMPASS) return false;
-        ItemMeta meta = stack.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) return false;
+    public boolean isProShieldCompass(ItemStack item) {
+        if (item == null || item.getType() != Material.COMPASS) return false;
+        if (!item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) return false;
 
-        String dn = ChatColor.stripColor(meta.getDisplayName());
-        return dn.equalsIgnoreCase("ProShield Compass")
-                || dn.equalsIgnoreCase("ProShield Admin Compass");
+        String name = item.getItemMeta().getDisplayName();
+        return name.contains("ProShield Compass") || name.contains("Admin Compass");
     }
 
     /**
-     * Opens the GUI when a player right-clicks with the compass.
+     * Open the correct GUI when right-clicked with compass.
      */
-    public static void openFromCompass(Player player, ItemStack stack) {
-        ProShield plugin = ProShield.getInstance();
-        GUIManager gui = plugin.getGuiManager();
+    public void openFromCompass(Player player, ItemStack item) {
+        if (!isProShieldCompass(item)) return;
 
-        if (stack == null || !isProShieldCompass(stack)) return;
-
-        boolean isAdmin = player.hasPermission("proshield.admin");
-        if (isAdmin) {
-            gui.openMain(player); // default open main first
-            // Admin can then navigate to admin menu
+        String name = item.getItemMeta().getDisplayName();
+        if (name.contains("Admin")) {
+            guiManager.openAdminMenu(player);
         } else {
-            gui.openMain(player);
+            guiManager.openMain(player);
         }
     }
 }

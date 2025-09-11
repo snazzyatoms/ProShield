@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -16,10 +17,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * PlotManager - central storage and persistence for plots.
  *
- * ✅ Preserves prior logic
- * ✅ Expanded with global async saveAll support
- * ✅ Supports lookups by Location/Chunk
- * ✅ Claim/unclaim management
+ * ✅ Preserves prior logic:
+ *    - Loads/saves plots
+ *    - Async saving
+ *    - Lookups by Location/Chunk
+ *    - Claim/unclaim support
+ * ✅ Expanded:
+ *    - isOwner / isTrustedOrOwner
+ *    - reloadFromConfig hook
  */
 public class PlotManager {
 
@@ -57,6 +62,10 @@ public class PlotManager {
 
     public Plot getPlot(Location loc) {
         return plots.get(key(loc));
+    }
+
+    public Collection<Plot> getAllPlots() {
+        return plots.values();
     }
 
     public boolean hasAnyClaim(UUID playerId) {
@@ -97,28 +106,16 @@ public class PlotManager {
      * Persistence
      * ------------------------------------------------------- */
 
-    /** Save a single plot asynchronously. */
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> save(plot));
     }
 
-    /** Save all plots asynchronously. */
-    public void saveAsync() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            for (Plot plot : plots.values()) {
-                save(plot);
-            }
-        });
-    }
-
-    /** Internal: save a single plot synchronously. */
     private void save(Plot plot) {
         String k = plot.getWorldName() + "," + plot.getX() + "," + plot.getZ();
         config.set(k, plot.serialize());
         saveFile();
     }
 
-    /** Persist YAML file safely. */
     private void saveFile() {
         try {
             config.save(file);
@@ -127,7 +124,6 @@ public class PlotManager {
         }
     }
 
-    /** Load all claims from plots.yml. */
     private void loadAll() {
         if (config.getKeys(false).isEmpty()) return;
         for (String key : config.getKeys(false)) {
@@ -147,7 +143,30 @@ public class PlotManager {
         }
     }
 
-    public Collection<Plot> getAllPlots() {
-        return plots.values();
+    /* -------------------------------------------------------
+     * Expanded Helpers
+     * ------------------------------------------------------- */
+
+    /** Check if player is the owner of a claim at a given location. */
+    public boolean isOwner(UUID playerId, Location loc) {
+        Plot plot = getPlot(loc);
+        return plot != null && plot.isOwner(playerId);
+    }
+
+    /** Check if player is trusted OR the owner at a given location. */
+    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
+        Plot plot = getPlot(loc);
+        return plot != null && (plot.isOwner(playerId) || plot.isTrusted(playerId));
+    }
+
+    /** Reload plots.yml into memory (used on /proshield reload). */
+    public void reloadFromConfig() {
+        plots.clear();
+        try {
+            config.load(file);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to reload plots.yml: " + e.getMessage());
+        }
+        loadAll();
     }
 }

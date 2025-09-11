@@ -11,9 +11,9 @@ protection:
   # Fire settings
   # -------------------------
   fire:
-    burn: false
-    spread: false
-    ignite:
+    burn: false         # 🔥 Allow blocks/entities to burn
+    spread: false       # 🔥 Allow fire to spread
+    ignite:             # 🔥 Sources of ignition
       flint_and_steel: false
       lava: false
       lightning: false
@@ -22,14 +22,14 @@ protection:
   # Explosion settings
   # -------------------------
   explosions:
-    enabled: false
+    enabled: false      # 💥 Global explosion toggle (TNT, creepers, beds, etc.)
 
   # -------------------------
   # Bucket settings
   # -------------------------
   buckets:
-    block-empty: false
-    block-fill: false
+    empty: false        # 🪣 Block players emptying buckets
+    fill: false         # 🪣 Block players filling buckets
 
   # -------------------------
   # Mob settings
@@ -37,9 +37,12 @@ protection:
   mobs:
     border-repel:
       enabled: true
-      radius: 1.5
-      horizontal-push: 0.6
-      vertical-push: 0.15
+      # 🔹 How far from the claim edge mobs get pushed back
+      #   Larger radius = safer "buffer zone" around claims
+      radius: 3.0       
+      horizontal-push: 0.7
+      vertical-push: 0.25
+    despawn-inside: true   # 🧟 Despawn mobs that manage to enter claims
 
   # -------------------------
   # Wilderness entity settings
@@ -57,17 +60,14 @@ messages:
   debug-prefix: "&8[Debug] &r"
 
   # 🔹 Wilderness entry toggle
-  # If true → players see "Entering Wilderness" when leaving claims.
-  # If false → wilderness entry messages are hidden to reduce chat spam.
-  # Admins can toggle this via /proshield or Admin GUI.
-  show-wilderness: false
+  show-wilderness: false   # "Entering Wilderness" shown when leaving claims?
 
 gui:
   flags:
     title: "§dClaim Flags"
   admin:
     wilderness:
-      toggle-messages: true   # 🔹 Shows wilderness toggle in Admin GUI (new)
+      toggle-messages: true   # 🔹 Shows wilderness toggle in Admin GUI
 
 # ==========================================================
 # Claim Defaults

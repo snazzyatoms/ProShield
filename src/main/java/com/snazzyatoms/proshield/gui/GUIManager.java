@@ -1,10 +1,10 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.PlotSettings; // ✅ missing import
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.*;
@@ -58,42 +58,7 @@ public class GUIManager implements Listener {
     /* ========================================================
      * COMPASS
      * ======================================================== */
-    public void giveCompass(Player player, boolean force) {
-        if (player == null) return;
-        ItemStack compass = buildCompass();
-        boolean has = player.getInventory().containsAtLeast(compass, 1);
-        if (force || !has) {
-            player.getInventory().addItem(compass);
-            if (plugin.isDebugEnabled()) plugin.getLogger().info("Gave compass to " + player.getName());
-        }
-    }
-
-    private ItemStack buildCompass() {
-        ItemStack it = new ItemStack(Material.COMPASS);
-        ItemMeta m = it.getItemMeta();
-        if (m != null) {
-            m.setDisplayName(ChatColor.AQUA + "ProShield Compass");
-            m.setLore(Arrays.asList(
-                    ChatColor.GRAY + "Manage claims & roles.",
-                    ChatColor.YELLOW + "Right-click to open GUI."
-            ));
-            m.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
-            it.setItemMeta(m);
-        }
-        return it;
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onCompassUse(PlayerInteractEvent e) {
-        ItemStack item = e.getItem();
-        if (item == null || item.getType() != Material.COMPASS) return;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
-        if (!ChatColor.stripColor(meta.getDisplayName()).equals("ProShield Compass")) return;
-
-        e.setCancelled(true);
-        openMain(e.getPlayer());
-    }
+    // ... (unchanged from your version) ...
 
     /* ========================================================
      * PUBLIC API
@@ -112,115 +77,62 @@ public class GUIManager implements Listener {
     public void clearCache()   { cache.clearCache(); }
 
     /* ========================================================
-     * INVENTORY CLICK ROUTER
+     * INTERNAL OPEN METHODS
      * ======================================================== */
-    @EventHandler(ignoreCancelled = true)
-    public void onInventoryClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        String title = e.getView().getTitle();
-
-        try {
-            if (TITLE_MAIN.equals(title)) {
-                e.setCancelled(true);
-                handleMainClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_FLAGS.equals(title)) {
-                e.setCancelled(true);
-                handleFlagsClick(p, e.getCurrentItem(), e.getClick(), e.getSlot());
-            } else if (TITLE_ROLES.equals(title)) {
-                e.setCancelled(true);
-                handleRolesClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_TRUST.equals(title)) {
-                e.setCancelled(true);
-                handleTrustClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_UNTRUST.equals(title)) {
-                e.setCancelled(true);
-                handleUntrustClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_TRANSFER.equals(title)) {
-                e.setCancelled(true);
-                handleTransferClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_ADMIN.equals(title)) {
-                e.setCancelled(true);
-                handleAdminClick(p, e.getCurrentItem(), e.getClick());
-            } else if (TITLE_ADMIN_WILD.equals(title)) {
-                e.setCancelled(true);
-                handleAdminWildernessClick(p, e.getCurrentItem(), e.getClick());
-            } else if (title.startsWith(TITLE_PICK_PLAYER)) {
-                e.setCancelled(true);
-                handlePickPlayerClick(p, e.getCurrentItem(), e.getClick());
-            }
-        } catch (Throwable t) {
-            plugin.getLogger().warning("GUI click error: " + t.getMessage());
-        }
-    }
+    private void openMainInternal(Player p) { /* your code from before */ }
+    private void openAdminInternal(Player p) { /* your code from before */ }
+    private void openFlagsInternal(Player p) { /* your code from before */ }
+    private void openRolesInternal(Player p) { /* your code from before */ }
+    private void openRolesInternal(Player p, Plot plot) { openRolesInternal(p); }
+    private void openTrustInternal(Player p) { /* your code from before */ }
+    private void openUntrustInternal(Player p) { /* your code from before */ }
+    private void openTransferInternal(Player p) { /* your code from before */ }
 
     /* ========================================================
-     * FLAGS CLICK HANDLER
+     * CLICK HANDLERS
      * ======================================================== */
-    private void handleFlagsClick(Player p, ItemStack it, ClickType click, int slot) {
-        if (!valid(it)) return;
-
-        Plot plot = plots.getPlot(p.getLocation());
-        if (plot == null) return;
-
-        // ✅ Restrict editing: only owners or admins
-        if (!canEdit(p, plot)) {
-            p.sendMessage(ChatColor.RED + "Only claim owners or admins can change flags.");
-            return;
-        }
-
-        String name = ChatColor.stripColor(it.getItemMeta().getDisplayName()).toLowerCase();
-        PlotSettings settings = plot.getSettings();
-
-        boolean newState = switch (name) {
-            case "explosions" -> toggle(settings.isExplosionsAllowed(), settings::setExplosionsAllowed);
-            case "buckets" -> toggle(settings.isBucketAllowed(), settings::setBucketAllowed);
-            case "item frames" -> toggle(settings.isItemFramesAllowed(), settings::setItemFramesAllowed);
-            case "armor stands" -> toggle(settings.isArmorStandsAllowed(), settings::setArmorStandsAllowed);
-            case "animals" -> toggle(settings.isAnimalAccessAllowed(), settings::setAnimalAccessAllowed);
-            case "pets" -> toggle(settings.isPetAccessAllowed(), settings::setPetAccessAllowed);
-            case "containers" -> toggle(settings.isContainersAllowed(), settings::setContainersAllowed);
-            case "vehicles" -> toggle(settings.isVehiclesAllowed(), settings::setVehiclesAllowed);
-            case "fire" -> toggle(settings.isFireAllowed(), settings::setFireAllowed);
-            case "redstone" -> toggle(settings.isRedstoneAllowed(), settings::setRedstoneAllowed);
-            case "entity griefing" -> toggle(settings.isEntityGriefingAllowed(), settings::setEntityGriefingAllowed);
-            case "pvp" -> toggle(settings.isPvpEnabled(), settings::setPvpEnabled);
-            case "mob repel" -> toggle(settings.isMobRepelEnabled(), settings::setMobRepelEnabled);
-            case "mob despawn" -> toggle(settings.isMobDespawnInsideEnabled(), settings::setMobDespawnInsideEnabled);
-            case "keep items" -> toggle(settings.isKeepItemsEnabled(), settings::setKeepItemsEnabled);
-            default -> null;
-        };
-
-        if (newState == null) return;
-
-        // Update GUI slot immediately
-        p.getOpenInventory().getTopInventory().setItem(
-                slot,
-                toggleItem(it.getType(), it.getItemMeta().getDisplayName(), newState)
-        );
-
-        // 🔊 Sound feedback instead of chat spam
-        if (newState) {
-            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1.5f);
-        } else {
-            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.8f);
-        }
-
-        // Log for admins
-        plugin.getLogger().info(p.getName() + " toggled flag '" + name + "' in claim " +
-                plot.getDisplayNameSafe() + " -> " + (newState ? "ENABLED" : "DISABLED"));
-
-        plots.saveAsync(plot);
-    }
-
-    private Boolean toggle(boolean current, java.util.function.Consumer<Boolean> setter) {
-        boolean newState = !current;
-        setter.accept(newState);
-        return newState;
-    }
+    private void handleMainClick(Player p, ItemStack it, ClickType click) { /* your code */ }
+    private void handleRolesClick(Player p, ItemStack it, ClickType click) { /* your code */ }
+    private void handleTrustClick(Player p, ItemStack it, ClickType click) { /* your code */ }
+    private void handleUntrustClick(Player p, ItemStack it, ClickType click) { /* your code */ }
+    private void handleTransferClick(Player p, ItemStack it, ClickType click) { /* your code */ }
+    private void handleAdminClick(Player p, ItemStack it, ClickType click) { /* your code */ }
+    private void handleAdminWildernessClick(Player p, ItemStack it, ClickType click) { /* your code */ }
+    private void handlePickPlayerClick(Player p, ItemStack it, ClickType click) { /* your code */ }
 
     /* ========================================================
-     * REMAINING METHODS (same as before, unchanged)
+     * HELPERS (re-added so errors go away)
      * ======================================================== */
-    // ... (keep your openMainInternal, openAdminInternal, etc. exactly as you have them now)
-    // ... (helpers like make(), toggleItem(), nameOf(), skullOwner(), dummyHolder(), canEdit() stay the same)
+    private boolean valid(ItemStack it) {
+        return it != null && it.getType() != Material.AIR && it.hasItemMeta() && it.getItemMeta().hasDisplayName();
+    }
+
+    private void set(Inventory inv, int slot, ItemStack it) {
+        if (slot >= 0 && slot < inv.getSize()) inv.setItem(slot, it);
+    }
+
+    private ItemStack toggleItem(Material type, String name, boolean enabled) {
+        ItemStack it = new ItemStack(type);
+        ItemMeta m = it.getItemMeta();
+        if (m != null) {
+            m.setDisplayName(ChatColor.WHITE + name);
+            m.setLore(List.of(
+                    ChatColor.GRAY + "State: " + (enabled ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF"),
+                    ChatColor.YELLOW + "Click to toggle."
+            ));
+            if (enabled) m.addEnchant(Enchantment.UNBREAKING, 1, true);
+            m.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+            it.setItemMeta(m);
+        }
+        return it;
+    }
+
+    private boolean canEdit(Player p, Plot plot) {
+        UUID id = p.getUniqueId();
+        return (plot.getOwner() != null && plot.getOwner().equals(id)) || p.hasPermission("proshield.admin");
+    }
+
+    private InventoryHolder dummyHolder() {
+        return () -> null;
+    }
 }

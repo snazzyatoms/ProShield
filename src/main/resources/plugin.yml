@@ -42,16 +42,23 @@ commands:
     usage: /<command>
     permission: proshield.compass
 
+  flags:
+    description: Open the claim flags menu
+    usage: /<command>
+    permission: proshield.flags
+
   # Trust & Roles
   trust:
     description: Trust a player with optional role
     usage: /<command> <player> [role]
     permission: proshield.use
+    aliases: [addtrust]
 
   untrust:
     description: Remove trust from a player
     usage: /<command> <player>
     permission: proshield.use
+    aliases: [removetrust]
 
   trusted:
     description: List trusted players in your claim

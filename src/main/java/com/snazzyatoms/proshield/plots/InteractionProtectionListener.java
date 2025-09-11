@@ -10,6 +10,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 
+import java.util.UUID;
+
 /**
  * Handles protections for player interactions inside claims.
  * - Uses PlotSettings for per-claim interaction rules
@@ -48,7 +50,8 @@ public class InteractionProtectionListener implements Listener {
             return;
         }
 
-        ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
+        UUID uid = player.getUniqueId();
+        ClaimRole role = roleManager.getRole(plot, uid);
 
         if (role == null || !roleManager.canInteract(role)) {
             event.setCancelled(true);

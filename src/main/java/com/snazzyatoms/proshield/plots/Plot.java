@@ -1,5 +1,6 @@
 package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -18,6 +19,7 @@ import java.util.*;
  * - Added getNearestBorder(Location) for MobBorderRepelListener.
  * - Added PlotSettings + getSettings() for per-claim configuration.
  * - Added getName() as a safe display name accessor.
+ * - Switched trusted map to use ClaimRole instead of String.
  */
 public class Plot {
 
@@ -26,7 +28,7 @@ public class Plot {
     private final int z;
 
     private UUID owner;
-    private final Map<UUID, String> trusted = new HashMap<>();
+    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
     private String displayName;
 
     // Per-plot settings
@@ -49,7 +51,7 @@ public class Plot {
     public UUID getOwner() { return owner; }
     public void setOwner(UUID owner) { this.owner = owner; }
 
-    public Map<UUID, String> getTrusted() { return trusted; }
+    public Map<UUID, ClaimRole> getTrusted() { return trusted; }
 
     public String getDisplayNameSafe() {
         return (displayName != null) ? displayName : "Claim (" + x + "," + z + ")";
@@ -95,10 +97,10 @@ public class Plot {
         if (owner != null) data.put("owner", owner.toString());
         if (displayName != null) data.put("display", displayName);
 
-        // Save trusted players
+        // Save trusted players with role names
         List<String> trustedList = new ArrayList<>();
         for (UUID id : trusted.keySet()) {
-            trustedList.add(id.toString() + ":" + trusted.get(id));
+            trustedList.add(id.toString() + ":" + trusted.get(id).name());
         }
         data.put("trusted", trustedList);
 
@@ -124,13 +126,13 @@ public class Plot {
 
         plot.displayName = section.getString("display");
 
-        // Load trusted players
+        // Load trusted players with roles
         List<String> trustedList = section.getStringList("trusted");
         for (String entry : trustedList) {
             String[] parts = entry.split(":");
             if (parts.length == 2) {
                 try {
-                    plot.trusted.put(UUID.fromString(parts[0]), parts[1]);
+                    plot.trusted.put(UUID.fromString(parts[0]), com.snazzyatoms.proshield.roles.ClaimRole.fromString(parts[1]));
                 } catch (IllegalArgumentException ignored) {}
             }
         }

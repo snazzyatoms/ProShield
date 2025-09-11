@@ -1,7 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.snazzyatoms</groupId>
@@ -10,62 +9,65 @@
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>Lightweight land and plot protection plugin for Spigot and Paper servers</description>
-    <url>https://github.com/snazzyatoms/ProShield</url>
+    <description>Advanced claim and protection plugin for Minecraft servers</description>
+    <url>https://github.com/snazzyatoms/proshield</url>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>17</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <repositories>
-        <!-- PaperMC API -->
+        <!-- Spigot / Paper repo -->
+        <repository>
+            <id>spigotmc-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
         <repository>
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
-
-        <!-- Spigot Snapshots (fallback) -->
         <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
     </repositories>
 
     <dependencies>
-        <!-- Paper API -->
+        <!-- Paper API preferred (includes Spigot API) -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.20.1-R0.1-SNAPSHOT</version>
+            <version>1.20.6-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Bukkit/Spigot API fallback -->
+        <!-- If you want direct Spigot API (fallback) -->
+        <!--
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.20.1-R0.1-SNAPSHOT</version>
+            <version>1.20.6-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+        -->
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Java Compiler -->
+            <!-- Ensure Java 17 compilation -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>${maven.compiler.source}</source>
-                    <target>${maven.compiler.target}</target>
-                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <release>${java.version}</release>
                 </configuration>
             </plugin>
 
-            <!-- Shade (only needed if you ever bundle external libs, safe to keep) -->
+            <!-- Shade plugin if you add external libs later -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -76,6 +78,19 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <minimizeJar>false</minimizeJar>
+                            <relocations>
+                                <!-- Example relocation if you shade external libs -->
+                                <!--
+                                <relocation>
+                                    <pattern>org.example.lib</pattern>
+                                    <shadedPattern>com.snazzyatoms.proshield.libs.org.example.lib</shadedPattern>
+                                </relocation>
+                                -->
+                            </relocations>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

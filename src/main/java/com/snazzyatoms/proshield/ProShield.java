@@ -77,18 +77,18 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerCommands() {
-        registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager)); // ✅ fixed
+        registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager, compassManager)); // ✅ add compass
         registerCommand("trust", new TrustCommand(this, plotManager, roleManager));
         registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
         registerCommand("roles", new RolesCommand(this, plotManager, roleManager, guiManager));
         registerCommand("transfer", new TransferCommand(this, plotManager));
-        registerCommand("flags", new FlagsCommand(guiManager)); // ✅ fixed
-        registerCommand("compass", new CompassCommand(this, compassManager)); // ✅ new injection
+        registerCommand("flags", new FlagsCommand(this, guiManager)); // ✅ pass plugin + gui
+        registerCommand("compass", new CompassCommand(compassManager, messages)); // ✅ corrected
     }
 
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(
-                new PlayerJoinListener(this, guiManager, plotManager, compassManager), this); // ✅ fixed
+                new PlayerJoinListener(this, guiManager, plotManager, compassManager), this); // ✅ with compass
         Bukkit.getPluginManager().registerEvents(
                 new BlockProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(

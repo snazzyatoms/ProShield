@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.Bukkit;
@@ -17,6 +16,8 @@ import java.util.*;
  * - Cleaned @Override usage (only on true overrides).
  * - Corrected DummyChunk wrapper for Chunk compatibility.
  * - Added getNearestBorder(Location) for MobBorderRepelListener.
+ * - Added PlotSettings + getSettings() for per-claim configuration.
+ * - Added getName() as a safe display name accessor.
  */
 public class Plot {
 
@@ -27,6 +28,9 @@ public class Plot {
     private UUID owner;
     private final Map<UUID, String> trusted = new HashMap<>();
     private String displayName;
+
+    // Per-plot settings
+    private final PlotSettings settings = new PlotSettings();
 
     public Plot(Chunk chunk, UUID owner) {
         this.worldName = chunk.getWorld().getName();
@@ -55,6 +59,20 @@ public class Plot {
         this.displayName = displayName;
     }
 
+    /**
+     * Returns a user-facing name for debug/logging.
+     */
+    public String getName() {
+        return getDisplayNameSafe();
+    }
+
+    /**
+     * Returns the per-plot settings object.
+     */
+    public PlotSettings getSettings() {
+        return settings;
+    }
+
     /* -------------------------------------------------------
      * Ownership / Trust
      * ------------------------------------------------------- */
@@ -77,11 +95,15 @@ public class Plot {
         if (owner != null) data.put("owner", owner.toString());
         if (displayName != null) data.put("display", displayName);
 
+        // Save trusted players
         List<String> trustedList = new ArrayList<>();
         for (UUID id : trusted.keySet()) {
             trustedList.add(id.toString() + ":" + trusted.get(id));
         }
         data.put("trusted", trustedList);
+
+        // Save settings
+        data.put("keep-items", settings.isKeepItemsEnabled());
 
         return data;
     }
@@ -102,6 +124,7 @@ public class Plot {
 
         plot.displayName = section.getString("display");
 
+        // Load trusted players
         List<String> trustedList = section.getStringList("trusted");
         for (String entry : trustedList) {
             String[] parts = entry.split(":");
@@ -111,6 +134,10 @@ public class Plot {
                 } catch (IllegalArgumentException ignored) {}
             }
         }
+
+        // Load settings
+        plot.getSettings().setKeepItemsEnabled(section.getBoolean("keep-items", false));
+
         return plot;
     }
 
@@ -157,5 +184,20 @@ public class Plot {
         public String getWorld() { return world; }
         public int getX() { return x; }
         public int getZ() { return z; }
+    }
+
+    /* -------------------------------------------------------
+     * Inner class: PlotSettings
+     * ------------------------------------------------------- */
+    public static class PlotSettings {
+        private boolean keepItemsEnabled;
+
+        public boolean isKeepItemsEnabled() {
+            return keepItemsEnabled;
+        }
+
+        public void setKeepItemsEnabled(boolean keepItemsEnabled) {
+            this.keepItemsEnabled = keepItemsEnabled;
+        }
     }
 }

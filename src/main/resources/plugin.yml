@@ -46,6 +46,7 @@ commands:
     description: Open the claim flags menu
     usage: /<command>
     permission: proshield.flags
+    aliases: [cf]   # ✅ Added shorthand alias for claim flags
 
   # Trust & Roles
   trust:

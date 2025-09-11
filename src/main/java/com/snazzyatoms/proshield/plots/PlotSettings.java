@@ -10,8 +10,8 @@ import java.util.Map;
  * Stores all per-claim toggles.
  *
  * ✅ Preserves all prior logic
- * ✅ Includes bucketAllowed (fixed naming)
- * ✅ Fire, mob, PvP, entity grief, drops, etc.
+ * ✅ Fixed bucket flags (empty + fill)
+ * ✅ Matches config.yml (fire, mobs, PvP, entity grief, drops, etc.)
  */
 public class PlotSettings {
 
@@ -19,7 +19,11 @@ public class PlotSettings {
      * Protection Toggles
      * ----------------- */
     private boolean explosionsAllowed = false;
-    private boolean bucketAllowed = false;   // ✅ fixed single flag for buckets
+
+    // ✅ buckets split
+    private boolean bucketEmptyAllowed = false;
+    private boolean bucketFillAllowed = false;
+
     private boolean itemFramesAllowed = false;
     private boolean armorStandsAllowed = false;
     private boolean animalAccessAllowed = false;
@@ -58,7 +62,10 @@ public class PlotSettings {
      * Getters
      * ----------------- */
     public boolean isExplosionsAllowed() { return explosionsAllowed; }
-    public boolean isBucketAllowed() { return bucketAllowed; } // ✅ fixed
+
+    public boolean isBucketEmptyAllowed() { return bucketEmptyAllowed; }
+    public boolean isBucketFillAllowed() { return bucketFillAllowed; }
+
     public boolean isItemFramesAllowed() { return itemFramesAllowed; }
     public boolean isArmorStandsAllowed() { return armorStandsAllowed; }
     public boolean isAnimalAccessAllowed() { return animalAccessAllowed; }
@@ -93,7 +100,10 @@ public class PlotSettings {
      * Setters
      * ----------------- */
     public void setExplosionsAllowed(boolean b) { explosionsAllowed = b; }
-    public void setBucketAllowed(boolean b) { bucketAllowed = b; } // ✅ fixed
+
+    public void setBucketEmptyAllowed(boolean b) { bucketEmptyAllowed = b; }
+    public void setBucketFillAllowed(boolean b) { bucketFillAllowed = b; }
+
     public void setItemFramesAllowed(boolean b) { itemFramesAllowed = b; }
     public void setArmorStandsAllowed(boolean b) { armorStandsAllowed = b; }
     public void setAnimalAccessAllowed(boolean b) { animalAccessAllowed = b; }
@@ -130,7 +140,11 @@ public class PlotSettings {
     public Map<String, Object> serialize() {
         Map<String, Object> map = new HashMap<>();
         map.put("explosions", explosionsAllowed);
-        map.put("buckets", bucketAllowed); // ✅ fixed
+
+        // ✅ buckets split
+        map.put("bucketEmpty", bucketEmptyAllowed);
+        map.put("bucketFill", bucketFillAllowed);
+
         map.put("itemFrames", itemFramesAllowed);
         map.put("armorStands", armorStandsAllowed);
         map.put("animals", animalAccessAllowed);
@@ -167,7 +181,11 @@ public class PlotSettings {
         if (sec == null) return;
 
         explosionsAllowed = sec.getBoolean("explosions", explosionsAllowed);
-        bucketAllowed = sec.getBoolean("buckets", bucketAllowed); // ✅ fixed
+
+        // ✅ buckets split
+        bucketEmptyAllowed = sec.getBoolean("bucketEmpty", bucketEmptyAllowed);
+        bucketFillAllowed = sec.getBoolean("bucketFill", bucketFillAllowed);
+
         itemFramesAllowed = sec.getBoolean("itemFrames", itemFramesAllowed);
         armorStandsAllowed = sec.getBoolean("armorStands", armorStandsAllowed);
         animalAccessAllowed = sec.getBoolean("animals", animalAccessAllowed);

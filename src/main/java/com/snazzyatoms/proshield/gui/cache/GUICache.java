@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/gui/cache/GUICache.java
 package com.snazzyatoms.proshield.gui.cache;
 
 import org.bukkit.entity.Player;
@@ -8,45 +7,53 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * GUICache - lightweight cache for storing temporary player GUI states.
+ * GUICache
  *
- * ✅ No longer depends on GUIManager
- * ✅ Pure no-args cache class
+ * - Tracks open menus for each player (so listeners know context).
+ * - Extendable for later caching (role selections, paging, etc.).
  */
 public class GUICache {
 
-    private final Map<UUID, Object> playerCache = new ConcurrentHashMap<>();
+    // Maps <Player UUID, menuKey>
+    private final Map<UUID, String> openMenus = new ConcurrentHashMap<>();
 
-    public GUICache() {
-        // no-args constructor
-    }
-
-    /** Store arbitrary GUI-related state for a player. */
-    public void put(Player player, Object state) {
-        if (player != null) {
-            playerCache.put(player.getUniqueId(), state);
+    /**
+     * Record which menu a player has open.
+     * @param playerId player UUID
+     * @param menuKey short key (ex: "main", "flags", "admin")
+     */
+    public void setOpenMenu(UUID playerId, String menuKey) {
+        if (playerId != null && menuKey != null) {
+            openMenus.put(playerId, menuKey);
         }
     }
 
-    /** Retrieve cached state for a player. */
-    public Object get(Player player) {
-        return (player != null) ? playerCache.get(player.getUniqueId()) : null;
+    /**
+     * Retrieve the last recorded menu for a player.
+     * @param playerId player UUID
+     * @return menu key (or null if none)
+     */
+    public String getOpenMenu(UUID playerId) {
+        if (playerId == null) return null;
+        return openMenus.get(playerId);
     }
 
-    /** Remove cached state for a player. */
-    public void remove(Player player) {
-        if (player != null) {
-            playerCache.remove(player.getUniqueId());
+    /**
+     * Remove player from cache (ex: when they close inv or logout).
+     * @param playerId player UUID
+     */
+    public void clearOpenMenu(UUID playerId) {
+        if (playerId != null) {
+            openMenus.remove(playerId);
         }
     }
 
-    /** Clear all cached GUI states. */
-    public void clearCache() {
-        playerCache.clear();
-    }
-
-    /** Check if player has cached GUI state. */
-    public boolean has(Player player) {
-        return player != null && playerCache.containsKey(player.getUniqueId());
+    /**
+     * Convenience: clear when Player object is available.
+     */
+    public void clearOpenMenu(Player player) {
+        if (player != null) {
+            clearOpenMenu(player.getUniqueId());
+        }
     }
 }

@@ -12,15 +12,14 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 /**
  * EntityGriefProtectionListener
  *
- * ✅ Blocks griefing from:
- *    - Endermen (block pickup)
- *    - Ravagers (crop trampling)
- *    - Silverfish (infestation)
- *    - Wither (block destruction)
- *    - EnderDragon (block destruction)
+ * ✅ Stops mob/entity griefing like:
+ *   - Endermen picking blocks
+ *   - Ravagers trampling
+ *   - Silverfish infestations
+ *   - Wither / EnderDragon destruction
  *
- * ✅ Global wilderness config + per-claim flags
- * ✅ Debug logging for admins
+ * ✅ Global config + per-claim flag (entityGriefingAllowed)
+ * ✅ Debug messages for admins
  */
 public class EntityGriefProtectionListener implements Listener {
 
@@ -41,28 +40,30 @@ public class EntityGriefProtectionListener implements Listener {
         Plot plot = plots.getPlot(chunk);
 
         FileConfiguration config = plugin.getConfig();
+        boolean globalGriefing = config.getBoolean("protection.entity-grief.enabled", false);
 
-        boolean globalGrief = config.getBoolean("protection.entity-grief.enabled", false);
-        boolean perClaimAllowed = plot != null && plot.getSettings().isEntityGriefingAllowed();
-
-        // Wilderness check
+        /* -------------------------------------------------------
+         * Wilderness handling
+         * ------------------------------------------------------- */
         if (plot == null) {
-            if (!globalGrief && isProtectedEntity(entity, config)) {
+            if (!globalGriefing && isProtectedEntity(entity, config)) {
                 event.setCancelled(true);
-                messages.debug("&cEntity grief blocked in wilderness by: " + entity.getType());
+                messages.debug("&cEntity grief blocked in wilderness by " + entity.getType());
             }
             return;
         }
 
-        // Inside a claim → controlled by per-claim setting
-        if (!perClaimAllowed && isProtectedEntity(entity, config)) {
+        /* -------------------------------------------------------
+         * Inside claims
+         * ------------------------------------------------------- */
+        if (!plot.getSettings().isEntityGriefingAllowed() && isProtectedEntity(entity, config)) {
             event.setCancelled(true);
-            messages.debug("&cEntity grief blocked in claim [" + plot.getDisplayNameSafe() + "] by: " + entity.getType());
+            messages.debug("&cEntity grief blocked in claim [" + plot.getDisplayNameSafe() + "] by " + entity.getType());
         }
     }
 
     /**
-     * Checks if entity type is protected according to config.
+     * Check if this entity type is one we should stop from griefing.
      */
     private boolean isProtectedEntity(Entity entity, FileConfiguration config) {
         if (entity instanceof Enderman) {

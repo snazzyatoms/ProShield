@@ -4,7 +4,6 @@ import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -15,9 +14,9 @@ import java.util.Collection;
 /**
  * EntityBorderRepelTask
  *
- * ✅ Uses PlotSettings.isMobRepelEnabled()
- * ✅ Added null-checks for world/chunk safety
- * ✅ Preserves periodic repel logic
+ * ✅ Repels all living entities at/near claim borders
+ * ✅ Adds buffer zone → mobs & entities can’t loiter near claims
+ * ✅ Configurable via config.yml
  */
 public class EntityBorderRepelTask extends BukkitRunnable {
 
@@ -25,14 +24,22 @@ public class EntityBorderRepelTask extends BukkitRunnable {
     private final PlotManager plotManager;
     private BukkitTask runningTask;
 
+    // Pull from config
+    private final double bufferRadius;
+    private final double pushStrengthX;
+    private final double pushStrengthY;
+
     public EntityBorderRepelTask(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+
+        // Config values
+        this.bufferRadius   = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 2.5);
+        this.pushStrengthX  = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.6);
+        this.pushStrengthY  = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.2);
     }
 
-    /**
-     * Start this task (legacy compatibility).
-     */
+    /** Start task (runs every 5s). */
     public void start() {
         if (runningTask != null) {
             runningTask.cancel();
@@ -51,10 +58,7 @@ public class EntityBorderRepelTask extends BukkitRunnable {
     }
 
     private void repelAtBorder(Plot plot) {
-        World world = Bukkit.getWorld(plot.getWorldName());
-        if (world == null) return;
-
-        Chunk chunk = world.getChunkAt(plot.getX(), plot.getZ());
+        Chunk chunk = Bukkit.getWorld(plot.getWorldName()).getChunkAt(plot.getX(), plot.getZ());
         if (chunk == null || !chunk.isLoaded()) return;
 
         for (Entity entity : chunk.getEntities()) {
@@ -62,32 +66,28 @@ public class EntityBorderRepelTask extends BukkitRunnable {
                 Location loc = living.getLocation();
                 double edgeDistance = getDistanceToChunkEdge(loc, chunk);
 
-                if (edgeDistance < 3.0) { // near the border
-                    double pushStrength = 0.5;
-                    Location center = new Location(
-                            chunk.getWorld(),
-                            (chunk.getX() << 4) + 8,
+                // If near border or within buffer zone → repel
+                if (edgeDistance < bufferRadius) {
+                    Location center = new Location(chunk.getWorld(),
+                            chunk.getX() * 16 + 8,
                             loc.getY(),
-                            (chunk.getZ() << 4) + 8
-                    );
+                            chunk.getZ() * 16 + 8);
 
-                    living.setVelocity(
-                            living.getVelocity().add(
-                                    loc.toVector()
-                                            .subtract(center.toVector())
-                                            .normalize()
-                                            .multiply(pushStrength)
-                            )
-                    );
+                    living.setVelocity(living.getVelocity().add(
+                            loc.toVector().subtract(center.toVector())
+                                    .normalize()
+                                    .multiply(pushStrengthX)
+                                    .setY(pushStrengthY)
+                    ));
                 }
             }
         }
     }
 
     private double getDistanceToChunkEdge(Location loc, Chunk chunk) {
-        int minX = chunk.getX() << 4;
+        int minX = chunk.getX() * 16;
         int maxX = minX + 15;
-        int minZ = chunk.getZ() << 4;
+        int minZ = chunk.getZ() * 16;
         int maxZ = minZ + 15;
 
         double dx = Math.min(Math.abs(loc.getX() - minX), Math.abs(loc.getX() - maxX));
@@ -96,9 +96,7 @@ public class EntityBorderRepelTask extends BukkitRunnable {
         return Math.min(dx, dz);
     }
 
-    /**
-     * Stop this task cleanly (if active).
-     */
+    /** Stop task cleanly. */
     public void stop() {
         if (runningTask != null) {
             runningTask.cancel();

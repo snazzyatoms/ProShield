@@ -1,8 +1,9 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
-import com.snazzyatoms.proshield.gui.GUIListener;
+import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.*;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
@@ -25,6 +26,7 @@ public class ProShield extends JavaPlugin {
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
     private GUICache guiCache;
+    private CompassManager compassManager; // ✅ NEW
 
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
@@ -43,9 +45,12 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
 
-        // GUI cache + manager
+        // GUIs
         guiCache = new GUICache();
         guiManager = new GUIManager(this, guiCache);
+
+        // ✅ Compass Manager
+        compassManager = new CompassManager(this, guiManager);
 
         registerCommands();
         registerListeners();
@@ -67,7 +72,7 @@ public class ProShield extends JavaPlugin {
         if (mobRepelTask != null) mobRepelTask.stop();
         if (borderRepelTask != null) borderRepelTask.stop();
 
-        // Save plots
+        // ✅ Explicitly save plots
         if (plotManager != null) {
             plotManager.saveAll();
         }
@@ -78,16 +83,17 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerCommands() {
-        registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager));
+        registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager, compassManager));
         registerCommand("trust", new TrustCommand(this, plotManager, roleManager));
         registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
         registerCommand("roles", new RolesCommand(this, plotManager, roleManager, guiManager));
         registerCommand("transfer", new TransferCommand(this, plotManager));
-        registerCommand("flags", new FlagsCommand(guiManager));
+        registerCommand("flags", new FlagsCommand(this, guiManager));
+        registerCommand("compass", new CompassCommand(this, compassManager)); // ✅ Added
     }
 
     private void registerListeners() {
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager, compassManager), this);
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
 
@@ -105,8 +111,8 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
 
-        // ✅ Central GUI listener (registers PlayerMenuListener + AdminMenuListener)
-        Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+        // ✅ Register GUI listener wrapper (player + admin menus)
+        new GUIListener(this, guiManager);
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {
@@ -138,6 +144,10 @@ public class ProShield extends JavaPlugin {
 
     public GUICache getGuiCache() {
         return guiCache;
+    }
+
+    public CompassManager getCompassManager() { // ✅ Expose it
+        return compassManager;
     }
 
     public boolean toggleBypass(Player player) {

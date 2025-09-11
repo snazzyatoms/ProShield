@@ -9,77 +9,109 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.util.List;
+import java.util.logging.Level;
 
 /**
  * MessagesUtil
- *
- * ✅ Preserves prior logic
- * ✅ Expanded with reload() and broadcastConsole()
- * ✅ Provides message lookup, formatting, and debug helpers
+ * - Handles message loading, prefixing, placeholders, broadcasting
+ * - Expanded with multiple send(...) overloads to match all plugin calls
+ * - Preserves reload() and broadcastConsole() logic
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
     private FileConfiguration config;
-    private final File file;
+
+    /** Global prefix (legacy support for listeners) */
+    public static final String PREFIX = ChatColor.DARK_AQUA + "[ProShield] " + ChatColor.RESET;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        this.file = new File(plugin.getDataFolder(), "messages.yml");
-        this.config = YamlConfiguration.loadConfiguration(file);
+        reload();
     }
 
-    /* -------------------------------------------------------
-     * Reload Support
-     * ------------------------------------------------------- */
-
-    /** Reloads messages.yml into memory. */
+    /** Reload messages.yml */
     public void reload() {
-        if (!file.exists()) {
-            plugin.saveResource("messages.yml", false);
+        try {
+            File file = new File(plugin.getDataFolder(), "messages.yml");
+            if (!file.exists()) {
+                plugin.saveResource("messages.yml", false);
+            }
+            config = YamlConfiguration.loadConfiguration(file);
+            plugin.getLogger().info("Messages reloaded.");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to reload messages.yml", e);
         }
-        this.config = YamlConfiguration.loadConfiguration(file);
     }
 
-    /* -------------------------------------------------------
-     * Messaging API
-     * ------------------------------------------------------- */
+    /** Get a message by key, with default fallback. */
+    public String get(String key, String def) {
+        if (config == null) return def;
+        String raw = config.getString(key, def);
+        return ChatColor.translateAlternateColorCodes('&', raw != null ? raw : def);
+    }
 
-    /** Send a formatted message from messages.yml to a sender. */
-    public void send(CommandSender sender, String path, String def) {
-        String msg = config.getString(path, def);
+    /* ======================================================
+     * SEND METHODS (overloaded)
+     * ====================================================== */
+
+    /** Full signature (core): key + default message */
+    public void send(CommandSender sender, String key, String def) {
+        if (sender == null) return;
+        String msg = get(key, def);
         if (msg != null && !msg.isEmpty()) {
-            sender.sendMessage(colorize(msg));
+            sender.sendMessage(PREFIX + msg);
         }
     }
 
-    /** Send a raw message directly (with color codes). */
-    public void sendRaw(CommandSender sender, String raw) {
-        if (raw != null && !raw.isEmpty()) {
-            sender.sendMessage(colorize(raw));
+    /** Overload: key only (no default, uses key if missing). */
+    public void send(CommandSender sender, String key) {
+        send(sender, key, "&cMissing message: " + key);
+    }
+
+    /** Overload: key + replacements ({} placeholders). */
+    public void send(CommandSender sender, String key, String... replacements) {
+        if (sender == null) return;
+        String msg = get(key, "&cMissing message: " + key);
+
+        if (replacements != null && replacements.length > 0) {
+            for (String r : replacements) {
+                msg = msg.replaceFirst("\\{\\}", r);
+            }
+        }
+
+        sender.sendMessage(PREFIX + msg);
+    }
+
+    /* ======================================================
+     * BROADCAST / CONSOLE
+     * ====================================================== */
+
+    /** Broadcast to console with optional console sender. */
+    public void broadcastConsole(String key, ConsoleCommandSender console) {
+        String msg = get(key, "&cMissing broadcast: " + key);
+        if (console != null) {
+            console.sendMessage(PREFIX + msg);
+        } else {
+            plugin.getLogger().info(ChatColor.stripColor(msg));
         }
     }
 
-    /** Broadcast a message to console (with key + fallback). */
-    public void broadcastConsole(String path, ConsoleCommandSender console) {
-        String msg = config.getString(path, "&e[ProShield] " + path);
-        if (msg != null && !msg.isEmpty()) {
-            console.sendMessage(colorize(msg));
-        }
+    /** Broadcast to all players and console. */
+    public void broadcastAll(String key) {
+        String msg = get(key, "&cMissing broadcast: " + key);
+        plugin.getServer().broadcastMessage(PREFIX + msg);
     }
 
-    /** Debug logging to console only. */
-    public void debug(String message) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().info("[DEBUG] " + ChatColor.stripColor(message));
+    /** Send multi-line messages (for help menus, etc.). */
+    public void sendList(CommandSender sender, String key) {
+        if (sender == null) return;
+        List<String> lines = config.getStringList(key);
+        if (lines != null && !lines.isEmpty()) {
+            for (String line : lines) {
+                sender.sendMessage(PREFIX + ChatColor.translateAlternateColorCodes('&', line));
+            }
         }
-    }
-
-    /* -------------------------------------------------------
-     * Utility
-     * ------------------------------------------------------- */
-
-    private String colorize(String input) {
-        return ChatColor.translateAlternateColorCodes('&', input);
     }
 }

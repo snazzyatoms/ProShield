@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -11,9 +12,14 @@ import java.util.*;
 /**
  * Represents a claimed chunk of land.
  *
- * Preserves all prior logic and fixes:
- * - Added constructor avoiding forced world/chunk load
- * - Fixed PlotSettings.deserialize() usage
+ * Preserves all prior logic:
+ * - Owner UUID
+ * - Trusted players with ClaimRole
+ * - Settings object
+ * - Display name safe helper
+ * - Added created timestamp
+ * - Added serialize/deserialize for persistence
+ * - Added isEmpty() and getNearestBorder(Location) for listeners
  */
 public class Plot {
 
@@ -23,43 +29,60 @@ public class Plot {
 
     private UUID owner;
     private final Map<UUID, ClaimRole> trusted = new HashMap<>();
-    private PlotSettings settings;
+    private final PlotSettings settings;
 
     private String name;
     private long created; // timestamp of creation
 
-    /** Main runtime constructor */
     public Plot(Chunk chunk, UUID owner) {
-        this(chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), owner,
-                System.currentTimeMillis(), "Claim@" + chunk.getX() + "," + chunk.getZ(), new PlotSettings());
-    }
-
-    /** Deserialization/utility constructor (avoids chunk load at startup) */
-    public Plot(String worldName, int x, int z, UUID owner, long created, String name, PlotSettings settings) {
-        this.worldName = worldName;
-        this.x = x;
-        this.z = z;
+        this.worldName = chunk.getWorld().getName();
+        this.x = chunk.getX();
+        this.z = chunk.getZ();
         this.owner = owner;
-        this.created = created;
-        this.name = name != null ? name : "Claim@" + x + "," + z;
-        this.settings = (settings != null) ? settings : new PlotSettings();
+        this.settings = new PlotSettings();
+        this.name = "Claim@" + x + "," + z;
+        this.created = System.currentTimeMillis();
     }
 
-    public String getWorldName() { return worldName; }
-    public World getWorld() { return Bukkit.getWorld(worldName); }
+    public String getWorldName() {
+        return worldName;
+    }
 
-    public int getX() { return x; }
-    public int getZ() { return z; }
+    public World getWorld() {
+        return Bukkit.getWorld(worldName);
+    }
 
-    public UUID getOwner() { return owner; }
-    public void setOwner(UUID newOwner) { this.owner = newOwner; }
+    public int getX() {
+        return x;
+    }
 
-    public Map<UUID, ClaimRole> getTrusted() { return trusted; }
+    public int getZ() {
+        return z;
+    }
 
-    public PlotSettings getSettings() { return settings; }
+    public UUID getOwner() {
+        return owner;
+    }
 
-    public String getName() { return name != null ? name : "Claim@" + x + "," + z; }
-    public void setName(String name) { this.name = name; }
+    public void setOwner(UUID newOwner) {
+        this.owner = newOwner;
+    }
+
+    public Map<UUID, ClaimRole> getTrusted() {
+        return trusted;
+    }
+
+    public PlotSettings getSettings() {
+        return settings;
+    }
+
+    public String getName() {
+        return name != null ? name : "Claim@" + x + "," + z;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public String getDisplayNameSafe() {
         return (name != null && !name.isEmpty()) ? name : "Claim@" + x + "," + z;
@@ -70,14 +93,58 @@ public class Plot {
     }
 
     public void addTrusted(UUID playerId, ClaimRole role) {
-        if (playerId != null && role != null) trusted.put(playerId, role);
+        if (playerId != null && role != null) {
+            trusted.put(playerId, role);
+        }
     }
 
     public void removeTrusted(UUID playerId) {
-        if (playerId != null) trusted.remove(playerId);
+        if (playerId != null) {
+            trusted.remove(playerId);
+        }
     }
 
-    public long getCreated() { return created; }
+    public long getCreated() {
+        return created;
+    }
+
+    /* -------------------------------------------------------
+     * Helpers for listeners
+     * ------------------------------------------------------- */
+
+    /**
+     * Whether this claim is effectively "empty".
+     * Used by listeners that expect Optional-like behavior.
+     */
+    public boolean isEmpty() {
+        return owner == null && trusted.isEmpty();
+    }
+
+    /**
+     * Stub for border distance checks (used in MobBorderRepelListener).
+     * Returns the chunk edge location closest to the given point.
+     */
+    public Location getNearestBorder(Location loc) {
+        if (loc == null || !loc.getWorld().getName().equalsIgnoreCase(worldName)) {
+            return null;
+        }
+        World w = getWorld();
+        if (w == null) return null;
+
+        int blockX = loc.getBlockX();
+        int blockZ = loc.getBlockZ();
+
+        int minX = x << 4;
+        int minZ = z << 4;
+        int maxX = minX + 15;
+        int maxZ = minZ + 15;
+
+        // clamp to nearest edge
+        int nearestX = Math.min(Math.max(blockX, minX), maxX);
+        int nearestZ = Math.min(Math.max(blockZ, minZ), maxZ);
+
+        return new Location(w, nearestX, loc.getBlockY(), nearestZ);
+    }
 
     /* -------------------------------------------------------
      * Serialization
@@ -117,15 +184,10 @@ public class Plot {
             } catch (IllegalArgumentException ignored) {}
         }
 
-        String name = sec.getString("name", "Claim@" + x + "," + z);
-        long created = sec.getLong("created", System.currentTimeMillis());
+        Plot plot = new Plot(Bukkit.getWorld(world).getChunkAt(x, z), owner);
 
-        // settings (fixed)
-        PlotSettings settings = sec.isConfigurationSection("settings")
-                ? PlotSettings.deserialize(sec.getConfigurationSection("settings"))
-                : new PlotSettings();
-
-        Plot plot = new Plot(world, x, z, owner, created, name, settings);
+        plot.name = sec.getString("name", "Claim@" + x + "," + z);
+        plot.created = sec.getLong("created", System.currentTimeMillis());
 
         // trusted
         ConfigurationSection trustedSec = sec.getConfigurationSection("trusted");
@@ -137,6 +199,11 @@ public class Plot {
                     plot.trusted.put(id, role);
                 } catch (Exception ignored) {}
             }
+        }
+
+        // settings
+        if (sec.isConfigurationSection("settings")) {
+            plot.settings.deserialize(sec.getConfigurationSection("settings"));
         }
 
         return plot;

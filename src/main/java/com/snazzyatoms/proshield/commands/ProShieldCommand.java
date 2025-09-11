@@ -15,17 +15,22 @@ import org.bukkit.entity.Player;
  *
  * ✅ Admin + general utility command dispatcher.
  * ✅ Handles cache clearing, reload, compass distribution, debug toggle.
- * ✅ Uses CompassManager + GUICache instead of deprecated GUIManager calls.
+ * ✅ Uses CompassManager instance + GUICache instead of deprecated GUIManager calls.
  */
 public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
+    private final CompassManager compassManager;
     private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, com.snazzyatoms.proshield.plots.PlotManager plotManager, GUIManager guiManager) {
+    public ProShieldCommand(ProShield plugin,
+                            com.snazzyatoms.proshield.plots.PlotManager plotManager,
+                            GUIManager guiManager,
+                            CompassManager compassManager) {
         this.plugin = plugin;
         this.guiManager = guiManager;
+        this.compassManager = compassManager;
         this.messages = plugin.getMessagesUtil();
     }
 
@@ -76,7 +81,7 @@ public class ProShieldCommand implements CommandExecutor {
                     messages.send(player, "error.no-permission");
                     return true;
                 }
-                CompassManager.giveCompass(player, player.isOp());
+                compassManager.giveCompass(player, player.isOp()); // ✅ instance method
                 messages.send(player, "prefix", "&aProShield compass has been given.");
             }
 

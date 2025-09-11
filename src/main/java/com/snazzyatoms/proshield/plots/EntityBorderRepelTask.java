@@ -1,10 +1,10 @@
-// src/main/java/com/snazzyatoms/proshield/plots/EntityBorderRepelTask.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -15,9 +15,9 @@ import java.util.Collection;
 /**
  * EntityBorderRepelTask
  *
- * ✅ Preserves all prior logic
- * ✅ Fixed class/file mismatch (no more duplicate EntityMobRepelTask)
- * ✅ Added start()/stop() for backward compatibility
+ * ✅ Uses PlotSettings.isMobRepelEnabled()
+ * ✅ Added null-checks for world/chunk safety
+ * ✅ Preserves periodic repel logic
  */
 public class EntityBorderRepelTask extends BukkitRunnable {
 
@@ -51,7 +51,10 @@ public class EntityBorderRepelTask extends BukkitRunnable {
     }
 
     private void repelAtBorder(Plot plot) {
-        Chunk chunk = Bukkit.getWorld(plot.getWorldName()).getChunkAt(plot.getX(), plot.getZ());
+        World world = Bukkit.getWorld(plot.getWorldName());
+        if (world == null) return;
+
+        Chunk chunk = world.getChunkAt(plot.getX(), plot.getZ());
         if (chunk == null || !chunk.isLoaded()) return;
 
         for (Entity entity : chunk.getEntities()) {
@@ -61,23 +64,30 @@ public class EntityBorderRepelTask extends BukkitRunnable {
 
                 if (edgeDistance < 3.0) { // near the border
                     double pushStrength = 0.5;
-                    Location center = new Location(chunk.getWorld(),
-                            chunk.getX() * 16 + 8,
+                    Location center = new Location(
+                            chunk.getWorld(),
+                            (chunk.getX() << 4) + 8,
                             loc.getY(),
-                            chunk.getZ() * 16 + 8);
+                            (chunk.getZ() << 4) + 8
+                    );
 
-                    living.setVelocity(living.getVelocity().add(
-                            loc.toVector().subtract(center.toVector()).normalize().multiply(pushStrength)
-                    ));
+                    living.setVelocity(
+                            living.getVelocity().add(
+                                    loc.toVector()
+                                            .subtract(center.toVector())
+                                            .normalize()
+                                            .multiply(pushStrength)
+                            )
+                    );
                 }
             }
         }
     }
 
     private double getDistanceToChunkEdge(Location loc, Chunk chunk) {
-        int minX = chunk.getX() * 16;
+        int minX = chunk.getX() << 4;
         int maxX = minX + 15;
-        int minZ = chunk.getZ() * 16;
+        int minZ = chunk.getZ() << 4;
         int maxZ = minZ + 15;
 
         double dx = Math.min(Math.abs(loc.getX() - minX), Math.abs(loc.getX() - maxX));

@@ -174,7 +174,24 @@ public class GUIManager implements Listener {
 
     private void openFlagsInternal(Player p) {
         Inventory inv = Bukkit.createInventory(dummyHolder(), 27, TITLE_FLAGS);
+
+        // --- Claim flags ---
+        set(inv, 10, make(Material.TNT, "Explosions", List.of("Toggle explosions in this claim")));
+        set(inv, 11, make(Material.BUCKET, "Buckets (Place/Use)", List.of("Toggle bucket usage (place/fill)")));
+        set(inv, 12, make(Material.ITEM_FRAME, "Item Frames", List.of("Toggle item frame protection")));
+        set(inv, 13, make(Material.ARMOR_STAND, "Armor Stands", List.of("Toggle armor stand interaction")));
+        set(inv, 14, make(Material.WHEAT, "Animals", List.of("Toggle animal interaction")));
+        set(inv, 15, make(Material.BONE, "Pets", List.of("Toggle tamed pet interaction")));
+        set(inv, 16, make(Material.CHEST, "Containers", List.of("Toggle container access")));
+        set(inv, 19, make(Material.MINECART, "Vehicles", List.of("Toggle vehicle usage")));
+        set(inv, 20, make(Material.FLINT_AND_STEEL, "Fire", List.of("Toggle fire ignition/spread")));
+        set(inv, 21, make(Material.REDSTONE, "Redstone", List.of("Toggle redstone use")));
         set(inv, 22, make(Material.OAK_DOOR, "Back", List.of("Return to main menu")));
+        set(inv, 23, make(Material.CREEPER_HEAD, "Entity Griefing", List.of("Toggle mob griefing (endermen, wither, etc.)")));
+        set(inv, 24, make(Material.DIAMOND_SWORD, "PvP", List.of("Toggle player-vs-player combat")));
+        set(inv, 25, make(Material.BARRIER, "Mob Repel", List.of("Repel mobs near your claim")));
+        set(inv, 26, make(Material.ROTTEN_FLESH, "Mob Despawn", List.of("Despawn mobs that enter claim")));
+
         p.openInventory(inv);
     }
 
@@ -188,7 +205,6 @@ public class GUIManager implements Listener {
     }
 
     private void openRolesInternal(Player p, Plot plot) {
-        // Could be expanded with per-plot role list
         openRolesInternal(p);
     }
 

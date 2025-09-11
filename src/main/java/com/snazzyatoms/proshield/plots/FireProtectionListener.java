@@ -11,15 +11,17 @@ import org.bukkit.event.block.BlockSpreadEvent;
 /**
  * Handles fire protections inside claims and wilderness.
  *
- * ✅ Uses PlotSettings.fireSpreadAllowed for per-claim fire toggle
+ * ✅ Preserves all prior logic
+ * ✅ Uses PlotSettings.fireSpreadAllowed
+ * ✅ Consistent constructor style
  */
 public class FireProtectionListener implements Listener {
 
-    private final PlotManager plotManager;
+    private final PlotManager plots;
     private final MessagesUtil messages;
 
-    public FireProtectionListener(PlotManager plotManager, MessagesUtil messages) {
-        this.plotManager = plotManager;
+    public FireProtectionListener(PlotManager plots, MessagesUtil messages) {
+        this.plots = plots;
         this.messages = messages;
     }
 
@@ -27,11 +29,12 @@ public class FireProtectionListener implements Listener {
     public void onFireSpread(BlockSpreadEvent event) {
         Block block = event.getBlock();
         Chunk chunk = block.getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
 
-        if (plot == null) return; // wilderness → handled globally
+        if (plot == null) return; // wilderness → use global config
 
         PlotSettings s = plot.getSettings();
+
         if (!s.isFireSpreadAllowed()) {
             event.setCancelled(true);
             messages.debug("&cFire spread prevented in claim: " + plot.getDisplayNameSafe());
@@ -42,11 +45,12 @@ public class FireProtectionListener implements Listener {
     public void onFireIgnite(BlockIgniteEvent event) {
         Block block = event.getBlock();
         Chunk chunk = block.getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plots.getPlot(chunk);
 
         if (plot == null) return;
 
         PlotSettings s = plot.getSettings();
+
         if (!s.isFireSpreadAllowed()) {
             event.setCancelled(true);
             messages.debug("&cFire ignition prevented in claim: " + plot.getDisplayNameSafe());

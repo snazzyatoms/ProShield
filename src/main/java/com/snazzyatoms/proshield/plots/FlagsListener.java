@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/FlagsListener.java
 package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.ChatColor;
@@ -13,9 +14,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 /**
  * FlagsListener
  *
- * ✅ Single bucket flag
- * ✅ Sound effect toggle for players
- * ✅ Chat debug message shown only to admins
+ * ✅ Single toggle for buckets (matches PlotSettings)
+ * ✅ Only owners + admins can flip flags (canEdit is checked via GUIManager)
+ * ✅ Players hear a sound effect when toggling
+ * ✅ Admins additionally get a debug chat message
  */
 public class FlagsListener implements Listener {
 
@@ -43,17 +45,17 @@ public class FlagsListener implements Listener {
 
         switch (name.toLowerCase()) {
             case "explosions" -> toggleFlag(player, item, settings.isExplosionsAllowed(), settings::setExplosionsAllowed);
-            case "buckets"    -> toggleFlag(player, item, settings.isBucketAllowed(), settings::setBucketAllowed);
+            case "buckets" -> toggleFlag(player, item, settings.isBucketAllowed(), settings::setBucketAllowed);
             case "item frames" -> toggleFlag(player, item, settings.isItemFramesAllowed(), settings::setItemFramesAllowed);
             case "armor stands" -> toggleFlag(player, item, settings.isArmorStandsAllowed(), settings::setArmorStandsAllowed);
-            case "animals"   -> toggleFlag(player, item, settings.isAnimalAccessAllowed(), settings::setAnimalAccessAllowed);
-            case "pets"      -> toggleFlag(player, item, settings.isPetAccessAllowed(), settings::setPetAccessAllowed);
-            case "containers"-> toggleFlag(player, item, settings.isContainersAllowed(), settings::setContainersAllowed);
-            case "vehicles"  -> toggleFlag(player, item, settings.isVehiclesAllowed(), settings::setVehiclesAllowed);
-            case "fire"      -> toggleFlag(player, item, settings.isFireAllowed(), settings::setFireAllowed);
-            case "redstone"  -> toggleFlag(player, item, settings.isRedstoneAllowed(), settings::setRedstoneAllowed);
+            case "animals" -> toggleFlag(player, item, settings.isAnimalAccessAllowed(), settings::setAnimalAccessAllowed);
+            case "pets" -> toggleFlag(player, item, settings.isPetAccessAllowed(), settings::setPetAccessAllowed);
+            case "containers" -> toggleFlag(player, item, settings.isContainersAllowed(), settings::setContainersAllowed);
+            case "vehicles" -> toggleFlag(player, item, settings.isVehiclesAllowed(), settings::setVehiclesAllowed);
+            case "fire" -> toggleFlag(player, item, settings.isFireAllowed(), settings::setFireAllowed);
+            case "redstone" -> toggleFlag(player, item, settings.isRedstoneAllowed(), settings::setRedstoneAllowed);
             case "entity griefing" -> toggleFlag(player, item, settings.isEntityGriefingAllowed(), settings::setEntityGriefingAllowed);
-            case "pvp"       -> toggleFlag(player, item, settings.isPvpEnabled(), settings::setPvpEnabled);
+            case "pvp" -> toggleFlag(player, item, settings.isPvpEnabled(), settings::setPvpEnabled);
             case "mob repel" -> toggleFlag(player, item, settings.isMobRepelEnabled(), settings::setMobRepelEnabled);
             case "mob despawn" -> toggleFlag(player, item, settings.isMobDespawnInsideEnabled(), settings::setMobDespawnInsideEnabled);
             case "keep items" -> toggleFlag(player, item, settings.isKeepItemsEnabled(), settings::setKeepItemsEnabled);
@@ -78,12 +80,11 @@ public class FlagsListener implements Listener {
             item.setItemMeta(meta);
         }
 
-        // ✅ Play sound feedback for players
-        Sound sound = newState ? Sound.BLOCK_NOTE_BLOCK_PLING : Sound.BLOCK_ANVIL_LAND;
-        player.playSound(player.getLocation(), sound, 1f, 1f);
+        // 🔊 Sound feedback (always for players)
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, newState ? 1.2f : 0.8f);
 
-        // ✅ Chat message only for admins
-        if (player.hasPermission("proshield.admin.flags")) {
+        // 🛠️ Chat message only for admins
+        if (player.hasPermission("proshield.admin")) {
             player.sendMessage(ChatColor.YELLOW + "Flag updated: " + ChatColor.AQUA + meta.getDisplayName());
         }
     }

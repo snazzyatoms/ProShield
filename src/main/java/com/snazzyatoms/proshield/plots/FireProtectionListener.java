@@ -9,20 +9,19 @@ import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
 
 /**
- * FireProtectionListener
+ * Handles fire protections inside claims and wilderness.
  *
- * ✅ Constructor cleaned (PlotManager, MessagesUtil)
- * ✅ Uses per-claim PlotSettings (fireAllowed + fireSpreadAllowed)
- * ✅ Preserves wilderness/global behavior
- * ✅ Debug messages for admins
+ * ✅ Preserves prior logic
+ * ✅ Uses per-claim PlotSettings for fire spread + ignite
+ * ✅ Supports ignite cause: flint, lava, lightning
  */
 public class FireProtectionListener implements Listener {
 
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    public FireProtectionListener(PlotManager plots, MessagesUtil messages) {
-        this.plots = plots;
+    public FireProtectionListener(PlotManager plotManager, MessagesUtil messages) {
+        this.plotManager = plotManager;
         this.messages = messages;
     }
 
@@ -30,9 +29,9 @@ public class FireProtectionListener implements Listener {
     public void onFireSpread(BlockSpreadEvent event) {
         Block block = event.getBlock();
         Chunk chunk = block.getChunk();
-        Plot plot = plots.getPlot(chunk);
+        Plot plot = plotManager.getPlot(chunk);
 
-        if (plot == null) return; // wilderness – follow global config only
+        if (plot == null) return; // wilderness → global config handles this
 
         PlotSettings s = plot.getSettings();
 
@@ -46,15 +45,42 @@ public class FireProtectionListener implements Listener {
     public void onFireIgnite(BlockIgniteEvent event) {
         Block block = event.getBlock();
         Chunk chunk = block.getChunk();
-        Plot plot = plots.getPlot(chunk);
+        Plot plot = plotManager.getPlot(chunk);
 
-        if (plot == null) return; // wilderness – follow global config
+        if (plot == null) return;
 
         PlotSettings s = plot.getSettings();
 
-        if (!s.isFireAllowed()) {
+        // Spread (natural ignition)
+        if (!s.isFireSpreadAllowed() &&
+                (event.getCause() == BlockIgniteEvent.IgniteCause.SPREAD ||
+                 event.getCause() == BlockIgniteEvent.IgniteCause.FIREBALL)) {
             event.setCancelled(true);
-            messages.debug("&cFire ignition prevented in claim: " + plot.getDisplayNameSafe());
+            messages.debug("&cFire ignition (spread) prevented in claim: " + plot.getDisplayNameSafe());
+            return;
+        }
+
+        // Flint & Steel
+        if (event.getCause() == BlockIgniteEvent.IgniteCause.FLINT_AND_STEEL &&
+                !s.isFireFlintIgniteAllowed()) {
+            event.setCancelled(true);
+            messages.debug("&cFlint & Steel ignition prevented in claim: " + plot.getDisplayNameSafe());
+            return;
+        }
+
+        // Lava ignition
+        if (event.getCause() == BlockIgniteEvent.IgniteCause.LAVA &&
+                !s.isFireLavaIgniteAllowed()) {
+            event.setCancelled(true);
+            messages.debug("&cLava ignition prevented in claim: " + plot.getDisplayNameSafe());
+            return;
+        }
+
+        // Lightning ignition
+        if (event.getCause() == BlockIgniteEvent.IgniteCause.LIGHTNING &&
+                !s.isFireLightningIgniteAllowed()) {
+            event.setCancelled(true);
+            messages.debug("&cLightning ignition prevented in claim: " + plot.getDisplayNameSafe());
         }
     }
 }

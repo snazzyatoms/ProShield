@@ -10,6 +10,13 @@ import org.bukkit.event.entity.EntityDamageEvent;
 
 import java.util.UUID;
 
+/**
+ * PlayerDamageProtectionListener
+ *
+ * ✅ Preserves prior protection logic
+ * ✅ Fixed to use PlotManager.getPlot(Location)
+ * ✅ Replaces missing isOwner/isTrustedOrOwner calls
+ */
 public class PlayerDamageProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -22,15 +29,17 @@ public class PlayerDamageProtectionListener implements Listener {
 
     private boolean shouldProtect(Player p) {
         if (!plugin.getConfig().getBoolean("protection.damage.enabled", true)) return false;
-        Location l = p.getLocation();
-        var claimOpt = plots.getClaim(l);
-        if (claimOpt.isEmpty()) return false;
+
+        Location loc = p.getLocation();
+        Plot plot = plots.getPlot(loc); // ✅ use existing method
+        if (plot == null) return false;
 
         if (!plugin.getConfig().getBoolean("protection.damage.protect-owner-and-trusted", true))
             return false;
 
         UUID u = p.getUniqueId();
-        return plots.isOwner(u, l) || plots.isTrustedOrOwner(u, l);
+        // ✅ check owner/trusted directly via Plot
+        return plot.isOwner(u) || plot.getTrusted().containsKey(u);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -67,6 +76,8 @@ public class PlayerDamageProtectionListener implements Listener {
     }
 
     private void cancelIf(String path, EntityDamageEvent e) {
-        if (plugin.getConfig().getBoolean(path, true)) e.setCancelled(true);
+        if (plugin.getConfig().getBoolean(path, true)) {
+            e.setCancelled(true);
+        }
     }
 }

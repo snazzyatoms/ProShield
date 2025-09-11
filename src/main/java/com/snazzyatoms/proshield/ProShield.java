@@ -1,8 +1,10 @@
+// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
-import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.compass.CompassListener;
+import com.snazzyatoms.proshield.compass.CompassManager;
+import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.*;
@@ -84,11 +86,16 @@ public class ProShield extends JavaPlugin {
         registerCommand("roles", new RolesCommand(this, plotManager, roleManager, guiManager));
         registerCommand("transfer", new TransferCommand(this, plotManager));
         registerCommand("flags", new FlagsCommand(this, guiManager));
-        // ✅ Fixed order: plugin first, compass manager second
-        registerCommand("compass", new CompassCommand(this, compassManager));
+        registerCommand("compass", new CompassCommand(compassManager, messages));
     }
 
     private void registerListeners() {
+        // ✅ Compass right-click listener
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
+
+        // ✅ GUI central listener (registers PlayerMenu & AdminMenu listeners)
+        new GUIListener(this, guiManager);
+
         Bukkit.getPluginManager().registerEvents(
                 new PlayerJoinListener(this, guiManager, plotManager, compassManager), this);
         Bukkit.getPluginManager().registerEvents(
@@ -113,9 +120,6 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
         Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
-
-        // ✅ Register compass listener to handle right-click GUI opening
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {

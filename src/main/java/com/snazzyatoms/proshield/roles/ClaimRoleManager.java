@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -8,49 +9,91 @@ import java.util.UUID;
 
 /**
  * ClaimRoleManager
- *
- * ✅ Preserves prior logic
- * ✅ Expanded to use PlotManager.saveAsync() correctly
- * ✅ Supports saving per-plot or all plots
+ * - Centralized role handling (get/set/trust/untrust)
+ * - Preserves prior logic
+ * - Expanded with missing methods for listeners & commands
  */
 public class ClaimRoleManager {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
+    private final PlotManager plots;
 
     public ClaimRoleManager(ProShield plugin) {
         this.plugin = plugin;
-        this.plotManager = plugin.getPlotManager();
+        this.plots = plugin.getPlotManager();
     }
 
-    /* -------------------------------------------------------
-     * Trust Management
-     * ------------------------------------------------------- */
+    /* ======================================================
+     * CORE GETTERS
+     * ====================================================== */
 
-    public void addTrusted(Plot plot, UUID player, String role) {
-        if (plot == null || player == null) return;
-
-        plot.getTrusted().put(player, role);
-        plotManager.saveAsync(plot); // preserve prior per-plot logic
+    /** Get the role of a player inside a plot (defaults to VISITOR). */
+    public ClaimRole getRole(Plot plot, UUID playerId) {
+        if (plot == null || playerId == null) return ClaimRole.VISITOR;
+        if (plot.getOwner() != null && plot.getOwner().equals(playerId)) return ClaimRole.OWNER;
+        return plot.getTrusted().getOrDefault(playerId, ClaimRole.VISITOR);
     }
 
-    public void removeTrusted(Plot plot, UUID player) {
-        if (plot == null || player == null) return;
-
-        plot.getTrusted().remove(player);
-        plotManager.saveAsync(plot); // preserve prior per-plot logic
+    /** Trust a player with a given role inside a plot. */
+    public void trustPlayer(Plot plot, UUID playerId, ClaimRole role) {
+        if (plot == null || playerId == null || role == null) return;
+        plot.getTrusted().put(playerId, role);
+        plots.saveAsync(plot);
     }
 
-    /* -------------------------------------------------------
-     * Reload Support
-     * ------------------------------------------------------- */
+    /** Untrust a player from a plot. */
+    public void untrustPlayer(Plot plot, UUID playerId) {
+        if (plot == null || playerId == null) return;
+        plot.getTrusted().remove(playerId);
+        plots.saveAsync(plot);
+    }
 
-    /**
-     * Reloads role-related settings from config and ensures plots are persisted.
-     * This now calls PlotManager.saveAsync() (all plots) instead of failing.
-     */
+    /* ======================================================
+     * PERMISSION HELPERS
+     * ====================================================== */
+
+    /** Can this role build inside a claim? */
+    public boolean canBuild(ClaimRole role) {
+        if (role == null) return false;
+        return switch (role) {
+            case BUILDER, COOWNER, OWNER -> true;
+            default -> false;
+        };
+    }
+
+    /** Can this role interact with blocks/entities? */
+    public boolean canInteract(ClaimRole role) {
+        if (role == null) return false;
+        return switch (role) {
+            case CONTAINER, BUILDER, COOWNER, OWNER -> true;
+            default -> false;
+        };
+    }
+
+    /** Can this role access containers (chests, barrels, furnaces)? */
+    public boolean canAccessContainers(ClaimRole role) {
+        if (role == null) return false;
+        return switch (role) {
+            case CONTAINER, BUILDER, COOWNER, OWNER -> true;
+            default -> false;
+        };
+    }
+
+    /** Can this role manage trust/roles? */
+    public boolean canManageTrust(ClaimRole role) {
+        if (role == null) return false;
+        return switch (role) {
+            case COOWNER, OWNER -> true;
+            default -> false;
+        };
+    }
+
+    /* ======================================================
+     * RELOAD
+     * ====================================================== */
+
+    /** Hook for reload — currently no external config. */
     public void reloadFromConfig() {
-        // TODO: extend with role limits / default role loading if needed
-        plotManager.saveAsync(); // save ALL plots async, new safe method
+        // Future role-based config options could be reloaded here.
     }
 }

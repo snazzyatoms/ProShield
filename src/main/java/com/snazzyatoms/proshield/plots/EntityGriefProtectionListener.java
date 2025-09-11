@@ -4,12 +4,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Enderman;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Ravager;
-import org.bukkit.entity.Silverfish;
-import org.bukkit.entity.Wither;
-import org.bukkit.entity.EnderDragon;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
@@ -47,21 +42,17 @@ public class EntityGriefProtectionListener implements Listener {
 
         // Wilderness check
         if (plot == null) {
-            if (!globalGriefEnabled) {
-                if (isProtectedEntity(entity, config)) {
-                    event.setCancelled(true);
-                    messages.debug(plugin, "&cEntity grief blocked in wilderness by " + entity.getType());
-                }
+            if (!globalGriefEnabled && isProtectedEntity(entity, config)) {
+                event.setCancelled(true);
+                messages.debug("&cEntity grief blocked in wilderness by " + entity.getType());
             }
             return;
         }
 
         // Inside claim check
-        if (!perClaimGriefAllowed) {
-            if (isProtectedEntity(entity, config)) {
-                event.setCancelled(true);
-                messages.debug(plugin, "&cEntity grief blocked in claim [" + plot.getName() + "] by " + entity.getType());
-            }
+        if (!perClaimGriefAllowed && isProtectedEntity(entity, config)) {
+            event.setCancelled(true);
+            messages.debug("&cEntity grief blocked in claim [" + plot.getName() + "] by " + entity.getType());
         }
     }
 

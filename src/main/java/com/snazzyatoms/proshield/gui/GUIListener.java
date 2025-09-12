@@ -9,6 +9,7 @@ import org.bukkit.inventory.Inventory;
 
 /**
  * Global GUI listener that delegates to specific listeners like RolesListener.
+ * Uses compatibility aliases in GUIManager to detect ProShield menus.
  */
 public class GUIListener implements Listener {
 
@@ -20,16 +21,21 @@ public class GUIListener implements Listener {
         this.plugin = plugin;
         this.guiManager = guiManager;
 
-        // RolesListener now only needs plugin + roleManager
-        this.rolesListener = new RolesListener(plugin, plugin.getRoleManager());
+        // RolesListener now requires plugin + roleManager + plotManager + gui
+        this.rolesListener = new RolesListener(
+                plugin,
+                plugin.getRoleManager(),
+                plugin.getPlotManager(),
+                guiManager
+        );
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         Inventory inv = event.getInventory();
         if (guiManager.isProShieldGUI(inv)) {
-            // Pass events down to specialized handlers
-            rolesListener.handle(event);
+            // Delegate into RolesListener
+            rolesListener.onClick(event); // call its existing handler directly
         }
     }
 }

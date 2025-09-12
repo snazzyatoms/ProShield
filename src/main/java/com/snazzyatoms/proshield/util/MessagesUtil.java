@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/util/MessagesUtil.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -8,6 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -17,6 +19,10 @@ import java.util.logging.Level;
  * - Handles message loading, prefixing, placeholders, broadcasting
  * - Provides multiple send(...) overloads for flexibility
  * - Supports Map-based placeholders {player}, {claim}, {role}, etc.
+ *
+ * Fixed for v1.2.5:
+ *   • Added getConfigList(String) (restored for ProShieldCommand).
+ *   • Preserves all overloads and debug helpers.
  */
 public class MessagesUtil {
 
@@ -52,11 +58,20 @@ public class MessagesUtil {
         return ChatColor.translateAlternateColorCodes('&', raw != null ? raw : def);
     }
 
+    /** ✅ Get a list of messages from config (for help pages, etc.) */
+    public List<String> getConfigList(String key) {
+        if (config == null) return Collections.emptyList();
+        List<String> lines = config.getStringList(key);
+        if (lines == null) return Collections.emptyList();
+        return lines.stream()
+                .map(line -> ChatColor.translateAlternateColorCodes('&', line))
+                .toList();
+    }
+
     /* ======================================================
      * SEND METHODS (overloaded)
      * ====================================================== */
 
-    /** Core: key + default message */
     public void send(CommandSender sender, String key, String def) {
         if (sender == null) return;
         String msg = get(key, def);
@@ -65,12 +80,10 @@ public class MessagesUtil {
         }
     }
 
-    /** Overload: key only */
     public void send(CommandSender sender, String key) {
         send(sender, key, "&cMissing message: " + key);
     }
 
-    /** Overload: positional replacements ({}) */
     public void send(CommandSender sender, String key, String... replacements) {
         if (sender == null) return;
         String msg = get(key, "&cMissing message: " + key);
@@ -84,7 +97,6 @@ public class MessagesUtil {
         sender.sendMessage(PREFIX + msg);
     }
 
-    /** ✅ Overload: Map-based replacements ({key}) */
     public void send(CommandSender sender, String key, Map<String, String> placeholders) {
         if (sender == null) return;
         String msg = get(key, "&cMissing message: " + key);

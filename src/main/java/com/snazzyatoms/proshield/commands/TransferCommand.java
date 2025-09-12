@@ -42,21 +42,17 @@ public class TransferCommand implements CommandExecutor {
         }
 
         if (args.length < 1) {
-            messages.send(player, "usage.transfer", "/" + label + " <player>");
+            messages.send(player, "usage.transfer", "/" + label + " <newOwner> [oldOwner]");
             return true;
         }
 
-        // Resolve target (offline safe)
-        OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
-        if (targetOP == null) {
-            targetOP = Bukkit.getOfflinePlayer(args[0]);
-            if (targetOP == null || targetOP.getUniqueId() == null) {
-                messages.send(player, "error.player-not-found", args[0]);
-                return true;
-            }
+        // Resolve new owner (offline safe)
+        OfflinePlayer newOwnerOP = Bukkit.getOfflinePlayer(args[0]);
+        if (newOwnerOP == null || newOwnerOP.getUniqueId() == null) {
+            messages.send(player, "error.player-not-found", args[0]);
+            return true;
         }
-
-        UUID target = targetOP.getUniqueId();
+        UUID newOwner = newOwnerOP.getUniqueId();
 
         // Must be inside a claim
         Plot plot = plotManager.getPlot(player.getLocation());
@@ -65,46 +61,73 @@ public class TransferCommand implements CommandExecutor {
             return true;
         }
 
-        // Only owner or admin can transfer
+        UUID oldOwner = plot.getOwner();
+
+        // ADMIN OVERRIDE MODE (explicit oldOwner provided)
+        if (args.length >= 2 && player.hasPermission("proshield.admin")) {
+            OfflinePlayer oldOwnerOP = Bukkit.getOfflinePlayer(args[1]);
+            if (oldOwnerOP == null || oldOwnerOP.getUniqueId() == null) {
+                messages.send(player, "error.player-not-found", args[1]);
+                return true;
+            }
+            UUID requestedOldOwner = oldOwnerOP.getUniqueId();
+
+            // Validate
+            if (!plot.isOwner(requestedOldOwner)) {
+                messages.send(player, "transfer.override-fail", oldOwnerOP.getName());
+                return true;
+            }
+
+            // Override transfer
+            doTransfer(plot, requestedOldOwner, newOwner, newOwnerOP, player, true);
+            return true;
+        }
+
+        // NORMAL MODE (self-transfer)
         if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
             messages.send(player, "error.cannot-transfer");
             return true;
         }
 
-        // Prevent transferring to self
-        if (plot.isOwner(target)) {
+        if (plot.isOwner(newOwner)) {
             messages.send(player, "transfer.already-owner");
             return true;
         }
 
-        // Perform transfer
-        UUID oldOwner = plot.getOwner();
-        plot.setOwner(target);
+        // Perform normal transfer
+        doTransfer(plot, oldOwner, newOwner, newOwnerOP, player, false);
+        return true;
+    }
+
+    private void doTransfer(Plot plot, UUID oldOwner, UUID newOwner, OfflinePlayer newOwnerOP, Player executor, boolean override) {
+        plot.setOwner(newOwner);
 
         // Clean up trusted list
-        plot.getTrusted().remove(target); // remove new owner from trusted (redundant)
-        if (oldOwner != null && !oldOwner.equals(target)) {
-            plot.getTrusted().put(oldOwner, null); // optionally demote old owner to "trusted" or clear entirely
+        plot.getTrusted().remove(newOwner); // new owner shouldn’t be in trusted
+        if (oldOwner != null && !oldOwner.equals(newOwner)) {
+            plot.getTrusted().remove(oldOwner); // old owner loses all claim rights
         }
 
-        // Clear & reset roles for safety
+        // Clear all role assignments for safety
         roles.clearAllRoles(plot.getId());
-        // The new owner bypasses all role checks anyway.
 
+        // Save claim
         plotManager.saveAsync(plot);
 
-        // Feedback
-        String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();
-        messages.send(player, "transfer.success", targetName);
-
-        // Notify target if online
-        if (targetOP.isOnline()) {
-            Player tp = targetOP.getPlayer();
-            if (tp != null) {
-                messages.send(tp, "transfer.you-are-owner", plot.getDisplayNameSafe());
-            }
+        // Feedback to executor
+        String newName = newOwnerOP.getName() != null ? newOwnerOP.getName() : newOwner.toString();
+        if (override) {
+            messages.send(executor, "transfer.override-success", newName);
+        } else {
+            messages.send(executor, "transfer.success", newName);
         }
 
-        return true;
+        // Notify new owner
+        if (newOwnerOP.isOnline()) {
+            Player np = newOwnerOP.getPlayer();
+            if (np != null) {
+                messages.send(np, "transfer.you-are-owner", plot.getDisplayNameSafe());
+            }
+        }
     }
 }

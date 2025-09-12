@@ -1,9 +1,9 @@
-// src/main/java/com/snazzyatoms/proshield/commands/TransferCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -18,11 +18,13 @@ public class TransferCommand implements CommandExecutor {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
+    private final ClaimRoleManager roles;
     private final MessagesUtil messages;
 
-    public TransferCommand(ProShield plugin, PlotManager plotManager) {
+    public TransferCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+        this.roles = roles;
         this.messages = plugin.getMessagesUtil();
     }
 
@@ -44,7 +46,7 @@ public class TransferCommand implements CommandExecutor {
             return true;
         }
 
-        // Resolve target (allow offline)
+        // Resolve target (offline safe)
         OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
         if (targetOP == null) {
             targetOP = Bukkit.getOfflinePlayer(args[0]);
@@ -56,14 +58,14 @@ public class TransferCommand implements CommandExecutor {
 
         UUID target = targetOP.getUniqueId();
 
-        // Must be in a claim
+        // Must be inside a claim
         Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
             messages.send(player, "error.not-in-claim");
             return true;
         }
 
-        // Only owner/admin can transfer
+        // Only owner or admin can transfer
         if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
             messages.send(player, "error.cannot-transfer");
             return true;
@@ -76,8 +78,19 @@ public class TransferCommand implements CommandExecutor {
         }
 
         // Perform transfer
+        UUID oldOwner = plot.getOwner();
         plot.setOwner(target);
-        plot.getTrusted().remove(target); // ensure clean
+
+        // Clean up trusted list
+        plot.getTrusted().remove(target); // remove new owner from trusted (redundant)
+        if (oldOwner != null && !oldOwner.equals(target)) {
+            plot.getTrusted().put(oldOwner, null); // optionally demote old owner to "trusted" or clear entirely
+        }
+
+        // Clear & reset roles for safety
+        roles.clearAllRoles(plot.getId());
+        // The new owner bypasses all role checks anyway.
+
         plotManager.saveAsync(plot);
 
         // Feedback

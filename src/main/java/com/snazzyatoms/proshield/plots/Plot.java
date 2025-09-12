@@ -1,9 +1,8 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.roles.ClaimRole;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 
 import java.util.*;
 
@@ -82,6 +81,7 @@ public class Plot {
 
     // --- Roles ---
 
+    /** Primary accessor (new system) */
     public ClaimRole getRole(UUID playerId) {
         if (isOwner(playerId)) {
             return ClaimRole.OWNER;
@@ -109,8 +109,16 @@ public class Plot {
         return roles;
     }
 
-    public List<String> getTrustedNames() {
-        List<String> names = new ArrayList<>();
+    /**
+     * Backwards-compatibility alias.
+     * Some older code still calls getTrusted() → this ensures it compiles.
+     */
+    public Map<UUID, ClaimRole> getTrusted() {
+        return roles;
+    }
+
+    public Set<String> getTrustedNames() {
+        Set<String> names = new HashSet<>();
         for (UUID id : roles.keySet()) {
             String name = Bukkit.getOfflinePlayer(id).getName();
             names.add((name != null) ? name : id.toString());

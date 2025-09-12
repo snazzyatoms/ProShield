@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/listeners/TrustListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -43,7 +44,7 @@ public class TrustListener implements Listener {
         if (event.getView().getTitle() == null) return;
 
         String title = event.getView().getTitle();
-        if (!title.contains("Trust")) return; // safer than hardcoding color
+        if (!title.contains("Trust")) return; // safer than hardcoding colors
 
         event.setCancelled(true);
         Plot plot = plots.getPlot(player.getLocation());

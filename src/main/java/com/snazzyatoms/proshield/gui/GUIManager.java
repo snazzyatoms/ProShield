@@ -14,12 +14,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * GUIManager
- * - Dynamically builds menus from config.yml (gui.menus)
- * - Paired with GUIListener to handle click actions
- * - Future-proof: size, titles, items all come from config
- */
 public class GUIManager {
 
     private final ProShield plugin;
@@ -34,56 +28,69 @@ public class GUIManager {
     public void openMenu(Player player, String menuKey) {
         ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
         if (menus == null) {
-            plugin.getLogger().warning("[ProShield] No menus defined in config.yml (gui.menus missing).");
+            plugin.getLogger().warning("No menus defined in config.yml (gui.menus missing).");
             return;
         }
 
         ConfigurationSection menu = menus.getConfigurationSection(menuKey);
         if (menu == null) {
-            plugin.getLogger().warning("[ProShield] Menu not found in config.yml: " + menuKey);
+            plugin.getLogger().warning("Menu not found in config.yml: " + menuKey);
             return;
         }
 
-        String title = ChatColor.translateAlternateColorCodes('&',
-                menu.getString("title", "&7Menu"));
-        int size = menu.getInt("size", 27); // default 27 slots
+        String title = ChatColor.translateAlternateColorCodes('&', menu.getString("title", "&7Menu"));
+
+        // Auto-size inventory if not provided (round up to nearest multiple of 9)
+        int size = menu.getInt("size", -1);
+        if (size <= 0) {
+            ConfigurationSection items = menu.getConfigurationSection("items");
+            int maxSlot = 0;
+            if (items != null) {
+                for (String key : items.getKeys(false)) {
+                    try {
+                        int slot = Integer.parseInt(key);
+                        if (slot > maxSlot) maxSlot = slot;
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            size = Math.min(54, ((maxSlot / 9) + 1) * 9); // nearest multiple of 9, capped at 54
+            if (size <= 0) size = 27; // fallback default
+        }
 
         Inventory inv = Bukkit.createInventory(null, size, title);
 
         ConfigurationSection items = menu.getConfigurationSection("items");
         if (items != null) {
             for (String slotKey : items.getKeys(false)) {
-                int slot;
                 try {
-                    slot = Integer.parseInt(slotKey);
+                    int slot = Integer.parseInt(slotKey);
+                    if (slot < 0 || slot >= size) {
+                        plugin.getLogger().warning("Invalid slot " + slot + " in menu " + menuKey);
+                        continue;
+                    }
+
+                    ConfigurationSection itemSec = items.getConfigurationSection(slotKey);
+                    if (itemSec == null) continue;
+
+                    Material mat = Material.matchMaterial(itemSec.getString("material", "BARRIER"));
+                    if (mat == null) mat = Material.BARRIER;
+
+                    String name = ChatColor.translateAlternateColorCodes('&', itemSec.getString("name", ""));
+                    List<String> lore = formatLore(itemSec.getStringList("lore"));
+
+                    ItemStack item = new ItemStack(mat);
+                    ItemMeta meta = item.getItemMeta();
+                    if (meta != null) {
+                        meta.setDisplayName(name);
+                        meta.setLore(lore);
+                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                        item.setItemMeta(meta);
+                    }
+
+                    inv.setItem(slot, item);
                 } catch (NumberFormatException e) {
-                    plugin.getLogger().warning("[ProShield] Invalid slot in menu " + menuKey + ": " + slotKey);
-                    continue;
+                    plugin.getLogger().warning("Invalid slot in menu " + menuKey + ": " + slotKey);
                 }
-
-                ConfigurationSection itemSec = items.getConfigurationSection(slotKey);
-                if (itemSec == null) continue;
-
-                // Material
-                Material mat = Material.matchMaterial(itemSec.getString("material", "BARRIER"));
-                if (mat == null) mat = Material.BARRIER;
-
-                // Name & Lore
-                String name = ChatColor.translateAlternateColorCodes('&',
-                        itemSec.getString("name", ""));
-                List<String> lore = formatLore(itemSec.getStringList("lore"));
-
-                // Build item
-                ItemStack item = new ItemStack(mat);
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
-                    if (!name.isEmpty()) meta.setDisplayName(name);
-                    if (!lore.isEmpty()) meta.setLore(lore);
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    item.setItemMeta(meta);
-                }
-
-                inv.setItem(slot, item);
             }
         }
 
@@ -91,14 +98,12 @@ public class GUIManager {
     }
 
     /**
-     * Utility: format lore lines with color codes.
+     * Format lore lines with color codes.
      */
     private List<String> formatLore(List<String> input) {
         List<String> out = new ArrayList<>();
-        if (input != null) {
-            for (String line : input) {
-                out.add(ChatColor.translateAlternateColorCodes('&', line));
-            }
+        for (String line : input) {
+            out.add(ChatColor.translateAlternateColorCodes('&', line));
         }
         return out;
     }

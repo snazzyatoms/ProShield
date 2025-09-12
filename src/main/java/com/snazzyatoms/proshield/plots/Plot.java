@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
@@ -15,6 +16,7 @@ import java.util.*;
  * ✅ Uses external PlotSettings class instead of duplicate inner class.
  * ✅ Fixed serialization to save/load full settings map.
  * ✅ Added getSettings() to expose the standalone PlotSettings object.
+ * ✅ Added helpers for role-aware GUIs and listeners.
  */
 public class Plot {
 
@@ -57,14 +59,10 @@ public class Plot {
     }
 
     /** Returns a user-facing name for debug/logging. */
-    public String getName() {
-        return getDisplayNameSafe();
-    }
+    public String getName() { return getDisplayNameSafe(); }
 
     /** Returns the per-plot settings object. */
-    public PlotSettings getSettings() {
-        return settings;
-    }
+    public PlotSettings getSettings() { return settings; }
 
     /* -------------------------------------------------------
      * Ownership / Trust
@@ -75,6 +73,27 @@ public class Plot {
 
     public boolean isTrusted(UUID playerId) {
         return trusted.containsKey(playerId);
+    }
+
+    public List<String> getTrustedNames() {
+        List<String> names = new ArrayList<>();
+        for (UUID id : trusted.keySet()) {
+            OfflinePlayer p = Bukkit.getOfflinePlayer(id);
+            names.add(p.getName() != null ? p.getName() : id.toString());
+        }
+        return names;
+    }
+
+    public Map<UUID, ClaimRole> getTrustedWithRoles() {
+        return Collections.unmodifiableMap(trusted);
+    }
+
+    /**
+     * Stable unique ID for this plot, used for role manager lookups.
+     * Based on world + chunk coords.
+     */
+    public UUID getId() {
+        return UUID.nameUUIDFromBytes((worldName + ":" + x + ":" + z).getBytes());
     }
 
     /* -------------------------------------------------------

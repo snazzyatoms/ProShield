@@ -13,6 +13,9 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * PlotManager - central storage and persistence for plots.
+ */
 public class PlotManager {
 
     private final ProShield plugin;
@@ -45,14 +48,6 @@ public class PlotManager {
 
     public Collection<Plot> getAllPlots() {
         return plots.values();
-    }
-
-    /** 🔑 New method for ClaimRoleManager */
-    public Plot getPlotById(UUID claimId) {
-        for (Plot plot : plots.values()) {
-            if (plot.getId().equals(claimId)) return plot;
-        }
-        return null;
     }
 
     public boolean hasAnyClaim(UUID playerId) {
@@ -106,15 +101,6 @@ public class PlotManager {
     private void loadAll() {
         if (config.getKeys(false).isEmpty()) return;
         for (String key : config.getKeys(false)) {
-            String[] parts = key.split(",");
-            if (parts.length < 3) continue;
-            String worldName = parts[0];
-            int x = Integer.parseInt(parts[1]);
-            int z = Integer.parseInt(parts[2]);
-            World world = Bukkit.getWorld(worldName);
-            if (world == null) continue;
-
-            Chunk chunk = world.getChunkAt(x, z);
             Plot plot = Plot.deserialize(config.getConfigurationSection(key));
             if (plot != null) {
                 plots.put(key, plot);
@@ -136,5 +122,17 @@ public class PlotManager {
         for (Plot plot : plots.values()) {
             save(plot);
         }
+    }
+
+    /* -------------------------------------------------------
+     * New: lookup by claim UUID (plot id)
+     * ------------------------------------------------------- */
+    public Plot getPlotById(UUID id) {
+        for (Plot plot : plots.values()) {
+            if (id.equals(plot.getId())) {
+                return plot;
+            }
+        }
+        return null;
     }
 }

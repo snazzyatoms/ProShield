@@ -8,6 +8,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,8 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * PlotManager
  * - Manages all plots in the world.
  * - Handles creation, lookup, saving, and trusted role access.
- * - Future-proofed with aliases for legacy method names.
- * - Now supports claim expiry & auto-purging (configurable).
+ * - Now includes expiry & purge system (config-driven).
  */
 public class PlotManager {
 
@@ -26,12 +26,25 @@ public class PlotManager {
     // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
 
+    // Expiry (in days) loaded from config
+    private final int expiryDays;
+
     /**
      * Modern constructor (preferred).
      */
     public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.roleManager = roleManager;
+        this.expiryDays = plugin.getConfig().getInt("claims.expiry-days", 0);
+
+        // Start expiry task if enabled
+        if (expiryDays > 0) {
+            long ticks = 20L * 60L * 60L; // every 1 hour
+            Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::purgeExpiredClaims, ticks, ticks);
+            plugin.getLogger().info("Claim expiry enabled: " + expiryDays + " days");
+        } else {
+            plugin.getLogger().info("Claim expiry is disabled.");
+        }
     }
 
     /**
@@ -39,8 +52,7 @@ public class PlotManager {
      * RoleManager will be null if not passed.
      */
     public PlotManager(ProShield plugin) {
-        this.plugin = plugin;
-        this.roleManager = null;
+        this(plugin, null);
     }
 
     public ProShield getPlugin() {
@@ -89,7 +101,7 @@ public class PlotManager {
 
     public Plot createPlot(UUID owner, Chunk chunk) {
         Plot plot = new Plot(chunk, owner);
-        plot.updateActivity(); // mark creation as activity
+        plot.setLastActive(Instant.now()); // mark as active when created
         plots.put(plot.getId(), plot);
         saveAsync(plot);
         return plot;
@@ -110,6 +122,38 @@ public class PlotManager {
     public void saveAll() {
         for (Plot plot : plots.values()) {
             saveAsync(plot);
+        }
+    }
+
+    /**
+     * Mark a claim as active (e.g., when player interacts with it).
+     */
+    public void markActive(Plot plot) {
+        if (plot != null) {
+            plot.setLastActive(Instant.now());
+        }
+    }
+
+    /**
+     * Purge expired claims based on expiry-days in config.
+     */
+    public void purgeExpiredClaims() {
+        if (expiryDays <= 0) return; // disabled
+
+        long cutoff = Instant.now().minusSeconds(expiryDays * 86400L).toEpochMilli();
+        int purgedCount = 0;
+
+        for (Iterator<Plot> it = plots.values().iterator(); it.hasNext(); ) {
+            Plot plot = it.next();
+            if (plot.getLastActive() != null && plot.getLastActive().toEpochMilli() < cutoff) {
+                it.remove();
+                purgedCount++;
+                plugin.getLogger().info("Expired claim purged: " + plot.getDisplayNameSafe());
+            }
+        }
+
+        if (purgedCount > 0) {
+            plugin.getLogger().info("Purged " + purgedCount + " expired claims.");
         }
     }
 
@@ -145,38 +189,5 @@ public class PlotManager {
 
         ClaimRole role = plot.getRole(playerId);
         return role != null && role.canManage();
-    }
-
-    /* ======================================================
-     * CLAIM EXPIRY & PURGE
-     * ====================================================== */
-
-    /**
-     * Purge expired claims based on config expiry-days.
-     */
-    public void purgeExpiredClaims() {
-        int expiryDays = plugin.getConfig().getInt("claims.expiry-days", 30);
-        long expiryMillis = expiryDays * 24L * 60L * 60L * 1000L;
-
-        long now = System.currentTimeMillis();
-        int purged = 0;
-
-        Iterator<Plot> it = plots.values().iterator();
-        while (it.hasNext()) {
-            Plot plot = it.next();
-            long lastActive = plot.getLastActive(); // requires Plot support
-            if (now - lastActive >= expiryMillis) {
-                it.remove();
-                purged++;
-                plugin.getLogger().info("Purged expired claim: " + plot.getDisplayNameSafe());
-            }
-        }
-
-        if (purged > 0) {
-            int finalPurged = purged;
-            Bukkit.getScheduler().runTask(plugin, () ->
-                Bukkit.broadcastMessage("§c" + finalPurged + " expired claims were purged.")
-            );
-        }
     }
 }

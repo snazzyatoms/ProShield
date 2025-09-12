@@ -81,7 +81,8 @@ public class TrustListener implements Listener {
         placeholders.put("claim", plot.getDisplayNameSafe());
         placeholders.put("role", assignedRole.getDisplayName());
 
-        messages.send(player, "trust.added", placeholders);
+        // Use roles.updated for consistency
+        messages.send(player, "roles.updated", placeholders);
 
         plots.saveAsync(plot);
         gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));

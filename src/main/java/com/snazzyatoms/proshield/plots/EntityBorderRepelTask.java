@@ -2,50 +2,57 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Monster;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 public class EntityBorderRepelTask extends BukkitRunnable {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
 
-    public EntityBorderRepelTask(ProShield plugin, PlotManager plots) {
+    private boolean repelEnabled;
+    private double repelRadius;
+    private double pushX;
+    private double pushY;
+
+    public EntityBorderRepelTask(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
-        this.plots = plots;
+        this.plotManager = plotManager;
+        loadSettings();
+    }
+
+    private void loadSettings() {
+        ConfigurationSection cfg = plugin.getConfig().getConfigurationSection("protection.mobs.border-repel");
+        if (cfg == null) return;
+
+        repelEnabled = cfg.getBoolean("enabled", true);
+        repelRadius = cfg.getDouble("radius", 3.0);
+        pushX = cfg.getDouble("horizontal-push", 0.7);
+        pushY = cfg.getDouble("vertical-push", 0.25);
     }
 
     @Override
     public void run() {
-        double radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.0);
-        double hPush  = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
-        double vPush  = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
+        if (!repelEnabled) return;
 
-        for (Plot plot : plots.getAllPlots()) {
-            Chunk c = plot.getChunk();
-            World w = c.getWorld();
-            int cx = c.getX() << 4;
-            int cz = c.getZ() << 4;
-            int minX = cx, maxX = cx + 15, minZ = cz, maxZ = cz + 15;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Plot plot = plotManager.getPlot(player.getLocation());
+            if (plot == null) continue;
 
-            // Scan entities *in* the claimed chunk and push them out when close to edges.
-            for (LivingEntity e : w.getLivingEntities()) {
-                Location l = e.getLocation();
-                if (l.getChunk().equals(c)) {
-                    double dx = Math.min(Math.abs(l.getX() - minX), Math.abs(l.getX() - maxX));
-                    double dz = Math.min(Math.abs(l.getZ() - minZ), Math.abs(l.getZ() - maxZ));
-                    double edge = Math.min(dx, dz);
-
-                    if (edge <= radius) {
-                        // Push outward from the nearest edge
-                        Vector v = new Vector(0, vPush, 0);
-                        if (dx < dz) v.setX(l.getX() < (minX + maxX) / 2.0 ? -hPush : hPush);
-                        else         v.setZ(l.getZ() < (minZ + maxZ) / 2.0 ? -hPush : hPush);
-                        e.setVelocity(v);
+            for (Entity entity : player.getNearbyEntities(repelRadius, repelRadius, repelRadius)) {
+                if (entity instanceof Monster mob) {
+                    if (!plot.contains(entity.getLocation())) {
+                        Vector push = entity.getLocation().toVector()
+                                .subtract(player.getLocation().toVector())
+                                .normalize()
+                                .multiply(pushX)
+                                .setY(pushY);
+                        mob.setVelocity(push);
                     }
                 }
             }

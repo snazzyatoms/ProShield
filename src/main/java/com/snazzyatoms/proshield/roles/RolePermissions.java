@@ -10,16 +10,25 @@ public class RolePermissions {
     private boolean canManageTrust = false;
     private boolean canUnclaim = false;
 
+    /* -------------------------------------------------------
+     * Getters
+     * ------------------------------------------------------- */
     public boolean canBuild() { return canBuild; }
     public boolean canContainers() { return canContainers; }
     public boolean canManageTrust() { return canManageTrust; }
     public boolean canUnclaim() { return canUnclaim; }
 
+    /* -------------------------------------------------------
+     * Setters
+     * ------------------------------------------------------- */
     public void setCanBuild(boolean v) { this.canBuild = v; }
     public void setCanContainers(boolean v) { this.canContainers = v; }
     public void setCanManageTrust(boolean v) { this.canManageTrust = v; }
     public void setCanUnclaim(boolean v) { this.canUnclaim = v; }
 
+    /* -------------------------------------------------------
+     * Serialization
+     * ------------------------------------------------------- */
     public Map<String, Object> toMap() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("canBuild", canBuild);
@@ -29,14 +38,35 @@ public class RolePermissions {
         return m;
     }
 
+    public static RolePermissions fromMap(Map<String, Object> m) {
+        RolePermissions p = new RolePermissions();
+        if (m == null) return p;
+        if (m.get("canBuild") instanceof Boolean b1) p.setCanBuild(b1);
+        if (m.get("canContainers") instanceof Boolean b2) p.setCanContainers(b2);
+        if (m.get("canManageTrust") instanceof Boolean b3) p.setCanManageTrust(b3);
+        if (m.get("canUnclaim") instanceof Boolean b4) p.setCanUnclaim(b4);
+        return p;
+    }
+
+    /* -------------------------------------------------------
+     * Defaults
+     * ------------------------------------------------------- */
     public static RolePermissions defaultsFor(String role) {
         RolePermissions p = new RolePermissions();
+        if (role == null) return p;
+
         switch (role.toLowerCase()) {
-            case "builder" -> {
+            case "owner" -> {
                 p.setCanBuild(true);
                 p.setCanContainers(true);
-                p.setCanManageTrust(false);
-                p.setCanUnclaim(false);
+                p.setCanManageTrust(true);
+                p.setCanUnclaim(true);
+            }
+            case "co_owner", "co-owner" -> {
+                p.setCanBuild(true);
+                p.setCanContainers(true);
+                p.setCanManageTrust(true);
+                p.setCanUnclaim(false); // optional: disallow unclaim by default
             }
             case "moderator" -> {
                 p.setCanBuild(true);
@@ -44,17 +74,26 @@ public class RolePermissions {
                 p.setCanManageTrust(true);
                 p.setCanUnclaim(false);
             }
+            case "builder" -> {
+                p.setCanBuild(true);
+                p.setCanContainers(true);
+                p.setCanManageTrust(false);
+                p.setCanUnclaim(false);
+            }
+            case "trusted" -> {
+                p.setCanBuild(false);
+                p.setCanContainers(false);
+                p.setCanManageTrust(false);
+                p.setCanUnclaim(false);
+            }
+            default -> {
+                // fallback to trusted defaults
+                p.setCanBuild(false);
+                p.setCanContainers(false);
+                p.setCanManageTrust(false);
+                p.setCanUnclaim(false);
+            }
         }
-        return p;
-    }
-
-    public static RolePermissions fromMap(Map<String, Object> m) {
-        RolePermissions p = new RolePermissions();
-        if (m == null) return p;
-        if (m.containsKey("canBuild")) p.setCanBuild((boolean)m.get("canBuild"));
-        if (m.containsKey("canContainers")) p.setCanContainers((boolean)m.get("canContainers"));
-        if (m.containsKey("canManageTrust")) p.setCanManageTrust((boolean)m.get("canManageTrust"));
-        if (m.containsKey("canUnclaim")) p.setCanUnclaim((boolean)m.get("canUnclaim"));
         return p;
     }
 }

@@ -46,60 +46,43 @@ gui:
         10:
           material: GRASS_BLOCK
           name: "&aClaim Chunk"
-          lore:
-            - "&7Claim your current chunk"
-            - "&7Protect your builds"
-          actions:
-            - "command:proshield claim"
+          lore: ["&7Claim your current chunk", "&7Protect your builds"]
+          actions: ["command:proshield claim"]
         11:
           material: BARRIER
           name: "&cUnclaim Chunk"
-          lore:
-            - "&7Unclaim your current chunk"
-          actions:
-            - "command:proshield unclaim"
+          lore: ["&7Unclaim your current chunk"]
+          actions: ["command:proshield unclaim"]
         12:
           material: PAPER
           name: "&eClaim Info"
-          lore:
-            - "&7View claim info"
-          actions:
-            - "custom:info"
+          lore: ["&7View claim info"]
+          actions: ["custom:info"]
         13:
           material: PLAYER_HEAD
           name: "&aTrust Player"
-          lore:
-            - "&7Trust a player"
-          actions:
-            - "custom:trustplayer"
+          lore: ["&7Trust a player"]
+          actions: ["open:trust"]
         14:
           material: SKELETON_SKULL
           name: "&cUntrust Player"
-          lore:
-            - "&7Remove trust"
-          actions:
-            - "custom:untrustplayer"
+          lore: ["&7Remove trust"]
+          actions: ["open:untrust"]
         15:
           material: BOOK
           name: "&6Roles"
-          lore:
-            - "&7Assign roles"
-          actions:
-            - "custom:roles"
+          lore: ["&7Assign roles"]
+          actions: ["open:roles"]
         16:
           material: IRON_SWORD
           name: "&cFlags"
-          lore:
-            - "&7Toggle protections"
-          actions:
-            - "custom:flags"
+          lore: ["&7Toggle protections"]
+          actions: ["open:flags"]
         26:
           material: BARRIER
           name: "&cBack"
-          lore:
-            - "&7Close menu"
-          actions:
-            - "command:close"
+          lore: ["&7Close menu"]
+          actions: ["command:close"]
 
     flags:
       title: "&dClaim Flags"
@@ -109,20 +92,42 @@ gui:
           material: TNT
           name: "&cExplosions"
           lore: ["&7Toggle explosions"]
-          actions:
-            - "command:proshield flag explosions"
+          actions: ["command:proshield flag explosions"]
         11:
           material: WATER_BUCKET
           name: "&bBuckets"
           lore: ["&7Toggle bucket use"]
-          actions:
-            - "command:proshield flag buckets"
+          actions: ["command:proshield flag buckets"]
+        12:
+          material: ITEM_FRAME
+          name: "&6Item Frames"
+          lore: ["&7Toggle item frame use"]
+          actions: ["command:proshield flag item-frames"]
+        13:
+          material: ARMOR_STAND
+          name: "&eArmor Stands"
+          lore: ["&7Toggle armor stand interaction"]
+          actions: ["command:proshield flag armor-stands"]
+        14:
+          material: CHEST
+          name: "&aContainers"
+          lore: ["&7Toggle container access"]
+          actions: ["command:proshield flag containers"]
+        15:
+          material: BONE
+          name: "&dPets"
+          lore: ["&7Toggle pet interaction"]
+          actions: ["command:proshield flag pets"]
+        16:
+          material: IRON_SWORD
+          name: "&cPvP"
+          lore: ["&7Toggle PvP"]
+          actions: ["command:proshield flag pvp"]
         26:
           material: BARRIER
           name: "&cBack"
           lore: ["&7Return to main menu"]
-          actions:
-            - "open:main"
+          actions: ["open:main"]
 
     roles:
       title: "&6Claim Roles"
@@ -132,11 +137,79 @@ gui:
           material: BOOK
           name: "&eManage Roles"
           lore: ["&7Assign roles for trusted players"]
-          actions:
-            - "custom:roles"
+          actions: ["custom:roles"]
         26:
           material: BARRIER
           name: "&cBack"
           lore: ["&7Return to main menu"]
-          actions:
-            - "open:main"
+          actions: ["open:main"]
+
+    trust:
+      title: "&aTrust Player"
+      size: 27
+      items:
+        13:
+          material: PLAYER_HEAD
+          name: "&aEnter Player"
+          lore: ["&7Type the player’s name in chat"]
+          actions: ["custom:trustplayer"]
+        26:
+          material: BARRIER
+          name: "&cBack"
+          lore: ["&7Return to main menu"]
+          actions: ["open:main"]
+
+    untrust:
+      title: "&cUntrust Player"
+      size: 27
+      items:
+        13:
+          material: SKELETON_SKULL
+          name: "&cEnter Player"
+          lore: ["&7Type the player’s name in chat"]
+          actions: ["custom:untrustplayer"]
+        26:
+          material: BARRIER
+          name: "&cBack"
+          lore: ["&7Return to main menu"]
+          actions: ["open:main"]
+
+    transfer:
+      title: "&dTransfer Claim"
+      size: 27
+      items:
+        13:
+          material: PAPER
+          name: "&dEnter Player"
+          lore: ["&7Type the player’s name in chat"]
+          actions: ["custom:transferclaim"]
+        26:
+          material: BARRIER
+          name: "&cBack"
+          lore: ["&7Return to main menu"]
+          actions: ["open:main"]
+
+    admin:
+      title: "&4ProShield Admin Menu"
+      size: 27
+      items:
+        11:
+          material: PLAYER_HEAD
+          name: "&aTrust Menu"
+          lore: ["&7Trust/untrust players in any claim"]
+          actions: ["open:trust"]
+        13:
+          material: BOOK
+          name: "&6Roles"
+          lore: ["&7Manage roles in any claim"]
+          actions: ["open:roles"]
+        15:
+          material: IRON_SWORD
+          name: "&cFlags"
+          lore: ["&7Manage claim flags"]
+          actions: ["open:flags"]
+        26:
+          material: BARRIER
+          name: "&cBack"
+          lore: ["&7Return to previous menu"]
+          actions: ["open:main"]

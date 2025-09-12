@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/listeners/UntrustListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -42,7 +43,7 @@ public class UntrustListener implements Listener {
         if (event.getView().getTitle() == null) return;
 
         String title = event.getView().getTitle();
-        if (!title.contains("Untrust")) return; // safer than hardcoding color codes
+        if (!title.contains("Untrust")) return; // safe even if colors change
 
         event.setCancelled(true);
         Plot plot = plots.getPlot(player.getLocation());
@@ -63,8 +64,7 @@ public class UntrustListener implements Listener {
 
         switch (event.getSlot()) {
             case 10, 11, 12 -> { // Untrust action
-                roles.clearRole(claimId, targetId);
-                plots.saveAsync(plot);
+                roles.clearRole(claimId, targetId); // handles persistence
                 messages.send(player, "untrust.removed", targetName);
             }
             case 26 -> { // Back button

@@ -12,13 +12,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Handles all claimed Plots in memory and persistence.
+ * Manages all plots in the world.
+ * Handles creation, lookup, saving, and trusted role access.
  */
 public class PlotManager {
 
     private final ProShield plugin;
     private final ClaimRoleManager roleManager;
 
+    // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
 
     public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
@@ -26,59 +28,78 @@ public class PlotManager {
         this.roleManager = roleManager;
     }
 
-    public Plot getPlot(Chunk chunk) {
-        return plots.values().stream()
-                .filter(p -> p.getChunk().getX() == chunk.getX()
-                        && p.getChunk().getZ() == chunk.getZ()
-                        && Objects.equals(p.getChunk().getWorld(), chunk.getWorld()))
-                .findFirst().orElse(null);
+    public ProShield getPlugin() {
+        return plugin;
     }
 
-    public Plot getPlot(Location loc) {
-        return getPlot(loc.getChunk());
+    public Collection<Plot> getAllPlots() {
+        return Collections.unmodifiableCollection(plots.values());
     }
 
     public Plot getPlotById(UUID id) {
         return plots.get(id);
     }
 
-    public void addPlot(Plot plot) {
+    public Plot getPlot(Location location) {
+        if (location == null) return null;
+        Chunk chunk = location.getChunk();
+        return getPlot(chunk);
+    }
+
+    public Plot getPlot(Chunk chunk) {
+        for (Plot plot : plots.values()) {
+            if (plot.getChunk().equals(chunk)) {
+                return plot;
+            }
+        }
+        return null;
+    }
+
+    public Plot createPlot(UUID owner, Chunk chunk) {
+        Plot plot = new Plot(chunk, owner);
         plots.put(plot.getId(), plot);
         saveAsync(plot);
+        return plot;
     }
 
     public void removePlot(Plot plot) {
+        if (plot == null) return;
         plots.remove(plot.getId());
-        // cleanup roles
-        for (UUID trusted : new HashSet<>(plot.getTrusted().keySet())) {
-            roleManager.clearRole(plot.getId(), trusted);
-        }
-        saveAll();
-    }
-
-    public Collection<Plot> getAllPlots() {
-        return plots.values();
+        // todo: persist removal to storage
     }
 
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // TODO: persist to disk/db
+            // todo: save plot to disk/database
         });
     }
 
     public void saveAll() {
-        for (Plot p : plots.values()) {
-            saveAsync(p);
+        for (Plot plot : plots.values()) {
+            saveAsync(plot);
         }
     }
 
-    /**
-     * Utility: is this UUID trusted or owner at a given Location.
-     */
-    public boolean isTrustedOrOwner(UUID player, Location loc) {
+    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
+        Plot plot = getPlot(loc);
+        if (plot == null) return true; // not claimed, free to interact
+        if (plot.isOwner(playerId)) return true;
+        return plot.isTrusted(playerId);
+    }
+
+    public boolean canInteract(UUID playerId, Location loc) {
+        Plot plot = getPlot(loc);
+        if (plot == null) return true;
+
+        ClaimRole role = plot.getRole(playerId);
+        return role != null && role.canInteract();
+    }
+
+    public boolean canManage(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return false;
-        if (plot.isOwner(player)) return true;
-        return plot.getTrusted().containsKey(player);
+
+        ClaimRole role = plot.getRole(playerId);
+        return role != null && role.canManage();
     }
 }

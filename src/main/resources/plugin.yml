@@ -1,6 +1,6 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.2.5
+version: 1.2.6
 api-version: 1.20
 author: snazzyatoms
 website: https://github.com/snazzyatoms/ProShield
@@ -11,21 +11,10 @@ description: >
 
 commands:
   proshield:
-    description: Main ProShield command (admin + help dispatcher)
-    usage: /<command> [args]
+    description: Root ProShield command (admin + utility dispatcher)
+    usage: /<command> [reload|debug|compass|flag <flag>]
     aliases: [ps, shield]
     permission: proshield.use
-
-  compass:
-    description: Get the ProShield compass
-    usage: /<command>
-    permission: proshield.compass
-
-  flags:
-    description: Open the claim flags menu
-    usage: /<command>
-    permission: proshield.flags
-    aliases: [cf]   # shorthand alias for claim flags
 
   trust:
     description: Trust a player with optional role

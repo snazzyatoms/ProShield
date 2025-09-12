@@ -27,7 +27,7 @@ public class ClaimRoleManager {
         ClaimRole role = plot.getTrusted().get(playerId);
         if (role == null) return false;
 
-        RolePermissions perms = getRolePermissions(plot.getId(), role);
+        RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
         return perms.canBuild();
     }
 
@@ -38,16 +38,39 @@ public class ClaimRoleManager {
         ClaimRole role = plot.getTrusted().get(playerId);
         if (role == null) return false;
 
-        RolePermissions perms = getRolePermissions(plot.getId(), role);
-        return perms.canContainers() || perms.canBuild(); // simple baseline interaction
+        RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
+        return perms.canInteract();
     }
 
-    public boolean isOwnerOrCoOwner(UUID playerId, Plot plot) {
+    public boolean canUnclaim(UUID playerId, Plot plot) {
         if (plot == null) return false;
         if (plot.isOwner(playerId)) return true;
 
         ClaimRole role = plot.getTrusted().get(playerId);
-        return role == ClaimRole.CO_OWNER;
+        if (role == null) return false;
+
+        RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
+        return perms.canUnclaim();
+    }
+
+    public boolean canManageTrust(UUID claimId, UUID playerId) {
+        Plot plot = plotManager.getPlotById(claimId);
+        if (plot == null) return false;
+        if (plot.isOwner(playerId)) return true;
+
+        ClaimRole role = plot.getTrusted().get(playerId);
+        if (role == null) return false;
+
+        RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
+        return perms.canManageTrust();
+    }
+
+    public boolean isOwnerOrManager(UUID playerId, Plot plot) {
+        if (plot == null) return false;
+        if (plot.isOwner(playerId)) return true;
+
+        ClaimRole role = plot.getTrusted().get(playerId);
+        return role == ClaimRole.MANAGER;
     }
 
     /* -------------------------------------------------------
@@ -74,20 +97,18 @@ public class ClaimRoleManager {
         plotManager.saveAsync(plot);
     }
 
-    /** Return role name for GUIManager (string-based). */
+    public ClaimRole getRole(Plot plot, UUID playerId) {
+        if (plot.isOwner(playerId)) return ClaimRole.OWNER;
+        return plot.getTrusted().getOrDefault(playerId, ClaimRole.VISITOR);
+    }
+
     public String getRole(UUID claimId, UUID playerId) {
         Plot plot = plotManager.getPlotById(claimId);
-        if (plot == null) return "None";
+        if (plot == null) return "Visitor";
         if (plot.isOwner(playerId)) return "Owner";
 
         ClaimRole role = plot.getTrusted().get(playerId);
         return (role != null) ? role.name() : "Trusted";
-    }
-
-    /** Return raw ClaimRole enum (for backend use). */
-    public ClaimRole getRole(Plot plot, UUID playerId) {
-        if (plot.isOwner(playerId)) return ClaimRole.OWNER;
-        return plot.getTrusted().getOrDefault(playerId, ClaimRole.NONE);
     }
 
     public void clearAllRoles(Plot plot) {
@@ -95,19 +116,37 @@ public class ClaimRoleManager {
         plotManager.saveAsync(plot);
     }
 
+    // convenience for GUI listeners
+    public void assignRole(UUID claimId, UUID playerId, String roleName) {
+        Plot plot = plotManager.getPlotById(claimId);
+        if (plot != null) {
+            ClaimRole role = ClaimRole.fromString(roleName);
+            if (role != null) {
+                setRole(plot, playerId, role);
+            }
+        }
+    }
+
+    public void clearRole(UUID claimId, UUID playerId) {
+        Plot plot = plotManager.getPlotById(claimId);
+        if (plot != null) {
+            plot.getTrusted().remove(playerId);
+            plotManager.saveAsync(plot);
+        }
+    }
+
+    public void savePermissions(UUID claimId, String roleId, RolePermissions perms) {
+        setRolePermissions(claimId, roleId, perms);
+    }
+
     /* -------------------------------------------------------
      * Role Permissions
      * ------------------------------------------------------- */
 
-    public RolePermissions getRolePermissions(UUID claimId, ClaimRole role) {
-        if (role == null) role = ClaimRole.NONE;
-        String roleId = role.name().toLowerCase();
-
+    public RolePermissions getRolePermissions(UUID claimId, String roleId) {
         rolePermissions.putIfAbsent(claimId, new HashMap<>());
         Map<String, RolePermissions> map = rolePermissions.get(claimId);
-
-        // return stored override OR fall back to defaults from ClaimRole
-        return map.computeIfAbsent(roleId, k -> RolePermissions.defaultsFor(role));
+        return map.computeIfAbsent(roleId.toLowerCase(), k -> RolePermissions.defaultsFor(roleId));
     }
 
     public void setRolePermissions(UUID claimId, String roleId, RolePermissions perms) {

@@ -3,10 +3,11 @@ package com.snazzyatoms.proshield.commands;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.roles.RolePermissions;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -33,7 +34,7 @@ public class UntrustCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
         if (!(sender instanceof Player player)) {
-            messages.send(sender, "error.players-only");
+            messages.send(sender, "error.player-only");
             return true;
         }
 
@@ -68,7 +69,10 @@ public class UntrustCommand implements CommandExecutor {
 
         // Check permissions (owner always bypasses, else need manageTrust)
         if (!plot.isOwner(player.getUniqueId())) {
-            if (!roles.canManageTrust(plot.getId(), player.getUniqueId())) {
+            ClaimRole role = roles.getRole(plot, player.getUniqueId());
+            RolePermissions perms = roles.getRolePermissions(plot.getId(), role.name().toLowerCase());
+
+            if (!perms.canManageTrust()) {
                 messages.send(player, "error.cannot-modify-claim");
                 return true;
             }
@@ -81,12 +85,8 @@ public class UntrustCommand implements CommandExecutor {
             return true;
         }
 
-        // Remove from Plot + RoleManager
-        plot.getTrusted().remove(target);
+        // Remove via RoleManager (handles save)
         roles.untrustPlayer(plot, target);
-
-        // Persist change
-        plotManager.saveAsync(plot);
 
         // Feedback
         String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();

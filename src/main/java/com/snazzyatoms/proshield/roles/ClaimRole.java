@@ -1,69 +1,62 @@
 // src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
+import java.util.Locale;
+
 /**
- * Represents the different roles inside a claim.
- * Each role defines its base permissions.
+ * Defines claim roles with permissions and hierarchy.
+ * Consolidated and polished (v1.2.0 → v1.2.5).
  */
 public enum ClaimRole {
-    NONE("None"),
-    VISITOR("Visitor"),
-    MEMBER("Member"),
-    TRUSTED("Trusted"),
-    BUILDER("Builder"),
-    CONTAINER("Container"),
-    MODERATOR("Moderator"),
-    MANAGER("Manager");
 
-    private final String displayName;
+    NONE(false, false, false),
+    VISITOR(false, false, false),
+    MEMBER(true, false, false),
+    TRUSTED(true, true, false),
+    BUILDER(true, true, true),
+    CONTAINER(true, true, false),
+    MODERATOR(true, true, true),
+    MANAGER(true, true, true),
+    OWNER(true, true, true);
 
-    ClaimRole(String displayName) {
-        this.displayName = displayName;
+    private final boolean canInteract;
+    private final boolean canBuild;
+    private final boolean canManage;
+
+    ClaimRole(boolean canInteract, boolean canBuild, boolean canManage) {
+        this.canInteract = canInteract;
+        this.canBuild = canBuild;
+        this.canManage = canManage;
     }
 
-    public String getDisplayName() {
-        return displayName;
+    public boolean canInteract() {
+        return canInteract;
     }
 
-    /**
-     * Whether this role can build/break blocks.
-     */
     public boolean canBuild() {
-        return this == BUILDER || this == TRUSTED || this == MANAGER;
+        return canBuild;
+    }
+
+    public boolean canManage() {
+        return canManage;
     }
 
     /**
-     * Whether this role can open containers.
+     * Resolve role by name (case-insensitive).
      */
-    public boolean canContainers() {
-        return this == CONTAINER || this == TRUSTED || this == MANAGER || this == BUILDER;
+    public static ClaimRole fromName(String name) {
+        if (name == null) return NONE;
+        try {
+            return ClaimRole.valueOf(name.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return NONE;
+        }
     }
 
     /**
-     * Whether this role can manage trust.
+     * Get display-friendly name.
      */
-    public boolean canManageTrust() {
-        return this == MODERATOR || this == MANAGER;
-    }
-
-    /**
-     * Whether this role can unclaim land.
-     */
-    public boolean canUnclaim() {
-        return this == MANAGER;
-    }
-
-    /**
-     * Whether this role can manage claim flags.
-     */
-    public boolean canFlags() {
-        return this == MODERATOR || this == MANAGER;
-    }
-
-    /**
-     * Whether this role can manage roles of others.
-     */
-    public boolean canManageRoles() {
-        return this == MANAGER;
+    public String getDisplayName() {
+        return name().charAt(0) + name().substring(1).toLowerCase(Locale.ROOT);
     }
 }

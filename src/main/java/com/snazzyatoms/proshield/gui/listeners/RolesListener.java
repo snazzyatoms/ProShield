@@ -1,11 +1,13 @@
-// src/main/java/com/snazzyatoms/proshield/gui/listeners/RolesListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,13 +16,15 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 
 public class RolesListener implements Listener {
 
+    private final ProShield plugin;
     private final PlotManager plots;
     private final ClaimRoleManager roles;
     private final GUIManager gui;
 
-    public RolesListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, GUIManager gui) {
-        this.plots = plotManager;
-        this.roles = roleManager;
+    public RolesListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles, GUIManager gui) {
+        this.plugin = plugin;
+        this.plots = plots;
+        this.roles = roles;
         this.gui = gui;
     }
 
@@ -31,42 +35,48 @@ public class RolesListener implements Listener {
         if (e.getCurrentItem() == null || !e.getCurrentItem().hasItemMeta()) return;
 
         String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
-        if (!title.contains("assign role")) return;
+        String label = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
+        Plot plot = plots.getPlot(player.getLocation());
+        if (plot == null) return;
 
         e.setCancelled(true);
-        String label = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
 
         if (label.equalsIgnoreCase("Back")) {
-            if (player.hasPermission("proshield.admin")) gui.openAdminMain(player); else gui.openMain(player);
+            if (title.startsWith("roles for")) {
+                gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
+            } else {
+                if (player.hasPermission("proshield.admin")) gui.openAdminMain(player); else gui.openMain(player);
+            }
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             return;
         }
 
-        String target = gui.getRememberedTarget(player);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "Select a player in the Trust Menu first.");
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.7f);
+        if (title.contains("manage roles")) {
+            String targetName = label;
+            gui.openRoleAssignmentMenu(player, plot, targetName, player.hasPermission("proshield.admin"));
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.1f);
             return;
         }
 
-        // Map GUI labels to role ids used by your command
-        String roleId;
-        if (label.equalsIgnoreCase("Builder"))      roleId = "builder";
-        else if (label.equalsIgnoreCase("Moderator")) roleId = "moderator";
-        else if (label.equalsIgnoreCase("Clear Role")) roleId = ""; // clears to default
-        else return;
+        if (title.startsWith("roles for ")) {
+            String targetName = title.replace("roles for ", "").trim();
+            OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
 
-        if (roleId.isEmpty()) {
-            // clear role by re-trusting without a role (or you could add a dedicated /roles clear if you have one)
-            gui.runPlayerCommand(player, "/trust " + target);
-            player.sendMessage(ChatColor.YELLOW + "Cleared role for " + ChatColor.WHITE + target + ChatColor.YELLOW + ".");
-        } else {
-            gui.runPlayerCommand(player, "/trust " + target + " " + roleId);
-            player.sendMessage(ChatColor.GREEN + "Set role " + ChatColor.WHITE + roleId + ChatColor.GREEN + " for " + ChatColor.WHITE + target + ChatColor.GREEN + ".");
+            switch (label.toLowerCase()) {
+                case "builder" -> roles.assignRole(plot.getId(), target.getUniqueId(), "builder");
+                case "moderator" -> roles.assignRole(plot.getId(), target.getUniqueId(), "moderator");
+                case "clear role" -> roles.clearRole(plot.getId(), target.getUniqueId());
+                case "role flags" -> {
+                    String currentRole = roles.getRole(plot.getId(), target.getUniqueId());
+                    if (currentRole == null || currentRole.isEmpty()) currentRole = "trusted";
+                    gui.openRoleFlagsMenu(player, plot, currentRole);
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.05f);
+                    return;
+                }
+            }
+
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+            gui.openRoleAssignmentMenu(player, plot, targetName, player.hasPermission("proshield.admin"));
         }
-
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
-        // Stay in roles menu (so user can continue adjusting), or go back:
-        gui.openRolesGUI(player, plots.getPlot(player.getLocation()), player.hasPermission("proshield.admin"));
     }
 }

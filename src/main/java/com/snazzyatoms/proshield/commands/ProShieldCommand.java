@@ -1,160 +1,82 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
-package com.snazzyatoms.proshield.plots;
+package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.snazzyatoms.proshield.compass.CompassManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 /**
- * PlotManager
- * - Manages all plots in the world.
- * - Handles creation, lookup, saving, and trusted role access.
- * - Unified with flag management.
+ * Handles core ProShield admin/meta commands.
+ * Includes: reload, debug, compass, help.
  */
-public class PlotManager {
+public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final ClaimRoleManager roleManager;
+    private final CompassManager compassManager;
+    private final MessagesUtil messages;
 
-    // Map of plotId -> Plot
-    private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
-
-    public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
+    public ProShieldCommand(ProShield plugin, CompassManager compassManager) {
         this.plugin = plugin;
-        this.roleManager = roleManager;
+        this.compassManager = compassManager;
+        this.messages = plugin.getMessagesUtil();
     }
 
-    public ProShield getPlugin() {
-        return plugin;
-    }
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (args.length == 0) {
+            sendHelp(sender);
+            return true;
+        }
 
-    public Collection<Plot> getAllPlots() {
-        return Collections.unmodifiableCollection(plots.values());
-    }
+        String sub = args[0].toLowerCase();
 
-    public Plot getPlotById(UUID id) {
-        return plots.get(id);
-    }
-
-    public Plot getPlot(Location location) {
-        if (location == null) return null;
-        return getPlot(location.getChunk());
-    }
-
-    public Plot getPlot(Chunk chunk) {
-        for (Plot plot : plots.values()) {
-            if (plot.getChunk().equals(chunk)) {
-                return plot;
+        switch (sub) {
+            case "reload" -> {
+                if (!sender.hasPermission("proshield.admin.reload")) {
+                    messages.send(sender, "error.no-permission");
+                    return true;
+                }
+                plugin.reloadConfig();
+                messages.reload();
+                messages.send(sender, "messages.reloaded");
             }
-        }
-        return null;
-    }
 
-    /** Alias for backwards compatibility */
-    public Plot getPlotAt(Chunk chunk) {
-        return getPlot(chunk);
-    }
-
-    /** Get safe display name (or Wilderness if none). */
-    public String getClaimName(Location location) {
-        Plot plot = getPlot(location);
-        return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
-    }
-
-    public Plot createPlot(UUID owner, Chunk chunk) {
-        Plot plot = new Plot(chunk, owner);
-
-        // Load default flags from config
-        ConfigurationSection defaults = plugin.getConfig().getConfigurationSection("claims.default-flags");
-        if (defaults != null) {
-            for (String key : defaults.getKeys(false)) {
-                boolean val = defaults.getBoolean(key, false);
-                plot.setFlag(key, val);
+            case "debug" -> {
+                if (!sender.hasPermission("proshield.admin")) {
+                    messages.send(sender, "error.no-permission");
+                    return true;
+                }
+                plugin.toggleDebug();
+                messages.send(sender, "admin.debug-" +
+                        (plugin.isDebugEnabled() ? "on" : "off"));
             }
+
+            case "compass" -> {
+                if (!(sender instanceof Player player)) {
+                    messages.send(sender, "error.player-only");
+                    return true;
+                }
+                if (!player.hasPermission("proshield.compass")) {
+                    messages.send(player, "error.no-permission");
+                    return true;
+                }
+                compassManager.giveCompass(player, player.isOp());
+                messages.send(player, "compass.given");
+            }
+
+            default -> sendHelp(sender);
         }
-
-        plots.put(plot.getId(), plot);
-        saveAsync(plot);
-        return plot;
+        return true;
     }
 
-    public void removePlot(Plot plot) {
-        if (plot == null) return;
-        plots.remove(plot.getId());
-        // TODO: persist removal to storage
-    }
-
-    public void saveAsync(Plot plot) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // TODO: save plot to disk/database
-        });
-    }
-
-    public void saveAll() {
-        for (Plot plot : plots.values()) {
-            saveAsync(plot);
-        }
-    }
-
-    /* -------------------------------------------------------
-     * Flag management
-     * ------------------------------------------------------- */
-
-    public boolean getFlag(Location loc, String flag) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-        return plot.getFlag(flag);
-    }
-
-    public void setFlag(Location loc, String flag, boolean state) {
-        Plot plot = getPlot(loc);
-        if (plot != null) {
-            plot.setFlag(flag, state);
-            saveAsync(plot);
-        }
-    }
-
-    public boolean toggleFlag(Location loc, String flag) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-        boolean newState = plot.toggleFlag(flag);
-        saveAsync(plot);
-        return newState;
-    }
-
-    /* -------------------------------------------------------
-     * Permission helpers
-     * ------------------------------------------------------- */
-
-    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return true; // not claimed
-        if (plot.isOwner(playerId)) return true;
-
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
-    }
-
-    public boolean canInteract(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return true;
-
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role.canInteract();
-    }
-
-    public boolean canManage(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role.canManage();
+    private void sendHelp(CommandSender sender) {
+        sender.sendMessage(MessagesUtil.PREFIX + "§bProShield Commands:");
+        sender.sendMessage(" §7/proshield reload §f- Reload plugin configs");
+        sender.sendMessage(" §7/proshield debug §f- Toggle debug mode");
+        sender.sendMessage(" §7/proshield compass §f- Get your ProShield compass");
+        sender.sendMessage(" §7/claim, /unclaim, /trust... §f- Player land commands");
     }
 }

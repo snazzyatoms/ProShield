@@ -2,29 +2,33 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.entity.*;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockIgniteEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.block.*;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
  * PlotListener
- * - Unified protection listener for claims
- * - Handles block, bucket, interaction, fire, explosions, PvP, and entities
+ * Unified protection/event listener for ProShield.
+ * Combines all old listeners into one place (block, entity, interaction, flags).
  */
 public class PlotListener implements Listener {
 
@@ -38,116 +42,155 @@ public class PlotListener implements Listener {
         this.messages = messages;
     }
 
-    /* ======================================================
-     * BLOCK BREAK / PLACE
-     * ====================================================== */
-    @EventHandler(ignoreCancelled = true)
+    /* ------------------------------------------------------
+     * Claim Enter/Exit Messages
+     * ------------------------------------------------------ */
+    @EventHandler
+    public void onMove(PlayerMoveEvent e) {
+        Player p = e.getPlayer();
+
+        String fromClaim = plotManager.getClaimName(e.getFrom());
+        String toClaim   = plotManager.getClaimName(e.getTo());
+
+        if (!fromClaim.equals(toClaim)) {
+            // Leaving claim
+            if (!fromClaim.equalsIgnoreCase("Wilderness")) {
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("claim", fromClaim);
+                messages.send(p, "claim.leaving", placeholders);
+            }
+
+            // Entering claim or wilderness
+            if ("Wilderness".equalsIgnoreCase(toClaim)) {
+                if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
+                    messages.send(p, "claim.wilderness");
+                }
+            } else {
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("claim", toClaim);
+                messages.send(p, "claim.entering", placeholders);
+            }
+        }
+    }
+
+    /* ------------------------------------------------------
+     * Block Break / Place
+     * ------------------------------------------------------ */
+    @EventHandler
     public void onBlockBreak(BlockBreakEvent e) {
-        Player p = e.getPlayer();
-        if (!canBuild(p.getUniqueId(), e.getBlock())) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
             e.setCancelled(true);
-            messages.send(p, "error.not-trusted");
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onBlockPlace(BlockPlaceEvent e) {
-        Player p = e.getPlayer();
-        if (!canBuild(p.getUniqueId(), e.getBlock())) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
             e.setCancelled(true);
-            messages.send(p, "error.not-trusted");
         }
     }
 
-    /* ======================================================
-     * BUCKETS
-     * ====================================================== */
-    @EventHandler(ignoreCancelled = true)
-    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
-        if (!canBuild(e.getPlayer().getUniqueId(), e.getBlockClicked())) {
-            e.setCancelled(true);
-            messages.send(e.getPlayer(), "error.not-trusted");
-        }
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onBucketFill(PlayerBucketFillEvent e) {
-        if (!canBuild(e.getPlayer().getUniqueId(), e.getBlockClicked())) {
-            e.setCancelled(true);
-            messages.send(e.getPlayer(), "error.not-trusted");
-        }
-    }
-
-    /* ======================================================
-     * INTERACTIONS
-     * ====================================================== */
-    @EventHandler(ignoreCancelled = true)
+    /* ------------------------------------------------------
+     * Player Interactions (doors, redstone, etc.)
+     * ------------------------------------------------------ */
+    @EventHandler
     public void onInteract(PlayerInteractEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND) return;
         if (e.getClickedBlock() == null) return;
-        Player p = e.getPlayer();
-        if (!canInteract(p.getUniqueId(), e.getClickedBlock())) {
+
+        if (!canInteract(e.getPlayer(), e.getClickedBlock().getLocation())) {
             e.setCancelled(true);
-            messages.send(p, "error.not-trusted");
         }
     }
 
-    /* ======================================================
-     * FIRE
-     * ====================================================== */
-    @EventHandler(ignoreCancelled = true)
-    public void onIgnite(BlockIgniteEvent e) {
-        if (e.getPlayer() != null && !canBuild(e.getPlayer().getUniqueId(), e.getBlock())) {
+    /* ------------------------------------------------------
+     * Buckets (water/lava)
+     * ------------------------------------------------------ */
+    @EventHandler
+    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
             e.setCancelled(true);
-            messages.send(e.getPlayer(), "error.not-trusted");
         }
     }
 
-    /* ======================================================
-     * EXPLOSIONS
-     * ====================================================== */
-    @EventHandler(ignoreCancelled = true)
-    public void onExplode(EntityExplodeEvent e) {
-        e.blockList().removeIf(block -> {
-            Plot plot = plotManager.getPlot(block.getLocation());
-            return plot != null; // remove block destruction inside claims
-        });
-    }
-
-    /* ======================================================
-     * PVP + ENTITY DAMAGE
-     * ====================================================== */
-    @EventHandler(ignoreCancelled = true)
-    public void onEntityDamage(EntityDamageByEntityEvent e) {
-        if (e.getEntity() instanceof Player victim && e.getDamager() instanceof Player attacker) {
-            Plot plot = plotManager.getPlot(victim.getLocation());
-            if (plot != null && !plugin.getConfig().getBoolean("claims.default-flags.pvp", false)) {
-                e.setCancelled(true);
-                messages.send(attacker, "error.not-trusted");
-            }
+    @EventHandler
+    public void onBucketFill(PlayerBucketFillEvent e) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
+            e.setCancelled(true);
         }
     }
 
-    /* ======================================================
-     * ENTITY SPAWN / MOB CONTROL
-     * ====================================================== */
-    @EventHandler(ignoreCancelled = true)
-    public void onCreatureSpawn(CreatureSpawnEvent e) {
+    /* ------------------------------------------------------
+     * Explosions (TNT, Creeper, etc.)
+     * ------------------------------------------------------ */
+    @EventHandler
+    public void onEntityExplode(EntityExplodeEvent e) {
         Plot plot = plotManager.getPlot(e.getLocation());
-        if (plot != null && !plugin.getConfig().getBoolean("claims.default-flags.animals", false)) {
-            if (e.getEntity() instanceof Animals || e.getEntity() instanceof Villager) {
-                e.setCancelled(true);
-            }
+        if (plot != null && !plot.getFlag("explosions")) {
+            e.blockList().clear(); // prevent block damage
         }
     }
 
-    /* ======================================================
-     * HELPERS
-     * ====================================================== */
-    private boolean canBuild(UUID playerId, Block block) {
-        return plotManager.isTrustedOrOwner(playerId, block.getLocation());
+    /* ------------------------------------------------------
+     * Fire spread & ignite
+     * ------------------------------------------------------ */
+    @EventHandler
+    public void onBlockIgnite(BlockIgniteEvent e) {
+        Plot plot = plotManager.getPlot(e.getBlock().getLocation());
+        if (plot != null && !plot.getFlag("fire")) {
+            e.setCancelled(true);
+        }
     }
 
-    private boolean canInteract(UUID playerId, Block block) {
-        return plotManager.canInteract(playerId, block.getLocation());
+    @EventHandler
+    public void onBlockBurn(BlockBurnEvent e) {
+        Plot plot = plotManager.getPlot(e.getBlock().getLocation());
+        if (plot != null && !plot.getFlag("fire")) {
+            e.setCancelled(true);
+        }
+    }
+
+    /* ------------------------------------------------------
+     * Entity grief (endermen, villagers, etc.)
+     * ------------------------------------------------------ */
+    @EventHandler
+    public void onEntityChangeBlock(EntityChangeBlockEvent e) {
+        Plot plot = plotManager.getPlot(e.getBlock().getLocation());
+        if (plot != null && !plot.getFlag("entity-grief")) {
+            e.setCancelled(true);
+        }
+    }
+
+    /* ------------------------------------------------------
+     * PvP Toggle
+     * ------------------------------------------------------ */
+    @EventHandler
+    public void onEntityDamage(EntityDamageByEntityEvent e) {
+        if (!(e.getEntity() instanceof Player victim)) return;
+
+        Player attacker = null;
+        if (e.getDamager() instanceof Player p) attacker = p;
+        if (e.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) attacker = p;
+        if (attacker == null) return;
+
+        Plot plot = plotManager.getPlot(victim.getLocation());
+        if (plot != null && !plot.getFlag("pvp")) {
+            e.setCancelled(true);
+        }
+    }
+
+    /* ------------------------------------------------------
+     * Helpers
+     * ------------------------------------------------------ */
+    private boolean canModify(Player player, org.bukkit.Location loc) {
+        if (player.isOp()) return true;
+        UUID uuid = player.getUniqueId();
+        return plotManager.isTrustedOrOwner(uuid, loc);
+    }
+
+    private boolean canInteract(Player player, org.bukkit.Location loc) {
+        if (player.isOp()) return true;
+        UUID uuid = player.getUniqueId();
+        return plotManager.canInteract(uuid, loc);
     }
 }

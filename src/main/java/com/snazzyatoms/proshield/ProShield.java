@@ -100,15 +100,24 @@ public class ProShield extends JavaPlugin {
     }
 
     private void scheduleTasks() {
-        // Mob repel (despawn + pushback)
-        if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)
-                || getConfig().getBoolean("protection.mobs.despawn-inside", true)) {
-            new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5);
+        // Configurable task intervals
+        int mobRepelInterval = getConfig().getInt("protection.mobs.mob-repel-task-interval", 100);
+        int borderRepelInterval = getConfig().getInt("protection.mobs.border-repel.interval-ticks", 60);
+
+        // Mob repel (despawn + reset target)
+        if (getConfig().getBoolean("protection.mobs.despawn-inside", true)) {
+            new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, mobRepelInterval);
+            if (isDebugEnabled()) {
+                getLogger().info("[Debug] Mob repel task scheduled every " + mobRepelInterval + " ticks.");
+            }
         }
 
-        // Border repel only
+        // Border repel
         if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
-            new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 3);
+            new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, borderRepelInterval);
+            if (isDebugEnabled()) {
+                getLogger().info("[Debug] Border repel task scheduled every " + borderRepelInterval + " ticks.");
+            }
         }
     }
 

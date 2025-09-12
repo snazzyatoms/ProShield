@@ -1,100 +1,69 @@
+// src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
 /**
- * ClaimRole
- *
- * Defines the available roles inside a ProShield claim.
- * Each role has increasing permissions.
- *
- * Order is important → progression is from lowest (NONE) to highest (OWNER).
+ * Represents the different roles inside a claim.
+ * Each role defines its base permissions.
  */
 public enum ClaimRole {
-    NONE("None", "§7No permissions, default role."),
-    VISITOR("Visitor", "§7Minimal access, can only enter claim."),
-    MEMBER("Member", "§aBasic access to walk and interact."),
-    TRUSTED("Trusted", "§bCan interact with doors, buttons, etc."),
-    BUILDER("Builder", "§2Can place and break blocks."),
-    CONTAINER("Container", "§6Can open chests, furnaces, hoppers."),
-    MODERATOR("Moderator", "§cCan manage PvP, entities, containers."),
-    MANAGER("Manager", "§eFull management rights except transfer."),
-    OWNER("Owner", "§dClaim owner, full permissions.");
+    NONE("None"),
+    VISITOR("Visitor"),
+    MEMBER("Member"),
+    TRUSTED("Trusted"),
+    BUILDER("Builder"),
+    CONTAINER("Container"),
+    MODERATOR("Moderator"),
+    MANAGER("Manager");
 
     private final String displayName;
-    private final String description;
 
-    ClaimRole(String displayName, String description) {
+    ClaimRole(String displayName) {
         this.displayName = displayName;
-        this.description = description;
     }
 
     public String getDisplayName() {
         return displayName;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
     /**
-     * Get the next higher role in progression.
+     * Whether this role can build/break blocks.
      */
-    public ClaimRole next() {
-        int index = this.ordinal();
-        ClaimRole[] values = ClaimRole.values();
-        if (index + 1 < values.length) {
-            return values[index + 1];
-        }
-        return this; // already at highest
-    }
-
-    /**
-     * Get the previous lower role in progression.
-     */
-    public ClaimRole previous() {
-        int index = this.ordinal();
-        if (index - 1 >= 0) {
-            return ClaimRole.values()[index - 1];
-        }
-        return this; // already at lowest
-    }
-
-    /**
-     * Look up a ClaimRole by name (case-insensitive).
-     */
-    public static ClaimRole fromString(String name) {
-        for (ClaimRole role : ClaimRole.values()) {
-            if (role.name().equalsIgnoreCase(name)) {
-                return role;
-            }
-        }
-        return null;
-    }
-
-    /* -------------------------------------------------------
-     * Permission helpers
-     * ------------------------------------------------------- */
-
-    public boolean canInteract() {
-        return this.ordinal() >= MEMBER.ordinal();
-    }
-
     public boolean canBuild() {
-        return this.ordinal() >= BUILDER.ordinal();
+        return this == BUILDER || this == TRUSTED || this == MANAGER;
     }
 
+    /**
+     * Whether this role can open containers.
+     */
     public boolean canContainers() {
-        return this.ordinal() >= CONTAINER.ordinal();
+        return this == CONTAINER || this == TRUSTED || this == MANAGER || this == BUILDER;
     }
 
+    /**
+     * Whether this role can manage trust.
+     */
     public boolean canManageTrust() {
-        return this.ordinal() >= MODERATOR.ordinal();
+        return this == MODERATOR || this == MANAGER;
     }
 
+    /**
+     * Whether this role can unclaim land.
+     */
     public boolean canUnclaim() {
-        return this.ordinal() >= MANAGER.ordinal();
+        return this == MANAGER;
     }
 
-    public boolean canManage() {
-        return this.ordinal() >= MANAGER.ordinal();
+    /**
+     * Whether this role can manage claim flags.
+     */
+    public boolean canFlags() {
+        return this == MODERATOR || this == MANAGER;
+    }
+
+    /**
+     * Whether this role can manage roles of others.
+     */
+    public boolean canManageRoles() {
+        return this == MANAGER;
     }
 }

@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class RolePermissions {
 
-    private boolean canBuild = true;
+    private boolean canBuild = false;
     private boolean canContainers = false;
     private boolean canManageTrust = false;
     private boolean canUnclaim = false;
@@ -49,45 +49,50 @@ public class RolePermissions {
     }
 
     /* -------------------------------------------------------
-     * Defaults
+     * Defaults loaded from ClaimRole
      * ------------------------------------------------------- */
-    public static RolePermissions defaultsFor(String role) {
+    public static RolePermissions defaultsFor(ClaimRole role) {
         RolePermissions p = new RolePermissions();
         if (role == null) return p;
 
-        switch (role.toLowerCase()) {
-            case "owner" -> {
+        switch (role) {
+            case OWNER -> {
                 p.setCanBuild(true);
                 p.setCanContainers(true);
                 p.setCanManageTrust(true);
                 p.setCanUnclaim(true);
             }
-            case "co_owner", "co-owner" -> {
+            case CO_OWNER -> {
                 p.setCanBuild(true);
                 p.setCanContainers(true);
                 p.setCanManageTrust(true);
-                p.setCanUnclaim(false); // optional: disallow unclaim by default
+                p.setCanUnclaim(false); // up to you if Co-Owner can unclaim
             }
-            case "moderator" -> {
+            case MODERATOR -> {
                 p.setCanBuild(true);
                 p.setCanContainers(true);
                 p.setCanManageTrust(true);
                 p.setCanUnclaim(false);
             }
-            case "builder" -> {
+            case BUILDER -> {
                 p.setCanBuild(true);
                 p.setCanContainers(true);
                 p.setCanManageTrust(false);
                 p.setCanUnclaim(false);
             }
-            case "trusted" -> {
+            case CONTAINER -> {
+                p.setCanBuild(false);
+                p.setCanContainers(true);
+                p.setCanManageTrust(false);
+                p.setCanUnclaim(false);
+            }
+            case TRUSTED -> {
                 p.setCanBuild(false);
                 p.setCanContainers(false);
                 p.setCanManageTrust(false);
                 p.setCanUnclaim(false);
             }
-            default -> {
-                // fallback to trusted defaults
+            case VISITOR, NONE -> {
                 p.setCanBuild(false);
                 p.setCanContainers(false);
                 p.setCanManageTrust(false);

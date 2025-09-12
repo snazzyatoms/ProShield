@@ -12,7 +12,7 @@ description: >
 commands:
   proshield:
     description: Root ProShield command (admin + utility dispatcher)
-    usage: /<command> [reload|debug|compass|flags ...]
+    usage: /<command> [reload|debug|compass|flags|help]
     aliases: [ps, shield]
     permission: proshield.use
 

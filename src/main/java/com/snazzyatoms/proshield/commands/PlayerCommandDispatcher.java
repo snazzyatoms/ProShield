@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/PlayerCommandDispatcher.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -15,7 +16,20 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * Handles all player-facing claim commands:
+ * - /claim
+ * - /unclaim
+ * - /trust <player> [role]
+ * - /untrust <player>
+ * - /roles
+ * - /transfer <player>
+ *
+ * Consolidated dispatcher for versions 1.2.0 → 1.2.5
+ * + Tab completion for /trust and /untrust.
+ */
 public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
@@ -37,7 +51,8 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        switch (cmd.getName().toLowerCase(Locale.ROOT)) {
+        String name = cmd.getName().toLowerCase(Locale.ROOT);
+        switch (name) {
             case "claim" -> handleClaim(player);
             case "unclaim" -> handleUnclaim(player);
             case "trust" -> handleTrust(player, args);
@@ -204,35 +219,36 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
     }
 
     /* ======================================================
-     * Tab Completion
+     * TAB COMPLETION
      * ====================================================== */
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        List<String> suggestions = new ArrayList<>();
+        if (!(sender instanceof Player)) return Collections.emptyList();
 
-        if (!(sender instanceof Player)) return suggestions;
+        String name = cmd.getName().toLowerCase(Locale.ROOT);
 
-        switch (cmd.getName().toLowerCase(Locale.ROOT)) {
-            case "trust" -> {
-                if (args.length == 1) {
-                    Bukkit.getOnlinePlayers().forEach(p -> suggestions.add(p.getName()));
-                } else if (args.length == 2) {
-                    // dynamically pull available roles from ClaimRoleManager
-                    suggestions.addAll(roleManager.getAvailableRoles());
-                }
-            }
-            case "untrust" -> {
-                if (args.length == 1) {
-                    Bukkit.getOnlinePlayers().forEach(p -> suggestions.add(p.getName()));
-                }
+        // /trust <player> [role]
+        if (name.equals("trust")) {
+            if (args.length == 1) {
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(n -> n.toLowerCase().startsWith(args[0].toLowerCase()))
+                        .collect(Collectors.toList());
+            } else if (args.length == 2) {
+                return roleManager.getAllRoles().stream()
+                        .filter(r -> r.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList());
             }
         }
 
-        if (args.length > 0) {
-            String current = args[args.length - 1].toLowerCase(Locale.ROOT);
-            suggestions.removeIf(s -> !s.toLowerCase(Locale.ROOT).startsWith(current));
+        // /untrust <player>
+        if (name.equals("untrust") && args.length == 1) {
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(n -> n.toLowerCase().startsWith(args[0].toLowerCase()))
+                    .collect(Collectors.toList());
         }
 
-        return suggestions;
+        return Collections.emptyList();
     }
 }

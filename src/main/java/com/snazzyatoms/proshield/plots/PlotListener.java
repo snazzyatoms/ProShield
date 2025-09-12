@@ -9,18 +9,16 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.EntityType;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerBucketEmptyEvent;
-import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.block.*;
+import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 
 import java.util.Map;
 import java.util.UUID;
@@ -28,7 +26,8 @@ import java.util.UUID;
 /**
  * PlotListener
  * - Unified claim protection handler
- * - Covers block breaking/placing, buckets, containers, item frames, vehicles
+ * - Covers blocks, buckets, containers, item frames, vehicles
+ * - Adds explosions, fire spread, piston checks
  * - Handles claim enter/leave messages
  *
  * Consolidated for v1.2.5+
@@ -136,11 +135,79 @@ public class PlotListener implements Listener {
     }
 
     /* ======================================================
+     * Explosions
+     * ====================================================== */
+    @EventHandler
+    public void onEntityExplode(EntityExplodeEvent e) {
+        e.blockList().removeIf(block -> {
+            Plot plot = plotManager.getPlot(block.getLocation());
+            return plot != null; // block explosion inside claims
+        });
+    }
+
+    @EventHandler
+    public void onExplosionPrime(ExplosionPrimeEvent e) {
+        Plot plot = plotManager.getPlot(e.getEntity().getLocation());
+        if (plot != null) {
+            e.setCancelled(true); // stop creepers, TNT minecarts, beds, etc.
+        }
+    }
+
+    /* ======================================================
+     * Fire Spread
+     * ====================================================== */
+    @EventHandler
+    public void onBlockSpread(BlockSpreadEvent e) {
+        if (e.getSource().getType() == Material.FIRE) {
+            Plot plot = plotManager.getPlot(e.getBlock().getLocation());
+            if (plot != null) {
+                e.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onBlockIgnite(BlockIgniteEvent e) {
+        Plot plot = plotManager.getPlot(e.getBlock().getLocation());
+        if (plot != null) {
+            e.setCancelled(true);
+        }
+    }
+
+    /* ======================================================
+     * Pistons (push/pull into claims)
+     * ====================================================== */
+    @EventHandler
+    public void onPistonExtend(BlockPistonExtendEvent e) {
+        for (Block block : e.getBlocks()) {
+            Location loc = block.getRelative(e.getDirection()).getLocation();
+            Plot from = plotManager.getPlot(block.getLocation());
+            Plot to   = plotManager.getPlot(loc);
+            if (from != null && to == null || from == null && to != null) {
+                e.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPistonRetract(BlockPistonRetractEvent e) {
+        for (Block block : e.getBlocks()) {
+            Plot from = plotManager.getPlot(block.getLocation());
+            Plot to   = plotManager.getPlot(e.getBlock().getLocation());
+            if (from != null && to == null || from == null && to != null) {
+                e.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    /* ======================================================
      * Claim enter/leave messages
      * ====================================================== */
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
-        if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return; // optimization
+        if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return;
 
         Player player = e.getPlayer();
         String fromClaim = plotManager.getClaimName(e.getFrom());
@@ -166,21 +233,19 @@ public class PlotListener implements Listener {
     private boolean canModify(Player player, Location loc) {
         UUID playerId = player.getUniqueId();
         Plot plot = plotManager.getPlot(loc);
-        if (plot == null) return true; // no claim
+        if (plot == null) return true;
         return plot.isOwner(playerId) || roleManager.canManage(playerId, plot.getId());
     }
 
     private boolean canInteract(Player player, Location loc, Material type) {
         UUID playerId = player.getUniqueId();
         Plot plot = plotManager.getPlot(loc);
-        if (plot == null) return true; // no claim
+        if (plot == null) return true;
 
-        // Container check
         if (isContainer(type)) {
             return plot.isOwner(playerId) || roleManager.canContainers(playerId, plot.getId());
         }
 
-        // Default interact
         return plot.isOwner(playerId) || roleManager.canInteract(playerId, plot.getId());
     }
 

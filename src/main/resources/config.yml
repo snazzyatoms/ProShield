@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (UI Actions Enabled)
+# Version: 1.2.6 (config-driven menus)
 # ==========================================================
 
 settings:
@@ -37,146 +37,106 @@ messages:
   show-wilderness: false
   admin-flag-chat: true
 
-ui:
+gui:
   menus:
     main:
       title: "&bProShield Menu"
       size: 27
       items:
-        claim:
-          slot: 10
+        10:
           material: GRASS_BLOCK
           name: "&aClaim Chunk"
           lore:
             - "&7Claim your current chunk"
             - "&7Protect your builds"
-          action: "command:/proshield claim"
-
-        unclaim:
-          slot: 11
+          actions:
+            - "command:proshield claim"
+        11:
           material: BARRIER
           name: "&cUnclaim Chunk"
           lore:
             - "&7Unclaim your current chunk"
-            - "&7Releases to wilderness"
-          action: "command:/proshield unclaim"
-
-        info:
-          slot: 12
+          actions:
+            - "command:proshield unclaim"
+        12:
           material: PAPER
           name: "&eClaim Info"
           lore:
-            - "&7View claim owner"
-            - "&7and trusted players"
-          action: "command:/proshield info"
-
-        trust:
-          slot: 13
+            - "&7View claim info"
+          actions:
+            - "custom:info"
+        13:
           material: PLAYER_HEAD
-          name: "&aTrust Menu"
+          name: "&aTrust Player"
           lore:
             - "&7Trust a player"
-          action: "open:trust"
-
-        untrust:
-          slot: 14
+          actions:
+            - "custom:trustplayer"
+        14:
           material: SKELETON_SKULL
-          name: "&cUntrust Menu"
+          name: "&cUntrust Player"
           lore:
-            - "&7Remove a player"
-          action: "open:untrust"
-
-        roles:
-          slot: 15
+            - "&7Remove trust"
+          actions:
+            - "custom:untrustplayer"
+        15:
           material: BOOK
           name: "&6Roles"
           lore:
-            - "&7Assign/manage roles"
-          action: "open:roles"
-
-        flags:
-          slot: 16
+            - "&7Assign roles"
+          actions:
+            - "custom:roles"
+        16:
           material: IRON_SWORD
           name: "&cFlags"
           lore:
             - "&7Toggle protections"
-          action: "open:flags"
-
-        back:
-          slot: 26
+          actions:
+            - "custom:flags"
+        26:
           material: BARRIER
           name: "&cBack"
           lore:
-            - "&7Return to previous menu"
-          action: "close"
+            - "&7Close menu"
+          actions:
+            - "command:close"
 
-    trust:
-      title: "&aTrust Players"
+    flags:
+      title: "&dClaim Flags"
       size: 27
       items:
-        enter:
-          slot: 13
-          material: PLAYER_HEAD
-          name: "&aEnter Player"
-          lore:
-            - "&7Type name in chat"
-          action: "command:/proshield trust"
-        back:
-          slot: 26
+        10:
+          material: TNT
+          name: "&cExplosions"
+          lore: ["&7Toggle explosions"]
+          actions:
+            - "command:proshield flag explosions"
+        11:
+          material: WATER_BUCKET
+          name: "&bBuckets"
+          lore: ["&7Toggle bucket use"]
+          actions:
+            - "command:proshield flag buckets"
+        26:
           material: BARRIER
           name: "&cBack"
-          lore:
-            - "&7Return to main menu"
-          action: "open:main"
-
-    untrust:
-      title: "&cUntrust Players"
-      size: 27
-      items:
-        enter:
-          slot: 13
-          material: SKELETON_SKULL
-          name: "&cEnter Player"
-          lore:
-            - "&7Type name in chat"
-          action: "command:/proshield untrust"
-        back:
-          slot: 26
-          material: BARRIER
-          name: "&cBack"
-          lore:
-            - "&7Return to main menu"
-          action: "open:main"
+          lore: ["&7Return to main menu"]
+          actions:
+            - "open:main"
 
     roles:
       title: "&6Claim Roles"
       size: 27
       items:
-        builder:
-          slot: 10
-          material: STONE_PICKAXE
-          name: "&eBuilder"
-          lore:
-            - "&7Assign Builder role"
-          action: "command:/proshield role builder"
-        moderator:
-          slot: 12
-          material: CROSSBOW
-          name: "&cModerator"
-          lore:
-            - "&7Assign Moderator role"
-          action: "command:/proshield role moderator"
-        clear:
-          slot: 14
+        13:
           material: BOOK
-          name: "&7Clear Role"
-          lore:
-            - "&7Revert to default"
-          action: "command:/proshield role clear"
-        back:
-          slot: 26
+          name: "&eManage Roles"
+          lore: ["&7Assign roles for trusted players"]
+          actions:
+            - "custom:roles"
+        26:
           material: BARRIER
           name: "&cBack"
-          lore:
-            - "&7Return to main menu"
-          action: "open:main"
+          lore: ["&7Return to main menu"]
+          actions:
+            - "open:main"

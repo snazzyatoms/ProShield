@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.roles.ClaimRole;
@@ -81,7 +82,7 @@ public class Plot {
 
     // --- Roles ---
 
-    /** Primary accessor (new system) */
+    /** Primary accessor (new system). */
     public ClaimRole getRole(UUID playerId) {
         if (isOwner(playerId)) {
             return ClaimRole.OWNER;
@@ -105,18 +106,17 @@ public class Plot {
         roles.put(playerId, role);
     }
 
+    /** Modern accessor (preferred). */
     public Map<UUID, ClaimRole> getRoles() {
         return roles;
     }
 
-    /**
-     * Backwards-compatibility alias.
-     * Some older code still calls getTrusted() → this ensures it compiles.
-     */
+    /** 🔄 Legacy alias for compatibility. */
     public Map<UUID, ClaimRole> getTrusted() {
         return roles;
     }
 
+    /** Get trusted player names for GUI. */
     public Set<String> getTrustedNames() {
         Set<String> names = new HashSet<>();
         for (UUID id : roles.keySet()) {

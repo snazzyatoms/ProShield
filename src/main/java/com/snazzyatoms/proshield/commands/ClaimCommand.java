@@ -1,48 +1,48 @@
-package com.snazzyatoms.proshield.commands;
+package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.Plot;
-import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import com.snazzyatoms.proshield.gui.GUIManager;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-public class ClaimCommand implements CommandExecutor {
+/**
+ * Handles giving and managing the ProShield Compass to players.
+ */
+public class CompassManager {
 
     private final ProShield plugin;
-    private final PlotManager plots;
-    private final MessagesUtil messages;
+    private final GUIManager guiManager;
 
-    public ClaimCommand(ProShield plugin, PlotManager plots) {
+    public CompassManager(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.plots = plots;
-        this.messages = plugin.getMessagesUtil();
+        this.guiManager = guiManager;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            messages.send(sender, "error.players-only");
-            return true;
+    /**
+     * Give the player a ProShield compass.
+     * @param player Player to receive
+     * @param force  Whether to override existing compass
+     */
+    public void giveCompass(Player player, boolean force) {
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§aProShield Compass");
+            compass.setItemMeta(meta);
         }
 
-        Chunk chunk = player.getLocation().getChunk();
-
-        Plot existing = plots.getPlot(chunk);
-        if (existing != null) {
-            messages.send(player, "claim.already-claimed", existing.getOwnerNameSafe());
-            return true;
+        if (force || !player.getInventory().contains(Material.COMPASS)) {
+            player.getInventory().addItem(compass);
         }
+    }
 
-        Plot plot = new Plot(chunk, player.getUniqueId());
-        plots.addPlot(plot);
-        plots.saveAsync(plot);
-
-        messages.send(player, "claim.success", chunk.getX() + "", chunk.getZ() + "");
-        return true;
+    /**
+     * Handle opening the GUI when compass is used.
+     */
+    public void openCompassGUI(Player player) {
+        Bukkit.getScheduler().runTask(plugin, () -> guiManager.openMainMenu(player));
     }
 }

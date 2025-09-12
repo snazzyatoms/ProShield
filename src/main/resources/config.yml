@@ -1,3 +1,78 @@
+# ==========================================================
+# ProShield Configuration
+# Version: 1.2.5 (Finalized for release build)
+# ==========================================================
+# Notes:
+#   - Use '&' for colors
+#   - Placeholders supported in messages:
+#       {player}, {claim}, {role}, {owner}, {state}, {count}
+# ==========================================================
+
+# ----------------------------------------------------------
+# General Settings
+# ----------------------------------------------------------
+settings:
+  give-compass-on-join: true
+
+# ----------------------------------------------------------
+# Protection Settings
+# ----------------------------------------------------------
+protection:
+  fire:
+    enabled: false
+    burn: false
+    spread: false
+    ignite:
+      flint_and_steel: false
+      lava: false
+      lightning: false
+
+  explosions:
+    enabled: false
+
+  buckets:
+    enabled: false
+
+  mobs:
+    border-repel:
+      enabled: true
+      radius: 3.0           # distance mobs are repelled at claim edge
+      horizontal-push: 0.7  # sideways push
+      vertical-push: 0.25   # upward push
+    despawn-inside: true     # mobs instantly removed if inside a claim
+
+  entities:
+    wilderness:
+      item-frames: false
+      vehicles: false
+
+# ----------------------------------------------------------
+# Messages
+# ----------------------------------------------------------
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+  show-wilderness: false
+  admin-flag-chat: true
+
+# ----------------------------------------------------------
+# Help Messages
+# ----------------------------------------------------------
+help:
+  player:
+    - "&bProShield Help &7- Player"
+    - "&a/claim &7→ Claim your current chunk"
+    - "&a/unclaim &7→ Unclaim your current chunk"
+    - "&a/proshield compass &7→ Receive your ProShield Compass"
+    - "&a/proshield help &7→ Show this help menu"
+
+  admin:
+    - "&cProShield Help &7- Admin"
+    - "&c/proshield reload &7→ Reload the config"
+    - "&c/proshield debug &7→ Toggle debug mode"
+    - "&c/proshield bypass &7→ Toggle bypass mode"
+    - "&c/proshield admin &7→ Open the admin menu"
+
 # ----------------------------------------------------------
 # GUI Menus (Config-driven)
 # ----------------------------------------------------------
@@ -125,3 +200,33 @@ gui:
           material: BARRIER
           name: "&cBack"
           action: "menu:main"
+
+# ----------------------------------------------------------
+# Sounds
+# ----------------------------------------------------------
+sounds:
+  button-click: "UI_BUTTON_CLICK"
+  claim-success: "ENTITY_PLAYER_LEVELUP"
+  unclaim-success: "ENTITY_ITEM_BREAK"
+  flag-toggle: "BLOCK_NOTE_BLOCK_PLING"
+  admin-action: "ENTITY_EXPERIENCE_ORB_PICKUP"
+
+# ----------------------------------------------------------
+# Claim Defaults
+# ----------------------------------------------------------
+claims:
+  default-flags:
+    pvp: false
+    explosions: false
+    fire: false
+    entity-grief: false
+    redstone: true
+    containers: false
+    animals: false
+    vehicles: false
+    armor-stands: false
+    item-frames: false
+    buckets: false
+    pets: false
+    mob-repel: true
+    mob-despawn: true

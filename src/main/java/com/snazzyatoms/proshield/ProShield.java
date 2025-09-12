@@ -1,13 +1,19 @@
-// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.commands.ClaimCommandHandler;
+import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.plots.*;
+import com.snazzyatoms.proshield.plots.BlockProtectionListener;
+import com.snazzyatoms.proshield.plots.BucketProtectionListener;
+import com.snazzyatoms.proshield.plots.ClaimMessageListener;
+import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
+import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
+import com.snazzyatoms.proshield.plots.InteractionProtectionListener;
+import com.snazzyatoms.proshield.plots.ItemProtectionListener;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
@@ -15,6 +21,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
+    /* -------------------------------------------------------
+     * Singletons / Managers
+     * ------------------------------------------------------- */
     private static ProShield instance;
 
     private MessagesUtil messages;
@@ -25,12 +34,16 @@ public class ProShield extends JavaPlugin {
     private GUIManager guiManager;
     private CompassManager compassManager;
 
+    /* Debug toggle used by MessagesUtil.debug(...) */
     private boolean debugEnabled = false;
 
     public static ProShield getInstance() {
         return instance;
     }
 
+    /* -------------------------------------------------------
+     * Lifecycle
+     * ------------------------------------------------------- */
     @Override
     public void onEnable() {
         instance = this;
@@ -43,18 +56,18 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
-        // GUI + compass
+        // GUI stack
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
         compassManager = new CompassManager(this, guiManager);
 
-        // Register commands
+        // Commands
         registerCommands();
 
-        // Register listeners
+        // Listeners
         registerListeners();
 
-        // Background tasks
+        // Background tasks (repel, borders)
         scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
@@ -69,28 +82,26 @@ public class ProShield extends JavaPlugin {
     }
 
     /* -------------------------------------------------------
-     * Commands
+     * Wiring
      * ------------------------------------------------------- */
     private void registerCommands() {
+        // Root /proshield command (admin + utility)
         if (getCommand("proshield") != null) {
             getCommand("proshield").setExecutor(
                 new ProShieldCommand(this, plotManager, guiManager, compassManager)
             );
         }
 
-        // Unified claim handler for claim/unclaim/trust/untrust/roles/transfer
-        ClaimCommandHandler claimHandler = new ClaimCommandHandler(this, plotManager, roleManager, guiManager);
-        String[] claimCmds = {"claim", "unclaim", "trust", "untrust", "roles", "transfer"};
-        for (String cmd : claimCmds) {
+        // Unified player claim command handler
+        ClaimCommandHandler claimHandler = new ClaimCommandHandler(this, plotManager, roleManager);
+        String[] claimCommands = {"claim", "unclaim", "trust", "untrust", "roles", "transfer"};
+        for (String cmd : claimCommands) {
             if (getCommand(cmd) != null) {
                 getCommand(cmd).setExecutor(claimHandler);
             }
         }
     }
 
-    /* -------------------------------------------------------
-     * Listeners
-     * ------------------------------------------------------- */
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
@@ -102,9 +113,6 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
     }
 
-    /* -------------------------------------------------------
-     * Background Tasks
-     * ------------------------------------------------------- */
     private void scheduleTasks() {
         try {
             new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5);
@@ -117,18 +125,38 @@ public class ProShield extends JavaPlugin {
     /* -------------------------------------------------------
      * Getters
      * ------------------------------------------------------- */
-    public MessagesUtil getMessagesUtil() { return messages; }
-    public PlotManager getPlotManager() { return plotManager; }
-    public ClaimRoleManager getRoleManager() { return roleManager; }
-    public GUICache getGuiCache() { return guiCache; }
-    public GUIManager getGuiManager() { return guiManager; }
-    public CompassManager getCompassManager() { return compassManager; }
+    public MessagesUtil getMessagesUtil() {
+        return messages;
+    }
 
-    /* -------------------------------------------------------
-     * Debug
-     * ------------------------------------------------------- */
-    public boolean isDebugEnabled() { return debugEnabled; }
-    public void setDebugEnabled(boolean enabled) { this.debugEnabled = enabled; }
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
+    }
+
+    public GUICache getGuiCache() {
+        return guiCache;
+    }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+
+    public CompassManager getCompassManager() {
+        return compassManager;
+    }
+
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public void setDebugEnabled(boolean enabled) {
+        this.debugEnabled = enabled;
+    }
+
     public void toggleDebug() {
         this.debugEnabled = !this.debugEnabled;
         if (messages != null) {

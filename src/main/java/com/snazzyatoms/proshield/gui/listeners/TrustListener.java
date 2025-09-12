@@ -1,57 +1,90 @@
-// src/main/java/com/snazzyatoms/proshield/gui/listeners/TrustListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import org.bukkit.ChatColor;
-import org.bukkit.Sound;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
+import java.util.UUID;
+
+/**
+ * TrustListener
+ *
+ * Handles the Trust Menu GUI interactions.
+ * - Lets owners/co-owners assign roles to trusted players.
+ * - Calls ClaimRoleManager.assignRole for persistence.
+ */
 public class TrustListener implements Listener {
 
+    private final ProShield plugin;
     private final PlotManager plots;
     private final ClaimRoleManager roles;
     private final GUIManager gui;
+    private final MessagesUtil messages;
 
     public TrustListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles, GUIManager gui) {
+        this.plugin = plugin;
         this.plots = plots;
         this.roles = roles;
         this.gui = gui;
+        this.messages = plugin.getMessagesUtil();
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onTrustClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        if (e.getClickedInventory() == null || e.getClickedInventory() != e.getView().getTopInventory()) return;
-        if (e.getCurrentItem() == null || !e.getCurrentItem().hasItemMeta()) return;
+    @EventHandler
+    public void onClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (event.getView().getTitle() == null) return;
 
-        String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
-        if (!title.contains("trust menu")) return;
+        String title = event.getView().getTitle();
+        if (!title.equalsIgnoreCase("§bTrust Menu")) return;
 
-        e.setCancelled(true);
-        String name = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
-
-        if (name.equalsIgnoreCase("Back")) {
-            if (player.hasPermission("proshield.admin")) gui.openAdminMain(player); else gui.openMain(player);
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+        event.setCancelled(true);
+        Plot plot = plots.getPlot(player.getLocation());
+        if (plot == null) {
+            messages.send(player, "error.not-in-claim");
             return;
         }
 
-        // Clicked a player head -> trust them (default role)
-        String target = ChatColor.stripColor(name);
-        gui.rememberTarget(player, target);
-        gui.runPlayerCommand(player, "/trust " + target);
+        // Get target (set earlier via rememberTarget)
+        String targetName = gui.getRememberedTarget(player);
+        if (targetName == null) {
+            messages.send(player, "error.player-not-found");
+            return;
+        }
 
-        player.sendMessage(ChatColor.GREEN + "Trusted " + ChatColor.WHITE + target + ChatColor.GREEN + ".");
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+        UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
+        UUID claimId = plot.getId();
 
-        // offer role assignment right after trust
-        gui.openRolesGUI(player, plots.getPlot(player.getLocation()), player.hasPermission("proshield.admin"));
+        switch (event.getSlot()) {
+            case 10 -> { // Trust as Trusted
+                roles.assignRole(claimId, targetId, ClaimRole.TRUSTED.name().toLowerCase());
+                messages.send(player, "trust.added", targetName);
+            }
+            case 11 -> { // Trust as Builder
+                roles.assignRole(claimId, targetId, ClaimRole.BUILDER.name().toLowerCase());
+                messages.send(player, "trust.added", targetName + " as Builder");
+            }
+            case 12 -> { // Trust as Moderator
+                roles.assignRole(claimId, targetId, ClaimRole.MODERATOR.name().toLowerCase());
+                messages.send(player, "trust.added", targetName + " as Moderator");
+            }
+            case 26 -> { // Back button
+                gui.openMain(player);
+                return;
+            }
+            default -> { return; }
+        }
+
+        // Save plot and refresh
+        plots.saveAsync(plot);
+        gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
     }
 }

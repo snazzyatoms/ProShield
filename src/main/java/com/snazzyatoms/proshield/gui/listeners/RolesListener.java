@@ -67,27 +67,32 @@ public class RolesListener implements Listener {
         placeholders.put("player", targetName);
         placeholders.put("claim", plot.getDisplayNameSafe());
 
-        switch (event.getRawSlot()) {
+        boolean updated = switch (event.getRawSlot()) {
             case 11 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.MANAGER);
                 placeholders.put("role", ClaimRole.MANAGER.getDisplayName());
-                messages.send(player, "roles.updated", placeholders);
+                messages.send(player, "trust.added", placeholders);
+                yield true;
             }
             case 13 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.TRUSTED);
                 placeholders.put("role", ClaimRole.TRUSTED.getDisplayName());
-                messages.send(player, "roles.updated", placeholders);
+                messages.send(player, "trust.added", placeholders);
+                yield true;
             }
             case 15 -> {
                 roles.clearRole(claimId, targetId);
-                messages.send(player, "roles.cleared", placeholders);
+                messages.send(player, "untrust.removed", placeholders);
+                yield true;
             }
             case 26 -> {
                 gui.openMain(player);
-                return;
+                yield false;
             }
-            default -> { return; }
-        }
+            default -> false;
+        };
+
+        if (!updated) return;
 
         plots.saveAsync(plot);
         gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));

@@ -61,6 +61,8 @@ roles:
   no-claim: "&cYou must be inside a claim to manage roles."
   not-allowed: "&cYou must be the claim owner or co-owner to manage roles in {claim}."
   opened: "&aOpening roles manager..."
+  updated: "&aUpdated role: {player} is now {role} in claim {claim}."
+  cleared: "&cRole cleared for {player} in claim {claim}."
 
 transfer:
   success: "&aYou transferred ownership of {claim} to {player}."

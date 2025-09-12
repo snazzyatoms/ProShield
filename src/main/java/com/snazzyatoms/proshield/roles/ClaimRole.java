@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
 /**
@@ -7,9 +6,10 @@ package com.snazzyatoms.proshield.roles;
  * Defines the available roles inside a ProShield claim.
  * Each role has increasing permissions.
  *
- * Order is important → progression is from lowest (VISITOR) to highest (OWNER).
+ * Order is important → progression is from lowest (NONE) to highest (OWNER).
  */
 public enum ClaimRole {
+    NONE("None", "§7No permissions, default role."),
     VISITOR("Visitor", "§7Minimal access, can only enter claim."),
     MEMBER("Member", "§aBasic access to walk and interact."),
     TRUSTED("Trusted", "§bCan interact with doors, buttons, etc."),
@@ -70,47 +70,14 @@ public enum ClaimRole {
         return null;
     }
 
-    // --- Permission Helpers ---
-
     /**
-     * Can this role interact with blocks/entities (doors, buttons, etc)?
+     * Permission helpers.
      */
     public boolean canInteract() {
-        return this.ordinal() >= TRUSTED.ordinal();
+        return this.ordinal() >= MEMBER.ordinal();
     }
 
-    /**
-     * Can this role place/break blocks?
-     */
-    public boolean canBuild() {
-        return this.ordinal() >= BUILDER.ordinal();
-    }
-
-    /**
-     * Can this role open/use containers?
-     */
-    public boolean canAccessContainers() {
-        return this.ordinal() >= CONTAINER.ordinal();
-    }
-
-    /**
-     * Can this role manage entities, PvP, flags, etc?
-     */
-    public boolean canModerate() {
-        return this.ordinal() >= MODERATOR.ordinal();
-    }
-
-    /**
-     * Can this role manage claims (trust/untrust, flags, etc)?
-     */
     public boolean canManage() {
         return this.ordinal() >= MANAGER.ordinal();
-    }
-
-    /**
-     * Is this the claim owner?
-     */
-    public boolean isOwner() {
-        return this == OWNER;
     }
 }

@@ -1,59 +1,69 @@
-// src/main/java/com/snazzyatoms/proshield/plots/BucketProtectionListener.java
-package com.snazzyatoms.proshield.plots;
+// src/main/java/com/snazzyatoms/proshield/commands/UnclaimCommand.java
+package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
-import org.bukkit.Location;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerBucketEmptyEvent;
-import org.bukkit.event.player.PlayerBucketFillEvent;
 
 import java.util.UUID;
 
-public class BucketProtectionListener implements Listener {
+/**
+ * /unclaim command
+ *
+ * ✅ Removes a player’s claim if they are the owner or have unclaim permission.
+ */
+public class UnclaimCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final ClaimRoleManager roles;
     private final MessagesUtil messages;
 
-    public BucketProtectionListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
+    public UnclaimCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
         this.plugin = plugin;
-        this.plots = plots;
+        this.plotManager = plotManager;
         this.roles = roles;
         this.messages = plugin.getMessagesUtil();
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onBucketEmpty(PlayerBucketEmptyEvent event) {
-        handleBucket(event.getPlayer(), event.getBlockClicked().getLocation(), "bucket-empty-deny", event);
-    }
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
-    @EventHandler(ignoreCancelled = true)
-    public void onBucketFill(PlayerBucketFillEvent event) {
-        handleBucket(event.getPlayer(), event.getBlockClicked().getLocation(), "bucket-fill-deny", event);
-    }
+        if (!(sender instanceof Player player)) {
+            messages.send(sender, "error.players-only");
+            return true;
+        }
 
-    private void handleBucket(Player player, Location loc, String msgKey, org.bukkit.event.Cancellable event) {
-        Chunk chunk = loc.getChunk();
-        Plot plot = plots.getPlot(chunk);
-        UUID uid = player.getUniqueId();
+        Chunk chunk = player.getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
 
         if (plot == null) {
-            if (!plugin.getConfig().getBoolean("protection.buckets.wilderness", true)) {
-                event.setCancelled(true);
-                messages.send(player, msgKey);
-            }
-            return;
+            messages.send(player, "error.not-in-claim");
+            return true;
         }
 
-        if (!roles.canBuild(uid, plot)) {
-            event.setCancelled(true);
-            messages.send(player, msgKey);
+        UUID uid = player.getUniqueId();
+
+        // Owner bypass
+        if (!plot.isOwner(uid)) {
+            if (!roles.canUnclaim(uid, plot)) {
+                messages.send(player, "error.cannot-unclaim");
+                return true;
+            }
         }
+
+        // Unclaim
+        plotManager.removePlot(plot);
+        messages.send(player, "unclaim.success", plot.getDisplayNameSafe());
+
+        messages.debug("&eClaim unclaimed: " + plot.getDisplayNameSafe() + " by " + player.getName());
+        return true;
     }
 }

@@ -13,15 +13,18 @@ import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
+/**
+ * Handles the /unclaim command.
+ * - Allows claim owners (or roles with permission) to remove claims.
+ * - Uses messages.yml keys consistently.
+ */
 public class UnclaimCommand implements CommandExecutor {
 
-    private final ProShield plugin;
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
     public UnclaimCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
-        this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
         this.messages = messages;
@@ -30,26 +33,26 @@ public class UnclaimCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Only players can unclaim land.");
+            sender.sendMessage(MessagesUtil.PREFIX + "Only players can unclaim land.");
             return true;
         }
 
         UUID playerId = player.getUniqueId();
         Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlotAt(chunk);
+        Plot plot = plotManager.getPlot(chunk);
 
         if (plot == null) {
-            messages.send(player, "not_claimed");
+            messages.send(player, "error.no-claim");
             return true;
         }
 
         if (!plot.isOwner(playerId) && !roleManager.canUnclaim(playerId, plot.getId())) {
-            messages.send(player, "no_permission_unclaim");
+            messages.send(player, "claim.not-owner");
             return true;
         }
 
         plotManager.removePlot(plot);
-        messages.send(player, "unclaim_success", String.valueOf(chunk.getX()), String.valueOf(chunk.getZ()));
+        messages.send(player, "claim.unclaimed");
         return true;
     }
 }

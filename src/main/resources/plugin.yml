@@ -12,7 +12,7 @@ description: >
 commands:
   proshield:
     description: Root ProShield command (admin + utility dispatcher)
-    usage: /<command> [reload|debug|compass|flags|help]
+    usage: /<command> [reload|debug|compass|flags ...]
     aliases: [ps, shield]
     permission: proshield.use
     tab-completer: com.snazzyatoms.proshield.commands.ProShieldCommand
@@ -21,11 +21,13 @@ commands:
     description: Claim your current chunk
     usage: /<command>
     permission: proshield.use
+    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
 
   unclaim:
     description: Unclaim your current chunk
     usage: /<command>
     permission: proshield.use
+    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
 
   trust:
     description: Trust a player with optional role
@@ -45,14 +47,15 @@ commands:
     description: Manage claim roles via GUI
     usage: /<command>
     permission: proshield.use
+    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
 
   transfer:
     description: Transfer claim ownership to another player
     usage: /<command> <player>
     permission: proshield.use
+    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
 
 permissions:
-  # General Use
   proshield.use:
     description: Use ProShield commands & GUI
     default: true
@@ -61,7 +64,6 @@ permissions:
     description: Allow players to toggle claim flags (in their own claims)
     default: true
 
-  # Compass & Tools
   proshield.compass:
     description: Receive/use ProShield compass
     default: op
@@ -74,7 +76,6 @@ permissions:
     description: Ignore max-claims limit
     default: op
 
-  # Admin Core
   proshield.admin:
     description: Access admin tools (compass, bypass, force unclaim, purge, admin menu)
     default: op

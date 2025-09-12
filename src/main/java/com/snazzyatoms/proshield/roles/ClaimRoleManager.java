@@ -4,86 +4,112 @@ package com.snazzyatoms.proshield.roles;
 import com.snazzyatoms.proshield.plots.Plot;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages role assignments within claims.
- * Combines role mapping + permission checks into one class.
+ * ClaimRoleManager
+ * - Handles trust/untrust of players in claims
+ * - Stores and resolves role permissions
+ * - Provides utility for ownership transfer
+ * - Now includes dynamic role list for tab completion
+ *
+ * Consolidated for v1.2.5
  */
 public class ClaimRoleManager {
 
-    // Map<claimId, Map<playerId, role>>
-    private final Map<UUID, Map<UUID, ClaimRole>> claimRoles = new HashMap<>();
+    // Map<claimId, Map<playerUUID, roleName>>
+    private final Map<UUID, Map<UUID, String>> claimRoles = new ConcurrentHashMap<>();
 
     /**
-     * Get the role of a player in a claim.
+     * Trust a player with a role in a claim.
      */
-    public ClaimRole getRole(UUID claimId, UUID playerId) {
-        return claimRoles
-                .getOrDefault(claimId, Collections.emptyMap())
-                .getOrDefault(playerId, ClaimRole.NONE);
+    public boolean trustPlayer(Plot plot, String playerName, String role) {
+        if (plot == null || playerName == null) return false;
+
+        UUID claimId = plot.getId();
+        UUID playerId = resolveUUID(playerName);
+        if (playerId == null) return false;
+
+        claimRoles.computeIfAbsent(claimId, k -> new ConcurrentHashMap<>())
+                  .put(playerId, role.toLowerCase(Locale.ROOT));
+        plot.addTrusted(playerId, playerName); // keep backward compatibility
+        return true;
     }
 
     /**
-     * Assign a role to a player in a claim.
+     * Untrust a player in a claim.
      */
-    public void setRole(UUID claimId, UUID playerId, ClaimRole role) {
-        claimRoles
-                .computeIfAbsent(claimId, id -> new HashMap<>())
-                .put(playerId, role);
-    }
+    public boolean untrustPlayer(Plot plot, String playerName) {
+        if (plot == null || playerName == null) return false;
 
-    /**
-     * Remove a player's role in a claim.
-     */
-    public void removeRole(UUID claimId, UUID playerId) {
-        Map<UUID, ClaimRole> map = claimRoles.get(claimId);
-        if (map != null) {
-            map.remove(playerId);
-            if (map.isEmpty()) {
-                claimRoles.remove(claimId);
-            }
+        UUID claimId = plot.getId();
+        UUID playerId = resolveUUID(playerName);
+        if (playerId == null) return false;
+
+        Map<UUID, String> roles = claimRoles.get(claimId);
+        if (roles != null) {
+            roles.remove(playerId);
         }
+        plot.removeTrusted(playerId); // maintain old behavior
+        return true;
     }
 
     /**
-     * Get all players with roles in a claim.
+     * Check if a player can unclaim land in a plot.
      */
-    public Map<UUID, ClaimRole> getAllRoles(UUID claimId) {
-        return claimRoles.getOrDefault(claimId, Collections.emptyMap());
-    }
-
-    /* ----------------------------------------------------
-     * Permission checks (merged from RolePermissions.java)
-     * ---------------------------------------------------- */
-
-    public boolean canBuild(UUID claimId, UUID playerId) {
-        return getRole(claimId, playerId).canBuild();
-    }
-
-    public boolean canContainers(UUID claimId, UUID playerId) {
-        return getRole(claimId, playerId).canContainers();
-    }
-
-    public boolean canManageTrust(UUID claimId, UUID playerId) {
-        return getRole(claimId, playerId).canManageTrust();
-    }
-
-    public boolean canUnclaim(UUID claimId, UUID playerId) {
-        return getRole(claimId, playerId).canUnclaim();
-    }
-
-    public boolean canFlags(UUID claimId, UUID playerId) {
-        return getRole(claimId, playerId).canFlags();
-    }
-
-    public boolean canManageRoles(UUID claimId, UUID playerId) {
-        return getRole(claimId, playerId).canManageRoles();
+    public boolean canUnclaim(UUID playerId, UUID claimId) {
+        if (playerId == null || claimId == null) return false;
+        String role = getRole(claimId, playerId);
+        return role != null && (role.equalsIgnoreCase("manager") || role.equalsIgnoreCase("admin"));
     }
 
     /**
-     * Reset all roles for a claim (e.g., on unclaim).
+     * Check if a player can manage (trust/untrust/roles).
      */
-    public void clearRoles(UUID claimId) {
-        claimRoles.remove(claimId);
+    public boolean canManage(UUID playerId, UUID claimId) {
+        if (playerId == null || claimId == null) return false;
+        String role = getRole(claimId, playerId);
+        return role != null && (role.equalsIgnoreCase("manager") || role.equalsIgnoreCase("moderator"));
+    }
+
+    /**
+     * Transfer claim ownership to another player.
+     */
+    public boolean transferOwnership(Plot plot, String targetName) {
+        if (plot == null || targetName == null) return false;
+
+        UUID newOwnerId = resolveUUID(targetName);
+        if (newOwnerId == null) return false;
+
+        plot.setOwner(newOwnerId);
+        return true;
+    }
+
+    /**
+     * Get role assigned to a player in a claim.
+     */
+    public String getRole(UUID claimId, UUID playerId) {
+        Map<UUID, String> roles = claimRoles.get(claimId);
+        return (roles != null) ? roles.get(playerId) : null;
+    }
+
+    /**
+     * Return a dynamic list of available roles (for tab completion).
+     * This could be driven by config.yml in the future.
+     */
+    public List<String> getAvailableRoles() {
+        return Arrays.asList("trusted", "builder", "container", "moderator", "manager");
+    }
+
+    /**
+     * Resolve a player name to UUID.
+     * Currently placeholder — in production this should query Bukkit.getOfflinePlayer.
+     */
+    private UUID resolveUUID(String name) {
+        try {
+            return UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes());
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

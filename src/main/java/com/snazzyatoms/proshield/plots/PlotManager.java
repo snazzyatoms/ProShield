@@ -13,6 +13,7 @@ import java.util.*;
  * - Stores and manages all plots
  * - Handles creation, lookup, saving/loading
  * - Provides name/owner resolution for use in GUIs & messages
+ * - Starts entity repel tasks if enabled in config
  *
  * Consolidated for v1.2.5+
  */
@@ -29,8 +30,23 @@ public class PlotManager {
     // Players in bypass mode
     private final Set<UUID> bypassing = new HashSet<>();
 
+    // Repel tasks
+    private EntityMobRepelTask mobRepelTask;
+    private EntityBorderRepelTask borderRepelTask;
+
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+
+        // Start repel tasks if enabled
+        if (plugin.getConfig().getBoolean("protection.mobs.repel.enabled", true)) {
+            mobRepelTask = new EntityMobRepelTask(plugin, this);
+            mobRepelTask.runTaskTimer(plugin, 20L, 40L); // every 2 seconds
+        }
+
+        if (plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
+            borderRepelTask = new EntityBorderRepelTask(plugin, this);
+            borderRepelTask.runTaskTimer(plugin, 20L, 40L);
+        }
     }
 
     /* ======================================================
@@ -103,7 +119,6 @@ public class PlotManager {
      * ====================================================== */
     public void saveAll() {
         // TODO: serialize plots to disk (YAML or JSON)
-        // For now, placeholder: plugin.getLogger().info("Plots saved: " + plots.size());
     }
 
     public void loadAll() {

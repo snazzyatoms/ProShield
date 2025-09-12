@@ -1,16 +1,6 @@
 # =========================================================
 # ProShield Messages
-# Version: 1.2.6 (sync with dispatcher + admin)
-# =========================================================
-# Supports:
-#   - Color codes: use '&'
-#   - Placeholders:
-#       {player} → Target player’s name
-#       {claim}  → Claim name or identifier
-#       {role}   → Role display name (Trusted, Builder, etc.)
-#       {owner}  → Claim owner’s name
-#       {state}  → Toggle state (ENABLED / DISABLED)
-#       {count}  → Numbers (e.g., number of claims purged)
+# Version: 1.2.6 (sync with dispatcher + admin + help)
 # =========================================================
 
 prefix: "&3[ProShield]&r "
@@ -41,12 +31,8 @@ claim:
   unclaimed: "&aYou unclaimed this chunk."
   not-owner: "&cYou are not the owner of this claim."
   info: "&eClaim Info: &7Owner: {owner}, Trusted: {trusted}"
-
-  # Entering / Leaving claims
   entering: "&aEntering claim: &e{claim}"
   leaving: "&cLeaving claim: &e{claim}"
-
-  # Wilderness entry message (toggled via config)
   wilderness: "&7Entering Wilderness"
 
 # ---------------------------------------------------------
@@ -87,8 +73,6 @@ transfer:
   already-owner: "&eThat player is already the owner."
   you-are-owner: "&aYou are now the owner of claim {claim}."
   failed: "&cFailed to transfer claim ownership to {player}."
-
-  # Admin override
   override-success: "&a(Admin) You reassigned ownership of {claim} to {player}."
   override-fail: "&c(Admin) Transfer failed — {player} is not the current owner."
 
@@ -103,6 +87,7 @@ admin:
   debug-off: "&eDebug mode &cDISABLED"
   reload: "&aConfiguration reloaded."
   keep-items-toggled: "&aKeep items in claims: {state}"
+
   help:
     - "&b--- ProShield Admin Help ---"
     - "&e/proshield reload &7→ Reload configs"
@@ -110,9 +95,21 @@ admin:
     - "&e/proshield compass &7→ Give yourself a compass"
     - "&e/proshield flags &7→ Manage claim flags"
 
-  # Wilderness toggle
   wilderness-toggle-on: "&aWilderness entry messages ENABLED."
   wilderness-toggle-off: "&cWilderness entry messages DISABLED."
+
+# ---------------------------------------------------------
+# Player Help
+# ---------------------------------------------------------
+help:
+  player:
+    - "&b--- ProShield Player Help ---"
+    - "&e/claim &7→ Claim your current chunk"
+    - "&e/unclaim &7→ Unclaim your current chunk"
+    - "&e/trust <player> [role] &7→ Trust a player"
+    - "&e/untrust <player> &7→ Remove a trusted player"
+    - "&e/roles &7→ Open roles manager GUI"
+    - "&e/transfer <player> &7→ Transfer your claim"
 
 # ---------------------------------------------------------
 # Flags

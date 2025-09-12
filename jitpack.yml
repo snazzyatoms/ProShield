@@ -2,7 +2,12 @@ jdk:
   - openjdk21
 
 before_install:
-  - echo "Using Java 21 for ProShield build"
+  - echo "Using OpenJDK 21 for build"
 
 install:
-  - mvn clean install -DskipTests
+  - mvn -B install -DskipTests
+
+# Optional: specify Maven wrapper if you want reproducible builds
+# build:
+#   commands:
+#     - ./mvnw -B clean package

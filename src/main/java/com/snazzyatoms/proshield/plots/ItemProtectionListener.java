@@ -1,8 +1,7 @@
+// src/main/java/com/snazzyatoms/proshield/plots/ItemProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import com.snazzyatoms.proshield.roles.RolePermissions;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.entity.*;
@@ -20,7 +19,7 @@ import java.util.UUID;
  *
  * ✅ Protects item frames, armor stands, animals, pets, containers, and vehicles
  * ✅ Uses per-claim PlotSettings + global config
- * ✅ Respects claim roles via ClaimRoleManager & RolePermissions
+ * ✅ Respects claim roles via ClaimRoleManager
  */
 public class ItemProtectionListener implements Listener {
 
@@ -56,10 +55,7 @@ public class ItemProtectionListener implements Listener {
         }
 
         UUID uid = player.getUniqueId();
-        ClaimRole role = roles.getRole(plot, uid);
-        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
-
-        if (!plot.getSettings().isItemFramesAllowed() || !perms.canBuild()) {
+        if (!plot.getSettings().isItemFramesAllowed() || !roles.canBuild(uid, plot)) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
             messages.debug("&cPrevented item frame break in claim [" + plot.getName() + "] by " + player.getName());
@@ -75,10 +71,7 @@ public class ItemProtectionListener implements Listener {
         if (plot == null) return;
 
         UUID uid = player.getUniqueId();
-        ClaimRole role = roles.getRole(plot, uid);
-        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
-
-        if (!plot.getSettings().isItemFramesAllowed() || !perms.canBuild()) {
+        if (!plot.getSettings().isItemFramesAllowed() || !roles.canBuild(uid, plot)) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
         }
@@ -97,12 +90,10 @@ public class ItemProtectionListener implements Listener {
         if (plot == null) return; // wilderness → config handles it
 
         UUID uid = player.getUniqueId();
-        ClaimRole role = roles.getRole(plot, uid);
-        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
 
         // Armor stands
         if (entity instanceof ArmorStand && !plot.getSettings().isArmorStandsAllowed()) {
-            if (!perms.canInteract()) {
+            if (!roles.canInteract(uid, plot)) {
                 event.setCancelled(true);
                 messages.send(player, "armor-stands-deny");
                 return;
@@ -111,60 +102,6 @@ public class ItemProtectionListener implements Listener {
 
         // Passive animals
         if (entity instanceof Animals && !plot.getSettings().isAnimalAccessAllowed()) {
-            if (!perms.canInteract()) {
+            if (!roles.canInteract(uid, plot)) {
                 event.setCancelled(true);
-                messages.send(player, "animals-deny");
-                return;
-            }
-        }
-
-        // Tamed pets
-        if (entity instanceof Tameable tameable && tameable.isTamed() && !plot.getSettings().isPetAccessAllowed()) {
-            if (!perms.canInteract()) {
-                event.setCancelled(true);
-                messages.send(player, "pets-deny");
-                return;
-            }
-        }
-
-        // Container entities (like chest minecarts)
-        if (entity instanceof Minecart && !plot.getSettings().isContainersAllowed()) {
-            if (!perms.canInteract()) {
-                event.setCancelled(true);
-                messages.send(player, "containers-deny");
-            }
-        }
-    }
-
-    /* ------------------------------
-     * Vehicle Protections
-     * ------------------------------ */
-    @EventHandler(ignoreCancelled = true)
-    public void onVehicleDestroy(VehicleDestroyEvent event) {
-        if (!(event.getAttacker() instanceof Player player)) return;
-
-        Chunk chunk = event.getVehicle().getLocation().getChunk();
-        Plot plot = plots.getPlot(chunk);
-
-        if (plot == null) {
-            // Wilderness vehicle protection
-            if (!player.hasPermission("proshield.admin") &&
-                !player.getServer().getPluginManager().getPlugin("ProShield")
-                      .getConfig().getBoolean("protection.entities.vehicles", true)) {
-                event.setCancelled(true);
-                messages.send(player, "vehicles-deny");
-            }
-            return;
-        }
-
-        UUID uid = player.getUniqueId();
-        ClaimRole role = roles.getRole(plot, uid);
-        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
-
-        if (!plot.getSettings().isVehiclesAllowed() || !perms.canBuild()) {
-            event.setCancelled(true);
-            messages.send(player, "vehicles-deny");
-            messages.debug("&cPrevented vehicle destroy in claim [" + plot.getName() + "] by " + player.getName());
-        }
-    }
-}
+                messages.send(player, "animals-de

@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
  * Fixed for v1.2.5:
  *   • Removed invalid MessagesUtil#getConfigList calls
  *   • Uses plugin.getConfig().getStringList() for help sections
+ *   • Updated /proshield admin to open "main" menu (admin entries hidden if no permission)
  */
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
@@ -96,7 +97,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     messages.send(sender, "error.no-permission");
                     return true;
                 }
-                guiManager.openMenu(player, "admin");
+                // Open unified main menu (admin items show only if permission is present)
+                guiManager.openMenu(player, "main");
             }
             case "help" -> showHelp(sender);
             default -> messages.send(sender, "error.unknown-command");

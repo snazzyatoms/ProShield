@@ -23,10 +23,6 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    // Role suggestions (customize these to match your ClaimRoleManager roles)
-    private static final List<String> ROLE_SUGGESTIONS =
-            Arrays.asList("trusted", "builder", "moderator", "manager");
-
     public PlayerCommandDispatcher(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
@@ -53,10 +49,9 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    // --------------------------
-    // Command handlers (unchanged)
-    // --------------------------
-
+    /* ======================================================
+     * /claim
+     * ====================================================== */
     private void handleClaim(Player player) {
         Chunk chunk = player.getLocation().getChunk();
         if (plotManager.getPlot(chunk) != null) {
@@ -68,6 +63,9 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
         messages.send(player, "claim.success", Map.of("claim", plot.getDisplayNameSafe()));
     }
 
+    /* ======================================================
+     * /unclaim
+     * ====================================================== */
     private void handleUnclaim(Player player) {
         Location loc = player.getLocation();
         Plot plot = plotManager.getPlot(loc);
@@ -87,6 +85,9 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
         messages.send(player, "claim.unclaimed", Map.of("claim", plot.getDisplayNameSafe()));
     }
 
+    /* ======================================================
+     * /trust <player> [role]
+     * ====================================================== */
     private void handleTrust(Player player, String[] args) {
         if (args.length < 1) {
             messages.send(player, "trust.usage");
@@ -118,6 +119,9 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
         }
     }
 
+    /* ======================================================
+     * /untrust <player>
+     * ====================================================== */
     private void handleUntrust(Player player, String[] args) {
         if (args.length < 1) {
             messages.send(player, "untrust.usage");
@@ -147,6 +151,9 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
         }
     }
 
+    /* ======================================================
+     * /roles
+     * ====================================================== */
     private void handleRoles(Player player) {
         Location loc = player.getLocation();
         Plot plot = plotManager.getPlot(loc);
@@ -164,6 +171,9 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
         plugin.getGuiManager().openMenu(player, "roles");
     }
 
+    /* ======================================================
+     * /transfer <player>
+     * ====================================================== */
     private void handleTransfer(Player player, String[] args) {
         if (args.length < 1) {
             messages.send(player, "transfer.usage");
@@ -193,9 +203,9 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
         }
     }
 
-    // --------------------------
-    // Tab Completion
-    // --------------------------
+    /* ======================================================
+     * Tab Completion
+     * ====================================================== */
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
         List<String> suggestions = new ArrayList<>();
@@ -207,7 +217,8 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
                 if (args.length == 1) {
                     Bukkit.getOnlinePlayers().forEach(p -> suggestions.add(p.getName()));
                 } else if (args.length == 2) {
-                    suggestions.addAll(ROLE_SUGGESTIONS);
+                    // dynamically pull available roles from ClaimRoleManager
+                    suggestions.addAll(roleManager.getAvailableRoles());
                 }
             }
             case "untrust" -> {
@@ -217,7 +228,6 @@ public class PlayerCommandDispatcher implements CommandExecutor, TabCompleter {
             }
         }
 
-        // filter partial matches
         if (args.length > 0) {
             String current = args[args.length - 1].toLowerCase(Locale.ROOT);
             suggestions.removeIf(s -> !s.toLowerCase(Locale.ROOT).startsWith(current));

@@ -1,12 +1,10 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (Config-Driven GUI + Unified Plots)
+# Version: 1.2.5 (Finalized for JAR Test)
 # ==========================================================
 # Notes:
 #   - Use '&' for colors
-#   - Placeholders supported in messages:
-#       {player}, {claim}, {role}, {owner}, {state}, {count}
-#   - GUI menus are fully configurable, actions can be:
+#   - Actions supported in GUI:
 #       command:<text> → runs a command as player
 #       menu:<menuKey> → opens another menu
 #       close           → closes inventory
@@ -17,11 +15,6 @@
 # ----------------------------------------------------------
 settings:
   give-compass-on-join: true
-  # Default claim name if none set
-  default-claim-name: "Unnamed Claim"
-  # Expiration system (based on Plot.lastActive)
-  claims-expire-days: 30
-  purge-on-expire: true
 
 # ----------------------------------------------------------
 # Protection Settings
@@ -49,6 +42,7 @@ protection:
       horizontal-push: 0.7
       vertical-push: 0.25
     despawn-inside: true
+    disable-targeting: true   # NEW → mobs can’t target players in claims
 
   entities:
     wilderness:
@@ -69,7 +63,6 @@ messages:
 # ----------------------------------------------------------
 gui:
   menus:
-
     main:
       title: "&bProShield Menu"
       size: 27
@@ -80,13 +73,14 @@ gui:
           lore:
             - "&7Claim your current chunk"
             - "&7Protect it from griefers"
-          action: "command:proshield claim"
+          action: "command:claim"
         "11":
           material: BARRIER
           name: "&cUnclaim Chunk"
           lore:
             - "&7Unclaim your current chunk"
-          action: "command:proshield unclaim"
+            - "&7Free it up for others"
+          action: "command:unclaim"
         "12":
           material: PAPER
           name: "&eClaim Info"
@@ -133,7 +127,7 @@ gui:
           name: "&aEnter Player"
           lore:
             - "&7Type the player’s name in chat"
-          action: "command:proshield trust"
+          action: "command:trust"
         "26":
           material: BARRIER
           name: "&cBack"
@@ -150,7 +144,7 @@ gui:
           name: "&cEnter Player"
           lore:
             - "&7Type the player’s name in chat"
-          action: "command:proshield untrust"
+          action: "command:untrust"
         "26":
           material: BARRIER
           name: "&cBack"

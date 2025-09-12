@@ -1,9 +1,9 @@
 // src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import java.util.*;
@@ -14,19 +14,17 @@ import java.util.*;
  * - Supports trust/untrust, transfer, and permission checks
  *
  * Fixed for v1.2.5:
- *   • Removed reliance on getPlugin() from PlotManager
- *   • Uses UUIDs for ownership transfer
+ *   • Constructor simplified → only requires PlotManager
+ *   • Uses Bukkit directly for UUID resolution during ownership transfer
  */
 public class ClaimRoleManager {
 
     private final PlotManager plotManager;
-    private final ProShield plugin;
 
     // Maps: plotId -> {playerName -> roleName}
     private final Map<UUID, Map<String, String>> roleCache = new HashMap<>();
 
-    public ClaimRoleManager(ProShield plugin, PlotManager plotManager) {
-        this.plugin = plugin;
+    public ClaimRoleManager(PlotManager plotManager) {
         this.plotManager = plotManager;
     }
 
@@ -54,7 +52,7 @@ public class ClaimRoleManager {
     public boolean transferOwnership(Plot plot, String newOwnerName) {
         if (newOwnerName == null || newOwnerName.isBlank()) return false;
 
-        OfflinePlayer offline = plugin.getServer().getOfflinePlayer(newOwnerName);
+        OfflinePlayer offline = Bukkit.getOfflinePlayer(newOwnerName);
         if (offline == null || offline.getUniqueId() == null) return false;
 
         UUID newOwnerId = offline.getUniqueId();

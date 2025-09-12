@@ -7,7 +7,7 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,9 +25,8 @@ import java.util.UUID;
 
 /**
  * PlotListener
- * - Unified handler for block, bucket, item, and movement protection.
- * - Condensed from multiple listeners (v1.2.0 → v1.2.5).
- * - Uses PlotManager + ClaimRoleManager for trust/role checks.
+ * - Unified protection & claim boundary messages
+ * - Covers block, bucket, interaction, entry/exit, and wilderness checks
  */
 public class PlotListener implements Listener {
 
@@ -36,9 +35,6 @@ public class PlotListener implements Listener {
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    // Cache player → last claim name (for enter/exit messages)
-    private final Map<UUID, String> lastClaimMap = new HashMap<>();
-
     public PlotListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
@@ -46,14 +42,13 @@ public class PlotListener implements Listener {
         this.messages = messages;
     }
 
-    /* -------------------------------------------------------
-     * Block Breaking / Placing
-     * ------------------------------------------------------- */
+    /* ------------------------------------------------------
+     * BLOCK BREAK / PLACE
+     * ------------------------------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent e) {
         Player player = e.getPlayer();
         Location loc = e.getBlock().getLocation();
-
         if (!plotManager.canInteract(player.getUniqueId(), loc)) {
             e.setCancelled(true);
             messages.send(player, "error.no-permission");
@@ -64,31 +59,42 @@ public class PlotListener implements Listener {
     public void onBlockPlace(BlockPlaceEvent e) {
         Player player = e.getPlayer();
         Location loc = e.getBlock().getLocation();
-
         if (!plotManager.canInteract(player.getUniqueId(), loc)) {
             e.setCancelled(true);
             messages.send(player, "error.no-permission");
         }
     }
 
-    /* -------------------------------------------------------
-     * Buckets (fill + empty)
-     * ------------------------------------------------------- */
+    /* ------------------------------------------------------
+     * BUCKETS
+     * ------------------------------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onBucketEmpty(PlayerBucketEmptyEvent e) {
-        Player player = e.getPlayer();
-        Location loc = e.getBlock().getLocation();
-
-        if (!plotManager.canInteract(player.getUniqueId(), loc)) {
-            e.setCancelled(true);
-            messages.send(player, "error.no-permission");
-        }
+        handleBucketEvent(e.getPlayer(), e.getBlockClicked().getLocation(), e);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBucketFill(PlayerBucketFillEvent e) {
+        handleBucketEvent(e.getPlayer(), e.getBlockClicked().getLocation(), e);
+    }
+
+    private void handleBucketEvent(Player player, Location loc, org.bukkit.event.Cancellable e) {
+        if (!plotManager.canInteract(player.getUniqueId(), loc)) {
+            e.setCancelled(true);
+            messages.send(player, "error.no-permission");
+        }
+    }
+
+    /* ------------------------------------------------------
+     * INTERACTIONS (chests, doors, item frames, etc.)
+     * ------------------------------------------------------ */
+    @EventHandler(ignoreCancelled = true)
+    public void onInteract(PlayerInteractEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND) return; // ignore offhand
+        if (e.getClickedBlock() == null) return;
+
         Player player = e.getPlayer();
-        Location loc = e.getBlock().getLocation();
+        Location loc = e.getClickedBlock().getLocation();
 
         if (!plotManager.canInteract(player.getUniqueId(), loc)) {
             e.setCancelled(true);
@@ -96,71 +102,31 @@ public class PlotListener implements Listener {
         }
     }
 
-    /* -------------------------------------------------------
-     * Interactions (doors, containers, armor stands, etc.)
-     * ------------------------------------------------------- */
-    @EventHandler(ignoreCancelled = true)
-    public void onInteract(PlayerInteractEvent e) {
-        if (e.getHand() != EquipmentSlot.HAND) return; // only main hand
-        Player player = e.getPlayer();
+    /* ------------------------------------------------------
+     * CLAIM ENTRY / EXIT MESSAGES
+     * ------------------------------------------------------ */
+    private final Map<UUID, String> lastClaim = new HashMap<>();
 
-        Block block = e.getClickedBlock();
-        if (block == null) return;
-
-        Material type = block.getType();
-        Location loc = block.getLocation();
-
-        if (!plotManager.canInteract(player.getUniqueId(), loc)) {
-            // Containers & interactive blocks blocked
-            if (type.toString().contains("CHEST") ||
-                type.toString().contains("FURNACE") ||
-                type.toString().contains("HOPPER") ||
-                type == Material.ARMOR_STAND ||
-                type == Material.ITEM_FRAME) {
-                e.setCancelled(true);
-                messages.send(player, "error.no-permission");
-            }
-        }
-    }
-
-    /* -------------------------------------------------------
-     * Claim Enter / Exit Messages
-     * ------------------------------------------------------- */
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
+        if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return;
+
         Player player = e.getPlayer();
-        Location from = e.getFrom();
-        Location to = e.getTo();
-        if (to == null) return;
+        String fromClaim = plotManager.getClaimName(e.getFrom());
+        String toClaim = plotManager.getClaimName(e.getTo());
 
-        String fromClaim = plotManager.getClaimName(from);
-        String toClaim = plotManager.getClaimName(to);
-
-        if (!fromClaim.equalsIgnoreCase(toClaim)) {
-            UUID id = player.getUniqueId();
-            String last = lastClaimMap.getOrDefault(id, "");
-
-            if (!toClaim.equalsIgnoreCase(last)) {
-                // Leaving claim
-                if (!"Wilderness".equalsIgnoreCase(fromClaim)) {
-                    Map<String, String> placeholders = new HashMap<>();
-                    placeholders.put("claim", fromClaim);
-                    messages.send(player, "claim.leaving", placeholders);
-                }
-
-                // Entering claim / wilderness
-                if ("Wilderness".equalsIgnoreCase(toClaim)) {
-                    if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
-                        messages.send(player, "claim.wilderness");
-                    }
-                } else {
-                    Map<String, String> placeholders = new HashMap<>();
-                    placeholders.put("claim", toClaim);
-                    messages.send(player, "claim.entering", placeholders);
-                }
-
-                lastClaimMap.put(id, toClaim);
+        if (!fromClaim.equals(toClaim)) {
+            if (!"Wilderness".equalsIgnoreCase(fromClaim)) {
+                messages.send(player, "claim.leaving", Map.of("claim", fromClaim));
             }
+            if ("Wilderness".equalsIgnoreCase(toClaim)) {
+                if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
+                    messages.send(player, "claim.wilderness");
+                }
+            } else {
+                messages.send(player, "claim.entering", Map.of("claim", toClaim));
+            }
+            lastClaim.put(player.getUniqueId(), toClaim);
         }
     }
 }

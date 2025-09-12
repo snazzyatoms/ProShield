@@ -1,6 +1,10 @@
 // src/main/java/com/snazzyatoms/proshield/plots/BucketProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -8,48 +12,48 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 
-/**
- * BucketProtectionListener
- *
- * Preserves prior protection logic:
- *  ✅ Prevents untrusted players from placing water/lava buckets in claims
- *  ✅ Prevents untrusted players from scooping up water/lava from claims
- * 
- * Expanded:
- *  ✅ Works with both fill & empty events
- *  ✅ Uses PlotManager trust/ownership checks
- */
+import java.util.UUID;
+
 public class BucketProtectionListener implements Listener {
 
+    private final ProShield plugin;
     private final PlotManager plots;
+    private final ClaimRoleManager roles;
+    private final MessagesUtil messages;
 
-    public BucketProtectionListener(PlotManager plots) {
+    public BucketProtectionListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
+        this.plugin = plugin;
         this.plots = plots;
+        this.roles = roles;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
-        Player p = e.getPlayer();
-        Location l = e.getBlockClicked().getLocation();
+    public void onBucketEmpty(PlayerBucketEmptyEvent event) {
+        handleBucket(event.getPlayer(), event.getBlockClicked().getLocation(), "bucket-empty-deny", event);
+    }
 
-        Plot plot = plots.getPlot(l);
-        if (plot == null) return; // wilderness, allow
+    @EventHandler(ignoreCancelled = true)
+    public void onBucketFill(PlayerBucketFillEvent event) {
+        handleBucket(event.getPlayer(), event.getBlockClicked().getLocation(), "bucket-fill-deny", event);
+    }
 
-        if (!plots.isTrustedOrOwner(p.getUniqueId(), l)) {
-            e.setCancelled(true);
+    private void handleBucket(Player player, Location loc, String msgKey, org.bukkit.event.Cancellable event) {
+        Chunk chunk = loc.getChunk();
+        Plot plot = plots.getPlot(chunk);
+        UUID uid = player.getUniqueId();
+
+        if (plot == null) {
+            if (!plugin.getConfig().getBoolean("protection.buckets.wilderness", true)) {
+                event.setCancelled(true);
+                messages.send(player, msgKey);
+            }
+            return;
         }
-    }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onBucketFill(PlayerBucketFillEvent e) {
-        Player p = e.getPlayer();
-        Location l = e.getBlockClicked().getLocation();
-
-        Plot plot = plots.getPlot(l);
-        if (plot == null) return;
-
-        if (!plots.isTrustedOrOwner(p.getUniqueId(), l)) {
-            e.setCancelled(true);
+        if (!roles.canBuild(uid, plot)) {
+            event.setCancelled(true);
+            messages.send(player, msgKey);
         }
     }
 }

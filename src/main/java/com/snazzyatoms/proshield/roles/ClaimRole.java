@@ -70,11 +70,28 @@ public enum ClaimRole {
         return null;
     }
 
-    /**
-     * Permission helpers.
-     */
+    /* -------------------------------------------------------
+     * Permission helpers
+     * ------------------------------------------------------- */
+
     public boolean canInteract() {
         return this.ordinal() >= MEMBER.ordinal();
+    }
+
+    public boolean canBuild() {
+        return this.ordinal() >= BUILDER.ordinal();
+    }
+
+    public boolean canContainers() {
+        return this.ordinal() >= CONTAINER.ordinal();
+    }
+
+    public boolean canManageTrust() {
+        return this.ordinal() >= MODERATOR.ordinal();
+    }
+
+    public boolean canUnclaim() {
+        return this.ordinal() >= MANAGER.ordinal();
     }
 
     public boolean canManage() {

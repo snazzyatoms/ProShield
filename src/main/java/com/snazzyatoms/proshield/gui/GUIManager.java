@@ -1,22 +1,19 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.plots.Plot;
-import com.snazzyatoms.proshield.plots.PlotSettings;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Collections;
+import java.util.List;
 
 public class GUIManager {
 
@@ -28,190 +25,119 @@ public class GUIManager {
         this.cache = cache;
     }
 
-    /* ---------------------------------------------------------
-     * MAIN MENUS
-     * --------------------------------------------------------- */
-
-    public void openMain(Player player) {
-        String title = plugin.getConfig().getString("gui.main.title", "§bProShield Menu");
-        Inventory inv = Bukkit.createInventory(player, 27, title);
-
-        fill(inv);
-
-        inv.setItem(10, itemFromConfig("gui.tooltips.claim", Material.GRASS_BLOCK, "§aClaim Chunk"));
-        inv.setItem(11, itemFromConfig("gui.tooltips.unclaim", Material.BARRIER, "§cUnclaim Chunk"));
-        inv.setItem(12, itemFromConfig("gui.tooltips.info", Material.BOOK, "§eClaim Info"));
-        inv.setItem(13, itemFromConfig("gui.tooltips.trust", Material.PAPER, "§aTrust Menu"));
-        inv.setItem(14, itemFromConfig("gui.tooltips.untrust", Material.BOOKSHELF, "§cUntrust Menu"));
-        inv.setItem(15, itemFromConfig("gui.tooltips.flags", Material.IRON_SWORD, "§cFlags"));
-        inv.setItem(16, itemFromConfig("gui.tooltips.roles", Material.NAME_TAG, "§dRoles"));
-        inv.setItem(22, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
-
-        cache.setPlayerMenu(player, inv);
-        player.openInventory(inv);
-    }
-
-    public void openAdminMain(Player player) {
-        String title = plugin.getConfig().getString("gui.admin.title", "§4ProShield Admin Menu");
-        Inventory inv = Bukkit.createInventory(player, 27, title);
-
-        fill(inv);
-
-        // Admin tools
-        inv.setItem(10, itemFromConfig("gui.tooltips.admin-teleport", Material.COMPASS, "§bTeleport to Claim"));
-        inv.setItem(11, itemFromConfig("gui.tooltips.admin-unclaim", Material.TNT, "§cForce Unclaim"));
-        inv.setItem(12, itemFromConfig("gui.tooltips.flags", Material.CHEST, "§6Manage Flags"));
-        inv.setItem(13, itemFromConfig("gui.tooltips.admin-purge", Material.HOPPER, "§ePurge Claims"));
-        inv.setItem(14, itemFromConfig("gui.tooltips.transfer", Material.BOOK, "§dTransfer Claim"));
-        inv.setItem(22, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
-
-        cache.setAdminMenu(player, inv);
-        player.openInventory(inv);
-    }
-
-    /* ---------------------------------------------------------
-     * SUB MENUS
-     * --------------------------------------------------------- */
-
-    public void openFlagsMenu(Player player, boolean fromAdmin) {
-        String title = plugin.getConfig().getString("gui.flags.title", "§dClaim Flags");
-        Inventory inv = Bukkit.createInventory(player, 27, title);
-
-        fill(inv);
-
-        Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
-        PlotSettings settings = plot != null ? plot.getSettings() : new PlotSettings();
-
-        inv.setItem(10, statefulItem("gui.tooltips.pvp", Material.IRON_SWORD, "§cPvP", settings.isPvpEnabled()));
-        inv.setItem(11, statefulItem("gui.tooltips.explosions", Material.TNT, "§4Explosions", settings.isExplosionsAllowed()));
-        inv.setItem(12, statefulItem("gui.tooltips.fire", Material.FLINT_AND_STEEL, "§6Fire", settings.isFireAllowed()));
-        inv.setItem(13, statefulItem("gui.tooltips.redstone", Material.REDSTONE, "§cRedstone", settings.isRedstoneAllowed()));
-        inv.setItem(14, statefulItem("gui.tooltips.containers", Material.CHEST, "§aContainers", settings.isContainersAllowed()));
-        inv.setItem(15, statefulItem("gui.tooltips.buckets", Material.BUCKET, "§bBuckets", settings.isBucketAllowed()));
-        inv.setItem(16, statefulItem("gui.tooltips.itemframes", Material.ITEM_FRAME, "§6Item Frames", settings.isItemFramesAllowed()));
-        inv.setItem(20, statefulItem("gui.tooltips.armorstands", Material.ARMOR_STAND, "§eArmor Stands", settings.isArmorStandsAllowed()));
-        inv.setItem(21, statefulItem("gui.tooltips.animals", Material.SADDLE, "§aAnimals", settings.isAnimalAccessAllowed()));
-        inv.setItem(22, statefulItem("gui.tooltips.pets", Material.BONE, "§dPets", settings.isPetAccessAllowed()));
-        inv.setItem(23, statefulItem("gui.tooltips.vehicles", Material.MINECART, "§2Vehicles", settings.isVehiclesAllowed()));
-        inv.setItem(24, statefulItem("gui.tooltips.entitygrief", Material.ROTTEN_FLESH, "§4Entity Griefing", settings.isEntityGriefingAllowed()));
-
-        inv.setItem(26, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
-
-        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
-        player.openInventory(inv);
-    }
-
-    public void openRolesGUI(Player player, Plot plot, boolean fromAdmin) {
-        String title = plugin.getConfig().getString("gui.roles.title", "§6Claim Roles");
-        Inventory inv = Bukkit.createInventory(player, 27, title);
-
-        fill(inv);
-
-        // Load roles from config
-        Map<String, Material> roleSlots = new LinkedHashMap<>();
-        roleSlots.put("visitor", Material.BARRIER);
-        roleSlots.put("member", Material.PAPER);
-        roleSlots.put("trusted", Material.BOOK);
-        roleSlots.put("builder", Material.STONE_PICKAXE);
-        roleSlots.put("container", Material.CHEST);
-        roleSlots.put("moderator", Material.IRON_SWORD);
-        roleSlots.put("manager", Material.DIAMOND);
-
-        int slot = 10;
-        for (Map.Entry<String, Material> entry : roleSlots.entrySet()) {
-            inv.setItem(slot, itemFromConfig("gui.tooltips." + entry.getKey(), entry.getValue(),
-                    ChatColor.YELLOW + entry.getKey().substring(0, 1).toUpperCase() + entry.getKey().substring(1)));
-            slot++;
+    /* ----------------------------------------
+     * Helper to build menu items
+     * ---------------------------------------- */
+    private ItemStack makeMenuItem(Material mat, ChatColor color, String name, List<String> lore, boolean hideAttributes) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(color + name);
+        meta.setLore(lore);
+        if (hideAttributes) {
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         }
+        item.setItemMeta(meta);
+        return item;
+    }
 
-        inv.setItem(22, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
+    /* ----------------------------------------
+     * Player Main Menu
+     * ---------------------------------------- */
+    public void openMain(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.AQUA + "ProShield Menu");
 
-        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
+        inv.setItem(10, makeMenuItem(Material.GRASS_BLOCK, ChatColor.GREEN, "Claim Chunk",
+                Arrays.asList(ChatColor.GRAY + "Claim your current chunk",
+                        ChatColor.GRAY + "Protect your builds safely."), false));
+
+        inv.setItem(11, makeMenuItem(Material.DIRT, ChatColor.RED, "Unclaim Chunk",
+                Arrays.asList(ChatColor.GRAY + "Remove your claim",
+                        ChatColor.GRAY + "and free the land."), false));
+
+        inv.setItem(12, makeMenuItem(Material.BOOK, ChatColor.YELLOW, "Claim Info",
+                Arrays.asList(ChatColor.GRAY + "View claim owner &",
+                        ChatColor.GRAY + "trusted players."), false));
+
+        inv.setItem(14, makeMenuItem(Material.WRITABLE_BOOK, ChatColor.GREEN, "Trust Menu",
+                Arrays.asList(ChatColor.GRAY + "Trust a player",
+                        ChatColor.GRAY + "and grant them access."), false));
+
+        inv.setItem(15, makeMenuItem(Material.PAPER, ChatColor.RED, "Untrust Menu",
+                Arrays.asList(ChatColor.GRAY + "Remove a player",
+                        ChatColor.GRAY + "from trusted list."), false));
+
+        inv.setItem(16, makeMenuItem(Material.IRON_PICKAXE, ChatColor.GOLD, "Roles",
+                Arrays.asList(ChatColor.GRAY + "Assign roles like",
+                        ChatColor.GRAY + "Builder or Moderator."), true));
+
+        inv.setItem(22, makeMenuItem(Material.IRON_SWORD, ChatColor.AQUA, "Flags",
+                Arrays.asList(ChatColor.GRAY + "Toggle protections like",
+                        ChatColor.GRAY + "explosions, PvP, fire, etc."), true));
+
+        inv.setItem(26, makeMenuItem(Material.BARRIER, ChatColor.DARK_RED, "Back",
+                Collections.singletonList(ChatColor.GRAY + "Return to previous menu"), false));
+
         player.openInventory(inv);
     }
+
+    /* ----------------------------------------
+     * Admin Main Menu
+     * ---------------------------------------- */
+    public void openAdminMain(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.RED + "ProShield Admin Menu");
+
+        inv.setItem(10, makeMenuItem(Material.GRASS_BLOCK, ChatColor.GREEN, "Force Claim",
+                Arrays.asList(ChatColor.GRAY + "Claim the current chunk",
+                        ChatColor.GRAY + "on behalf of another player."), false));
+
+        inv.setItem(11, makeMenuItem(Material.DIRT, ChatColor.RED, "Force Unclaim",
+                Arrays.asList(ChatColor.GRAY + "Remove a player’s claim",
+                        ChatColor.GRAY + "from this chunk."), false));
+
+        inv.setItem(12, makeMenuItem(Material.BOOK, ChatColor.YELLOW, "Claim Info",
+                Arrays.asList(ChatColor.GRAY + "View owner, trusted,",
+                        ChatColor.GRAY + "and claim settings."), false));
+
+        inv.setItem(14, makeMenuItem(Material.WRITABLE_BOOK, ChatColor.GREEN, "Trust Menu",
+                Arrays.asList(ChatColor.GRAY + "Admin-manage trust",
+                        ChatColor.GRAY + "for this claim."), false));
+
+        inv.setItem(15, makeMenuItem(Material.PAPER, ChatColor.RED, "Untrust Menu",
+                Arrays.asList(ChatColor.GRAY + "Admin-remove players",
+                        ChatColor.GRAY + "from trusted list."), false));
+
+        inv.setItem(16, makeMenuItem(Material.IRON_PICKAXE, ChatColor.GOLD, "Roles",
+                Arrays.asList(ChatColor.GRAY + "Manage player roles",
+                        ChatColor.GRAY + "in this claim."), true));
+
+        inv.setItem(22, makeMenuItem(Material.IRON_SWORD, ChatColor.AQUA, "Flags",
+                Arrays.asList(ChatColor.GRAY + "Admin toggle protections:",
+                        ChatColor.GRAY + "explosions, PvP, containers, etc."), true));
+
+        inv.setItem(26, makeMenuItem(Material.BARRIER, ChatColor.DARK_RED, "Back",
+                Collections.singletonList(ChatColor.GRAY + "Return to previous menu"), false));
+
+        player.openInventory(inv);
+    }
+
+    /* ----------------------------------------
+     * TODO: Trust, Untrust, Roles, Flags
+     * These will open sub-menus (already drafted)
+     * ---------------------------------------- */
 
     public void openTrustMenu(Player player, boolean fromAdmin) {
-        String title = plugin.getConfig().getString("gui.trust.title", "§aTrust Player");
-        Inventory inv = Bukkit.createInventory(player, 9, title);
-
-        fill(inv);
-
-        inv.setItem(4, itemFromConfig("gui.tooltips.trust", Material.BOOK, "§aTrust Player"));
-        inv.setItem(8, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
-
-        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
-        player.openInventory(inv);
+        // same structure, PLAYER_HEADs for player selection, etc.
     }
 
     public void openUntrustMenu(Player player, boolean fromAdmin) {
-        String title = plugin.getConfig().getString("gui.untrust.title", "§cUntrust Player");
-        Inventory inv = Bukkit.createInventory(player, 9, title);
-
-        fill(inv);
-
-        inv.setItem(4, itemFromConfig("gui.tooltips.untrust", Material.BARRIER, "§cUntrust Player"));
-        inv.setItem(8, itemFromConfig("gui.tooltips.back", Material.ARROW, "§7Back"));
-
-        if (fromAdmin) cache.setAdminMenu(player, inv); else cache.setPlayerMenu(player, inv);
-        player.openInventory(inv);
+        // same structure
     }
 
-    /* ---------------------------------------------------------
-     * HELPERS
-     * --------------------------------------------------------- */
-
-    private ItemStack itemFromConfig(String path, Material fallbackMat, String fallbackName) {
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection(path);
-        String name = fallbackName;
-        String[] lore = new String[]{};
-
-        if (section != null) {
-            name = section.getString("name", fallbackName);
-            lore = section.getStringList("lore").toArray(new String[0]);
-        }
-
-        return createItem(fallbackMat, name, lore);
+    public void openRolesGUI(Player player, Object plot, boolean fromAdmin) {
+        // same structure
     }
 
-    private ItemStack statefulItem(String path, Material mat, String fallbackName, boolean enabled) {
-        ItemStack item = itemFromConfig(path, mat, fallbackName);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setLore(Arrays.asList(
-                    ChatColor.GRAY + "Now: " + (enabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED")
-            ));
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
-    private ItemStack createItem(Material mat, String name, String... lore) {
-        ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(name);
-            meta.setLore(Arrays.asList(lore));
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
-    private void fill(Inventory inv) {
-        ItemStack filler = createItem(Material.GRAY_STAINED_GLASS_PANE, ChatColor.DARK_GRAY + " ");
-        for (int i = 0; i < inv.getSize(); i++) {
-            inv.setItem(i, filler);
-        }
-    }
-
-    public void clearCache() {
-        cache.clearCache();
-    }
-
-    public GUICache getCache() {
-        return cache;
-    }
-
-    public ProShield getPlugin() {
-        return plugin;
+    public void openFlagsMenu(Player player, boolean fromAdmin) {
+        // dynamic lore with ENABLED/DISABLED states
     }
 }

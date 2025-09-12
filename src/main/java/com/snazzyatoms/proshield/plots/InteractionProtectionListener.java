@@ -1,9 +1,8 @@
+// src/main/java/com/snazzyatoms/proshield/plots/InteractionProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import com.snazzyatoms.proshield.roles.RolePermissions;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.entity.Player;
@@ -16,7 +15,7 @@ import java.util.UUID;
 /**
  * Handles protections for player interactions inside claims.
  * - Uses PlotSettings for per-claim interaction rules
- * - Uses ClaimRoleManager + RolePermissions for trusted role enforcement
+ * - Uses ClaimRoleManager for trusted role enforcement
  * - Falls back to wilderness config
  */
 public class InteractionProtectionListener implements Listener {
@@ -52,14 +51,4 @@ public class InteractionProtectionListener implements Listener {
         }
 
         UUID uid = player.getUniqueId();
-        ClaimRole role = roleManager.getRole(plot, uid);
-        RolePermissions perms = roleManager.getRolePermissions(plot.getId(), role);
-
-        if (!perms.canInteract()) {
-            event.setCancelled(true);
-            messages.send(player, "interaction-deny");
-            messages.debug("&cPrevented interaction in claim: " + plot.getDisplayNameSafe() +
-                    " by " + player.getName());
-        }
-    }
-}
+        if (!roleManager.canI

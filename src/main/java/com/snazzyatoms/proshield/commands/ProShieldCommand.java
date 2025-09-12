@@ -6,13 +6,21 @@ import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * ProShieldCommand
+ * - Root /proshield command
+ * - Handles reload, debug, bypass, compass, admin menu
+ *
+ * Fixed for v1.2.5:
+ *   • Removed invalid MessagesUtil#getConfigList calls
+ *   • Uses plugin.getConfig().getStringList() for help sections
+ */
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
@@ -97,9 +105,9 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(CommandSender sender) {
-        List<String> lines = new ArrayList<>(messages.getConfigList("help.player"));
+        List<String> lines = new ArrayList<>(plugin.getConfig().getStringList("help.player"));
         if (sender.hasPermission("proshield.admin")) {
-            lines.addAll(messages.getConfigList("help.admin"));
+            lines.addAll(plugin.getConfig().getStringList("help.admin"));
         }
         for (String line : lines) sender.sendMessage(line);
     }
@@ -110,8 +118,12 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("help"));
             if (sender.hasPermission("proshield.admin.reload")) subs.add("reload");
-            if (sender.hasPermission("proshield.admin")) subs.addAll(Arrays.asList("debug", "bypass", "compass", "admin"));
-            return subs.stream().filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT))).collect(Collectors.toList());
+            if (sender.hasPermission("proshield.admin")) {
+                subs.addAll(Arrays.asList("debug", "bypass", "compass", "admin"));
+            }
+            return subs.stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
         }
         return Collections.emptyList();
     }

@@ -1,72 +1,109 @@
-// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.gui.listeners.RoleFlagsListener;
-import com.snazzyatoms.proshield.gui.listeners.RolesListener;
-import com.snazzyatoms.proshield.gui.listeners.TrustListener;
-import com.snazzyatoms.proshield.gui.listeners.UntrustListener;
+import com.snazzyatoms.proshield.gui.listeners.*;
 import com.snazzyatoms.proshield.plots.*;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
     private static ProShield instance;
+
     private MessagesUtil messages;
-    private PlotManager plotManager;
-    private ClaimRoleManager roleManager;
     private GUIManager guiManager;
+    private ClaimRoleManager roleManager;
+    private PlotManager plotManager;
+    private GUICache guiCache;
+
+    private boolean debugEnabled = false;
+
+    public static ProShield getInstance() {
+        return instance;
+    }
 
     @Override
     public void onEnable() {
         instance = this;
+        saveDefaultConfig();
 
+        this.messages = new MessagesUtil(this);
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(plotManager);
-        this.guiManager = new GUIManager(this, new GUICache(), roleManager);
-        this.messages = new MessagesUtil(this);
+        this.guiCache = new GUICache();
+        this.guiManager = new GUIManager(this, guiCache, roleManager);
 
-        // Commands
-        getCommand("trust").setExecutor(new TrustCommand(this, plotManager, roleManager));
-        getCommand("untrust").setExecutor(new UntrustCommand(this, plotManager, roleManager));
-        getCommand("roles").setExecutor(new RolesCommand(this, plotManager, roleManager, guiManager));
-        getCommand("flags").setExecutor(new FlagsCommand(this, guiManager));
-        getCommand("transfer").setExecutor(new TransferCommand(this, plotManager, roleManager));
+        registerCommands();
+        registerListeners();
 
-        // Listeners
-        getServer().getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
-        getServer().getPluginManager().registerEvents(new ItemProtectionListener(plotManager, roleManager, messages), this);
-        getServer().getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
-        getServer().getPluginManager().registerEvents(new TrustListener(this, plotManager, roleManager, guiManager), this);
-        getServer().getPluginManager().registerEvents(new UntrustListener(this, plotManager, roleManager, guiManager), this);
-        getServer().getPluginManager().registerEvents(new RolesListener(this, roleManager), this);
-        getServer().getPluginManager().registerEvents(new RoleFlagsListener(this, roleManager), this);
-
-        getLogger().info("ProShield enabled.");
+        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion());
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("ProShield disabled.");
+        getLogger().info("[ProShield] Disabled.");
     }
 
-    public static ProShield getInstance() {
-        return instance;
+    private void registerCommands() {
+        getCommand("proshield").setExecutor(new ProShieldCommand(this));
+        getCommand("claim").setExecutor(new ClaimCommand(this, plotManager));
+        getCommand("unclaim").setExecutor(new UnclaimCommand(this, plotManager, roleManager));
+        getCommand("trust").setExecutor(new TrustCommand(this, plotManager, roleManager));
+        getCommand("untrust").setExecutor(new UntrustCommand(this, plotManager, roleManager));
+        getCommand("transfer").setExecutor(new TransferCommand(this, plotManager, roleManager));
+        getCommand("roles").setExecutor(new RolesCommand(this, plotManager, roleManager, guiManager));
+        getCommand("flags").setExecutor(new FlagsCommand(this, guiManager));
+    }
+
+    private void registerListeners() {
+        Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new TrustListener(this, plotManager, roleManager, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new UntrustListener(this, plotManager, roleManager, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new RolesListener(this, roleManager, guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new RoleFlagsListener(this, roleManager), this);
+
+        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager, roleManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager, roleManager, messages), this);
+    }
+
+    /* ====================================================
+     * ACCESSORS (for other classes)
+     * ==================================================== */
+    public MessagesUtil getMessagesUtil() {
+        return messages;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
     }
 
     public PlotManager getPlotManager() {
         return plotManager;
     }
 
+    public GUICache getGuiCache() {
+        return guiCache;
+    }
+
     public GUIManager getGuiManager() {
         return guiManager;
     }
 
-    public MessagesUtil getMessagesUtil() {
-        return messages;
+    /* ====================================================
+     * Debug toggle
+     * ==================================================== */
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public void toggleDebug() {
+        this.debugEnabled = !this.debugEnabled;
+        getLogger().info("[ProShield] Debug mode: " + (debugEnabled ? "ON" : "OFF"));
     }
 }

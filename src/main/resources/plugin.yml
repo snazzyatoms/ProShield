@@ -32,14 +32,14 @@ commands:
     usage: /<command> <player> [role]
     permission: proshield.use
     aliases: [addtrust]
-    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
+    tab-completer: com.snazzyatoms.proshield.commands.ProShieldCommand
 
   untrust:
     description: Remove trust from a player
     usage: /<command> <player>
     permission: proshield.use
     aliases: [removetrust]
-    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
+    tab-completer: com.snazzyatoms.proshield.commands.ProShieldCommand
 
   roles:
     description: Manage claim roles via GUI

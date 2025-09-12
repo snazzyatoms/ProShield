@@ -7,8 +7,8 @@ import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * PlotManager
  * - Manages all plots in the world.
  * - Handles creation, lookup, saving, and trusted role access.
- * - Now includes expiry & purge system (config-driven).
+ * - Unified with flag management.
  */
 public class PlotManager {
 
@@ -26,33 +26,9 @@ public class PlotManager {
     // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
 
-    // Expiry (in days) loaded from config
-    private final int expiryDays;
-
-    /**
-     * Modern constructor (preferred).
-     */
     public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.roleManager = roleManager;
-        this.expiryDays = plugin.getConfig().getInt("claims.expiry-days", 0);
-
-        // Start expiry task if enabled
-        if (expiryDays > 0) {
-            long ticks = 20L * 60L * 60L; // every 1 hour
-            Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::purgeExpiredClaims, ticks, ticks);
-            plugin.getLogger().info("Claim expiry enabled: " + expiryDays + " days");
-        } else {
-            plugin.getLogger().info("Claim expiry is disabled.");
-        }
-    }
-
-    /**
-     * Legacy constructor for compatibility.
-     * RoleManager will be null if not passed.
-     */
-    public PlotManager(ProShield plugin) {
-        this(plugin, null);
     }
 
     public ProShield getPlugin() {
@@ -69,8 +45,7 @@ public class PlotManager {
 
     public Plot getPlot(Location location) {
         if (location == null) return null;
-        Chunk chunk = location.getChunk();
-        return getPlot(chunk);
+        return getPlot(location.getChunk());
     }
 
     public Plot getPlot(Chunk chunk) {
@@ -82,18 +57,12 @@ public class PlotManager {
         return null;
     }
 
-    /**
-     * Alias for backwards compatibility.
-     * Older code calls getPlotAt(...).
-     */
+    /** Alias for backwards compatibility */
     public Plot getPlotAt(Chunk chunk) {
         return getPlot(chunk);
     }
 
-    /**
-     * Get a safe display name for the claim at this location.
-     * Returns "Wilderness" if unclaimed.
-     */
+    /** Get safe display name (or Wilderness if none). */
     public String getClaimName(Location location) {
         Plot plot = getPlot(location);
         return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
@@ -101,7 +70,16 @@ public class PlotManager {
 
     public Plot createPlot(UUID owner, Chunk chunk) {
         Plot plot = new Plot(chunk, owner);
-        plot.setLastActive(Instant.now()); // mark as active when created
+
+        // Load default flags from config
+        ConfigurationSection defaults = plugin.getConfig().getConfigurationSection("claims.default-flags");
+        if (defaults != null) {
+            for (String key : defaults.getKeys(false)) {
+                boolean val = defaults.getBoolean(key, false);
+                plot.setFlag(key, val);
+            }
+        }
+
         plots.put(plot.getId(), plot);
         saveAsync(plot);
         return plot;
@@ -125,41 +103,36 @@ public class PlotManager {
         }
     }
 
-    /**
-     * Mark a claim as active (e.g., when player interacts with it).
-     */
-    public void markActive(Plot plot) {
+    /* -------------------------------------------------------
+     * Flag management
+     * ------------------------------------------------------- */
+
+    public boolean getFlag(Location loc, String flag) {
+        Plot plot = getPlot(loc);
+        if (plot == null) return false;
+        return plot.getFlag(flag);
+    }
+
+    public void setFlag(Location loc, String flag, boolean state) {
+        Plot plot = getPlot(loc);
         if (plot != null) {
-            plot.setLastActive(Instant.now());
+            plot.setFlag(flag, state);
+            saveAsync(plot);
         }
     }
 
-    /**
-     * Purge expired claims based on expiry-days in config.
-     */
-    public void purgeExpiredClaims() {
-        if (expiryDays <= 0) return; // disabled
-
-        long cutoff = Instant.now().minusSeconds(expiryDays * 86400L).toEpochMilli();
-        int purgedCount = 0;
-
-        for (Iterator<Plot> it = plots.values().iterator(); it.hasNext(); ) {
-            Plot plot = it.next();
-            if (plot.getLastActive() != null && plot.getLastActive().toEpochMilli() < cutoff) {
-                it.remove();
-                purgedCount++;
-                plugin.getLogger().info("Expired claim purged: " + plot.getDisplayNameSafe());
-            }
-        }
-
-        if (purgedCount > 0) {
-            plugin.getLogger().info("Purged " + purgedCount + " expired claims.");
-        }
+    public boolean toggleFlag(Location loc, String flag) {
+        Plot plot = getPlot(loc);
+        if (plot == null) return false;
+        boolean newState = plot.toggleFlag(flag);
+        saveAsync(plot);
+        return newState;
     }
 
-    /**
-     * Checks if a player is trusted or the owner of a claim.
-     */
+    /* -------------------------------------------------------
+     * Permission helpers
+     * ------------------------------------------------------- */
+
     public boolean isTrustedOrOwner(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return true; // not claimed
@@ -169,9 +142,6 @@ public class PlotManager {
         return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
     }
 
-    /**
-     * Checks if a player can interact within a plot.
-     */
     public boolean canInteract(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return true;
@@ -180,9 +150,6 @@ public class PlotManager {
         return role != null && role.canInteract();
     }
 
-    /**
-     * Checks if a player can manage a plot.
-     */
     public boolean canManage(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return false;

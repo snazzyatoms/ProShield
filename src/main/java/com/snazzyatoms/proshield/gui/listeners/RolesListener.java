@@ -14,6 +14,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -48,32 +50,38 @@ public class RolesListener implements Listener {
 
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) {
-            messages.send(player, "error.not-in-claim");
+            messages.send(player, "roles.no-claim");
             return;
         }
 
         // Target from remembered trust flow
         String targetName = gui.getRememberedTarget(player);
         if (targetName == null) {
-            messages.send(player, "error.player-not-found");
+            messages.send(player, "error.player-not-found", Map.of("player", "unknown"));
             return;
         }
 
         UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
         UUID claimId = plot.getId();
 
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("player", targetName);
+        placeholders.put("claim", plot.getDisplayNameSafe());
+
         switch (event.getRawSlot()) {
             case 11 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.MANAGER);
-                messages.send(player, "roles.updated", targetName + " → Manager");
+                placeholders.put("role", "Manager");
+                messages.send(player, "trust.added", placeholders);
             }
             case 13 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.TRUSTED);
-                messages.send(player, "roles.updated", targetName + " → Trusted");
+                placeholders.put("role", "Trusted");
+                messages.send(player, "trust.added", placeholders);
             }
             case 15 -> {
                 roles.clearRole(claimId, targetId);
-                messages.send(player, "roles.cleared", targetName);
+                messages.send(player, "roles.cleared", placeholders);
             }
             case 26 -> {
                 gui.openMain(player);

@@ -32,22 +32,26 @@ public class TrustListener implements Listener {
         if (e.getCurrentItem() == null || !e.getCurrentItem().hasItemMeta()) return;
 
         String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
-        if (!title.contains("trust")) return;
+        if (!title.contains("trust menu")) return;
 
         e.setCancelled(true);
+        String name = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
 
-        String name = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName()).toLowerCase();
-        Plot plot = plots.getPlot(player.getLocation());
-        if (plot == null) return;
-
-        if (name.equals("back")) {
-            if (player.hasPermission("proshield.admin")) gui.openAdminMain(player);
-            else gui.openMain(player);
+        if (name.equalsIgnoreCase("Back")) {
+            if (player.hasPermission("proshield.admin")) gui.openAdminMain(player); else gui.openMain(player);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             return;
         }
 
-        player.sendMessage(ChatColor.YELLOW + "ℹ Trust via GUI is coming in v2.0. Use /trust <player> instead.");
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.5f);
+        // Clicked a player head -> trust them (default role)
+        String target = ChatColor.stripColor(name);
+        gui.rememberTarget(player, target);
+        gui.runPlayerCommand(player, "/trust " + target);
+
+        player.sendMessage(ChatColor.GREEN + "Trusted " + ChatColor.WHITE + target + ChatColor.GREEN + ".");
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+
+        // offer role assignment right after trust
+        gui.openRolesGUI(player, plots.getPlot(player.getLocation()), player.hasPermission("proshield.admin"));
     }
 }

@@ -2,7 +2,6 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
@@ -10,12 +9,12 @@ import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.Map;
 import java.util.UUID;
 
 public class ClaimCommandHandler implements CommandExecutor {
@@ -24,185 +23,158 @@ public class ClaimCommandHandler implements CommandExecutor {
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
     private final GUIManager guiManager;
-    private final CompassManager compassManager;
     private final MessagesUtil messages;
 
     public ClaimCommandHandler(ProShield plugin,
                                PlotManager plotManager,
                                ClaimRoleManager roleManager,
-                               GUIManager guiManager,
-                               CompassManager compassManager) {
+                               GUIManager guiManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
         this.guiManager = guiManager;
-        this.compassManager = compassManager;
         this.messages = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Only players may use this command.");
+            sender.sendMessage("Only players can use this command.");
             return true;
         }
 
-        String name = cmd.getName().toLowerCase();
-        switch (name) {
-            case "claim":    return handleClaim(player);
-            case "unclaim":  return handleUnclaim(player);
-            case "trust":    return handleTrust(player, args);
-            case "untrust":  return handleUntrust(player, args);
-            case "roles":    return handleRoles(player);
-            case "transfer": return handleTransfer(player, args);
-            case "flags":    return handleFlags(player);
-            default: return false;
+        String cmd = command.getName().toLowerCase();
+        switch (cmd) {
+            case "claim" -> handleClaim(player);
+            case "unclaim" -> handleUnclaim(player);
+            case "trust" -> handleTrust(player, args);
+            case "untrust" -> handleUntrust(player, args);
+            case "roles" -> handleRoles(player);
+            case "transfer" -> handleTransfer(player, args);
+            default -> sender.sendMessage("Unknown command.");
         }
-    }
-
-    /* -------------------------------------------------------
-     * /claim
-     * ------------------------------------------------------- */
-    private boolean handleClaim(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        if (plotManager.getPlot(chunk) != null) {
-            messages.send(player, "claim.already-owned",
-                    Map.of("owner", plotManager.getPlot(chunk).getOwner().toString()));
-            return true;
-        }
-
-        Plot plot = plotManager.createPlot(player.getUniqueId(), chunk);
-        messages.send(player, "claim.success", Map.of("claim", plot.getDisplayNameSafe()));
         return true;
     }
 
     /* -------------------------------------------------------
-     * /unclaim
+     * Command Handlers
      * ------------------------------------------------------- */
-    private boolean handleUnclaim(Player player) {
+    private void handleClaim(Player player) {
         Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        UUID playerId = player.getUniqueId();
 
-        if (plot == null) {
-            messages.send(player, "claim.unclaimed");
-            return true;
+        Plot existing = plotManager.getPlot(chunk);
+        if (existing != null) {
+            messages.send(player, "claim.already-owned",
+                    "Owner: " + plugin.getServer().getOfflinePlayer(existing.getOwner()).getName());
+            return;
         }
 
+        Plot newPlot = plotManager.createPlot(playerId, chunk);
+        messages.send(player, "claim.success",
+                "Claimed at chunk [" + chunk.getX() + "," + chunk.getZ() + "]");
+    }
+
+    private void handleUnclaim(Player player) {
+        Chunk chunk = player.getLocation().getChunk();
         UUID playerId = player.getUniqueId();
+
+        Plot plot = plotManager.getPlot(chunk);
+        if (plot == null) {
+            messages.send(player, "claim.not-owner", "This land is not claimed.");
+            return;
+        }
+
         if (!plot.isOwner(playerId) && !roleManager.canUnclaim(playerId, plot.getId())) {
             messages.send(player, "error.no-permission");
-            return true;
+            return;
         }
 
         plotManager.removePlot(plot);
-        messages.send(player, "claim.unclaimed");
-        return true;
+        messages.send(player, "claim.unclaimed", "You unclaimed this chunk.");
     }
 
-    /* -------------------------------------------------------
-     * /trust
-     * ------------------------------------------------------- */
-    private boolean handleTrust(Player player, String[] args) {
+    private void handleTrust(Player player, String[] args) {
         if (args.length < 1) {
-            messages.send(player, "trust.usage");
-            return true;
+            messages.send(player, "trust.usage", "Usage: /trust <player> [role]");
+            return;
         }
 
-        Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        OfflinePlayer target = plugin.getServer().getOfflinePlayer(args[0]);
+        if (target == null || target.getUniqueId() == null) {
+            messages.send(player, "error.player-not-found", args[0]);
+            return;
+        }
+
+        String roleName = (args.length >= 2) ? args[1] : "trusted";
+        ClaimRole role = ClaimRole.fromName(roleName);
+
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
             messages.send(player, "error.no-claim");
-            return true;
+            return;
         }
 
-        String targetName = args[0];
-        UUID claimId = plot.getId();
-        UUID targetId = plugin.getServer().getOfflinePlayer(targetName).getUniqueId();
-
-        ClaimRole role = ClaimRole.TRUSTED;
-        if (args.length >= 2) {
-            try {
-                role = ClaimRole.valueOf(args[1].toUpperCase());
-            } catch (IllegalArgumentException e) {
-                messages.send(player, "trust.invalid-role", Map.of("role", args[1]));
-                return true;
-            }
-        }
-
-        roleManager.setRole(claimId, targetId, role);
-        messages.send(player, "trust.added", Map.of("player", targetName, "role", role.name(), "claim", plot.getDisplayNameSafe()));
-        return true;
+        roleManager.setRole(plot.getId(), target.getUniqueId(), role);
+        messages.send(player, "trust.added", target.getName() + " → " + role.getDisplayName());
     }
 
-    /* -------------------------------------------------------
-     * /untrust
-     * ------------------------------------------------------- */
-    private boolean handleUntrust(Player player, String[] args) {
+    private void handleUntrust(Player player, String[] args) {
         if (args.length < 1) {
-            messages.send(player, "untrust.usage");
-            return true;
+            messages.send(player, "untrust.usage", "Usage: /untrust <player>");
+            return;
         }
 
-        Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        OfflinePlayer target = plugin.getServer().getOfflinePlayer(args[0]);
+        if (target == null || target.getUniqueId() == null) {
+            messages.send(player, "error.player-not-found", args[0]);
+            return;
+        }
+
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
             messages.send(player, "error.no-claim");
-            return true;
+            return;
         }
 
-        String targetName = args[0];
-        UUID claimId = plot.getId();
-        UUID targetId = plugin.getServer().getOfflinePlayer(targetName).getUniqueId();
-
-        roleManager.clearRole(claimId, targetId);
-        messages.send(player, "untrust.removed", Map.of("player", targetName, "claim", plot.getDisplayNameSafe()));
-        return true;
+        roleManager.clearRole(plot.getId(), target.getUniqueId());
+        messages.send(player, "untrust.removed", target.getName());
     }
 
-    /* -------------------------------------------------------
-     * /roles
-     * ------------------------------------------------------- */
-    private boolean handleRoles(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-
+    private void handleRoles(Player player) {
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
-            messages.send(player, "error.no-claim");
-            return true;
+            messages.send(player, "roles.no-claim", "You must be in a claim to manage roles.");
+            return;
         }
 
         guiManager.openMenu(player, "roles");
-        return true;
     }
 
-    /* -------------------------------------------------------
-     * /transfer
-     * ------------------------------------------------------- */
-    private boolean handleTransfer(Player player, String[] args) {
+    private void handleTransfer(Player player, String[] args) {
         if (args.length < 1) {
-            messages.send(player, "transfer.usage");
-            return true;
+            messages.send(player, "transfer.usage", "Usage: /transfer <player>");
+            return;
         }
 
-        Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        OfflinePlayer target = plugin.getServer().getOfflinePlayer(args[0]);
+        if (target == null || target.getUniqueId() == null) {
+            messages.send(player, "error.player-not-found", args[0]);
+            return;
+        }
+
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
             messages.send(player, "error.no-claim");
-            return true;
+            return;
         }
 
-        UUID newOwner = plugin.getServer().getOfflinePlayer(args[0]).getUniqueId();
-        plot.setOwner(newOwner);
+        if (!plot.isOwner(player.getUniqueId())) {
+            messages.send(player, "error.not-owner");
+            return;
+        }
 
-        messages.send(player, "transfer.success", Map.of("player", args[0], "claim", plot.getDisplayNameSafe()));
-        return true;
-    }
-
-    /* -------------------------------------------------------
-     * /flags
-     * ------------------------------------------------------- */
-    private boolean handleFlags(Player player) {
-        guiManager.openMenu(player, "flags");
-        return true;
+        plot.setOwner(target.getUniqueId());
+        messages.send(player, "transfer.success", "Ownership transferred to " + target.getName());
     }
 }

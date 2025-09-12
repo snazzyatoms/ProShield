@@ -4,30 +4,34 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.Entity;
+import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
+import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.vehicle.VehicleDestroyEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 
-import java.util.*;
+import java.util.UUID;
 
 /**
  * PlotListener
- * - Unified protection & claim boundary messages
- * - Block/place, buckets, interactions
- * - Claim entry/exit messages
- * - Mob repel & border repel tasks (replaces EntityMobRepelTask + EntityBorderRepelTask)
+ * - Unified claim protection handler
+ * - Covers block breaking/placing, buckets, item frames, vehicles
+ * - Handles claim enter/leave messages
+ *
+ * Consolidated for v1.2.5
  */
 public class PlotListener implements Listener {
 
@@ -36,143 +40,140 @@ public class PlotListener implements Listener {
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    private final Map<UUID, String> lastClaim = new HashMap<>();
-
     public PlotListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
         this.messages = messages;
-
-        // Schedule mob repel tasks
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                repelMobs();
-            }
-        }.runTaskTimer(plugin, 20L, 20L * 5); // every 5s
-
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                repelBorders();
-            }
-        }.runTaskTimer(plugin, 20L, 20L * 3); // every 3s
     }
 
-    /* ------------------------------------------------------
-     * BLOCK BREAK / PLACE
-     * ------------------------------------------------------ */
-    @EventHandler(ignoreCancelled = true)
+    /* ======================================================
+     * Block protections
+     * ====================================================== */
+    @EventHandler
     public void onBlockBreak(BlockBreakEvent e) {
         Player player = e.getPlayer();
-        Location loc = e.getBlock().getLocation();
-        if (!plotManager.canInteract(player.getUniqueId(), loc)) {
+        if (!canModify(player, e.getBlock().getLocation())) {
             e.setCancelled(true);
             messages.send(player, "error.no-permission");
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onBlockPlace(BlockPlaceEvent e) {
         Player player = e.getPlayer();
-        Location loc = e.getBlock().getLocation();
-        if (!plotManager.canInteract(player.getUniqueId(), loc)) {
+        if (!canModify(player, e.getBlock().getLocation())) {
             e.setCancelled(true);
             messages.send(player, "error.no-permission");
         }
     }
 
-    /* ------------------------------------------------------
-     * BUCKETS
-     * ------------------------------------------------------ */
-    @EventHandler(ignoreCancelled = true)
-    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
-        handleBucketEvent(e.getPlayer(), e.getBlockClicked().getLocation(), e);
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onBucketFill(PlayerBucketFillEvent e) {
-        handleBucketEvent(e.getPlayer(), e.getBlockClicked().getLocation(), e);
-    }
-
-    private void handleBucketEvent(Player player, Location loc, org.bukkit.event.Cancellable e) {
-        if (!plotManager.canInteract(player.getUniqueId(), loc)) {
-            e.setCancelled(true);
-            messages.send(player, "error.no-permission");
-        }
-    }
-
-    /* ------------------------------------------------------
-     * INTERACTIONS
-     * ------------------------------------------------------ */
-    @EventHandler(ignoreCancelled = true)
+    /* ======================================================
+     * Interactions (doors, containers, etc.)
+     * ====================================================== */
+    @EventHandler
     public void onInteract(PlayerInteractEvent e) {
-        if (e.getHand() != EquipmentSlot.HAND) return;
-        if (e.getClickedBlock() == null) return;
+        if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getClickedBlock() != null) {
+            Player player = e.getPlayer();
+            Block block = e.getClickedBlock();
+            if (!canInteract(player, block.getLocation())) {
+                e.setCancelled(true);
+                messages.send(player, "error.no-permission");
+            }
+        }
+    }
 
+    /* ======================================================
+     * Buckets
+     * ====================================================== */
+    @EventHandler
+    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
+            e.setCancelled(true);
+            messages.send(e.getPlayer(), "error.no-permission");
+        }
+    }
+
+    @EventHandler
+    public void onBucketFill(PlayerBucketFillEvent e) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
+            e.setCancelled(true);
+            messages.send(e.getPlayer(), "error.no-permission");
+        }
+    }
+
+    /* ======================================================
+     * Item Frames & Armor Stands
+     * ====================================================== */
+    @EventHandler
+    public void onHangingPlace(HangingPlaceEvent e) {
         Player player = e.getPlayer();
-        Location loc = e.getClickedBlock().getLocation();
-
-        if (!plotManager.canInteract(player.getUniqueId(), loc)) {
+        if (!canModify(player, e.getEntity().getLocation())) {
             e.setCancelled(true);
             messages.send(player, "error.no-permission");
         }
     }
 
-    /* ------------------------------------------------------
-     * CLAIM ENTRY / EXIT MESSAGES
-     * ------------------------------------------------------ */
+    @EventHandler
+    public void onHangingBreak(HangingBreakByEntityEvent e) {
+        if (e.getRemover() instanceof Player player) {
+            if (!canModify(player, e.getEntity().getLocation())) {
+                e.setCancelled(true);
+                messages.send(player, "error.no-permission");
+            }
+        }
+    }
+
+    /* ======================================================
+     * Vehicles
+     * ====================================================== */
+    @EventHandler
+    public void onVehicleDestroy(VehicleDestroyEvent e) {
+        if (e.getAttacker() instanceof Player player) {
+            if (!canModify(player, e.getVehicle().getLocation())) {
+                e.setCancelled(true);
+                messages.send(player, "error.no-permission");
+            }
+        }
+    }
+
+    /* ======================================================
+     * Claim enter/leave messages
+     * ====================================================== */
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
-        if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return;
-
         Player player = e.getPlayer();
         String fromClaim = plotManager.getClaimName(e.getFrom());
-        String toClaim = plotManager.getClaimName(e.getTo());
+        String toClaim   = plotManager.getClaimName(e.getTo());
 
         if (!fromClaim.equals(toClaim)) {
             if (!"Wilderness".equalsIgnoreCase(fromClaim)) {
-                messages.send(player, "claim.leaving", Map.of("claim", fromClaim));
+                messages.send(player, "claim.leaving", java.util.Map.of("claim", fromClaim));
             }
             if ("Wilderness".equalsIgnoreCase(toClaim)) {
                 if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
                     messages.send(player, "claim.wilderness");
                 }
             } else {
-                messages.send(player, "claim.entering", Map.of("claim", toClaim));
-            }
-            lastClaim.put(player.getUniqueId(), toClaim);
-        }
-    }
-
-    /* ------------------------------------------------------
-     * MOB REPEL TASKS
-     * ------------------------------------------------------ */
-    private void repelMobs() {
-        double radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.0);
-        double hPush = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
-        double vPush = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
-
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Location loc = player.getLocation();
-            Plot plot = plotManager.getPlot(loc);
-            if (plot == null) continue;
-
-            for (Entity entity : player.getNearbyEntities(radius, radius, radius)) {
-                if (entity instanceof Mob mob) {
-                    double dx = mob.getLocation().getX() - loc.getX();
-                    double dz = mob.getLocation().getZ() - loc.getZ();
-                    double dist = Math.sqrt(dx * dx + dz * dz);
-                    if (dist < radius && dist > 0) {
-                        mob.setVelocity(mob.getVelocity().setX(dx / dist * hPush).setZ(dz / dist * hPush).setY(vPush));
-                    }
-                }
+                messages.send(player, "claim.entering", java.util.Map.of("claim", toClaim));
             }
         }
     }
 
-    private void repelBorders() {
-        // future: border-specific logic if needed
+    /* ======================================================
+     * Helpers
+     * ====================================================== */
+    private boolean canModify(Player player, Location loc) {
+        UUID playerId = player.getUniqueId();
+        Plot plot = plotManager.getPlot(loc);
+        if (plot == null) return true;
+        return plot.isOwner(playerId) || roleManager.canManage(playerId, plot.getId());
+    }
+
+    private boolean canInteract(Player player, Location loc) {
+        UUID playerId = player.getUniqueId();
+        Plot plot = plotManager.getPlot(loc);
+        if (plot == null) return true;
+        return plot.isOwner(playerId) || roleManager.canManage(playerId, plot.getId());
     }
 }

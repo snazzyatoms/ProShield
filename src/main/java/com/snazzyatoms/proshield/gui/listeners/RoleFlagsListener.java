@@ -1,11 +1,10 @@
 package com.snazzyatoms.proshield.gui.listeners;
 
-import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.plots.Plot;
-import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.roles.RolePermissions;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,55 +13,56 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import java.util.UUID;
 
 /**
- * RoleFlagsListener
+ * Handles toggling permissions inside the Role Flags GUI.
  *
- * Handles toggling permissions in the Role Flags menu.
- * Syncs changes to ClaimRoleManager.savePermissions().
+ * ✅ Uses ClaimRoleManager.setRolePermissions
+ * ✅ Works per-claim and per-role
  */
 public class RoleFlagsListener implements Listener {
 
-    private final PlotManager plotManager;
+    private final ProShield plugin;
     private final ClaimRoleManager roles;
-    private final GUIManager gui;
     private final MessagesUtil messages;
 
-    public RoleFlagsListener(PlotManager plotManager, ClaimRoleManager roles, GUIManager gui, MessagesUtil messages) {
-        this.plotManager = plotManager;
+    public RoleFlagsListener(ProShield plugin, ClaimRoleManager roles) {
+        this.plugin = plugin;
         this.roles = roles;
-        this.gui = gui;
-        this.messages = messages;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @EventHandler
-    public void onClick(InventoryClickEvent event) {
+    public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getView().getTitle() == null) return;
+        if (event.getCurrentItem() == null || event.getView().getTitle() == null) return;
 
-        String title = event.getView().getTitle();
-        if (!title.startsWith("§bRole Flags: ")) return;
+        String title = ChatColor.stripColor(event.getView().getTitle());
+        if (!title.startsWith("Role Flags: ")) return;
 
         event.setCancelled(true);
-        Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot == null) return;
 
-        String roleId = title.replace("§bRole Flags: ", "").toLowerCase();
-        UUID claimId = plot.getId();
+        String roleId = title.substring("Role Flags: ".length()).toLowerCase();
+        UUID claimId = plugin.getPlotManager().getPlot(player.getLocation()).getId();
         RolePermissions perms = roles.getRolePermissions(claimId, roleId);
 
-        switch (event.getSlot()) {
-            case 10 -> perms.setCanBuild(!perms.canBuild());
-            case 11 -> perms.setCanContainers(!perms.canContainers());
-            case 12 -> perms.setCanManageTrust(!perms.canManageTrust());
-            case 13 -> perms.setCanUnclaim(!perms.canUnclaim());
-            default -> { return; }
+        switch (event.getCurrentItem().getType()) {
+            case STONE_PICKAXE -> perms.setCanBuild(!perms.canBuild());
+            case CHEST -> perms.setCanContainers(!perms.canContainers());
+            case BOOK -> perms.setCanManageTrust(!perms.canManageTrust());
+            case BARRIER -> perms.setCanUnclaim(!perms.canUnclaim());
+            case BARRIER: {
+                // Back button
+                player.closeInventory();
+                return;
+            }
+            default -> {
+                return;
+            }
         }
 
-        // Persist changes
-        roles.savePermissions(claimId, roleId, perms);
+        // Persist
+        roles.setRolePermissions(claimId, roleId, perms);
 
-        messages.send(player, "flags.toggle", roleId + " updated");
-
-        // Refresh menu
-        gui.openRoleFlagsMenu(player, plot, roleId);
+        // Feedback
+        messages.send(player, "flags.toggle", roleId, perms.toString());
     }
 }

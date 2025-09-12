@@ -3,141 +3,71 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Vehicle;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
-import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.player.PlayerBucketEmptyEvent;
-import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 /**
  * PlotListener
- * Unified protection/event listener for ProShield.
- * Combines all old listeners into one place (block, entity, interaction, flags).
+ * - Unified from v1.2.0 → v1.2.5
+ * - Handles block breaks, places, fire, explosions, buckets,
+ *   item frames, armor stands, containers, vehicles, pets.
+ * - Uses PlotManager + ClaimRoleManager + config flags.
  */
 public class PlotListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
+    private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    public PlotListener(ProShield plugin, PlotManager plotManager, MessagesUtil messages) {
+    public PlotListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+        this.roleManager = roleManager;
         this.messages = messages;
     }
 
-    /* ------------------------------------------------------
-     * Claim Enter/Exit Messages
-     * ------------------------------------------------------ */
-    @EventHandler
-    public void onMove(PlayerMoveEvent e) {
-        Player p = e.getPlayer();
-
-        String fromClaim = plotManager.getClaimName(e.getFrom());
-        String toClaim   = plotManager.getClaimName(e.getTo());
-
-        if (!fromClaim.equals(toClaim)) {
-            // Leaving claim
-            if (!fromClaim.equalsIgnoreCase("Wilderness")) {
-                Map<String, String> placeholders = new HashMap<>();
-                placeholders.put("claim", fromClaim);
-                messages.send(p, "claim.leaving", placeholders);
-            }
-
-            // Entering claim or wilderness
-            if ("Wilderness".equalsIgnoreCase(toClaim)) {
-                if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
-                    messages.send(p, "claim.wilderness");
-                }
-            } else {
-                Map<String, String> placeholders = new HashMap<>();
-                placeholders.put("claim", toClaim);
-                messages.send(p, "claim.entering", placeholders);
-            }
-        }
-    }
-
-    /* ------------------------------------------------------
-     * Block Break / Place
-     * ------------------------------------------------------ */
+    /* -------------------------------------------------------
+     * Block protection (break + place)
+     * ------------------------------------------------------- */
     @EventHandler
     public void onBlockBreak(BlockBreakEvent e) {
-        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
+        if (!canModify(e.getPlayer(), e.getBlock())) {
             e.setCancelled(true);
+            messages.send(e.getPlayer(), "error.no-permission");
         }
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent e) {
-        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
+        if (!canModify(e.getPlayer(), e.getBlockPlaced())) {
             e.setCancelled(true);
+            messages.send(e.getPlayer(), "error.no-permission");
         }
     }
 
-    /* ------------------------------------------------------
-     * Player Interactions (doors, redstone, etc.)
-     * ------------------------------------------------------ */
-    @EventHandler
-    public void onInteract(PlayerInteractEvent e) {
-        if (e.getHand() != EquipmentSlot.HAND) return;
-        if (e.getClickedBlock() == null) return;
-
-        if (!canInteract(e.getPlayer(), e.getClickedBlock().getLocation())) {
-            e.setCancelled(true);
-        }
-    }
-
-    /* ------------------------------------------------------
-     * Buckets (water/lava)
-     * ------------------------------------------------------ */
-    @EventHandler
-    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
-        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onBucketFill(PlayerBucketFillEvent e) {
-        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
-            e.setCancelled(true);
-        }
-    }
-
-    /* ------------------------------------------------------
-     * Explosions (TNT, Creeper, etc.)
-     * ------------------------------------------------------ */
-    @EventHandler
-    public void onEntityExplode(EntityExplodeEvent e) {
-        Plot plot = plotManager.getPlot(e.getLocation());
-        if (plot != null && !plot.getFlag("explosions")) {
-            e.blockList().clear(); // prevent block damage
-        }
-    }
-
-    /* ------------------------------------------------------
-     * Fire spread & ignite
-     * ------------------------------------------------------ */
+    /* -------------------------------------------------------
+     * Fire + Explosions
+     * ------------------------------------------------------- */
     @EventHandler
     public void onBlockIgnite(BlockIgniteEvent e) {
-        Plot plot = plotManager.getPlot(e.getBlock().getLocation());
-        if (plot != null && !plot.getFlag("fire")) {
+        if (e.getPlayer() == null) return;
+        if (!canModify(e.getPlayer(), e.getBlock())) {
             e.setCancelled(true);
         }
     }
@@ -150,47 +80,117 @@ public class PlotListener implements Listener {
         }
     }
 
-    /* ------------------------------------------------------
-     * Entity grief (endermen, villagers, etc.)
-     * ------------------------------------------------------ */
     @EventHandler
-    public void onEntityChangeBlock(EntityChangeBlockEvent e) {
-        Plot plot = plotManager.getPlot(e.getBlock().getLocation());
-        if (plot != null && !plot.getFlag("entity-grief")) {
+    public void onEntityExplode(EntityExplodeEvent e) {
+        e.blockList().removeIf(block -> {
+            Plot plot = plotManager.getPlot(block.getLocation());
+            return plot != null && !plot.getFlag("explosions");
+        });
+    }
+
+    /* -------------------------------------------------------
+     * Buckets
+     * ------------------------------------------------------- */
+    @EventHandler
+    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
+        if (!canModify(e.getPlayer(), e.getBlockClicked())) {
             e.setCancelled(true);
         }
     }
 
-    /* ------------------------------------------------------
-     * PvP Toggle
-     * ------------------------------------------------------ */
     @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent e) {
-        if (!(e.getEntity() instanceof Player victim)) return;
-
-        Player attacker = null;
-        if (e.getDamager() instanceof Player p) attacker = p;
-        if (e.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) attacker = p;
-        if (attacker == null) return;
-
-        Plot plot = plotManager.getPlot(victim.getLocation());
-        if (plot != null && !plot.getFlag("pvp")) {
+    public void onBucketFill(PlayerBucketFillEvent e) {
+        if (!canModify(e.getPlayer(), e.getBlockClicked())) {
             e.setCancelled(true);
         }
     }
 
-    /* ------------------------------------------------------
-     * Helpers
-     * ------------------------------------------------------ */
-    private boolean canModify(Player player, org.bukkit.Location loc) {
-        if (player.isOp()) return true;
-        UUID uuid = player.getUniqueId();
-        return plotManager.isTrustedOrOwner(uuid, loc);
+    /* -------------------------------------------------------
+     * Interactions (containers, armor stands, item frames, pets)
+     * ------------------------------------------------------- */
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent e) {
+        if (e.getHand() == EquipmentSlot.OFF_HAND) return; // ignore off-hand
+        if (e.getClickedBlock() == null) return;
+
+        Block block = e.getClickedBlock();
+        Player player = e.getPlayer();
+        Plot plot = plotManager.getPlot(block.getLocation());
+        if (plot == null) return;
+
+        Material type = block.getType();
+
+        if (isContainer(type) && !plot.getFlag("containers") && !plot.isOwner(player.getUniqueId())) {
+            if (!plotManager.isTrustedOrOwner(player.getUniqueId(), block.getLocation())) {
+                e.setCancelled(true);
+                messages.send(player, "error.no-permission");
+            }
+        }
     }
 
-    private boolean canInteract(Player player, org.bukkit.Location loc) {
-        if (player.isOp()) return true;
-        UUID uuid = player.getUniqueId();
-        return plotManager.canInteract(uuid, loc);
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
+        Player player = e.getPlayer();
+        Entity entity = e.getRightClicked();
+        Plot plot = plotManager.getPlot(entity.getLocation());
+        if (plot == null) return;
+
+        if (entity.getType().toString().contains("ARMOR_STAND") && !plot.getFlag("armor-stands")) {
+            e.setCancelled(true);
+        }
+        if (entity.getType().toString().contains("ITEM_FRAME") && !plot.getFlag("item-frames")) {
+            e.setCancelled(true);
+        }
+        if (entity instanceof org.bukkit.entity.Animals && !plot.getFlag("animals")) {
+            e.setCancelled(true);
+        }
+        if (entity instanceof org.bukkit.entity.Tameable && !plot.getFlag("pets")) {
+            e.setCancelled(true);
+        }
+    }
+
+    /* -------------------------------------------------------
+     * Vehicles
+     * ------------------------------------------------------- */
+    @EventHandler
+    public void onVehicleDestroy(VehicleDestroyEvent e) {
+        if (!(e.getAttacker() instanceof Player player)) return;
+
+        Vehicle vehicle = e.getVehicle();
+        Plot plot = plotManager.getPlot(vehicle.getLocation());
+        if (plot == null) return;
+
+        if (!plot.getFlag("vehicles") && !plot.isOwner(player.getUniqueId())) {
+            e.setCancelled(true);
+            messages.send(player, "error.no-permission");
+        }
+    }
+
+    /* -------------------------------------------------------
+     * Utility
+     * ------------------------------------------------------- */
+    private boolean canModify(Player player, Block block) {
+        if (player.hasPermission("proshield.bypass")) return true;
+        Plot plot = plotManager.getPlot(block.getLocation());
+        if (plot == null) return true;
+
+        UUID playerId = player.getUniqueId();
+        if (plot.isOwner(playerId)) return true;
+
+        ClaimRole role = plot.getRole(playerId);
+        return role != null && role.canBuild();
+    }
+
+    private boolean isContainer(Material mat) {
+        return mat == Material.CHEST ||
+               mat == Material.TRAPPED_CHEST ||
+               mat == Material.BARREL ||
+               mat == Material.HOPPER ||
+               mat == Material.FURNACE ||
+               mat == Material.BLAST_FURNACE ||
+               mat == Material.SMOKER ||
+               mat == Material.DISPENSER ||
+               mat == Material.DROPPER ||
+               mat == Material.SHULKER_BOX;
     }
 }

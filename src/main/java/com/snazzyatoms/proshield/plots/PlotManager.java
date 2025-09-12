@@ -7,7 +7,6 @@ import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,8 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * PlotManager
  * - Manages all plots in the world.
- * - Consolidates PlotSettings + PlotService into one unified manager.
- * - Provides creation, removal, role checks, persistence, and default flag handling.
+ * - Handles creation, lookup, saving, and trusted role access.
+ * - Unified from v1.2.0 → v1.2.5 with dynamic flag initialization.
  */
 public class PlotManager {
 
@@ -26,26 +25,14 @@ public class PlotManager {
     // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
 
-    // Default flags loaded from config.yml
-    private final Map<String, Boolean> defaultFlags = new HashMap<>();
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
+        this.roleManager = null; // fallback if role manager not injected
+    }
 
     public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.roleManager = roleManager;
-        loadDefaultFlags();
-    }
-
-    /**
-     * Load default claim flags from config.yml
-     */
-    private void loadDefaultFlags() {
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection("claims.default-flags");
-        if (section != null) {
-            for (String key : section.getKeys(false)) {
-                defaultFlags.put(key.toLowerCase(), section.getBoolean(key, false));
-            }
-        }
-        plugin.getLogger().info("Loaded " + defaultFlags.size() + " default claim flags.");
     }
 
     public ProShield getPlugin() {
@@ -62,8 +49,7 @@ public class PlotManager {
 
     public Plot getPlot(Location location) {
         if (location == null) return null;
-        Chunk chunk = location.getChunk();
-        return getPlot(chunk);
+        return getPlot(location.getChunk());
     }
 
     public Plot getPlot(Chunk chunk) {
@@ -77,7 +63,6 @@ public class PlotManager {
 
     /**
      * Alias for backwards compatibility.
-     * Older code calls getPlotAt(...).
      */
     public Plot getPlotAt(Chunk chunk) {
         return getPlot(chunk);
@@ -93,14 +78,17 @@ public class PlotManager {
     }
 
     /**
-     * Create a new plot with default flags.
+     * Create a new plot and initialize with default flags from config.yml.
      */
     public Plot createPlot(UUID owner, Chunk chunk) {
         Plot plot = new Plot(chunk, owner);
 
-        // Apply default flags
-        for (Map.Entry<String, Boolean> entry : defaultFlags.entrySet()) {
-            plot.setFlag(entry.getKey(), entry.getValue());
+        // Initialize flags from config (claims.default-flags.*)
+        if (plugin.getConfig().isConfigurationSection("claims.default-flags")) {
+            for (String key : plugin.getConfig().getConfigurationSection("claims.default-flags").getKeys(false)) {
+                boolean def = plugin.getConfig().getBoolean("claims.default-flags." + key, false);
+                plot.setFlag(key, def);
+            }
         }
 
         plots.put(plot.getId(), plot);
@@ -116,7 +104,7 @@ public class PlotManager {
 
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // TODO: save plot to disk/database
+            // TODO: save plot to disk or database
         });
     }
 
@@ -125,6 +113,10 @@ public class PlotManager {
             saveAsync(plot);
         }
     }
+
+    /* -------------------------------------------------------
+     * Role / Trust Checks
+     * ------------------------------------------------------- */
 
     /**
      * Checks if a player is trusted or the owner of a claim.
@@ -158,12 +150,5 @@ public class PlotManager {
 
         ClaimRole role = plot.getRole(playerId);
         return role != null && role.canManage();
-    }
-
-    /**
-     * Get default flag value by key.
-     */
-    public boolean getDefaultFlag(String key) {
-        return defaultFlags.getOrDefault(key.toLowerCase(), false);
     }
 }

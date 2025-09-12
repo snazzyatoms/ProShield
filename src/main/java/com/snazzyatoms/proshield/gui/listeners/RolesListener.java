@@ -54,7 +54,6 @@ public class RolesListener implements Listener {
             return;
         }
 
-        // Target from remembered trust flow
         String targetName = gui.getRememberedTarget(player);
         if (targetName == null) {
             messages.send(player, "error.player-not-found", Map.of("player", "unknown"));

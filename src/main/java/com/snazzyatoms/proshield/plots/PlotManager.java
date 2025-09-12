@@ -15,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * PlotManager
  * - Manages all plots in the world.
- * - Handles creation, lookup, saving, and trusted role access.
- * - Unified with flag management.
+ * - Consolidates PlotSettings + PlotService into one unified manager.
+ * - Provides creation, removal, role checks, persistence, and default flag handling.
  */
 public class PlotManager {
 
@@ -26,9 +26,26 @@ public class PlotManager {
     // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
 
+    // Default flags loaded from config.yml
+    private final Map<String, Boolean> defaultFlags = new HashMap<>();
+
     public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.roleManager = roleManager;
+        loadDefaultFlags();
+    }
+
+    /**
+     * Load default claim flags from config.yml
+     */
+    private void loadDefaultFlags() {
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("claims.default-flags");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                defaultFlags.put(key.toLowerCase(), section.getBoolean(key, false));
+            }
+        }
+        plugin.getLogger().info("Loaded " + defaultFlags.size() + " default claim flags.");
     }
 
     public ProShield getPlugin() {
@@ -45,7 +62,8 @@ public class PlotManager {
 
     public Plot getPlot(Location location) {
         if (location == null) return null;
-        return getPlot(location.getChunk());
+        Chunk chunk = location.getChunk();
+        return getPlot(chunk);
     }
 
     public Plot getPlot(Chunk chunk) {
@@ -57,27 +75,32 @@ public class PlotManager {
         return null;
     }
 
-    /** Alias for backwards compatibility */
+    /**
+     * Alias for backwards compatibility.
+     * Older code calls getPlotAt(...).
+     */
     public Plot getPlotAt(Chunk chunk) {
         return getPlot(chunk);
     }
 
-    /** Get safe display name (or Wilderness if none). */
+    /**
+     * Get a safe display name for the claim at this location.
+     * Returns "Wilderness" if unclaimed.
+     */
     public String getClaimName(Location location) {
         Plot plot = getPlot(location);
         return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
     }
 
+    /**
+     * Create a new plot with default flags.
+     */
     public Plot createPlot(UUID owner, Chunk chunk) {
         Plot plot = new Plot(chunk, owner);
 
-        // Load default flags from config
-        ConfigurationSection defaults = plugin.getConfig().getConfigurationSection("claims.default-flags");
-        if (defaults != null) {
-            for (String key : defaults.getKeys(false)) {
-                boolean val = defaults.getBoolean(key, false);
-                plot.setFlag(key, val);
-            }
+        // Apply default flags
+        for (Map.Entry<String, Boolean> entry : defaultFlags.entrySet()) {
+            plot.setFlag(entry.getKey(), entry.getValue());
         }
 
         plots.put(plot.getId(), plot);
@@ -103,36 +126,9 @@ public class PlotManager {
         }
     }
 
-    /* -------------------------------------------------------
-     * Flag management
-     * ------------------------------------------------------- */
-
-    public boolean getFlag(Location loc, String flag) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-        return plot.getFlag(flag);
-    }
-
-    public void setFlag(Location loc, String flag, boolean state) {
-        Plot plot = getPlot(loc);
-        if (plot != null) {
-            plot.setFlag(flag, state);
-            saveAsync(plot);
-        }
-    }
-
-    public boolean toggleFlag(Location loc, String flag) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-        boolean newState = plot.toggleFlag(flag);
-        saveAsync(plot);
-        return newState;
-    }
-
-    /* -------------------------------------------------------
-     * Permission helpers
-     * ------------------------------------------------------- */
-
+    /**
+     * Checks if a player is trusted or the owner of a claim.
+     */
     public boolean isTrustedOrOwner(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return true; // not claimed
@@ -142,6 +138,9 @@ public class PlotManager {
         return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
     }
 
+    /**
+     * Checks if a player can interact within a plot.
+     */
     public boolean canInteract(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return true;
@@ -150,11 +149,21 @@ public class PlotManager {
         return role != null && role.canInteract();
     }
 
+    /**
+     * Checks if a player can manage a plot.
+     */
     public boolean canManage(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return false;
 
         ClaimRole role = plot.getRole(playerId);
         return role != null && role.canManage();
+    }
+
+    /**
+     * Get default flag value by key.
+     */
+    public boolean getDefaultFlag(String key) {
+        return defaultFlags.getOrDefault(key.toLowerCase(), false);
     }
 }

@@ -1,6 +1,16 @@
 # =========================================================
 # ProShield Messages
-# Version: 1.2.6 (sync with dispatcher + admin + help)
+# Version: 1.2.6+
+# =========================================================
+# Supports:
+#   - Color codes: use '&'
+#   - Placeholders (dynamic values inserted at runtime):
+#       {player} → Target player’s name
+#       {claim}  → Claim name or identifier
+#       {role}   → Role display name (Trusted, Builder, etc.)
+#       {owner}  → Claim owner’s name
+#       {state}  → Current toggle state (ENABLED / DISABLED)
+#       {count}  → Numerical values (e.g., number of claims purged)
 # =========================================================
 
 prefix: "&3[ProShield]&r "
@@ -16,7 +26,7 @@ error:
   not-trusted: "&cYou are not trusted in this claim."
   cannot-transfer: "&cYou cannot transfer this claim."
   player-not-found: "&cCould not find player &e{player}&c."
-  unknown-command: "&cUnknown command. Use /proshield help for options."
+  unknown-command: "&cUnknown command. Use /proshield help"
 
 messages:
   reloaded: "&aProShield configs reloaded."
@@ -31,6 +41,7 @@ claim:
   unclaimed: "&aYou unclaimed this chunk."
   not-owner: "&cYou are not the owner of this claim."
   info: "&eClaim Info: &7Owner: {owner}, Trusted: {trusted}"
+
   entering: "&aEntering claim: &e{claim}"
   leaving: "&cLeaving claim: &e{claim}"
   wilderness: "&7Entering Wilderness"
@@ -39,20 +50,20 @@ claim:
 # Trust / Untrust / Roles
 # ---------------------------------------------------------
 trust:
-  usage: "&eUsage: /trust <player> [role]"
   added: "&a{player} was trusted with role {role} in claim {claim}."
   already-trusted: "&e{player} is already trusted here."
   self: "&cYou cannot trust yourself."
   invalid-role: "&cInvalid role: {role}"
   cannot-self: "&cYou cannot trust yourself."
   you-were-trusted: "&aYou were trusted in {claim} with role {role}."
-  failed: "&cFailed to trust {player}. Please try again."
+  usage: "&eUsage: /trust <player> [role]"
+  failed: "&cFailed to trust {player}."
 
 untrust:
-  usage: "&eUsage: /untrust <player>"
   removed: "&c{player} was untrusted from claim {claim}."
   not-trusted: "&e{player} is not trusted here."
   you-were-untrusted: "&cYou were untrusted from {claim}."
+  usage: "&eUsage: /untrust <player>"
 
 roles:
   no-claim: "&cYou must be inside a claim to manage roles."
@@ -65,14 +76,15 @@ roles:
 # Ownership Transfer
 # ---------------------------------------------------------
 transfer:
-  usage: "&eUsage: /transfer <player>"
   success: "&aYou transferred ownership of {claim} to {player}."
   not-owner: "&cOnly the claim owner can transfer ownership."
   self: "&cYou cannot transfer a claim to yourself."
   target-offline: "&cThe target player must be online."
   already-owner: "&eThat player is already the owner."
   you-are-owner: "&aYou are now the owner of claim {claim}."
-  failed: "&cFailed to transfer claim ownership to {player}."
+  usage: "&eUsage: /transfer <player>"
+  failed: "&cFailed to transfer claim to {player}."
+
   override-success: "&a(Admin) You reassigned ownership of {claim} to {player}."
   override-fail: "&c(Admin) Transfer failed — {player} is not the current owner."
 
@@ -80,36 +92,14 @@ transfer:
 # Admin Messages
 # ---------------------------------------------------------
 admin:
-  usage: "&eUsage: /proshield <reload|debug|compass|flags ...>"
   bypass-on: "&eBypass &aENABLED"
   bypass-off: "&eBypass &cDISABLED"
   debug-on: "&eDebug mode &aENABLED"
   debug-off: "&eDebug mode &cDISABLED"
   reload: "&aConfiguration reloaded."
   keep-items-toggled: "&aKeep items in claims: {state}"
-
-  help:
-    - "&b--- ProShield Admin Help ---"
-    - "&e/proshield reload &7→ Reload configs"
-    - "&e/proshield debug &7→ Toggle debug mode"
-    - "&e/proshield compass &7→ Give yourself a compass"
-    - "&e/proshield flags &7→ Manage claim flags"
-
   wilderness-toggle-on: "&aWilderness entry messages ENABLED."
   wilderness-toggle-off: "&cWilderness entry messages DISABLED."
-
-# ---------------------------------------------------------
-# Player Help
-# ---------------------------------------------------------
-help:
-  player:
-    - "&b--- ProShield Player Help ---"
-    - "&e/claim &7→ Claim your current chunk"
-    - "&e/unclaim &7→ Unclaim your current chunk"
-    - "&e/trust <player> [role] &7→ Trust a player"
-    - "&e/untrust <player> &7→ Remove a trusted player"
-    - "&e/roles &7→ Open roles manager GUI"
-    - "&e/transfer <player> &7→ Transfer your claim"
 
 # ---------------------------------------------------------
 # Flags
@@ -150,3 +140,23 @@ compass:
 # ---------------------------------------------------------
 debug:
   generic: "&8[DEBUG] &7{message}"
+
+# ---------------------------------------------------------
+# Help Messages
+# ---------------------------------------------------------
+help:
+  player:
+    - "&b--- ProShield Help ---"
+    - "&e/claim &7→ Claim your current chunk"
+    - "&e/unclaim &7→ Unclaim your current chunk"
+    - "&e/trust <player> [role] &7→ Trust a player"
+    - "&e/untrust <player> &7→ Remove a trusted player"
+    - "&e/roles &7→ Open roles manager GUI"
+    - "&e/transfer <player> &7→ Transfer your claim"
+
+  admin:
+    - "&b--- ProShield Admin Help ---"
+    - "&e/proshield reload &7→ Reload configs"
+    - "&e/proshield debug &7→ Toggle debug mode"
+    - "&e/proshield compass &7→ Give yourself a compass"
+    - "&e/proshield flags &7→ Manage claim flags"

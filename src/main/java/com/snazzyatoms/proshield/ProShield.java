@@ -1,6 +1,7 @@
 // src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
+import com.snazzyatoms.proshield.commands.ClaimCommandHandler;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
@@ -17,9 +18,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
-    /* -------------------------------------------------------
-     * Singletons / Managers
-     * ------------------------------------------------------- */
     private static ProShield instance;
 
     private MessagesUtil messages;
@@ -30,41 +28,29 @@ public class ProShield extends JavaPlugin {
     private GUIManager guiManager;
     private CompassManager compassManager;
 
-    /* Debug toggle used by MessagesUtil.debug(...) */
     private boolean debugEnabled = false;
 
     public static ProShield getInstance() {
         return instance;
     }
 
-    /* -------------------------------------------------------
-     * Lifecycle
-     * ------------------------------------------------------- */
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
 
-        // Utilities
+        // Managers
         messages = new MessagesUtil(this);
+        plotManager = new PlotManager(this);
+        roleManager = new ClaimRoleManager(plotManager);
 
-        // Core managers
-        roleManager = new ClaimRoleManager(null); // temp null until after plotManager init
-        plotManager = new PlotManager(this, roleManager);
-        roleManager.setPlotManager(plotManager); // circular link
-
-        // GUI stack
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
         compassManager = new CompassManager(this, guiManager);
 
-        // Commands
+        // Register commands + listeners
         registerCommands();
-
-        // Listeners
         registerListeners();
-
-        // Background tasks
         scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
@@ -79,72 +65,64 @@ public class ProShield extends JavaPlugin {
     }
 
     /* -------------------------------------------------------
-     * Wiring
+     * Command Registration
      * ------------------------------------------------------- */
     private void registerCommands() {
-        ProShieldCommand cmd = new ProShieldCommand(this, plotManager, roleManager, guiManager, compassManager, messages);
+        // Root admin/debug command
         if (getCommand("proshield") != null) {
-            getCommand("proshield").setExecutor(cmd);
-            getCommand("proshield").setTabCompleter(cmd);
+            getCommand("proshield").setExecutor(
+                new ProShieldCommand(this, plotManager, guiManager, compassManager)
+            );
+        }
+
+        // Unified handler for all claim-related commands
+        ClaimCommandHandler claimHandler = new ClaimCommandHandler(this, plotManager, roleManager, guiManager, compassManager);
+
+        String[] claimCommands = { "claim", "unclaim", "trust", "untrust", "roles", "transfer", "flags" };
+        for (String cmd : claimCommands) {
+            if (getCommand(cmd) != null) {
+                getCommand(cmd).setExecutor(claimHandler);
+            }
         }
     }
 
+    /* -------------------------------------------------------
+     * Listener Registration
+     * ------------------------------------------------------- */
     private void registerListeners() {
-        // GUI root listener (config-driven)
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-
-        // Claim enter/exit messages
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
-
-        // TODO: Condense other protection listeners into a single ProtectionListener later
+        // Other protection listeners can be unified later as we condense
     }
 
+    /* -------------------------------------------------------
+     * Tasks
+     * ------------------------------------------------------- */
     private void scheduleTasks() {
         try {
             new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5);
         } catch (Throwable ignored) {}
+
         try {
             new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 3);
         } catch (Throwable ignored) {}
     }
 
     /* -------------------------------------------------------
-     * Getters used across the codebase
+     * Getters
      * ------------------------------------------------------- */
-    public MessagesUtil getMessagesUtil() {
-        return messages;
-    }
-
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
-
-    public ClaimRoleManager getRoleManager() {
-        return roleManager;
-    }
-
-    public GUICache getGuiCache() {
-        return guiCache;
-    }
-
-    public GUIManager getGuiManager() {
-        return guiManager;
-    }
-
-    public CompassManager getCompassManager() {
-        return compassManager;
-    }
+    public MessagesUtil getMessagesUtil() { return messages; }
+    public PlotManager getPlotManager() { return plotManager; }
+    public ClaimRoleManager getRoleManager() { return roleManager; }
+    public GUICache getGuiCache() { return guiCache; }
+    public GUIManager getGuiManager() { return guiManager; }
+    public CompassManager getCompassManager() { return compassManager; }
 
     /* -------------------------------------------------------
-     * Debug hooks
+     * Debug
      * ------------------------------------------------------- */
-    public boolean isDebugEnabled() {
-        return debugEnabled;
-    }
-
-    public void setDebugEnabled(boolean enabled) {
-        this.debugEnabled = enabled;
-    }
+    public boolean isDebugEnabled() { return debugEnabled; }
+    public void setDebugEnabled(boolean enabled) { this.debugEnabled = enabled; }
 
     public void toggleDebug() {
         this.debugEnabled = !this.debugEnabled;

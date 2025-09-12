@@ -7,6 +7,15 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * ClaimMessageListener
+ * - Sends enter/leave messages when players cross claim boundaries.
+ * - Supports wilderness toggle from config.
+ * - Uses named placeholders for consistency ({claim}).
+ */
 public class ClaimMessageListener implements Listener {
 
     private final ProShield plugin;
@@ -21,23 +30,29 @@ public class ClaimMessageListener implements Listener {
 
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
-        Player p = e.getPlayer();
+        Player player = e.getPlayer();
 
         String fromClaim = plotManager.getClaimName(e.getFrom());
         String toClaim   = plotManager.getClaimName(e.getTo());
 
         if (!fromClaim.equals(toClaim)) {
+            // Leaving claim
             if (fromClaim != null && !fromClaim.isEmpty() && !"Wilderness".equalsIgnoreCase(fromClaim)) {
-                messages.send(p, "claim.leaving", fromClaim);
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("claim", fromClaim);
+                messages.send(player, "claim.leaving", placeholders);
             }
 
+            // Entering claim / wilderness
             if (toClaim != null && !toClaim.isEmpty()) {
                 if ("Wilderness".equalsIgnoreCase(toClaim)) {
                     if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
-                        messages.send(p, "claim.entering", toClaim);
+                        messages.send(player, "claim.wilderness");
                     }
                 } else {
-                    messages.send(p, "claim.entering", toClaim);
+                    Map<String, String> placeholders = new HashMap<>();
+                    placeholders.put("claim", toClaim);
+                    messages.send(player, "claim.entering", placeholders);
                 }
             }
         }

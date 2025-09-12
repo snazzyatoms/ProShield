@@ -3,7 +3,6 @@ package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.ChatColor;
@@ -32,22 +31,25 @@ public class UntrustListener implements Listener {
         if (e.getCurrentItem() == null || !e.getCurrentItem().hasItemMeta()) return;
 
         String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
-        if (!title.contains("untrust")) return;
+        if (!title.contains("untrust menu")) return;
 
         e.setCancelled(true);
+        String name = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
 
-        String name = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName()).toLowerCase();
-        Plot plot = plots.getPlot(player.getLocation());
-        if (plot == null) return;
-
-        if (name.equals("back")) {
-            if (player.hasPermission("proshield.admin")) gui.openAdminMain(player);
-            else gui.openMain(player);
+        if (name.equalsIgnoreCase("Back")) {
+            if (player.hasPermission("proshield.admin")) gui.openAdminMain(player); else gui.openMain(player);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             return;
         }
 
-        player.sendMessage(ChatColor.YELLOW + "ℹ Untrust via GUI is coming in v2.0. Use /untrust <player> instead.");
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 0.5f);
+        String target = ChatColor.stripColor(name);
+        gui.rememberTarget(player, target);
+        gui.runPlayerCommand(player, "/untrust " + target);
+
+        player.sendMessage(ChatColor.YELLOW + "Untrusted " + ChatColor.WHITE + target + ChatColor.YELLOW + ".");
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+
+        // After untrust, bounce back to main appropriate menu
+        if (player.hasPermission("proshield.admin")) gui.openAdminMain(player); else gui.openMain(player);
     }
 }

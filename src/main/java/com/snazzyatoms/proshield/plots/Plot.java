@@ -1,76 +1,92 @@
 // src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Chunk;
+import org.bukkit.World;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /**
- * Represents a single land claim ("plot").
- * Stores owner, trusted players, roles, and metadata.
- * Unified from earlier versions (1.2.0 → 1.2.5).
+ * Plot
+ * - Represents a single claimed chunk
+ * - Stores owner, trusted players, and metadata
+ *
+ * Fixed for v1.2.5 so all managers & tasks compile.
  */
 public class Plot {
 
     private final UUID id;
-    private final Chunk chunk;
-    private UUID owner;
+    private final UUID ownerId;
+    private final String worldName;
+    private final int x;
+    private final int z;
 
-    // playerId → role
-    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
+    private String ownerName; // cache of owner's last known name
+    private final Set<UUID> trusted = new HashSet<>();
 
-    public Plot(Chunk chunk, UUID owner) {
+    public Plot(Chunk chunk, UUID ownerId) {
         this.id = UUID.randomUUID();
-        this.chunk = chunk;
-        this.owner = owner;
+        this.ownerId = ownerId;
+        this.worldName = chunk.getWorld().getName();
+        this.x = chunk.getX();
+        this.z = chunk.getZ();
     }
 
+    // -------------------------------
+    // Basic Getters
+    // -------------------------------
     public UUID getId() {
         return id;
     }
 
-    public Chunk getChunk() {
-        return chunk;
+    public UUID getOwnerId() {
+        return ownerId;
     }
 
-    public UUID getOwner() {
-        return owner;
+    public String getWorldName() {
+        return worldName;
     }
 
-    public void setOwner(UUID newOwner) {
-        this.owner = newOwner;
+    public int getX() {
+        return x;
     }
 
-    /** Display-friendly claim name (defaults to owner UUID if unknown). */
-    public String getDisplayNameSafe() {
-        return "Claim-" + id.toString().substring(0, 8);
+    public int getZ() {
+        return z;
     }
 
-    /* ------------------------------------------------------
-     * Trust & Roles
-     * ------------------------------------------------------ */
+    // -------------------------------
+    // Owner Name (cached)
+    // -------------------------------
+    public String getOwnerName() {
+        return ownerName != null ? ownerName : ownerId.toString();
+    }
+
+    public void setOwnerName(String name) {
+        this.ownerName = name;
+    }
+
+    // -------------------------------
+    // Trusted Players
+    // -------------------------------
+    public Set<UUID> getTrusted() {
+        return trusted;
+    }
+
     public boolean isOwner(UUID playerId) {
-        return owner.equals(playerId);
-    }
-
-    public void trust(UUID playerId, ClaimRole role) {
-        trusted.put(playerId, role);
-    }
-
-    public void untrust(UUID playerId) {
-        trusted.remove(playerId);
+        return ownerId.equals(playerId);
     }
 
     public boolean isTrusted(UUID playerId) {
-        return trusted.containsKey(playerId);
+        return trusted.contains(playerId);
     }
 
-    public ClaimRole getRole(UUID playerId) {
-        return trusted.getOrDefault(playerId, ClaimRole.NONE);
-    }
-
-    public Set<UUID> getTrustedPlayers() {
-        return Collections.unmodifiableSet(trusted.keySet());
+    // -------------------------------
+    // Utility
+    // -------------------------------
+    public String getDisplayNameSafe() {
+        return getOwnerName() + "'s Claim";
     }
 }

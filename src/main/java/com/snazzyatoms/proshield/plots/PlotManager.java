@@ -1,7 +1,7 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -25,16 +25,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * ✅ Expanded:
  *    - isOwner / isTrustedOrOwner
  *    - reloadFromConfig hook
+ * ✅ NEW:
+ *    - Integration with ClaimRoleManager (role persistence)
  */
 public class PlotManager {
 
     private final ProShield plugin;
+    private final ClaimRoleManager roleManager;
     private final Map<String, Plot> plots = new ConcurrentHashMap<>();
     private final File file;
     private final FileConfiguration config;
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+        this.roleManager = plugin.getRoleManager();
         this.file = new File(plugin.getDataFolder(), "plots.yml");
         this.config = YamlConfiguration.loadConfiguration(file);
         loadAll();
@@ -50,6 +54,11 @@ public class PlotManager {
 
     private String key(Location loc) {
         return loc.getWorld().getName() + "," + loc.getChunk().getX() + "," + loc.getChunk().getZ();
+    }
+
+    /** Returns the stable UUID used by ClaimRoleManager for this plot. */
+    public UUID getOrCreatePlotId(Plot plot) {
+        return plot.getId();
     }
 
     /* -------------------------------------------------------
@@ -92,14 +101,23 @@ public class PlotManager {
         Plot plot = new Plot(chunk, owner);
         plots.put(k, plot);
         saveAsync(plot);
+
+        // ensure role manager knows about this claim
+        roleManager.getRolePermissions(plot.getId(), "trusted");
+
         return plot;
     }
 
     public void unclaim(Chunk chunk) {
         String k = key(chunk);
-        plots.remove(k);
+        Plot removed = plots.remove(k);
         config.set(k, null);
         saveFile();
+
+        if (removed != null) {
+            // clear role data too
+            roleManager.clearRole(removed.getId(), null);
+        }
     }
 
     /* -------------------------------------------------------
@@ -139,6 +157,9 @@ public class PlotManager {
             Plot plot = Plot.deserialize(config.getConfigurationSection(key));
             if (plot != null) {
                 plots.put(key, plot);
+
+                // ensure role manager knows about this claim
+                roleManager.getRolePermissions(plot.getId(), "trusted");
             }
         }
     }

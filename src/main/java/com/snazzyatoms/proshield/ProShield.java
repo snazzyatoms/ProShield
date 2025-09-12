@@ -7,9 +7,10 @@ import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
-import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
+import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
+import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
@@ -45,7 +46,7 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
-        // GUI
+        // GUI stack
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
         compassManager = new CompassManager(this, guiManager);
@@ -56,8 +57,8 @@ public class ProShield extends JavaPlugin {
         // Listeners
         registerListeners();
 
-        // Background tasks (repel)
-        scheduleRepelTasks();
+        // Tasks (mobs + border repel)
+        scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
     }
@@ -71,6 +72,7 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerCommands() {
+        // Root /proshield command
         if (getCommand("proshield") != null) {
             getCommand("proshield").setExecutor(
                 new ProShieldCommand(this, plotManager, guiManager, compassManager)
@@ -80,6 +82,7 @@ public class ProShield extends JavaPlugin {
             );
         }
 
+        // Player dispatcher for claim-related commands
         PlayerCommandDispatcher playerCommandDispatcher =
             new PlayerCommandDispatcher(this, plotManager, roleManager, messages);
 
@@ -98,34 +101,65 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerListeners() {
+        // GUI
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+
+        // Unified plot protections
+        Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
     }
 
-    private void scheduleRepelTasks() {
-        boolean borderEnabled = getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
-        boolean despawnInside = getConfig().getBoolean("protection.mobs.despawn-inside", true);
+    private void scheduleTasks() {
+        // Read config toggles
+        boolean repelMobs = getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
+        boolean despawnMobs = getConfig().getBoolean("protection.mobs.despawn-inside", true);
 
-        if (borderEnabled) {
-            new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 3); // every 3s
+        if (repelMobs) {
+            new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 3);
         }
-        if (despawnInside) {
-            new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5); // every 5s
+
+        if (despawnMobs) {
+            new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5);
         }
     }
 
     // Getters
-    public MessagesUtil getMessagesUtil() { return messages; }
-    public PlotManager getPlotManager() { return plotManager; }
-    public ClaimRoleManager getRoleManager() { return roleManager; }
-    public GUICache getGuiCache() { return guiCache; }
-    public GUIManager getGuiManager() { return guiManager; }
-    public CompassManager getCompassManager() { return compassManager; }
+    public MessagesUtil getMessagesUtil() {
+        return messages;
+    }
+
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
+    }
+
+    public GUICache getGuiCache() {
+        return guiCache;
+    }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+
+    public CompassManager getCompassManager() {
+        return compassManager;
+    }
 
     // Debug support
-    public boolean isDebugEnabled() { return debugEnabled; }
-    public void setDebugEnabled(boolean enabled) { this.debugEnabled = enabled; }
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public void setDebugEnabled(boolean enabled) {
+        this.debugEnabled = enabled;
+    }
+
     public void toggleDebug() {
         this.debugEnabled = !this.debugEnabled;
-        if (messages != null) messages.debug("Debug mode toggled: " + (this.debugEnabled ? "ON" : "OFF"));
+        if (messages != null) {
+            messages.debug("Debug mode toggled: " + (this.debugEnabled ? "ON" : "OFF"));
+        }
     }
 }

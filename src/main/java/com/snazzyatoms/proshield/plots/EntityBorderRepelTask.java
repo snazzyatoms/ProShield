@@ -16,7 +16,7 @@ import org.bukkit.util.Vector;
  *
  * Fixed for v1.2.5:
  *   • Uses Plot#getWorldName(), getX(), getZ()
- *   • Null-safe for world lookups
+ *   • Null-safe world lookups
  */
 public class EntityBorderRepelTask extends BukkitRunnable {
 

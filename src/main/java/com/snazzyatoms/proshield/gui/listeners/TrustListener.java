@@ -42,7 +42,7 @@ public class TrustListener implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
-        if (title == null || !title.contains("Trust")) return; // safer than hardcoding
+        if (title == null || !title.toLowerCase().contains("trust")) return;
 
         event.setCancelled(true);
 
@@ -52,7 +52,6 @@ public class TrustListener implements Listener {
             return;
         }
 
-        // Get target (set earlier via rememberTarget)
         String targetName = gui.getRememberedTarget(player);
         if (targetName == null) {
             messages.send(player, "error.player-not-found", Map.of("player", "unknown"));
@@ -75,10 +74,8 @@ public class TrustListener implements Listener {
 
         if (assignedRole == null) return;
 
-        // Apply role and persist
         roles.assignRole(claimId, targetId, assignedRole);
 
-        // Send placeholder-based message
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("player", targetName);
         placeholders.put("claim", plot.getDisplayNameSafe());
@@ -86,7 +83,6 @@ public class TrustListener implements Listener {
 
         messages.send(player, "trust.added", placeholders);
 
-        // Save plot and refresh
         plots.saveAsync(plot);
         gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
     }

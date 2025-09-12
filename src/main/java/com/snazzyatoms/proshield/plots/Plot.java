@@ -5,13 +5,13 @@ import com.snazzyatoms.proshield.roles.ClaimRole;
 
 import org.bukkit.Chunk;
 
-import java.time.Instant;
 import java.util.*;
 
 /**
  * Plot
- * Represents a single claimed chunk.
- * Stores owner, trusted players, roles, flags, and metadata.
+ * - Represents a claimed chunk.
+ * - Stores owner, trusted players (with roles), flags.
+ * - Unified model for v1.2.0 → v1.2.5.
  */
 public class Plot {
 
@@ -19,85 +19,124 @@ public class Plot {
     private final Chunk chunk;
     private final UUID owner;
 
-    // Trusted players and roles
+    // trusted players → role
     private final Map<UUID, ClaimRole> trusted = new HashMap<>();
 
-    // Claim display name
-    private String displayName;
-
-    // Flags (pvp, explosions, fire, etc.)
+    // claim flags
     private final Map<String, Boolean> flags = new HashMap<>();
 
-    // Metadata
-    private Instant lastActive;
+    // Optional display name (fallback = owner’s name or id)
+    private String displayName;
 
     public Plot(Chunk chunk, UUID owner) {
         this.id = UUID.randomUUID();
         this.chunk = chunk;
         this.owner = owner;
-        this.displayName = "Claim-" + id.toString().substring(0, 8);
-        this.lastActive = Instant.now();
+
+        // default flags (can be overridden via config or GUI)
+        flags.put("pvp", false);
+        flags.put("explosions", false);
+        flags.put("fire", false);
+        flags.put("entity-grief", false);
+        flags.put("redstone", true);
+        flags.put("containers", false);
+        flags.put("animals", false);
+        flags.put("vehicles", false);
+        flags.put("armor-stands", false);
+        flags.put("item-frames", false);
+        flags.put("buckets", false);
+        flags.put("pets", false);
+        flags.put("mob-repel", true);
+        flags.put("mob-despawn", true);
     }
 
-    /* ----------------------------
-     * Getters / Setters
-     * ---------------------------- */
-    public UUID getId() { return id; }
-
-    public Chunk getChunk() { return chunk; }
-
-    public UUID getOwner() { return owner; }
-
-    public boolean isOwner(UUID uuid) { return owner.equals(uuid); }
-
-    public String getDisplayNameSafe() {
-        return (displayName != null && !displayName.isEmpty()) ? displayName : "Unnamed Claim";
+    /* -------------------------------------------------------
+     * Identity
+     * ------------------------------------------------------- */
+    public UUID getId() {
+        return id;
     }
 
-    public void setDisplayName(String name) {
-        this.displayName = (name != null && !name.isEmpty()) ? name : "Unnamed Claim";
+    public Chunk getChunk() {
+        return chunk;
     }
 
-    public Instant getLastActive() { return lastActive; }
-
-    public void updateActivity() { this.lastActive = Instant.now(); }
-
-    /* ----------------------------
-     * Trusted Players
-     * ---------------------------- */
-    public ClaimRole getRole(UUID uuid) {
-        return trusted.getOrDefault(uuid, ClaimRole.VISITOR);
+    public UUID getOwner() {
+        return owner;
     }
 
-    public void setRole(UUID uuid, ClaimRole role) {
-        trusted.put(uuid, role);
+    public boolean isOwner(UUID playerId) {
+        return playerId != null && playerId.equals(owner);
     }
 
-    public void removeRole(UUID uuid) {
-        trusted.remove(uuid);
+    /* -------------------------------------------------------
+     * Trusted / Roles
+     * ------------------------------------------------------- */
+    public void setRole(UUID playerId, ClaimRole role) {
+        if (playerId == null || role == null) return;
+        trusted.put(playerId, role);
     }
 
-    public Set<String> getTrustedNames() {
-        // Names can be resolved asynchronously if needed
-        Set<String> names = new HashSet<>();
-        for (UUID uuid : trusted.keySet()) {
-            names.add(uuid.toString()); // TODO: hook into Bukkit.getOfflinePlayer
-        }
-        return names;
+    public ClaimRole getRole(UUID playerId) {
+        return trusted.getOrDefault(playerId, ClaimRole.NONE);
     }
 
-    /* ----------------------------
+    public void clearRole(UUID playerId) {
+        trusted.remove(playerId);
+    }
+
+    public boolean isTrusted(UUID playerId) {
+        return trusted.containsKey(playerId);
+    }
+
+    public Set<UUID> getTrustedPlayers() {
+        return Collections.unmodifiableSet(trusted.keySet());
+    }
+
+    public Map<UUID, ClaimRole> getTrustedRoles() {
+        return Collections.unmodifiableMap(trusted);
+    }
+
+    /* -------------------------------------------------------
      * Flags
-     * ---------------------------- */
-    public void setFlag(String flag, boolean value) {
-        flags.put(flag.toLowerCase(), value);
-    }
-
+     * ------------------------------------------------------- */
     public boolean getFlag(String flag) {
         return flags.getOrDefault(flag.toLowerCase(), false);
     }
 
-    public Map<String, Boolean> getFlags() {
+    public void setFlag(String flag, boolean value) {
+        flags.put(flag.toLowerCase(), value);
+    }
+
+    public Map<String, Boolean> getAllFlags() {
         return Collections.unmodifiableMap(flags);
+    }
+
+    /* -------------------------------------------------------
+     * Display Name
+     * ------------------------------------------------------- */
+    public String getDisplayNameSafe() {
+        if (displayName != null && !displayName.isEmpty()) {
+            return displayName;
+        }
+        return "Claim " + id.toString().substring(0, 8);
+    }
+
+    public void setDisplayName(String name) {
+        this.displayName = name;
+    }
+
+    /* -------------------------------------------------------
+     * Utility
+     * ------------------------------------------------------- */
+    @Override
+    public String toString() {
+        return "Plot{" +
+                "id=" + id +
+                ", owner=" + owner +
+                ", chunk=" + chunk.getX() + "," + chunk.getZ() +
+                ", trusted=" + trusted.size() +
+                ", flags=" + flags +
+                '}';
     }
 }

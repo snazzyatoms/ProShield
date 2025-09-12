@@ -140,7 +140,10 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
      * ====================================================== */
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        if (cmd.getName().equalsIgnoreCase("proshield")) {
+        String name = cmd.getName().toLowerCase(Locale.ROOT);
+
+        // /proshield subcommands
+        if (name.equals("proshield")) {
             if (args.length == 1) {
                 List<String> subs = new ArrayList<>(List.of("help"));
                 if (sender.hasPermission("proshield.admin.reload")) subs.add("reload");
@@ -153,14 +156,33 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        // Trust/Untrust completions (player names)
-        if (cmd.getName().equalsIgnoreCase("trust") || cmd.getName().equalsIgnoreCase("untrust")) {
+        // /trust completions
+        if (name.equals("trust")) {
             if (args.length == 1) {
+                // Suggest online players
                 return Bukkit.getOnlinePlayers().stream()
                         .map(Player::getName)
-                        .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
+                        .filter(p -> p.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
+                        .collect(Collectors.toList());
+            } else if (args.length == 2) {
+                // Suggest roles
+                List<String> roles = Arrays.asList("visitor", "trusted", "builder", "container", "moderator", "manager");
+                if (sender.hasPermission("proshield.admin")) {
+                    roles = new ArrayList<>(roles);
+                    roles.add("owner"); // admin-only suggestion
+                }
+                return roles.stream()
+                        .filter(r -> r.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
                         .collect(Collectors.toList());
             }
+        }
+
+        // /untrust completions
+        if (name.equals("untrust") && args.length == 1) {
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(p -> p.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
         }
 
         return Collections.emptyList();

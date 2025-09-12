@@ -24,6 +24,9 @@ public class GUIManager {
     private final GUICache cache;
     private final ClaimRoleManager roles;
 
+    // store temporary targets for trust/untrust menus
+    private final Map<UUID, String> pendingTargets = new HashMap<>();
+
     public GUIManager(ProShield plugin, GUICache cache, ClaimRoleManager roles) {
         this.plugin = plugin;
         this.cache = cache;
@@ -190,7 +193,7 @@ public class GUIManager {
     }
 
     /* ====================================================
-     * UTIL HELPERS
+     * HELPER METHODS
      * ==================================================== */
     private ItemStack makeMenuItem(Material mat, ChatColor color, String name, List<String> lore, boolean hideAttrs) {
         ItemStack item = new ItemStack(mat);
@@ -214,4 +217,35 @@ public class GUIManager {
     }
 
     private String state(boolean on) { return on ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled"; }
+
+    /* ====================================================
+     * REQUIRED UTILS (added to fix compile errors)
+     * ==================================================== */
+    public void openTrustMenu(Player player, boolean fromAdmin) {
+        // TODO: implement GUI for trust
+    }
+
+    public void openUntrustMenu(Player player, boolean fromAdmin) {
+        // TODO: implement GUI for untrust
+    }
+
+    public void openFlagsMenu(Player player, boolean fromAdmin) {
+        // TODO: implement GUI for flags
+    }
+
+    public void openInfoMenu(Player player, Plot plot) {
+        // TODO: implement GUI for claim info
+    }
+
+    public void rememberTarget(Player player, String targetName) {
+        pendingTargets.put(player.getUniqueId(), targetName);
+    }
+
+    public String getRememberedTarget(Player player) {
+        return pendingTargets.get(player.getUniqueId());
+    }
+
+    public void runPlayerCommand(Player player, String command) {
+        Bukkit.dispatchCommand(player, command);
+    }
 }

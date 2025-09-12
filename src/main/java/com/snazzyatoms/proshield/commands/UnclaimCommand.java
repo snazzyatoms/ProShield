@@ -11,46 +11,45 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.UUID;
+
 public class UnclaimCommand implements CommandExecutor {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final ClaimRoleManager roles;
+    private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    public UnclaimCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
+    public UnclaimCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        this.roles = roles;
-        this.messages = plugin.getMessagesUtil();
+        this.roleManager = roleManager;
+        this.messages = messages;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            messages.send(sender, "error.players-only");
+            sender.sendMessage("Only players can unclaim land.");
             return true;
         }
 
+        UUID playerId = player.getUniqueId();
         Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
+        Plot plot = plotManager.getPlotAt(chunk);
 
         if (plot == null) {
-            messages.send(player, "unclaim.not-claimed");
+            messages.send(player, "not_claimed");
             return true;
         }
 
-        if (!plot.isOwner(player.getUniqueId())) {
-            if (!roles.canUnclaim(plot.getId(), player.getUniqueId())) {
-                messages.send(player, "error.cannot-modify-claim");
-                return true;
-            }
+        if (!plot.isOwner(playerId) && !roleManager.canUnclaim(playerId, plot.getId())) {
+            messages.send(player, "no_permission_unclaim");
+            return true;
         }
 
-        // Remove claim
         plotManager.removePlot(plot);
-
-        messages.send(player, "unclaim.success", chunk.getX() + "", chunk.getZ() + "");
+        messages.send(player, "unclaim_success", String.valueOf(chunk.getX()), String.valueOf(chunk.getZ()));
         return true;
     }
 }

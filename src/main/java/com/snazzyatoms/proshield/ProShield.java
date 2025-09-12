@@ -45,7 +45,7 @@ public class ProShield extends JavaPlugin {
 
         // Core managers
         plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(this, plotManager);
+        roleManager = new ClaimRoleManager(plotManager); // ✅ fixed constructor
 
         // GUI + Compass
         guiCache = new GUICache();

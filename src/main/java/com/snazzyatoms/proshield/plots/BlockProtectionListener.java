@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.roles.RolePermissions;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.block.Block;
@@ -53,8 +54,9 @@ public class BlockProtectionListener implements Listener {
 
         UUID uid = player.getUniqueId();
         ClaimRole role = roleManager.getRole(plot, uid);
+        RolePermissions perms = roleManager.getRolePermissions(plot.getId(), role);
 
-        if (role == null || !roleManager.canBuild(role)) {
+        if (!perms.canBuild()) {
             event.setCancelled(true);
             messages.send(player, "block-break-deny");
             messages.debug("&cPrevented block break in claim: " + plot.getDisplayNameSafe() +
@@ -81,8 +83,9 @@ public class BlockProtectionListener implements Listener {
 
         UUID uid = player.getUniqueId();
         ClaimRole role = roleManager.getRole(plot, uid);
+        RolePermissions perms = roleManager.getRolePermissions(plot.getId(), role);
 
-        if (role == null || !roleManager.canBuild(role)) {
+        if (!perms.canBuild()) {
             event.setCancelled(true);
             messages.send(player, "block-place-deny");
             messages.debug("&cPrevented block place in claim: " + plot.getDisplayNameSafe() +

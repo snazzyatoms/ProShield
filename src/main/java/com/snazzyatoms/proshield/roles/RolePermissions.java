@@ -9,11 +9,11 @@ import java.util.Map;
  */
 public class RolePermissions {
 
-    private boolean canBuild = true;
+    private boolean canBuild = false;
     private boolean canContainers = false;
     private boolean canManageTrust = false;
     private boolean canUnclaim = false;
-    private boolean canInteract = true; // 🔹 Added for entity/block interaction
+    private boolean canInteract = false;
 
     public boolean canBuild() { return canBuild; }
     public boolean canContainers() { return canContainers; }
@@ -40,19 +40,46 @@ public class RolePermissions {
     public static RolePermissions defaultsFor(String role) {
         RolePermissions p = new RolePermissions();
         switch (role.toLowerCase()) {
+            case "visitor" -> {
+                p.setCanInteract(false);
+            }
+            case "member" -> {
+                p.setCanInteract(true);
+            }
+            case "trusted" -> {
+                p.setCanInteract(true);
+            }
             case "builder" -> {
                 p.setCanBuild(true);
                 p.setCanContainers(true);
-                p.setManageTrust(false);
-                p.setUnclaim(false);
+                p.setCanInteract(true);
+            }
+            case "container" -> {
+                p.setCanContainers(true);
                 p.setCanInteract(true);
             }
             case "moderator" -> {
                 p.setCanBuild(true);
                 p.setCanContainers(true);
-                p.setManageTrust(true);
-                p.setUnclaim(false);
+                p.setCanManageTrust(true);
                 p.setCanInteract(true);
+            }
+            case "manager" -> {
+                p.setCanBuild(true);
+                p.setCanContainers(true);
+                p.setCanManageTrust(true);
+                p.setCanUnclaim(true);
+                p.setCanInteract(true);
+            }
+            case "owner" -> {
+                p.setCanBuild(true);
+                p.setCanContainers(true);
+                p.setCanManageTrust(true);
+                p.setCanUnclaim(true);
+                p.setCanInteract(true);
+            }
+            default -> {
+                // NONE or unknown roles → no permissions
             }
         }
         return p;
@@ -61,14 +88,11 @@ public class RolePermissions {
     public static RolePermissions fromMap(Map<String, Object> m) {
         RolePermissions p = new RolePermissions();
         if (m == null) return p;
-        if (m.containsKey("canBuild")) p.setCanBuild((boolean)m.get("canBuild"));
-        if (m.containsKey("canContainers")) p.setCanContainers((boolean)m.get("canContainers"));
-        if (m.containsKey("canManageTrust")) p.setManageTrust((boolean)m.get("canManageTrust"));
-        if (m.containsKey("canUnclaim")) p.setUnclaim((boolean)m.get("canUnclaim"));
-        if (m.containsKey("canInteract")) p.setCanInteract((boolean)m.get("canInteract"));
+        if (m.containsKey("canBuild")) p.setCanBuild((boolean) m.get("canBuild"));
+        if (m.containsKey("canContainers")) p.setCanContainers((boolean) m.get("canContainers"));
+        if (m.containsKey("canManageTrust")) p.setCanManageTrust((boolean) m.get("canManageTrust"));
+        if (m.containsKey("canUnclaim")) p.setCanUnclaim((boolean) m.get("canUnclaim"));
+        if (m.containsKey("canInteract")) p.setCanInteract((boolean) m.get("canInteract"));
         return p;
     }
-
-    private void setManageTrust(boolean v) { this.canManageTrust = v; }
-    private void setUnclaim(boolean v) { this.canUnclaim = v; }
 }

@@ -14,6 +14,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -24,14 +26,12 @@ import java.util.UUID;
  */
 public class TrustListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
     private final ClaimRoleManager roles;
     private final GUIManager gui;
     private final MessagesUtil messages;
 
     public TrustListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles, GUIManager gui) {
-        this.plugin = plugin;
         this.plots = plots;
         this.roles = roles;
         this.gui = gui;
@@ -49,38 +49,41 @@ public class TrustListener implements Listener {
         event.setCancelled(true);
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) {
-            messages.send(player, "error.not-in-claim");
+            messages.send(player, "error.no-claim");
             return;
         }
 
         // Get target (set earlier via rememberTarget)
         String targetName = gui.getRememberedTarget(player);
         if (targetName == null) {
-            messages.send(player, "error.player-not-found");
+            messages.send(player, "error.player-not-found", Map.of("player", "unknown"));
             return;
         }
 
         UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
         UUID claimId = plot.getId();
 
+        ClaimRole assignedRole = null;
         switch (event.getSlot()) {
-            case 10 -> { // Trust as Trusted
-                roles.assignRole(claimId, targetId, ClaimRole.TRUSTED);
-                messages.send(player, "trust.added", targetName);
-            }
-            case 11 -> { // Trust as Builder
-                roles.assignRole(claimId, targetId, ClaimRole.BUILDER);
-                messages.send(player, "trust.added", targetName + " as Builder");
-            }
-            case 12 -> { // Trust as Moderator
-                roles.assignRole(claimId, targetId, ClaimRole.MODERATOR);
-                messages.send(player, "trust.added", targetName + " as Moderator");
-            }
-            case 26 -> { // Back button
+            case 10 -> assignedRole = ClaimRole.TRUSTED;
+            case 11 -> assignedRole = ClaimRole.BUILDER;
+            case 12 -> assignedRole = ClaimRole.MODERATOR;
+            case 26 -> {
                 gui.openMain(player);
                 return;
             }
             default -> { return; }
+        }
+
+        if (assignedRole != null) {
+            roles.assignRole(claimId, targetId, assignedRole);
+
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("player", targetName);
+            placeholders.put("claim", plot.getDisplayNameSafe());
+            placeholders.put("role", assignedRole.getDisplayName());
+
+            messages.send(player, "trust.added", placeholders);
         }
 
         // Save plot and refresh

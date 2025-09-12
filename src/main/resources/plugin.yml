@@ -16,6 +16,16 @@ commands:
     aliases: [ps, shield]
     permission: proshield.use
 
+  claim:
+    description: Claim the chunk you are standing in
+    usage: /<command>
+    permission: proshield.use
+
+  unclaim:
+    description: Unclaim the chunk you are standing in
+    usage: /<command>
+    permission: proshield.use
+
   trust:
     description: Trust a player with optional role
     usage: /<command> <player> [role]
@@ -37,6 +47,12 @@ commands:
     description: Transfer claim ownership to another player
     usage: /<command> <player>
     permission: proshield.use
+
+  flags:
+    description: Manage claim flags via GUI
+    usage: /<command>
+    permission: proshield.flags
+    aliases: [cf]
 
 permissions:
   # General Use

@@ -12,58 +12,59 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.UUID;
-
 /**
  * /unclaim command
  *
- * ✅ Removes a player’s claim if they are the owner or have unclaim permission.
+ * ✅ Allows a player to unclaim their current chunk.
+ * ✅ Checks ownership or permission through ClaimRoleManager.
+ * ✅ Integrates with PlotManager + MessagesUtil.
  */
 public class UnclaimCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
+    private final PlotManager plots;
     private final ClaimRoleManager roles;
     private final MessagesUtil messages;
 
-    public UnclaimCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
+    public UnclaimCommand(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
+        this.plots = plots;
         this.roles = roles;
         this.messages = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
             messages.send(sender, "error.players-only");
             return true;
         }
 
-        Chunk chunk = player.getLocation().getChunk();
-        Plot plot = plotManager.getPlot(chunk);
-
-        if (plot == null) {
-            messages.send(player, "error.not-in-claim");
+        if (!player.hasPermission("proshield.use")) {
+            messages.send(player, "error.no-permission");
             return true;
         }
 
-        UUID uid = player.getUniqueId();
+        Chunk chunk = player.getLocation().getChunk();
+        Plot plot = plots.getPlot(chunk);
 
-        // Owner bypass
-        if (!plot.isOwner(uid)) {
-            if (!roles.canUnclaim(uid, plot)) {
-                messages.send(player, "error.cannot-unclaim");
+        if (plot == null) {
+            messages.send(player, "unclaim.not-claimed");
+            return true;
+        }
+
+        // Check if owner OR role allows unclaim
+        if (!plot.isOwner(player.getUniqueId())) {
+            if (!roles.canUnclaim(plot.getId(), player.getUniqueId())) {
+                messages.send(player, "unclaim.no-permission");
                 return true;
             }
         }
 
-        // Unclaim
-        plotManager.removePlot(plot);
-        messages.send(player, "unclaim.success", plot.getDisplayNameSafe());
+        // Remove the claim
+        plots.removePlot(plot);
 
-        messages.debug("&eClaim unclaimed: " + plot.getDisplayNameSafe() + " by " + player.getName());
+        messages.send(player, "unclaim.success", chunk.getX(), chunk.getZ());
         return true;
     }
 }

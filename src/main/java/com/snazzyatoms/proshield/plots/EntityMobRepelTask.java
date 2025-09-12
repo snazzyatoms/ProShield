@@ -15,7 +15,8 @@ import org.bukkit.scheduler.BukkitRunnable;
  * - Resets targeting so mobs ignore players inside claims
  *
  * Fixed for v1.2.5:
- *   • Uses Plot#getWorldName(), getX(), getZ()
+ *   • Uses PlotManager#getPlot(Location) safely
+ *   • No direct Plot#getX()/getZ() calls (avoids errors)
  *   • Null-safe checks
  */
 public class EntityMobRepelTask extends BukkitRunnable {

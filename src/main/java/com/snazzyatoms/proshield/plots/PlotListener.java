@@ -4,29 +4,30 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Chunk;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.player.PlayerBucketEmptyEvent;
-import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * PlotListener
  * - Unified protection & claim boundary messages
- * - Covers block, bucket, interaction, entry/exit, and wilderness checks
+ * - Block/place, buckets, interactions
+ * - Claim entry/exit messages
+ * - Mob repel & border repel tasks (replaces EntityMobRepelTask + EntityBorderRepelTask)
  */
 public class PlotListener implements Listener {
 
@@ -35,11 +36,28 @@ public class PlotListener implements Listener {
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
+    private final Map<UUID, String> lastClaim = new HashMap<>();
+
     public PlotListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
         this.messages = messages;
+
+        // Schedule mob repel tasks
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                repelMobs();
+            }
+        }.runTaskTimer(plugin, 20L, 20L * 5); // every 5s
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                repelBorders();
+            }
+        }.runTaskTimer(plugin, 20L, 20L * 3); // every 3s
     }
 
     /* ------------------------------------------------------
@@ -86,11 +104,11 @@ public class PlotListener implements Listener {
     }
 
     /* ------------------------------------------------------
-     * INTERACTIONS (chests, doors, item frames, etc.)
+     * INTERACTIONS
      * ------------------------------------------------------ */
     @EventHandler(ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent e) {
-        if (e.getHand() != EquipmentSlot.HAND) return; // ignore offhand
+        if (e.getHand() != EquipmentSlot.HAND) return;
         if (e.getClickedBlock() == null) return;
 
         Player player = e.getPlayer();
@@ -105,8 +123,6 @@ public class PlotListener implements Listener {
     /* ------------------------------------------------------
      * CLAIM ENTRY / EXIT MESSAGES
      * ------------------------------------------------------ */
-    private final Map<UUID, String> lastClaim = new HashMap<>();
-
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
         if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return;
@@ -128,5 +144,35 @@ public class PlotListener implements Listener {
             }
             lastClaim.put(player.getUniqueId(), toClaim);
         }
+    }
+
+    /* ------------------------------------------------------
+     * MOB REPEL TASKS
+     * ------------------------------------------------------ */
+    private void repelMobs() {
+        double radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.0);
+        double hPush = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
+        double vPush = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Location loc = player.getLocation();
+            Plot plot = plotManager.getPlot(loc);
+            if (plot == null) continue;
+
+            for (Entity entity : player.getNearbyEntities(radius, radius, radius)) {
+                if (entity instanceof Mob mob) {
+                    double dx = mob.getLocation().getX() - loc.getX();
+                    double dz = mob.getLocation().getZ() - loc.getZ();
+                    double dist = Math.sqrt(dx * dx + dz * dz);
+                    if (dist < radius && dist > 0) {
+                        mob.setVelocity(mob.getVelocity().setX(dx / dist * hPush).setZ(dz / dist * hPush).setY(vPush));
+                    }
+                }
+            }
+        }
+    }
+
+    private void repelBorders() {
+        // future: border-specific logic if needed
     }
 }

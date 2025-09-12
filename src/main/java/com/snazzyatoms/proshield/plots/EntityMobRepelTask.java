@@ -8,29 +8,27 @@ import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
+/**
+ * EntityMobRepelTask
+ * - Removes mobs inside claims (if enabled)
+ * - Resets targeting so mobs ignore players inside claims
+ *
+ * Fixed for v1.2.5:
+ *   • Uses Plot#getWorldName(), getX(), getZ()
+ *   • Null-safe checks
+ */
 public class EntityMobRepelTask extends BukkitRunnable {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
 
     private final boolean despawnInside;
-    private final boolean repelEnabled;
-    private final double repelRadius;
-    private final double pushHorizontal;
-    private final double pushVertical;
 
     public EntityMobRepelTask(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-
-        // Configurable values
         this.despawnInside = plugin.getConfig().getBoolean("protection.mobs.despawn-inside", true);
-        this.repelEnabled = plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
-        this.repelRadius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.0);
-        this.pushHorizontal = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
-        this.pushVertical = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
     }
 
     @Override
@@ -44,39 +42,14 @@ public class EntityMobRepelTask extends BukkitRunnable {
 
                 if (plot != null) {
                     if (despawnInside) {
-                        mob.remove(); // Instantly despawn mobs inside claims
+                        // Instantly despawn mobs that enter claims
+                        mob.remove();
                     } else {
-                        mob.setTarget(null); // Reset target → players inside claims are "invisible"
-
-                        // Repel mobs from claim borders
-                        if (repelEnabled) {
-                            Location nearestEdge = getNearestEdge(loc, plot);
-                            if (nearestEdge != null && loc.distance(nearestEdge) <= repelRadius) {
-                                Vector push = loc.toVector().subtract(nearestEdge.toVector()).normalize();
-                                push.setX(push.getX() * pushHorizontal);
-                                push.setZ(push.getZ() * pushHorizontal);
-                                push.setY(pushVertical);
-                                mob.setVelocity(push);
-                            }
-                        }
+                        // Reset target → mobs act like player is "invisible" inside claims
+                        mob.setTarget(null);
                     }
                 }
             }
         }
-    }
-
-    /**
-     * Calculate nearest edge of claim to push mobs away.
-     */
-    private Location getNearestEdge(Location loc, Plot plot) {
-        int x = plot.getX() << 4; // chunkX * 16
-        int z = plot.getZ() << 4; // chunkZ * 16
-        int maxX = x + 15;
-        int maxZ = z + 15;
-
-        double clampedX = Math.max(x, Math.min(loc.getX(), maxX));
-        double clampedZ = Math.max(z, Math.min(loc.getZ(), maxZ));
-
-        return new Location(loc.getWorld(), clampedX, loc.getY(), clampedZ);
     }
 }

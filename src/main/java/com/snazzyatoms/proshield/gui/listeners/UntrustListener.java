@@ -68,7 +68,8 @@ public class UntrustListener implements Listener {
                 placeholders.put("player", targetName);
                 placeholders.put("claim", plot.getDisplayNameSafe());
 
-                messages.send(player, "untrust.removed", placeholders);
+                // Use roles.cleared for consistency
+                messages.send(player, "roles.cleared", placeholders);
                 yield true;
             }
             case 26 -> {

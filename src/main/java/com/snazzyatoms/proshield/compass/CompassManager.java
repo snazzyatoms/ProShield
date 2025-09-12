@@ -50,15 +50,10 @@ public class CompassManager {
     }
 
     /**
-     * Open GUI depending on player’s permissions.
+     * Open the unified GUI (main menu).
+     * Admin-only items are auto-hidden by permission checks in config.yml.
      */
     public void openCompassGUI(Player player) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (player.hasPermission("proshield.admin")) {
-                guiManager.openMenu(player, "admin");
-            } else {
-                guiManager.openMenu(player, "main");
-            }
-        });
+        Bukkit.getScheduler().runTask(plugin, () -> guiManager.openMenu(player, "main"));
     }
 }

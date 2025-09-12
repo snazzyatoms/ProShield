@@ -2,120 +2,122 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRole;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * PlotManager
+ * - Stores and manages all plots
+ * - Handles creation, lookup, saving/loading
+ * - Provides name/owner resolution for use in GUIs & messages
+ *
+ * Consolidated for v1.2.5+
+ */
 public class PlotManager {
 
     private final ProShield plugin;
-    private final ClaimRoleManager roleManager;
 
-    // plotId -> Plot
-    private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
+    // Plots stored by ID
+    private final Map<UUID, Plot> plots = new HashMap<>();
 
-    // Admin bypass set
-    private final Set<UUID> bypass = ConcurrentHashMap.newKeySet();
+    // Chunk mapping: world+chunkX+chunkZ -> plotId
+    private final Map<String, UUID> chunkMap = new HashMap<>();
+
+    // Players in bypass mode
+    private final Set<UUID> bypassing = new HashSet<>();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-        this.roleManager = null;
     }
 
-    public ProShield getPlugin() { return plugin; }
-
-    public Collection<Plot> getAllPlots() {
-        return Collections.unmodifiableCollection(plots.values());
-    }
-
-    public Plot getPlotById(UUID id) { return plots.get(id); }
-
-    public Plot getPlot(Location location) {
-        if (location == null) return null;
-        return getPlot(location.getChunk());
-    }
-
-    public Plot getPlot(Chunk chunk) {
-        for (Plot plot : plots.values()) {
-            if (plot.getChunk().equals(chunk)) return plot;
-        }
-        return null;
-    }
-
-    public Plot getPlotAt(Chunk chunk) { return getPlot(chunk); }
-
-    public String getClaimName(Location location) {
-        Plot plot = getPlot(location);
-        return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
-    }
-
-    public Plot createPlot(UUID owner, Chunk chunk) {
-        Plot existing = getPlot(chunk);
-        if (existing != null) return existing;
-        Plot plot = new Plot(chunk, owner);
-        plots.put(plot.getId(), plot);
-        saveAsync(plot);
+    /* ======================================================
+     * PLOTS
+     * ====================================================== */
+    public Plot createPlot(UUID ownerId, Chunk chunk) {
+        UUID id = UUID.randomUUID();
+        Plot plot = new Plot(id, ownerId, chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+        plots.put(id, plot);
+        chunkMap.put(chunkKey(chunk), id);
         return plot;
     }
 
     public void removePlot(Plot plot) {
-        if (plot == null) return;
         plots.remove(plot.getId());
-        // TODO persist removal
+        chunkMap.remove(chunkKey(plot.getWorld(), plot.getX(), plot.getZ()));
     }
 
-    public void saveAsync(Plot plot) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // TODO persist plot
-        });
+    public Plot getPlot(UUID plotId) {
+        return plots.get(plotId);
     }
 
-    public void saveAll() {
-        for (Plot p : plots.values()) saveAsync(p);
+    public Plot getPlot(Chunk chunk) {
+        UUID id = chunkMap.get(chunkKey(chunk));
+        return id != null ? plots.get(id) : null;
     }
 
-    // -----------------------------
-    // Trust / Access helpers
-    // -----------------------------
-    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
+    public Plot getPlot(Location loc) {
+        if (loc == null) return null;
+        Chunk chunk = loc.getChunk();
+        return getPlot(chunk);
+    }
+
+    /* ======================================================
+     * CLAIM NAME HELPERS
+     * ====================================================== */
+    public String getClaimName(Location loc) {
         Plot plot = getPlot(loc);
-        if (plot == null) return true;
-        if (plot.isOwner(playerId)) return true;
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
+        if (plot == null) return "Wilderness";
+        return plot.getDisplayNameSafe();
     }
 
-    public boolean canInteract(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return true;
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role.canInteract();
+    /* ======================================================
+     * PLAYER HELPERS
+     * ====================================================== */
+    public String getPlayerName(UUID uuid) {
+        OfflinePlayer offline = plugin.getServer().getOfflinePlayer(uuid);
+        return (offline != null && offline.getName() != null) ? offline.getName() : uuid.toString();
     }
 
-    public boolean canManage(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role.canManage();
-    }
-
-    // -----------------------------
-    // Admin bypass
-    // -----------------------------
-    public boolean isBypass(UUID playerId) { return bypass.contains(playerId); }
-
+    /* ======================================================
+     * BYPASS MODE
+     * ====================================================== */
     public boolean toggleBypass(UUID playerId) {
-        if (bypass.contains(playerId)) {
-            bypass.remove(playerId);
+        if (bypassing.contains(playerId)) {
+            bypassing.remove(playerId);
             return false;
         } else {
-            bypass.add(playerId);
+            bypassing.add(playerId);
             return true;
         }
+    }
+
+    public boolean isBypassing(UUID playerId) {
+        return bypassing.contains(playerId);
+    }
+
+    /* ======================================================
+     * SAVE / LOAD
+     * ====================================================== */
+    public void saveAll() {
+        // TODO: serialize plots to disk (YAML or JSON)
+        // For now, placeholder: plugin.getLogger().info("Plots saved: " + plots.size());
+    }
+
+    public void loadAll() {
+        // TODO: load plots from disk
+    }
+
+    /* ======================================================
+     * INTERNAL HELPERS
+     * ====================================================== */
+    private String chunkKey(Chunk chunk) {
+        return chunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+    }
+
+    private String chunkKey(String world, int x, int z) {
+        return world + ":" + x + ":" + z;
     }
 }

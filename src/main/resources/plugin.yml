@@ -60,7 +60,7 @@ permissions:
 
   # Compass & Tools
   proshield.compass:
-    description: Receive/use ProShield compass (via /proshield compass)
+    description: Receive/use ProShield compass
     default: op
 
   proshield.bypass:
@@ -73,7 +73,7 @@ permissions:
 
   # Admin Core
   proshield.admin:
-    description: Access admin tools (bypass, force unclaim, purge, admin menu)
+    description: Access admin tools (compass, bypass, force unclaim, purge, admin menu)
     default: op
 
   proshield.admin.reload:

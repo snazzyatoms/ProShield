@@ -8,7 +8,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.Inventory;
 
 public class GUIListener implements Listener {
 
@@ -23,13 +22,11 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getCurrentItem() == null) return;
-
-        Inventory inv = event.getInventory();
-        if (inv == null) return;
+        if (event.getClickedInventory() == null) return; // skip non-inventory clicks
+        if (event.getCurrentItem() == null) return;      // skip empty slots
 
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null) return;
+        if (title == null || title.isBlank()) return;
 
         ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
         if (menus == null) return;
@@ -56,7 +53,15 @@ public class GUIListener implements Listener {
         if (items == null) return;
 
         ConfigurationSection item = items.getConfigurationSection(String.valueOf(slot));
-        if (item == null) return;
+        if (item == null) return; // No config for this slot
+
+        // --- Permission Check ---
+        String permission = item.getString("permission");
+        if (permission != null && !permission.isBlank() && !player.hasPermission(permission)) {
+            player.closeInventory();
+            player.sendMessage(ChatColor.RED + "You do not have permission to use this option.");
+            return;
+        }
 
         String action = item.getString("action", "").trim();
         if (action.isEmpty()) return;

@@ -7,86 +7,82 @@ import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.UUID;
 
 /**
- * Handles clicks inside the Roles GUI.
+ * RolesListener
+ *
+ * Handles the Roles GUI interactions.
+ * Allows assigning / clearing roles for trusted players.
  */
 public class RolesListener implements Listener {
 
-    private final ProShield plugin;
     private final ClaimRoleManager roles;
-    private final PlotManager plotManager;
+    private final PlotManager plots;
     private final GUIManager gui;
+    private final MessagesUtil messages;
 
-    public RolesListener(ProShield plugin, ClaimRoleManager roles, PlotManager plotManager, GUIManager gui) {
-        this.plugin = plugin;
+    public RolesListener(ProShield plugin, ClaimRoleManager roles, PlotManager plots, GUIManager gui) {
         this.roles = roles;
-        this.plotManager = plotManager;
+        this.plots = plots;
         this.gui = gui;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
+    public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getCurrentItem() == null) return;
 
         String title = event.getView().getTitle();
-        if (!title.toLowerCase().contains("roles")) return; // more flexible check
+        if (title == null || !title.toLowerCase().contains("roles")) return;
 
         event.setCancelled(true);
 
-        // Get the plot at the player's current location
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) {
-            player.sendMessage("§cYou are not inside a claim.");
+            messages.send(player, "error.not-in-claim");
             return;
         }
 
-        UUID plotId = plot.getId();
-
-        // Determine target from clicked skull
-        UUID targetId = null;
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked.hasItemMeta() && clicked.getItemMeta() instanceof SkullMeta skullMeta) {
-            OfflinePlayer target = skullMeta.getOwningPlayer();
-            if (target != null) {
-                targetId = target.getUniqueId();
-            }
-        }
-
-        if (targetId == null) {
-            player.sendMessage("§cCould not determine target player.");
+        // Target from remembered trust flow
+        String targetName = gui.getRememberedTarget(player);
+        if (targetName == null) {
+            messages.send(player, "error.player-not-found");
             return;
         }
 
-        // Assign roles based on clicked slot
+        UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
+        UUID claimId = plot.getId();
+
         switch (event.getRawSlot()) {
             case 11 -> {
-                roles.assignRole(plotId, targetId, ClaimRole.MANAGER);
-                player.sendMessage("§a" + Bukkit.getOfflinePlayer(targetId).getName() + " is now Manager in this claim!");
+                roles.assignRole(claimId, targetId, ClaimRole.MANAGER);
+                messages.send(player, "roles.updated", targetName + " → Manager");
             }
             case 13 -> {
-                roles.assignRole(plotId, targetId, ClaimRole.TRUSTED);
-                player.sendMessage("§a" + Bukkit.getOfflinePlayer(targetId).getName() + " is now Trusted in this claim!");
+                roles.assignRole(claimId, targetId, ClaimRole.TRUSTED);
+                messages.send(player, "roles.updated", targetName + " → Trusted");
             }
             case 15 -> {
-                roles.clearRole(plotId, targetId);
-                player.sendMessage("§cRole for " + Bukkit.getOfflinePlayer(targetId).getName() + " was cleared.");
+                roles.clearRole(claimId, targetId);
+                messages.send(player, "roles.cleared", targetName);
+            }
+            case 26 -> {
+                gui.openMain(player);
+                return;
             }
             default -> { return; }
         }
 
-        // Refresh GUI so changes are visible immediately
+        plots.saveAsync(plot);
         gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
     }
 }

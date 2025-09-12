@@ -1,147 +1,72 @@
+// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.*;
-import com.snazzyatoms.proshield.compass.CompassListener;
-import com.snazzyatoms.proshield.compass.CompassManager;
-import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.gui.listeners.*;
+import com.snazzyatoms.proshield.gui.listeners.RoleFlagsListener;
+import com.snazzyatoms.proshield.gui.listeners.RolesListener;
+import com.snazzyatoms.proshield.gui.listeners.TrustListener;
+import com.snazzyatoms.proshield.gui.listeners.UntrustListener;
 import com.snazzyatoms.proshield.plots.*;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
 
 public class ProShield extends JavaPlugin {
 
     private static ProShield instance;
-
     private MessagesUtil messages;
-    private GUIManager guiManager;
-    private ClaimRoleManager roleManager;
     private PlotManager plotManager;
-    private GUICache guiCache;
-    private CompassManager compassManager;
-
-    private final Set<UUID> bypassing = new HashSet<>();
-    private boolean debugEnabled = false;
-
-    // Repel tasks
-    private EntityMobRepelTask mobRepelTask;
-    private EntityBorderRepelTask borderRepelTask;
+    private ClaimRoleManager roleManager;
+    private GUIManager guiManager;
 
     @Override
     public void onEnable() {
         instance = this;
-        saveDefaultConfig();
 
-        // Managers
-        messages = new MessagesUtil(this);
-        plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(this);
+        this.plotManager = new PlotManager(this);
+        this.roleManager = new ClaimRoleManager(plotManager);
+        this.guiManager = new GUIManager(this, new GUICache(), roleManager);
+        this.messages = new MessagesUtil(this);
 
-        guiCache = new GUICache();
-        guiManager = new GUIManager(this, guiCache, roleManager);
-        compassManager = new CompassManager(this, guiManager);
+        // Commands
+        getCommand("trust").setExecutor(new TrustCommand(this, plotManager, roleManager));
+        getCommand("untrust").setExecutor(new UntrustCommand(this, plotManager, roleManager));
+        getCommand("roles").setExecutor(new RolesCommand(this, plotManager, roleManager, guiManager));
+        getCommand("flags").setExecutor(new FlagsCommand(this, guiManager));
+        getCommand("transfer").setExecutor(new TransferCommand(this, plotManager, roleManager));
 
-        registerCommands();
-        registerListeners();
+        // Listeners
+        getServer().getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
+        getServer().getPluginManager().registerEvents(new ItemProtectionListener(plotManager, roleManager, messages), this);
+        getServer().getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
+        getServer().getPluginManager().registerEvents(new TrustListener(this, plotManager, roleManager, guiManager), this);
+        getServer().getPluginManager().registerEvents(new UntrustListener(this, plotManager, roleManager, guiManager), this);
+        getServer().getPluginManager().registerEvents(new RolesListener(this, roleManager), this);
+        getServer().getPluginManager().registerEvents(new RoleFlagsListener(this, roleManager), this);
 
-        // Start repel tasks
-        mobRepelTask = new EntityMobRepelTask(this, plotManager);
-        mobRepelTask.start();
-
-        borderRepelTask = new EntityBorderRepelTask(this, plotManager);
-        borderRepelTask.start();
-
-        messages.send(getServer().getConsoleSender(), "prefix",
-                "&aProShield v" + getDescription().getVersion() + " enabled!");
+        getLogger().info("ProShield enabled.");
     }
 
     @Override
     public void onDisable() {
-        if (mobRepelTask != null) mobRepelTask.stop();
-        if (borderRepelTask != null) borderRepelTask.stop();
-
-        if (plotManager != null) plotManager.saveAll();
-
-        if (messages != null) {
-            messages.send(getServer().getConsoleSender(), "prefix", "&cProShield disabled.");
-        }
+        getLogger().info("ProShield disabled.");
     }
 
-    private void registerCommands() {
-        registerCommand("proshield", new ProShieldCommand(this, plotManager, guiManager, compassManager));
-        registerCommand("trust", new TrustCommand(this, plotManager, roleManager));
-        registerCommand("untrust", new UntrustCommand(this, plotManager, roleManager));
-        registerCommand("roles", new RolesCommand(this, plotManager, roleManager, guiManager));
-        registerCommand("transfer", new TransferCommand(this, plotManager));
-        registerCommand("flags", new FlagsCommand(this, guiManager));
-        registerCommand("compass", new CompassCommand(compassManager, messages));
+    public static ProShield getInstance() {
+        return instance;
     }
 
-    private void registerListeners() {
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
-
-        // Central GUI listener
-        new GUIListener(this, guiManager);
-
-        // Player/protection listeners
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, guiManager, plotManager, compassManager), this);
-        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
-        Bukkit.getPluginManager().registerEvents(new ExplosionProtectionListener(this, plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new FireProtectionListener(this, plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager, roleManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new KeepDropsListener(this, plotManager), this);
-        Bukkit.getPluginManager().registerEvents(new EntityGriefProtectionListener(this, plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new DamageProtectionListener(plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new PvpProtectionListener(plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
-        Bukkit.getPluginManager().registerEvents(new SpawnGuardListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new FlagsListener(this, plotManager), this);
-
-        // New GUI-based listeners
-        Bukkit.getPluginManager().registerEvents(new RolesListener(this, plotManager, roleManager, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new TrustListener(this, plotManager, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new UntrustListener(this, plotManager, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new RoleFlagsListener(this, plotManager, roleManager, guiManager), this);
+    public PlotManager getPlotManager() {
+        return plotManager;
     }
 
-    private void registerCommand(String name, org.bukkit.command.CommandExecutor executor) {
-        PluginCommand cmd = getCommand(name);
-        if (cmd != null) {
-            cmd.setExecutor(executor);
-        }
+    public GUIManager getGuiManager() {
+        return guiManager;
     }
 
-    public static ProShield getInstance() { return instance; }
-    public MessagesUtil getMessagesUtil() { return messages; }
-    public PlotManager getPlotManager() { return plotManager; }
-    public ClaimRoleManager getRoleManager() { return roleManager; }
-    public GUIManager getGuiManager() { return guiManager; }
-    public GUICache getGuiCache() { return guiCache; }
-    public CompassManager getCompassManager() { return compassManager; }
-
-    public boolean toggleBypass(Player player) {
-        if (bypassing.contains(player.getUniqueId())) {
-            bypassing.remove(player.getUniqueId());
-            return false;
-        } else {
-            bypassing.add(player.getUniqueId());
-            return true;
-        }
+    public MessagesUtil getMessagesUtil() {
+        return messages;
     }
-
-    public boolean isBypassing(Player player) { return bypassing.contains(player.getUniqueId()); }
-    public boolean toggleDebug() { debugEnabled = !debugEnabled; return debugEnabled; }
-    public boolean isDebugEnabled() { return debugEnabled; }
 }

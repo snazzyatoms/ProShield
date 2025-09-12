@@ -12,8 +12,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 /**
  * ClaimPreview
  *
- * ✅ Fixed & Updated:
- * - Replaced legacy Particle.VILLAGER_HAPPY with Particle.HAPPY_VILLAGER.
+ * ✅ Fixed for v1.2.5:
+ * - Uses Particle.VILLAGER_HAPPY (available in 1.20.1 API).
  * - Integrated with ClaimPreviewTask to track and cancel tasks cleanly.
  * - Preserves particle border logic from earlier versions.
  */
@@ -67,7 +67,7 @@ public class ClaimPreview {
     private static void spawnParticle(Player player, World world, double x, double y, double z) {
         Location loc = new Location(world, x + 0.5, y, z + 0.5);
         player.spawnParticle(
-                Particle.HAPPY_VILLAGER, // ✅ modern API
+                Particle.VILLAGER_HAPPY, // ✅ rolled back for 1.20.1 support
                 loc,
                 3, // count
                 0.2, 0.2, 0.2, // offsets

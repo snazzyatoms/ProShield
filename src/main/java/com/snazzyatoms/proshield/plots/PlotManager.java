@@ -3,7 +3,6 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -65,12 +64,12 @@ public class PlotManager {
     public void removePlot(Plot plot) {
         if (plot == null) return;
         plots.remove(plot.getId());
-        // todo: persist removal to storage
+        // TODO: persist removal to storage
     }
 
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // todo: save plot to disk/database
+            // TODO: save plot to disk/database
         });
     }
 
@@ -88,7 +87,7 @@ public class PlotManager {
         if (plot == null) return true; // not claimed, free to interact
         if (plot.isOwner(playerId)) return true;
 
-        ClaimRole role = plot.getRole(playerId);
+        ClaimRole role = plot.getTrusted().get(playerId);
         return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
     }
 
@@ -99,7 +98,7 @@ public class PlotManager {
         Plot plot = getPlot(loc);
         if (plot == null) return true;
 
-        ClaimRole role = plot.getRole(playerId);
+        ClaimRole role = plot.getTrusted().get(playerId);
         return role != null && role.canInteract();
     }
 
@@ -110,7 +109,7 @@ public class PlotManager {
         Plot plot = getPlot(loc);
         if (plot == null) return false;
 
-        ClaimRole role = plot.getRole(playerId);
+        ClaimRole role = plot.getTrusted().get(playerId);
         return role != null && role.canManage();
     }
 }

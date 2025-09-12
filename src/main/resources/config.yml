@@ -1,33 +1,12 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5+
-# ==========================================================
-# General Notes:
-#   - Use '&' for color codes
-#   - Placeholders (dynamic values inserted at runtime):
-#       {player} → Player’s name
-#       {claim}  → Claim name or ID
-#       {role}   → Role name (Trusted, Builder, etc.)
-#       {owner}  → Claim owner’s name
-#       {state}  → Toggle state (ENABLED / DISABLED)
-#       {count}  → Numbers (e.g., claims purged)
+# Version: 1.2.6 (UI Actions Enabled)
 # ==========================================================
 
-# ==========================================================
-# General Settings
-# ==========================================================
 settings:
-  # 🧭 Automatically give players a ProShield compass on join.
-  # If false → players must use /compass manually.
   give-compass-on-join: true
 
-# ==========================================================
-# Protection Settings
-# ==========================================================
 protection:
-  # -------------------------
-  # Fire
-  # -------------------------
   fire:
     enabled: false
     burn: false
@@ -36,58 +15,33 @@ protection:
       flint_and_steel: false
       lava: false
       lightning: false
-
-  # -------------------------
-  # Explosions
-  # -------------------------
   explosions:
     enabled: false
-
-  # -------------------------
-  # Buckets
-  # -------------------------
   buckets:
-    enabled: false   # 🪣 Blocks empty + fill together
-
-  # -------------------------
-  # Mobs
-  # -------------------------
+    enabled: false
   mobs:
     border-repel:
       enabled: true
-      radius: 3.0          # 🔹 Distance mobs are pushed away from claim edge
-      horizontal-push: 0.7 # 🔹 Sideways push strength
-      vertical-push: 0.25  # 🔹 Upward push strength
-    despawn-inside: true   # 🧟 Despawn mobs that enter claims
-
-  # -------------------------
-  # Wilderness Entities
-  # -------------------------
+      radius: 3.0
+      horizontal-push: 0.7
+      vertical-push: 0.25
+    despawn-inside: true
   entities:
     wilderness:
       item-frames: false
       vehicles: false
 
-# ==========================================================
-# Messages & GUI
-# ==========================================================
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
-
-  # 🌲 Wilderness entry messages
   show-wilderness: false
-
-  # 💬 Admin debug flag chat
   admin-flag-chat: true
 
-# ==========================================================
-# Unified UI Menus
-# ==========================================================
 ui:
   menus:
     main:
       title: "&bProShield Menu"
+      size: 27
       items:
         claim:
           slot: 10
@@ -95,185 +49,134 @@ ui:
           name: "&aClaim Chunk"
           lore:
             - "&7Claim your current chunk"
-            - "&7Protect your builds from griefers"
+            - "&7Protect your builds"
+          action: "command:/proshield claim"
+
         unclaim:
           slot: 11
           material: BARRIER
           name: "&cUnclaim Chunk"
           lore:
             - "&7Unclaim your current chunk"
-            - "&7Free it up for others"
+            - "&7Releases to wilderness"
+          action: "command:/proshield unclaim"
+
         info:
           slot: 12
           material: PAPER
           name: "&eClaim Info"
           lore:
-            - "&7View claim owner and trusted players"
+            - "&7View claim owner"
+            - "&7and trusted players"
+          action: "command:/proshield info"
+
         trust:
           slot: 13
           material: PLAYER_HEAD
           name: "&aTrust Menu"
           lore:
-            - "&7Trust a player into your claim"
+            - "&7Trust a player"
+          action: "open:trust"
+
         untrust:
           slot: 14
           material: SKELETON_SKULL
           name: "&cUntrust Menu"
           lore:
-            - "&7Remove a player from your claim"
+            - "&7Remove a player"
+          action: "open:untrust"
+
         roles:
           slot: 15
           material: BOOK
           name: "&6Roles"
           lore:
-            - "&7Assign roles to trusted players"
+            - "&7Assign/manage roles"
+          action: "open:roles"
+
         flags:
           slot: 16
           material: IRON_SWORD
           name: "&cFlags"
           lore:
-            - "&7Toggle protections like TNT, fire, PvP"
+            - "&7Toggle protections"
+          action: "open:flags"
+
         back:
           slot: 26
           material: BARRIER
           name: "&cBack"
           lore:
             - "&7Return to previous menu"
+          action: "close"
+
+    trust:
+      title: "&aTrust Players"
+      size: 27
+      items:
+        enter:
+          slot: 13
+          material: PLAYER_HEAD
+          name: "&aEnter Player"
+          lore:
+            - "&7Type name in chat"
+          action: "command:/proshield trust"
+        back:
+          slot: 26
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "open:main"
+
+    untrust:
+      title: "&cUntrust Players"
+      size: 27
+      items:
+        enter:
+          slot: 13
+          material: SKELETON_SKULL
+          name: "&cEnter Player"
+          lore:
+            - "&7Type name in chat"
+          action: "command:/proshield untrust"
+        back:
+          slot: 26
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "open:main"
 
     roles:
-      title: "&6Manage Roles"
+      title: "&6Claim Roles"
+      size: 27
       items:
         builder:
           slot: 10
           material: STONE_PICKAXE
           name: "&eBuilder"
           lore:
-            - "&7Build & break blocks"
+            - "&7Assign Builder role"
+          action: "command:/proshield role builder"
         moderator:
           slot: 12
           material: CROSSBOW
           name: "&cModerator"
           lore:
-            - "&7Manage trusted players and flags"
-        manager:
+            - "&7Assign Moderator role"
+          action: "command:/proshield role moderator"
+        clear:
           slot: 14
           material: BOOK
-          name: "&6Manager"
+          name: "&7Clear Role"
           lore:
-            - "&7Full control: manage roles, trust, flags"
+            - "&7Revert to default"
+          action: "command:/proshield role clear"
         back:
           slot: 26
           material: BARRIER
           name: "&cBack"
           lore:
-            - "&7Return to Roles Menu"
-
-    flags:
-      title: "&dClaim Flags"
-      items:
-        explosions:
-          slot: 10
-          material: TNT
-          name: "&cExplosions"
-          lore:
-            - "&7Toggle TNT & creeper damage"
-        buckets:
-          slot: 11
-          material: WATER_BUCKET
-          name: "&bBuckets"
-          lore:
-            - "&7Toggle water/lava placement"
-        itemframes:
-          slot: 12
-          material: ITEM_FRAME
-          name: "&6Item Frames"
-          lore:
-            - "&7Toggle item frame access"
-        armorstands:
-          slot: 13
-          material: ARMOR_STAND
-          name: "&eArmor Stands"
-          lore:
-            - "&7Toggle armor stand interaction"
-        containers:
-          slot: 14
-          material: CHEST
-          name: "&aContainers"
-          lore:
-            - "&7Toggle chest/furnace/hopper access"
-        pets:
-          slot: 15
-          material: BONE
-          name: "&dPets"
-          lore:
-            - "&7Toggle pet interaction"
-        pvp:
-          slot: 16
-          material: IRON_SWORD
-          name: "&cPvP"
-          lore:
-            - "&7Toggle player-vs-player combat"
-        back:
-          slot: 26
-          material: BARRIER
-          name: "&cBack"
-          lore:
-            - "&7Return to previous menu"
-
-    admin:
-      title: "&4ProShield Admin Menu"
-      items:
-        teleport:
-          slot: 11
-          material: ENDER_PEARL
-          name: "&bTeleport to Claim"
-          lore:
-            - "&7Teleport to any player's claim"
-        roles:
-          slot: 13
-          material: BOOK
-          name: "&6Manage Roles"
-          lore:
-            - "&7Manage roles for any claim"
-        purge:
-          slot: 15
-          material: LAVA_BUCKET
-          name: "&cPurge Claims"
-          lore:
-            - "&7Delete expired claims"
-        back:
-          slot: 26
-          material: BARRIER
-          name: "&cBack"
-          lore:
-            - "&7Return to previous menu"
-
-# ==========================================================
-# Sounds
-# ==========================================================
-sounds:
-  button-click: "UI_BUTTON_CLICK"
-  claim-success: "ENTITY_PLAYER_LEVELUP"
-  unclaim-success: "ENTITY_ITEM_BREAK"
-  flag-toggle: "BLOCK_NOTE_BLOCK_PLING"
-  admin-action: "ENTITY_EXPERIENCE_ORB_PICKUP"
-
-# ==========================================================
-# Claim Defaults
-# ==========================================================
-claims:
-  default-flags:
-    pvp: false
-    explosions: false
-    fire: false
-    entity-grief: false
-    redstone: true
-    containers: false
-    animals: false
-    vehicles: false
-    armor-stands: false
-    item-frames: false
-    buckets: false
-    pets: false
-    mob-repel: true
-    mob-despawn: true
+            - "&7Return to main menu"
+          action: "open:main"

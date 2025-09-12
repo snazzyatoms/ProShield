@@ -1,30 +1,38 @@
 package com.snazzyatoms.proshield.plots;
 
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.Bukkit;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Represents a claimed plot of land in ProShield.
- * Holds the chunk + owner UUID, trusted players, and settings.
  */
 public class Plot {
 
+    private final UUID id; // Unique identifier for this plot
     private final Chunk chunk;
     private UUID owner;
-    private final Set<UUID> trusted = new HashSet<>();
+
+    // Players with roles inside this claim
+    private final Map<UUID, ClaimRole> roles = new HashMap<>();
+
     private final PlotSettings settings;
 
     public Plot(Chunk chunk, UUID owner) {
+        this.id = UUID.randomUUID();
         this.chunk = chunk;
         this.owner = owner;
         this.settings = new PlotSettings();
     }
 
-    // --- Core Getters ---
+    // --- Core Identifiers ---
+
+    public UUID getId() {
+        return id;
+    }
 
     public Chunk getChunk() {
         return chunk;
@@ -38,8 +46,20 @@ public class Plot {
         this.owner = newOwner;
     }
 
+    public boolean isOwner(UUID playerId) {
+        return owner != null && owner.equals(playerId);
+    }
+
+    // --- Display ---
+
     public String getName() {
         return owner != null ? owner.toString() : "Unowned";
+    }
+
+    public String getDisplayNameSafe() {
+        if (owner == null) return "Unowned";
+        String name = Bukkit.getOfflinePlayer(owner).getName();
+        return (name != null) ? name : owner.toString();
     }
 
     public String getWorldName() {
@@ -54,32 +74,46 @@ public class Plot {
         return chunk.getZ();
     }
 
+    // --- Settings ---
+
     public PlotSettings getSettings() {
         return settings;
     }
 
-    // --- Trusted Players ---
+    // --- Roles ---
 
-    public void addTrusted(UUID player) {
-        trusted.add(player);
+    public ClaimRole getRole(UUID playerId) {
+        if (isOwner(playerId)) {
+            return ClaimRole.OWNER;
+        }
+        return roles.getOrDefault(playerId, ClaimRole.NONE);
     }
 
-    public void removeTrusted(UUID player) {
-        trusted.remove(player);
+    public void setRole(UUID playerId, ClaimRole role) {
+        if (role == ClaimRole.NONE) {
+            roles.remove(playerId);
+        } else {
+            roles.put(playerId, role);
+        }
     }
 
-    public boolean isTrusted(UUID player) {
-        return trusted.contains(player);
+    public boolean containsKey(UUID playerId) {
+        return roles.containsKey(playerId);
     }
 
-    public Set<UUID> getTrusted() {
-        return trusted;
+    public void put(UUID playerId, ClaimRole role) {
+        roles.put(playerId, role);
+    }
+
+    public Map<UUID, ClaimRole> getRoles() {
+        return roles;
     }
 
     public Set<String> getTrustedNames() {
         Set<String> names = new HashSet<>();
-        for (UUID id : trusted) {
-            names.add(id.toString()); // Could hook into Bukkit.getOfflinePlayer(id).getName()
+        for (UUID id : roles.keySet()) {
+            String name = Bukkit.getOfflinePlayer(id).getName();
+            names.add((name != null) ? name : id.toString());
         }
         return names;
     }

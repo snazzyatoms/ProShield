@@ -80,13 +80,21 @@ public class PlotManager {
         }
     }
 
+    /**
+     * Checks if a player is trusted or the owner of a claim.
+     */
     public boolean isTrustedOrOwner(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return true; // not claimed, free to interact
         if (plot.isOwner(playerId)) return true;
-        return plot.isTrusted(playerId);
+
+        ClaimRole role = plot.getRole(playerId);
+        return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
     }
 
+    /**
+     * Checks if a player can interact within a plot.
+     */
     public boolean canInteract(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return true;
@@ -95,6 +103,9 @@ public class PlotManager {
         return role != null && role.canInteract();
     }
 
+    /**
+     * Checks if a player can manage a plot.
+     */
     public boolean canManage(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
         if (plot == null) return false;

@@ -14,6 +14,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * GUIManager
+ * - Dynamically builds menus from config.yml (gui.menus)
+ * - Paired with GUIListener to handle click actions
+ * - Future-proof: size, titles, items all come from config
+ */
 public class GUIManager {
 
     private final ProShield plugin;
@@ -23,53 +29,61 @@ public class GUIManager {
     }
 
     /**
-     * Open a GUI menu defined in config.yml under gui.menus.<menuKey>
+     * Opens a GUI menu defined in config.yml under gui.menus.<menuKey>
      */
     public void openMenu(Player player, String menuKey) {
         ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
         if (menus == null) {
-            plugin.getLogger().warning("No menus defined in config.yml (gui.menus missing).");
+            plugin.getLogger().warning("[ProShield] No menus defined in config.yml (gui.menus missing).");
             return;
         }
 
         ConfigurationSection menu = menus.getConfigurationSection(menuKey);
         if (menu == null) {
-            plugin.getLogger().warning("Menu not found in config.yml: " + menuKey);
+            plugin.getLogger().warning("[ProShield] Menu not found in config.yml: " + menuKey);
             return;
         }
 
-        String title = ChatColor.translateAlternateColorCodes('&', menu.getString("title", "&7Menu"));
-        int size = menu.getInt("size", 27);
+        String title = ChatColor.translateAlternateColorCodes('&',
+                menu.getString("title", "&7Menu"));
+        int size = menu.getInt("size", 27); // default 27 slots
 
         Inventory inv = Bukkit.createInventory(null, size, title);
 
         ConfigurationSection items = menu.getConfigurationSection("items");
         if (items != null) {
             for (String slotKey : items.getKeys(false)) {
+                int slot;
                 try {
-                    int slot = Integer.parseInt(slotKey);
-                    ConfigurationSection itemSec = items.getConfigurationSection(slotKey);
-                    if (itemSec == null) continue;
-
-                    Material mat = Material.matchMaterial(itemSec.getString("material", "BARRIER"));
-                    if (mat == null) mat = Material.BARRIER;
-
-                    String name = ChatColor.translateAlternateColorCodes('&', itemSec.getString("name", ""));
-                    List<String> lore = formatLore(itemSec.getStringList("lore"));
-
-                    ItemStack item = new ItemStack(mat);
-                    ItemMeta meta = item.getItemMeta();
-                    if (meta != null) {
-                        meta.setDisplayName(name);
-                        meta.setLore(lore);
-                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                        item.setItemMeta(meta);
-                    }
-
-                    inv.setItem(slot, item);
+                    slot = Integer.parseInt(slotKey);
                 } catch (NumberFormatException e) {
-                    plugin.getLogger().warning("Invalid slot in menu " + menuKey + ": " + slotKey);
+                    plugin.getLogger().warning("[ProShield] Invalid slot in menu " + menuKey + ": " + slotKey);
+                    continue;
                 }
+
+                ConfigurationSection itemSec = items.getConfigurationSection(slotKey);
+                if (itemSec == null) continue;
+
+                // Material
+                Material mat = Material.matchMaterial(itemSec.getString("material", "BARRIER"));
+                if (mat == null) mat = Material.BARRIER;
+
+                // Name & Lore
+                String name = ChatColor.translateAlternateColorCodes('&',
+                        itemSec.getString("name", ""));
+                List<String> lore = formatLore(itemSec.getStringList("lore"));
+
+                // Build item
+                ItemStack item = new ItemStack(mat);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    if (!name.isEmpty()) meta.setDisplayName(name);
+                    if (!lore.isEmpty()) meta.setLore(lore);
+                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                    item.setItemMeta(meta);
+                }
+
+                inv.setItem(slot, item);
             }
         }
 
@@ -77,12 +91,14 @@ public class GUIManager {
     }
 
     /**
-     * Format lore lines with color codes
+     * Utility: format lore lines with color codes.
      */
     private List<String> formatLore(List<String> input) {
         List<String> out = new ArrayList<>();
-        for (String line : input) {
-            out.add(ChatColor.translateAlternateColorCodes('&', line));
+        if (input != null) {
+            for (String line : input) {
+                out.add(ChatColor.translateAlternateColorCodes('&', line));
+            }
         }
         return out;
     }

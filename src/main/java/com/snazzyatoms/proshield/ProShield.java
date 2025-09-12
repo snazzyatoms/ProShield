@@ -13,6 +13,7 @@ import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
 import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import com.snazzyatoms.proshield.util.ClaimPreviewTask;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -68,6 +69,10 @@ public class ProShield extends JavaPlugin {
         if (plotManager != null) {
             plotManager.saveAll();
         }
+
+        // ✅ Stop all claim preview particle tasks
+        ClaimPreviewTask.stopAll();
+
         getLogger().info("ProShield disabled.");
     }
 

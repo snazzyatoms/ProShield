@@ -1,11 +1,9 @@
-// src/main/java/com/snazzyatoms/proshield/commands/RolesCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
@@ -17,7 +15,8 @@ import org.bukkit.entity.Player;
 /**
  * /roles command — opens the role management GUI for the current claim.
  *
- * ✅ Fixed for new GUIManager.openRolesGUI signature.
+ * ✅ Uses ClaimRoleManager.isOwnerOrCoOwner(UUID, Plot)
+ * ✅ Calls GUIManager.openRolesGUI
  */
 public class RolesCommand implements CommandExecutor {
 
@@ -51,8 +50,7 @@ public class RolesCommand implements CommandExecutor {
         }
 
         // Only owners/co-owners may open role GUI
-        ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
-        if (!roleManager.isOwnerOrCoOwner(role)) {
+        if (!roleManager.isOwnerOrCoOwner(player.getUniqueId(), plot)) {
             messages.send(player, "error.not-owner");
             return true;
         }

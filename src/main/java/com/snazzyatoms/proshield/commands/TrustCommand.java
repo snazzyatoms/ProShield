@@ -5,6 +5,7 @@ import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.roles.RolePermissions;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -40,8 +41,12 @@ public class TrustCommand implements CommandExecutor {
             return true;
         }
 
+        // Permission check (owner bypasses, otherwise need manageTrust)
         if (!plot.isOwner(player.getUniqueId())) {
-            if (!roles.canManageTrust(plot.getId(), player.getUniqueId())) {
+            ClaimRole playerRole = roles.getRole(plot, player.getUniqueId());
+            RolePermissions perms = roles.getRolePermissions(plot.getId(), playerRole.name().toLowerCase());
+
+            if (!perms.canManageTrust()) {
                 player.sendMessage(ChatColor.RED + "⛔ You do not have permission to manage trust here.");
                 return true;
             }
@@ -62,11 +67,11 @@ public class TrustCommand implements CommandExecutor {
         ClaimRole role = ClaimRole.fromString(roleName);
         if (role == null) role = ClaimRole.TRUSTED;
 
-        plot.getTrusted().put(target.getUniqueId(), role);
-        plugin.getPlotManager().saveAsync(plot);
+        // Apply trust via role manager
+        roles.setRole(plot, target.getUniqueId(), role);
 
-        // Role manager also tracks this
-        roles.assignRole(plot.getId(), target.getUniqueId(), roleName);
+        // Persist plot
+        plots.saveAsync(plot);
 
         player.sendMessage(ChatColor.GREEN + "✅ " + target.getName() + " is now trusted as " + role.name() + ".");
         if (target.isOnline()) {

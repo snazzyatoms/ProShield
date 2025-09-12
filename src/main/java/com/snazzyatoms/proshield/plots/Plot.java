@@ -4,83 +4,109 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Chunk;
 
-import java.time.Instant;
 import java.util.*;
 
+/**
+ * Plot
+ * - Represents a single claimed chunk.
+ * - Stores owner, trusted players, roles, and metadata.
+ * - Now supports lastActive timestamp for expiry/purge.
+ */
 public class Plot {
 
     private final UUID id;
-    private final UUID owner;
     private final Chunk chunk;
+    private final UUID owner;
 
+    // Trusted players & roles
     private final Map<UUID, ClaimRole> trusted = new HashMap<>();
 
-    // --- Expiry Tracking ---
-    private Instant lastActive; // last time claim was interacted with
+    // Metadata
+    private String customName;
+    private long lastActive;
 
     public Plot(Chunk chunk, UUID owner) {
         this.id = UUID.randomUUID();
-        this.owner = owner;
         this.chunk = chunk;
-        this.lastActive = Instant.now(); // start as active
+        this.owner = owner;
+        this.customName = "Claim-" + id.toString().substring(0, 6);
+        this.lastActive = System.currentTimeMillis(); // mark as active on creation
     }
+
+    /* ======================================================
+     * GETTERS
+     * ====================================================== */
 
     public UUID getId() {
         return id;
-    }
-
-    public UUID getOwner() {
-        return owner;
     }
 
     public Chunk getChunk() {
         return chunk;
     }
 
+    public UUID getOwner() {
+        return owner;
+    }
+
+    public String getCustomName() {
+        return customName;
+    }
+
+    public void setCustomName(String name) {
+        this.customName = name;
+        updateActivity();
+    }
+
     public String getDisplayNameSafe() {
-        return "Claim@" + chunk.getX() + "," + chunk.getZ();
+        return (customName != null && !customName.isEmpty()) ? customName : "Claim";
     }
 
-    public void trust(UUID player, ClaimRole role) {
-        trusted.put(player, role);
-        touch();
+    /* ======================================================
+     * TRUSTED PLAYERS & ROLES
+     * ====================================================== */
+
+    public void trust(UUID playerId, ClaimRole role) {
+        trusted.put(playerId, role);
+        updateActivity();
     }
 
-    public void untrust(UUID player) {
-        trusted.remove(player);
-        touch();
+    public void untrust(UUID playerId) {
+        trusted.remove(playerId);
+        updateActivity();
     }
 
-    public ClaimRole getRole(UUID player) {
-        return trusted.getOrDefault(player, ClaimRole.VISITOR);
+    public ClaimRole getRole(UUID playerId) {
+        return trusted.getOrDefault(playerId, ClaimRole.NONE);
     }
 
-    public Set<String> getTrustedNames() {
-        Set<String> names = new HashSet<>();
-        for (UUID uuid : trusted.keySet()) {
-            names.add(uuid.toString()); // replace with Bukkit API lookup if needed
+    public Set<UUID> getTrusted() {
+        return Collections.unmodifiableSet(trusted.keySet());
+    }
+
+    public List<String> getTrustedNames() {
+        List<String> names = new ArrayList<>();
+        for (UUID id : trusted.keySet()) {
+            names.add(id.toString()); // TODO: resolve to OfflinePlayer name if needed
         }
         return names;
     }
 
-    /* ======================================================
-     * Expiry Logic
-     * ====================================================== */
-
-    /** Mark the plot as active now */
-    public void touch() {
-        lastActive = Instant.now();
+    public boolean isOwner(UUID playerId) {
+        return owner.equals(playerId);
     }
 
-    /** True if claim has expired based on config value */
-    public boolean isExpired() {
-        long maxDays = 30; // fallback
-        try {
-            maxDays = com.snazzyatoms.proshield.ProShield.getInstance()
-                    .getConfig().getLong("claims.expiry-days", 30);
-        } catch (Exception ignored) {}
+    /* ======================================================
+     * ACTIVITY TRACKING (for expiry)
+     * ====================================================== */
 
-        Instant expireAt = lastActive.plusSeconds(maxDays * 86400);
-        return Instant.now().isAfter(expireAt);
+    /** Update last activity timestamp (call whenever plot changes). */
+    public void updateActivity() {
+        this.lastActive = System.currentTimeMillis();
+    }
+
+    /** Get the last active timestamp. */
+    public long getLastActive() {
+        return lastActive;
     }
 }

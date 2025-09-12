@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/commands/UntrustCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -7,6 +6,7 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -66,10 +66,12 @@ public class UntrustCommand implements CommandExecutor {
             return true;
         }
 
-        // Only owner/admin can untrust
-        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
-            messages.send(player, "error.cannot-modify-claim");
-            return true;
+        // Check permissions (owner always bypasses, else need manageTrust)
+        if (!plot.isOwner(player.getUniqueId())) {
+            if (!roles.canManageTrust(plot.getId(), player.getUniqueId())) {
+                messages.send(player, "error.cannot-modify-claim");
+                return true;
+            }
         }
 
         // Ensure target is trusted
@@ -79,8 +81,12 @@ public class UntrustCommand implements CommandExecutor {
             return true;
         }
 
-        // Delegate removal to role manager (saves via PlotManager)
+        // Remove from Plot + RoleManager
+        plot.getTrusted().remove(target);
         roles.untrustPlayer(plot, target);
+
+        // Persist change
+        plotManager.saveAsync(plot);
 
         // Feedback
         String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();

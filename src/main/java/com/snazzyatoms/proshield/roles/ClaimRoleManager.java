@@ -1,140 +1,142 @@
 package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.Plot;
-import com.snazzyatoms.proshield.plots.PlotManager;
-import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
-/**
- * ClaimRoleManager
- * - Centralized role handling (get/set/trust/untrust)
- * - Extended with missing methods for GUI listeners & commands
- */
 public class ClaimRoleManager {
 
     private final ProShield plugin;
-    private final PlotManager plots;
+    // claimId -> (playerUUID -> roleId)
+    private final Map<UUID, Map<UUID, String>> roleAssignments = new HashMap<>();
+    // claimId -> (roleId -> RolePermissions)
+    private final Map<UUID, Map<String, RolePermissions>> rolePermissions = new HashMap<>();
 
-    // Temporary cache for GUI → target selection
-    private final Map<UUID, UUID> pendingTargets = new HashMap<>();
+    private File file;
+    private FileConfiguration data;
 
     public ClaimRoleManager(ProShield plugin) {
         this.plugin = plugin;
-        this.plots = plugin.getPlotManager();
+        init();
     }
 
-    /* ======================================================
-     * CORE GETTERS
-     * ====================================================== */
-
-    /** Get the role of a player inside a plot (defaults to VISITOR). */
-    public ClaimRole getRole(Plot plot, UUID playerId) {
-        if (plot == null || playerId == null) return ClaimRole.VISITOR;
-        if (plot.getOwner() != null && plot.getOwner().equals(playerId)) return ClaimRole.OWNER;
-        return plot.getTrusted().getOrDefault(playerId, ClaimRole.VISITOR);
+    private void init() {
+        file = new File(plugin.getDataFolder(), "roles.yml");
+        if (!file.getParentFile().exists()) file.getParentFile().mkdirs();
+        if (!file.exists()) {
+            try { file.createNewFile(); } catch (IOException ignored) {}
+        }
+        data = YamlConfiguration.loadConfiguration(file);
+        loadAll();
     }
 
-    /** Assign a role directly (wrapper for trust/untrust). */
-    public void setRole(Plot plot, UUID playerId, ClaimRole role) {
-        if (plot == null || playerId == null || role == null) return;
+    @SuppressWarnings("unchecked")
+    private void loadAll() {
+        roleAssignments.clear();
+        rolePermissions.clear();
 
-        if (role == ClaimRole.VISITOR) {
-            // Visitor = untrusted
-            untrustPlayer(plot, playerId);
-        } else {
-            plot.getTrusted().put(playerId, role);
-            plots.saveAsync(plot);
+        if (!data.contains("claims")) return;
+        for (String claimKey : data.getConfigurationSection("claims").getKeys(false)) {
+            UUID claimId = UUID.fromString(claimKey);
+            Map<UUID, String> assignMap = new HashMap<>();
+            Map<String, RolePermissions> permMap = new HashMap<>();
+
+            // assignments
+            if (data.contains("claims." + claimKey + ".assignments")) {
+                for (String pu : data.getConfigurationSection("claims." + claimKey + ".assignments").getKeys(false)) {
+                    assignMap.put(UUID.fromString(pu), data.getString("claims." + claimKey + ".assignments." + pu, ""));
+                }
+            }
+            // permissions
+            if (data.contains("claims." + claimKey + ".roles")) {
+                for (String role : data.getConfigurationSection("claims." + claimKey + ".roles").getKeys(false)) {
+                    Map<String, Object> m = data.getConfigurationSection("claims." + claimKey + ".roles." + role).getValues(false);
+                    permMap.put(role, RolePermissions.fromMap(m));
+                }
+            }
+            roleAssignments.put(claimId, assignMap);
+            rolePermissions.put(claimId, permMap);
         }
     }
 
-    /** Remove any role (back to VISITOR). */
-    public void removeRole(Plot plot, UUID playerId) {
-        if (plot == null || playerId == null) return;
-        plot.getTrusted().remove(playerId);
-        plots.saveAsync(plot);
+    private void saveAll() {
+        data.set("claims", null); // wipe
+        for (Map.Entry<UUID, Map<UUID, String>> e : roleAssignments.entrySet()) {
+            String claimKey = e.getKey().toString();
+            // assignments
+            for (Map.Entry<UUID, String> a : e.getValue().entrySet()) {
+                data.set("claims." + claimKey + ".assignments." + a.getKey(), a.getValue() == null ? "" : a.getValue());
+            }
+            // role perms
+            Map<String, RolePermissions> rp = rolePermissions.getOrDefault(e.getKey(), new HashMap<>());
+            for (Map.Entry<String, RolePermissions> rpe : rp.entrySet()) {
+                data.createSection("claims." + claimKey + ".roles." + rpe.getKey(), rpe.getValue().toMap());
+            }
+        }
+        try { data.save(file); } catch (IOException ignored) {}
     }
 
-    /** Trust a player with a given role inside a plot. */
-    public void trustPlayer(Plot plot, UUID playerId, ClaimRole role) {
-        setRole(plot, playerId, role);
+    /* ===================================================
+     * Public API used by GUIs/listeners
+     * =================================================== */
+
+    public synchronized void assignRole(UUID claimId, UUID playerId, String roleId) {
+        Map<UUID, String> m = roleAssignments.computeIfAbsent(claimId, k -> new HashMap<>());
+        if (roleId == null) roleId = "";
+        m.put(playerId, roleId);
+        // ensure role has a permission bucket
+        rolePermissions.computeIfAbsent(claimId, k -> new HashMap<>())
+                       .computeIfAbsent(roleId.isEmpty() ? "trusted" : roleId, RolePermissions::defaultsFor);
+        saveAll();
     }
 
-    /** Untrust a player from a plot. */
-    public void untrustPlayer(Plot plot, UUID playerId) {
-        removeRole(plot, playerId);
+    public synchronized void clearRole(UUID claimId, UUID playerId) {
+        Map<UUID, String> m = roleAssignments.computeIfAbsent(claimId, k -> new HashMap<>());
+        m.put(playerId, "");
+        saveAll();
     }
 
-    /* ======================================================
-     * GUI TARGET HELPERS
-     * ====================================================== */
-
-    /** Store which target player this executor is modifying. */
-    public void setPendingTarget(Player executor, UUID target) {
-        pendingTargets.put(executor.getUniqueId(), target);
+    public String getRole(UUID claimId, UUID playerId) {
+        Map<UUID, String> m = roleAssignments.get(claimId);
+        if (m == null) return "";
+        return m.getOrDefault(playerId, "");
     }
 
-    /** Retrieve the pending target for this executor. */
-    public UUID getPendingTarget(Player executor) {
-        return pendingTargets.get(executor.getUniqueId());
+    public RolePermissions getRolePermissions(UUID claimId, String roleId) {
+        String key = (roleId == null || roleId.isEmpty()) ? "trusted" : roleId.toLowerCase();
+        Map<String, RolePermissions> map = rolePermissions.computeIfAbsent(claimId, k -> new HashMap<>());
+        return map.computeIfAbsent(key, RolePermissions::defaultsFor);
     }
 
-    /** Clear a pending target after use. */
-    public void clearPendingTarget(Player executor) {
-        pendingTargets.remove(executor.getUniqueId());
+    public synchronized void savePermissions(UUID claimId, String roleId, RolePermissions perms) {
+        String key = (roleId == null || roleId.isEmpty()) ? "trusted" : roleId.toLowerCase();
+        rolePermissions.computeIfAbsent(claimId, k -> new HashMap<>()).put(key, perms);
+        saveAll();
     }
 
-    /* ======================================================
-     * PERMISSION HELPERS
-     * ====================================================== */
+    /* ===== Permission checks used by protections ===== */
 
-    /** Can this role build inside a claim? */
-    public boolean canBuild(ClaimRole role) {
-        if (role == null) return false;
-        return switch (role) {
-            case BUILDER, OWNER -> true;
-            default -> false;
-        };
+    public boolean canBuild(UUID claimId, UUID playerId) {
+        String role = getRole(claimId, playerId);
+        return getRolePermissions(claimId, role).canBuild();
     }
 
-    /** Can this role interact with blocks/entities? */
-    public boolean canInteract(ClaimRole role) {
-        if (role == null) return false;
-        return switch (role) {
-            case CONTAINER, BUILDER, OWNER -> true;
-            default -> false;
-        };
+    public boolean canUseContainers(UUID claimId, UUID playerId) {
+        String role = getRole(claimId, playerId);
+        return getRolePermissions(claimId, role).canContainers();
     }
 
-    /** Can this role access containers (chests, barrels, furnaces)? */
-    public boolean canAccessContainers(ClaimRole role) {
-        if (role == null) return false;
-        return switch (role) {
-            case CONTAINER, BUILDER, OWNER -> true;
-            default -> false;
-        };
+    public boolean canManageTrust(UUID claimId, UUID playerId) {
+        String role = getRole(claimId, playerId);
+        return getRolePermissions(claimId, role).canManageTrust();
     }
 
-    /** Can this role manage trust/roles? */
-    public boolean canManageTrust(ClaimRole role) {
-        if (role == null) return false;
-        return role == ClaimRole.OWNER; // only Owner for v1.2.5
-    }
-
-    /** Is this role an Owner (used in RolesCommand). */
-    public boolean isOwnerOrCoOwner(ClaimRole role) {
-        return role == ClaimRole.OWNER; // no Co-Owner in v1.2.5
-    }
-
-    /* ======================================================
-     * RELOAD
-     * ====================================================== */
-
-    /** Hook for reload — currently no external config. */
-    public void reloadFromConfig() {
-        // Future role-based config options could be reloaded here.
+    public boolean canUnclaim(UUID claimId, UUID playerId) {
+        String role = getRole(claimId, playerId);
+        return getRolePermissions(claimId, role).canUnclaim();
     }
 }

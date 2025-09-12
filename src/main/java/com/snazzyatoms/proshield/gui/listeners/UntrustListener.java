@@ -13,6 +13,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -23,14 +25,12 @@ import java.util.UUID;
  */
 public class UntrustListener implements Listener {
 
-    private final ProShield plugin;
     private final PlotManager plots;
     private final ClaimRoleManager roles;
     private final GUIManager gui;
     private final MessagesUtil messages;
 
     public UntrustListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles, GUIManager gui) {
-        this.plugin = plugin;
         this.plots = plots;
         this.roles = roles;
         this.gui = gui;
@@ -48,14 +48,14 @@ public class UntrustListener implements Listener {
         event.setCancelled(true);
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) {
-            messages.send(player, "error.not-in-claim");
+            messages.send(player, "error.no-claim");
             return;
         }
 
         // Get target (set earlier via rememberTarget)
         String targetName = gui.getRememberedTarget(player);
         if (targetName == null) {
-            messages.send(player, "error.player-not-found");
+            messages.send(player, "error.player-not-found", Map.of("player", "unknown"));
             return;
         }
 
@@ -65,7 +65,12 @@ public class UntrustListener implements Listener {
         switch (event.getSlot()) {
             case 10, 11, 12 -> { // Untrust action
                 roles.clearRole(claimId, targetId); // handles persistence
-                messages.send(player, "untrust.removed", targetName);
+
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("player", targetName);
+                placeholders.put("claim", plot.getDisplayNameSafe());
+
+                messages.send(player, "untrust.removed", placeholders);
             }
             case 26 -> { // Back button
                 gui.openMain(player);

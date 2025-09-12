@@ -206,6 +206,35 @@ gui:
             - "&7Return to main menu"
           action: "menu:main"
 
+    roles:
+      title: "&6Manage Roles"
+      size: 27
+      items:
+        "11":
+          material: STONE_PICKAXE
+          name: "&eBuilder"
+          lore:
+            - "&7Assign Builder role"
+          action: "command:proshield role builder"
+        "13":
+          material: CROSSBOW
+          name: "&cModerator"
+          lore:
+            - "&7Assign Moderator role"
+          action: "command:proshield role moderator"
+        "15":
+          material: BOOK
+          name: "&7Clear Role"
+          lore:
+            - "&7Revert to default trusted"
+          action: "command:proshield role clear"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "menu:main"
+
     admin:
       title: "&4ProShield Admin Menu"
       size: 27

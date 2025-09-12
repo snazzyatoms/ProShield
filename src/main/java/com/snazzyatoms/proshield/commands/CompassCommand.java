@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/commands/CompassCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.compass.CompassManager;
@@ -12,10 +11,7 @@ import org.bukkit.inventory.ItemStack;
 /**
  * /compass command
  *
- * ✅ Gives the player their ProShield compass (only one).
- * ✅ Uses CompassManager (injected via constructor).
- * ✅ Handles OP/Admin vs regular players (admin compass vs normal).
- * ✅ Warns if player already has one instead of duplicating.
+ * Gives the player their ProShield compass.
  */
 public class CompassCommand implements CommandExecutor {
 
@@ -30,7 +26,7 @@ public class CompassCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            messages.send(sender, "error.players-only");
+            messages.send(sender, "error.player-only");
             return true;
         }
 
@@ -39,17 +35,17 @@ public class CompassCommand implements CommandExecutor {
             return true;
         }
 
-        // ✅ Check if player already has a ProShield compass
+        // Check if player already has a ProShield compass
         for (ItemStack item : player.getInventory().getContents()) {
             if (compassManager.isProShieldCompass(item)) {
-                messages.send(player, "prefix", "&eYou already have a ProShield compass!");
+                messages.send(player, "compass.already");
                 return true;
             }
         }
 
-        // ✅ Give the compass through CompassManager
+        // Give the compass
         compassManager.giveCompass(player, player.isOp());
-        messages.send(player, "prefix", "&aYou have been given the ProShield compass!");
+        messages.send(player, "compass.given");
 
         return true;
     }

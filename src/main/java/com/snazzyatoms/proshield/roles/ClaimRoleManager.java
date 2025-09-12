@@ -4,112 +4,80 @@ package com.snazzyatoms.proshield.roles;
 import com.snazzyatoms.proshield.plots.Plot;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ClaimRoleManager
- * - Handles trust/untrust of players in claims
- * - Stores and resolves role permissions
- * - Provides utility for ownership transfer
- * - Now includes dynamic role list for tab completion
- *
- * Consolidated for v1.2.5
+ * Manages claim roles, trusted players, and ownership transfers.
+ * Consolidated from v1.2.0 → v1.2.5 with helper methods for tab completion.
  */
 public class ClaimRoleManager {
 
-    // Map<claimId, Map<playerUUID, roleName>>
-    private final Map<UUID, Map<UUID, String>> claimRoles = new ConcurrentHashMap<>();
+    // Map: plotId -> (playerName -> role)
+    private final Map<UUID, Map<String, ClaimRole>> claimRoles = new HashMap<>();
 
-    /**
-     * Trust a player with a role in a claim.
-     */
-    public boolean trustPlayer(Plot plot, String playerName, String role) {
-        if (plot == null || playerName == null) return false;
+    /* ======================================================
+     * Trust / Untrust
+     * ====================================================== */
 
-        UUID claimId = plot.getId();
-        UUID playerId = resolveUUID(playerName);
-        if (playerId == null) return false;
+    public boolean trustPlayer(Plot plot, String playerName, String roleName) {
+        ClaimRole role = ClaimRole.fromName(roleName);
+        if (role == null || role == ClaimRole.NONE) {
+            return false;
+        }
 
-        claimRoles.computeIfAbsent(claimId, k -> new ConcurrentHashMap<>())
-                  .put(playerId, role.toLowerCase(Locale.ROOT));
-        plot.addTrusted(playerId, playerName); // keep backward compatibility
+        claimRoles.computeIfAbsent(plot.getId(), k -> new HashMap<>())
+                  .put(playerName.toLowerCase(Locale.ROOT), role);
         return true;
     }
 
-    /**
-     * Untrust a player in a claim.
-     */
     public boolean untrustPlayer(Plot plot, String playerName) {
-        if (plot == null || playerName == null) return false;
+        Map<String, ClaimRole> roles = claimRoles.get(plot.getId());
+        if (roles == null) return false;
 
-        UUID claimId = plot.getId();
-        UUID playerId = resolveUUID(playerName);
-        if (playerId == null) return false;
+        return roles.remove(playerName.toLowerCase(Locale.ROOT)) != null;
+    }
 
-        Map<UUID, String> roles = claimRoles.get(claimId);
-        if (roles != null) {
-            roles.remove(playerId);
-        }
-        plot.removeTrusted(playerId); // maintain old behavior
+    public ClaimRole getRole(Plot plot, String playerName) {
+        Map<String, ClaimRole> roles = claimRoles.get(plot.getId());
+        if (roles == null) return ClaimRole.NONE;
+
+        return roles.getOrDefault(playerName.toLowerCase(Locale.ROOT), ClaimRole.NONE);
+    }
+
+    public boolean isTrusted(Plot plot, String playerName) {
+        return getRole(plot, playerName) != ClaimRole.NONE;
+    }
+
+    /* ======================================================
+     * Ownership
+     * ====================================================== */
+
+    public boolean transferOwnership(Plot plot, String newOwner) {
+        if (plot == null) return false;
+
+        UUID oldOwner = plot.getOwner();
+        if (oldOwner == null) return false;
+
+        // Reassign
+        plot.setOwnerName(newOwner);
         return true;
     }
 
-    /**
-     * Check if a player can unclaim land in a plot.
-     */
-    public boolean canUnclaim(UUID playerId, UUID claimId) {
-        if (playerId == null || claimId == null) return false;
-        String role = getRole(claimId, playerId);
-        return role != null && (role.equalsIgnoreCase("manager") || role.equalsIgnoreCase("admin"));
+    public boolean canUnclaim(UUID playerId, UUID plotId) {
+        // For now, only owners can unclaim. Could extend later.
+        return false;
     }
 
-    /**
-     * Check if a player can manage (trust/untrust/roles).
-     */
-    public boolean canManage(UUID playerId, UUID claimId) {
-        if (playerId == null || claimId == null) return false;
-        String role = getRole(claimId, playerId);
-        return role != null && (role.equalsIgnoreCase("manager") || role.equalsIgnoreCase("moderator"));
-    }
+    /* ======================================================
+     * Roles List (for Tab Completion)
+     * ====================================================== */
 
-    /**
-     * Transfer claim ownership to another player.
-     */
-    public boolean transferOwnership(Plot plot, String targetName) {
-        if (plot == null || targetName == null) return false;
-
-        UUID newOwnerId = resolveUUID(targetName);
-        if (newOwnerId == null) return false;
-
-        plot.setOwner(newOwnerId);
-        return true;
-    }
-
-    /**
-     * Get role assigned to a player in a claim.
-     */
-    public String getRole(UUID claimId, UUID playerId) {
-        Map<UUID, String> roles = claimRoles.get(claimId);
-        return (roles != null) ? roles.get(playerId) : null;
-    }
-
-    /**
-     * Return a dynamic list of available roles (for tab completion).
-     * This could be driven by config.yml in the future.
-     */
-    public List<String> getAvailableRoles() {
-        return Arrays.asList("trusted", "builder", "container", "moderator", "manager");
-    }
-
-    /**
-     * Resolve a player name to UUID.
-     * Currently placeholder — in production this should query Bukkit.getOfflinePlayer.
-     */
-    private UUID resolveUUID(String name) {
-        try {
-            return UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes());
-        } catch (Exception e) {
-            return null;
+    public List<String> getAllRoles() {
+        List<String> roles = new ArrayList<>();
+        for (ClaimRole role : ClaimRole.values()) {
+            if (role != ClaimRole.NONE && role != ClaimRole.VISITOR) {
+                roles.add(role.name().toLowerCase(Locale.ROOT));
+            }
         }
+        return roles;
     }
 }

@@ -7,6 +7,7 @@ import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
+import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -88,6 +89,12 @@ public class ProShield extends JavaPlugin {
     private void registerListeners() {
         // GUI
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+
+        // Unified plot protections, claim messages & mob repel
+        Bukkit.getPluginManager().registerEvents(
+            new PlotListener(this, plotManager, roleManager, messages),
+            this
+        );
     }
 
     // Getters

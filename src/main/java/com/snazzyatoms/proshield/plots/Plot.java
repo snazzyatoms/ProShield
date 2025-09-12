@@ -109,8 +109,8 @@ public class Plot {
         return roles;
     }
 
-    public Set<String> getTrustedNames() {
-        Set<String> names = new HashSet<>();
+    public List<String> getTrustedNames() {
+        List<String> names = new ArrayList<>();
         for (UUID id : roles.keySet()) {
             String name = Bukkit.getOfflinePlayer(id).getName();
             names.add((name != null) ? name : id.toString());

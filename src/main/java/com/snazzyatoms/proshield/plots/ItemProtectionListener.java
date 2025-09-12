@@ -2,6 +2,7 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.roles.RolePermissions;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.entity.*;
@@ -17,10 +18,9 @@ import java.util.UUID;
 /**
  * ItemProtectionListener
  *
- * ✅ Clean constructor: (PlotManager, ClaimRoleManager, MessagesUtil)
  * ✅ Protects item frames, armor stands, animals, pets, containers, and vehicles
  * ✅ Uses per-claim PlotSettings + global config
- * ✅ Respects claim roles via ClaimRoleManager
+ * ✅ Respects claim roles via ClaimRoleManager & RolePermissions
  */
 public class ItemProtectionListener implements Listener {
 
@@ -57,8 +57,9 @@ public class ItemProtectionListener implements Listener {
 
         UUID uid = player.getUniqueId();
         ClaimRole role = roles.getRole(plot, uid);
+        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
 
-        if (!plot.getSettings().isItemFramesAllowed() || !roles.canBuild(role)) {
+        if (!plot.getSettings().isItemFramesAllowed() || !perms.canBuild()) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
             messages.debug("&cPrevented item frame break in claim [" + plot.getName() + "] by " + player.getName());
@@ -75,8 +76,9 @@ public class ItemProtectionListener implements Listener {
 
         UUID uid = player.getUniqueId();
         ClaimRole role = roles.getRole(plot, uid);
+        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
 
-        if (!plot.getSettings().isItemFramesAllowed() || !roles.canBuild(role)) {
+        if (!plot.getSettings().isItemFramesAllowed() || !perms.canBuild()) {
             event.setCancelled(true);
             messages.send(player, "item-frames-deny");
         }
@@ -96,10 +98,11 @@ public class ItemProtectionListener implements Listener {
 
         UUID uid = player.getUniqueId();
         ClaimRole role = roles.getRole(plot, uid);
+        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
 
         // Armor stands
         if (entity instanceof ArmorStand && !plot.getSettings().isArmorStandsAllowed()) {
-            if (!roles.canInteract(role)) {
+            if (!perms.canInteract()) {
                 event.setCancelled(true);
                 messages.send(player, "armor-stands-deny");
                 return;
@@ -108,7 +111,7 @@ public class ItemProtectionListener implements Listener {
 
         // Passive animals
         if (entity instanceof Animals && !plot.getSettings().isAnimalAccessAllowed()) {
-            if (!roles.canInteract(role)) {
+            if (!perms.canInteract()) {
                 event.setCancelled(true);
                 messages.send(player, "animals-deny");
                 return;
@@ -117,7 +120,7 @@ public class ItemProtectionListener implements Listener {
 
         // Tamed pets
         if (entity instanceof Tameable tameable && tameable.isTamed() && !plot.getSettings().isPetAccessAllowed()) {
-            if (!roles.canInteract(role)) {
+            if (!perms.canInteract()) {
                 event.setCancelled(true);
                 messages.send(player, "pets-deny");
                 return;
@@ -126,7 +129,7 @@ public class ItemProtectionListener implements Listener {
 
         // Container entities (like chest minecarts)
         if (entity instanceof Minecart && !plot.getSettings().isContainersAllowed()) {
-            if (!roles.canInteract(role)) {
+            if (!perms.canInteract()) {
                 event.setCancelled(true);
                 messages.send(player, "containers-deny");
             }
@@ -156,8 +159,9 @@ public class ItemProtectionListener implements Listener {
 
         UUID uid = player.getUniqueId();
         ClaimRole role = roles.getRole(plot, uid);
+        RolePermissions perms = roles.getRolePermissions(plot.getId(), role);
 
-        if (!plot.getSettings().isVehiclesAllowed() || !roles.canBuild(role)) {
+        if (!plot.getSettings().isVehiclesAllowed() || !perms.canBuild()) {
             event.setCancelled(true);
             messages.send(player, "vehicles-deny");
             messages.debug("&cPrevented vehicle destroy in claim [" + plot.getName() + "] by " + player.getName());

@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.plots.Plot;
@@ -27,8 +28,8 @@ public class ClaimRoleManager {
         if (plot == null) return true; // wilderness
         if (plot.isOwner(playerId)) return true;
 
-        ClaimRole role = plot.getRoles().get(playerId);
-        if (role == null) return false;
+        ClaimRole role = plot.getRole(playerId);
+        if (role == null || role == ClaimRole.NONE) return false;
 
         RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
         return perms.canBuild();
@@ -38,8 +39,8 @@ public class ClaimRoleManager {
         if (plot == null) return true;
         if (plot.isOwner(playerId)) return true;
 
-        ClaimRole role = plot.getRoles().get(playerId);
-        if (role == null) return false;
+        ClaimRole role = plot.getRole(playerId);
+        if (role == null || role == ClaimRole.NONE) return false;
 
         RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
         return perms.canInteract();
@@ -50,8 +51,8 @@ public class ClaimRoleManager {
         if (plot == null) return false;
         if (plot.isOwner(playerId)) return true;
 
-        ClaimRole role = plot.getRoles().get(playerId);
-        if (role == null) return false;
+        ClaimRole role = plot.getRole(playerId);
+        if (role == null || role == ClaimRole.NONE) return false;
 
         RolePermissions perms = getRolePermissions(claimId, role.name().toLowerCase());
         return perms.canManageTrust();
@@ -62,8 +63,8 @@ public class ClaimRoleManager {
         if (plot == null) return false;
         if (plot.isOwner(playerId)) return true;
 
-        ClaimRole role = plot.getRoles().get(playerId);
-        if (role == null) return false;
+        ClaimRole role = plot.getRole(playerId);
+        if (role == null || role == ClaimRole.NONE) return false;
 
         RolePermissions perms = getRolePermissions(claimId, role.name().toLowerCase());
         return perms.canUnclaim();
@@ -73,7 +74,7 @@ public class ClaimRoleManager {
         if (plot == null) return false;
         if (plot.isOwner(playerId)) return true;
 
-        ClaimRole role = plot.getRoles().get(playerId);
+        ClaimRole role = plot.getRole(playerId);
         return role == ClaimRole.MANAGER; // treat Manager as co-owner
     }
 
@@ -82,12 +83,12 @@ public class ClaimRoleManager {
      * ------------------------------------------------------- */
 
     public void trustPlayer(Plot plot, UUID playerId, ClaimRole role) {
-        plot.getRoles().put(playerId, role);
+        plot.setRole(playerId, role);
         plotManager.saveAsync(plot);
     }
 
     public void untrustPlayer(Plot plot, UUID playerId) {
-        plot.getRoles().remove(playerId);
+        plot.setRole(playerId, ClaimRole.NONE);
         plotManager.saveAsync(plot);
     }
 
@@ -101,7 +102,7 @@ public class ClaimRoleManager {
         if (plot == null) return;
 
         if (plot.isOwner(playerId)) return; // never override owner
-        plot.getRoles().put(playerId, role);
+        plot.setRole(playerId, role);
         plotManager.saveAsync(plot);
     }
 
@@ -117,7 +118,7 @@ public class ClaimRoleManager {
         Plot plot = plotManager.getPlotById(claimId);
         if (plot == null) return;
 
-        plot.getRoles().remove(playerId);
+        plot.setRole(playerId, ClaimRole.NONE);
         plotManager.saveAsync(plot);
     }
 
@@ -127,14 +128,14 @@ public class ClaimRoleManager {
         if (plot == null) return "None";
         if (plot.isOwner(playerId)) return "Owner";
 
-        ClaimRole role = plot.getRoles().get(playerId);
+        ClaimRole role = plot.getRole(playerId);
         return (role != null) ? role.name() : "Trusted";
     }
 
     /** Get raw ClaimRole enum. */
     public ClaimRole getRole(Plot plot, UUID playerId) {
         if (plot.isOwner(playerId)) return ClaimRole.OWNER;
-        return plot.getRoles().getOrDefault(playerId, ClaimRole.VISITOR);
+        return plot.getRole(playerId);
     }
 
     public void clearAllRoles(Plot plot) {

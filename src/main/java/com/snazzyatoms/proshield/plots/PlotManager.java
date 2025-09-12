@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -19,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PlotManager {
 
     private final ProShield plugin;
-    private final ClaimRoleManager roleManager;
+    private final ClaimRoleManager roleManager; // may be null if legacy ctor used
 
     // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
@@ -33,8 +34,7 @@ public class PlotManager {
     }
 
     /**
-     * Legacy constructor for compatibility.
-     * RoleManager will be null if not passed.
+     * Legacy constructor for compatibility (roleManager will be null).
      */
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
@@ -60,6 +60,7 @@ public class PlotManager {
     }
 
     public Plot getPlot(Chunk chunk) {
+        if (chunk == null) return null;
         for (Plot plot : plots.values()) {
             if (plot.getChunk().equals(chunk)) {
                 return plot;
@@ -69,18 +70,21 @@ public class PlotManager {
     }
 
     /**
-     * Alias for backwards compatibility.
-     * Older code calls getPlotAt(...).
+     * Legacy alias for backwards compatibility.
+     * Prefer {@link #getPlot(Chunk)} going forward.
      */
+    @Deprecated
     public Plot getPlotAt(Chunk chunk) {
         return getPlot(chunk);
     }
 
     /**
-     * Get a safe display name for the claim at this location.
-     * Returns "Wilderness" if unclaimed.
+     * Returns a safe display name for the claim at the given location.
+     * - Claim name (via Plot#getDisplayNameSafe) if claimed
+     * - "Wilderness" if unclaimed or location is null
      */
     public String getClaimName(Location location) {
+        if (location == null) return "Wilderness";
         Plot plot = getPlot(location);
         return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
     }

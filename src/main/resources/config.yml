@@ -3,7 +3,7 @@
 # Version: 1.2.5+
 # ==========================================================
 # All protection features can be globally toggled here.
-# Individual claims may override via /flags GUI.
+# Individual claims may override via the /flags GUI.
 # ==========================================================
 
 # ==========================================================
@@ -22,6 +22,7 @@ protection:
   # Fire settings
   # -------------------------
   fire:
+    enabled: false
     burn: false
     spread: false
     ignite:
@@ -38,7 +39,8 @@ protection:
   # -------------------------
   # Bucket settings
   # -------------------------
-  buckets: false   # 🪣 Single toggle (empty + fill blocked together)
+  buckets:
+    enabled: false   # 🪣 Block empty + fill together
 
   # -------------------------
   # Mob settings
@@ -46,10 +48,10 @@ protection:
   mobs:
     border-repel:
       enabled: true
-      radius: 3.0          # 🔹 Distance mobs are pushed away from claim edge
-      horizontal-push: 0.7 # 🔹 Strength of sideways push
-      vertical-push: 0.25  # 🔹 Strength of upward push
-    despawn-inside: true   # 🧟 Despawn mobs that manage to enter claims
+      radius: 3.0          # 🔹 Distance mobs are pushed from claim edge
+      horizontal-push: 0.7 # 🔹 Sideways push strength
+      vertical-push: 0.25  # 🔹 Upward push strength
+    despawn-inside: true   # 🧟 Despawn mobs that enter claims
 
   # -------------------------
   # Wilderness entity settings
@@ -63,8 +65,8 @@ protection:
 # Messages and GUI
 # ==========================================================
 messages:
-  prefix: "&3[ProShield] &r"
-  debug-prefix: "&8[Debug] &r"
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
 
   # 🌲 Wilderness entry messages
   show-wilderness: false
@@ -73,21 +75,21 @@ messages:
   admin-flag-chat: true
 
 gui:
-  # Menu titles
+  # Menu titles (use '&' formatting for consistency)
   main:
-    title: "§bProShield Menu"
+    title: "&bProShield Menu"
   flags:
-    title: "§dClaim Flags"
+    title: "&dClaim Flags"
   roles:
-    title: "§6Claim Roles"
+    title: "&6Claim Roles"
   trust:
-    title: "§aTrust Players"
+    title: "&aTrust Players"
   untrust:
-    title: "§cUntrust Players"
+    title: "&cUntrust Players"
   transfer:
-    title: "§dTransfer Claim"
+    title: "&dTransfer Claim"
   admin:
-    title: "§4ProShield Admin Menu"
+    title: "&4ProShield Admin Menu"
     wilderness:
       toggle-messages: true
     debug:

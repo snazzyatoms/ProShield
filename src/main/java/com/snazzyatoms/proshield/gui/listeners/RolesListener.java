@@ -1,12 +1,8 @@
-// src/main/java/com/snazzyatoms/proshield/gui/listeners/RolesListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,9 +10,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 
 import java.util.UUID;
 
-/**
- * Handles clicks in the Roles GUI.
- */
 public class RolesListener implements Listener {
 
     private final ProShield plugin;
@@ -31,23 +24,26 @@ public class RolesListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getCurrentItem() == null) return;
-        if (!event.getView().getTitle().equals(ChatColor.GOLD + "Manage Roles")) return;
+
+        String title = event.getView().getTitle();
+        if (!title.contains("Roles")) return;
 
         event.setCancelled(true);
 
-        Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
-        if (plot == null) return;
+        UUID plotId = roles.getOpenPlot(player.getUniqueId());
+        if (plotId == null) return;
 
-        String targetName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
-        UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
-
-        switch (event.getCurrentItem().getType()) {
-            case STONE_PICKAXE -> roles.setRole(plot, targetId, ClaimRole.BUILDER);
-            case CROSSBOW -> roles.setRole(plot, targetId, ClaimRole.MODERATOR);
-            case BOOK -> roles.setRole(plot, targetId, ClaimRole.TRUSTED);
-            default -> {}
+        // Example logic: assign different roles based on clicked slot
+        int slot = event.getRawSlot();
+        if (slot == 11) {
+            roles.assignRole(plotId, player.getUniqueId(), ClaimRole.MANAGER);
+            player.sendMessage("§aYou are now Manager in this claim!");
+        } else if (slot == 13) {
+            roles.assignRole(plotId, player.getUniqueId(), ClaimRole.TRUSTED);
+            player.sendMessage("§aYou are now Trusted in this claim!");
+        } else if (slot == 15) {
+            roles.clearRole(plotId, player.getUniqueId());
+            player.sendMessage("§cYour role in this claim was cleared.");
         }
-
-        plugin.getGuiManager().openRoleAssignmentMenu(player, plot, targetName, false);
     }
 }

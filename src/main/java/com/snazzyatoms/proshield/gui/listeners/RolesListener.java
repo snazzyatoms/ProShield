@@ -71,12 +71,12 @@ public class RolesListener implements Listener {
         switch (event.getRawSlot()) {
             case 11 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.MANAGER);
-                placeholders.put("role", "Manager");
+                placeholders.put("role", ClaimRole.MANAGER.getDisplayName());
                 messages.send(player, "trust.added", placeholders);
             }
             case 13 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.TRUSTED);
-                placeholders.put("role", "Trusted");
+                placeholders.put("role", ClaimRole.TRUSTED.getDisplayName());
                 messages.send(player, "trust.added", placeholders);
             }
             case 15 -> {

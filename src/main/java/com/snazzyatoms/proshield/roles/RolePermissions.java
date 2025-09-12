@@ -20,7 +20,6 @@ public class RolePermissions {
     public void setCanManageTrust(boolean v) { this.canManageTrust = v; }
     public void setCanUnclaim(boolean v) { this.canUnclaim = v; }
 
-    // Serialize for YAML
     public Map<String, Object> toMap() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("canBuild", canBuild);
@@ -30,7 +29,6 @@ public class RolePermissions {
         return m;
     }
 
-    // Defaults for a named role (owner adjustable later in GUI)
     public static RolePermissions defaultsFor(String role) {
         RolePermissions p = new RolePermissions();
         switch (role.toLowerCase()) {
@@ -46,7 +44,6 @@ public class RolePermissions {
                 p.setCanManageTrust(true);
                 p.setCanUnclaim(false);
             }
-            default -> { /* trusted baseline already set */ }
         }
         return p;
     }
@@ -54,11 +51,10 @@ public class RolePermissions {
     public static RolePermissions fromMap(Map<String, Object> m) {
         RolePermissions p = new RolePermissions();
         if (m == null) return p;
-        Object a;
-        if ((a = m.get("canBuild")) != null) p.setCanBuild((boolean)a);
-        if ((a = m.get("canContainers")) != null) p.setCanContainers((boolean)a);
-        if ((a = m.get("canManageTrust")) != null) p.setCanManageTrust((boolean)a);
-        if ((a = m.get("canUnclaim")) != null) p.setCanUnclaim((boolean)a);
+        if (m.containsKey("canBuild")) p.setCanBuild((boolean)m.get("canBuild"));
+        if (m.containsKey("canContainers")) p.setCanContainers((boolean)m.get("canContainers"));
+        if (m.containsKey("canManageTrust")) p.setCanManageTrust((boolean)m.get("canManageTrust"));
+        if (m.containsKey("canUnclaim")) p.setCanUnclaim((boolean)m.get("canUnclaim"));
         return p;
     }
 }

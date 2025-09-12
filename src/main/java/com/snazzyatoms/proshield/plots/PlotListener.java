@@ -8,7 +8,6 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,15 +22,16 @@ import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
  * PlotListener
  * - Unified claim protection handler
- * - Covers block breaking/placing, buckets, item frames, vehicles
+ * - Covers block breaking/placing, buckets, containers, item frames, vehicles
  * - Handles claim enter/leave messages
  *
- * Consolidated for v1.2.5
+ * Consolidated for v1.2.5+
  */
 public class PlotListener implements Listener {
 
@@ -52,19 +52,17 @@ public class PlotListener implements Listener {
      * ====================================================== */
     @EventHandler
     public void onBlockBreak(BlockBreakEvent e) {
-        Player player = e.getPlayer();
-        if (!canModify(player, e.getBlock().getLocation())) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
             e.setCancelled(true);
-            messages.send(player, "error.no-permission");
+            messages.send(e.getPlayer(), "error.no-permission");
         }
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent e) {
-        Player player = e.getPlayer();
-        if (!canModify(player, e.getBlock().getLocation())) {
+        if (!canModify(e.getPlayer(), e.getBlock().getLocation())) {
             e.setCancelled(true);
-            messages.send(player, "error.no-permission");
+            messages.send(e.getPlayer(), "error.no-permission");
         }
     }
 
@@ -76,7 +74,7 @@ public class PlotListener implements Listener {
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getClickedBlock() != null) {
             Player player = e.getPlayer();
             Block block = e.getClickedBlock();
-            if (!canInteract(player, block.getLocation())) {
+            if (!canInteract(player, block.getLocation(), block.getType())) {
                 e.setCancelled(true);
                 messages.send(player, "error.no-permission");
             }
@@ -142,20 +140,22 @@ public class PlotListener implements Listener {
      * ====================================================== */
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
+        if (e.getFrom().getChunk().equals(e.getTo().getChunk())) return; // optimization
+
         Player player = e.getPlayer();
         String fromClaim = plotManager.getClaimName(e.getFrom());
         String toClaim   = plotManager.getClaimName(e.getTo());
 
         if (!fromClaim.equals(toClaim)) {
             if (!"Wilderness".equalsIgnoreCase(fromClaim)) {
-                messages.send(player, "claim.leaving", java.util.Map.of("claim", fromClaim));
+                messages.send(player, "claim.leaving", Map.of("claim", fromClaim));
             }
             if ("Wilderness".equalsIgnoreCase(toClaim)) {
                 if (plugin.getConfig().getBoolean("messages.show-wilderness", false)) {
                     messages.send(player, "claim.wilderness");
                 }
             } else {
-                messages.send(player, "claim.entering", java.util.Map.of("claim", toClaim));
+                messages.send(player, "claim.entering", Map.of("claim", toClaim));
             }
         }
     }
@@ -166,14 +166,29 @@ public class PlotListener implements Listener {
     private boolean canModify(Player player, Location loc) {
         UUID playerId = player.getUniqueId();
         Plot plot = plotManager.getPlot(loc);
-        if (plot == null) return true;
+        if (plot == null) return true; // no claim
         return plot.isOwner(playerId) || roleManager.canManage(playerId, plot.getId());
     }
 
-    private boolean canInteract(Player player, Location loc) {
+    private boolean canInteract(Player player, Location loc, Material type) {
         UUID playerId = player.getUniqueId();
         Plot plot = plotManager.getPlot(loc);
-        if (plot == null) return true;
-        return plot.isOwner(playerId) || roleManager.canManage(playerId, plot.getId());
+        if (plot == null) return true; // no claim
+
+        // Container check
+        if (isContainer(type)) {
+            return plot.isOwner(playerId) || roleManager.canContainers(playerId, plot.getId());
+        }
+
+        // Default interact
+        return plot.isOwner(playerId) || roleManager.canInteract(playerId, plot.getId());
+    }
+
+    private boolean isContainer(Material type) {
+        return switch (type) {
+            case CHEST, TRAPPED_CHEST, FURNACE, BLAST_FURNACE, SMOKER,
+                 HOPPER, DROPPER, DISPENSER, BARREL, SHULKER_BOX -> true;
+            default -> false;
+        };
     }
 }

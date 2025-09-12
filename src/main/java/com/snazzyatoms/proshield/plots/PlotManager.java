@@ -16,11 +16,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Manages all plots in the world.
  * - Handles creation, lookup, saving, and trusted role access.
  * - Future-proofed with aliases for legacy method names.
+ * - Now supports claim expiry & auto-purging (configurable).
  */
 public class PlotManager {
 
     private final ProShield plugin;
-    private final ClaimRoleManager roleManager; // may be null if legacy ctor used
+    private final ClaimRoleManager roleManager;
 
     // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
@@ -34,7 +35,8 @@ public class PlotManager {
     }
 
     /**
-     * Legacy constructor for compatibility (roleManager will be null).
+     * Legacy constructor for compatibility.
+     * RoleManager will be null if not passed.
      */
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
@@ -60,7 +62,6 @@ public class PlotManager {
     }
 
     public Plot getPlot(Chunk chunk) {
-        if (chunk == null) return null;
         for (Plot plot : plots.values()) {
             if (plot.getChunk().equals(chunk)) {
                 return plot;
@@ -70,27 +71,25 @@ public class PlotManager {
     }
 
     /**
-     * Legacy alias for backwards compatibility.
-     * Prefer {@link #getPlot(Chunk)} going forward.
+     * Alias for backwards compatibility.
+     * Older code calls getPlotAt(...).
      */
-    @Deprecated
     public Plot getPlotAt(Chunk chunk) {
         return getPlot(chunk);
     }
 
     /**
-     * Returns a safe display name for the claim at the given location.
-     * - Claim name (via Plot#getDisplayNameSafe) if claimed
-     * - "Wilderness" if unclaimed or location is null
+     * Get a safe display name for the claim at this location.
+     * Returns "Wilderness" if unclaimed.
      */
     public String getClaimName(Location location) {
-        if (location == null) return "Wilderness";
         Plot plot = getPlot(location);
         return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
     }
 
     public Plot createPlot(UUID owner, Chunk chunk) {
         Plot plot = new Plot(chunk, owner);
+        plot.updateActivity(); // mark creation as activity
         plots.put(plot.getId(), plot);
         saveAsync(plot);
         return plot;
@@ -146,5 +145,38 @@ public class PlotManager {
 
         ClaimRole role = plot.getRole(playerId);
         return role != null && role.canManage();
+    }
+
+    /* ======================================================
+     * CLAIM EXPIRY & PURGE
+     * ====================================================== */
+
+    /**
+     * Purge expired claims based on config expiry-days.
+     */
+    public void purgeExpiredClaims() {
+        int expiryDays = plugin.getConfig().getInt("claims.expiry-days", 30);
+        long expiryMillis = expiryDays * 24L * 60L * 60L * 1000L;
+
+        long now = System.currentTimeMillis();
+        int purged = 0;
+
+        Iterator<Plot> it = plots.values().iterator();
+        while (it.hasNext()) {
+            Plot plot = it.next();
+            long lastActive = plot.getLastActive(); // requires Plot support
+            if (now - lastActive >= expiryMillis) {
+                it.remove();
+                purged++;
+                plugin.getLogger().info("Purged expired claim: " + plot.getDisplayNameSafe());
+            }
+        }
+
+        if (purged > 0) {
+            int finalPurged = purged;
+            Bukkit.getScheduler().runTask(plugin, () ->
+                Bukkit.broadcastMessage("§c" + finalPurged + " expired claims were purged.")
+            );
+        }
     }
 }

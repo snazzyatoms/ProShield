@@ -103,9 +103,9 @@ public class TransferCommand implements CommandExecutor {
         plot.setOwner(newOwner);
 
         // Clean up trusted list
-        plot.getTrusted().remove(newOwner); // new owner shouldn’t be in trusted
+        plot.getTrusted().remove(newOwner); // new owner shouldn’t be trusted
         if (oldOwner != null && !oldOwner.equals(newOwner)) {
-            plot.getTrusted().remove(oldOwner); // old owner loses all claim rights
+            plot.getTrusted().remove(oldOwner); // old owner loses claim rights
         }
 
         // Clear all role assignments for safety
@@ -118,6 +118,12 @@ public class TransferCommand implements CommandExecutor {
         String newName = newOwnerOP.getName() != null ? newOwnerOP.getName() : newOwner.toString();
         if (override) {
             messages.send(executor, "transfer.override-success", newName);
+
+            // 📝 Log admin override to console for audit
+            plugin.getLogger().info("[ADMIN-TRANSFER] " + executor.getName() +
+                    " reassigned claim " + plot.getDisplayNameSafe() +
+                    " from " + (oldOwner != null ? oldOwner : "UNKNOWN") +
+                    " to " + newName);
         } else {
             messages.send(executor, "transfer.success", newName);
         }

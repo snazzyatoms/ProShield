@@ -10,49 +10,40 @@ description: >
   repel mobs, protect items, and provide intuitive GUIs for players and admins.
 
 commands:
+  # Unified admin + utility dispatcher
   proshield:
-    description: Root ProShield command (admin + utility dispatcher)
+    description: Root ProShield command (admin + utilities)
     usage: /<command> [reload|debug|compass|flag <flag>]
     aliases: [ps, shield]
     permission: proshield.use
 
+  # Claim management commands (all handled by ClaimCommandHandler)
   claim:
-    description: Claim the chunk you are standing in
+    description: Claim your current chunk
     usage: /<command>
     permission: proshield.use
-
   unclaim:
-    description: Unclaim the chunk you are standing in
+    description: Unclaim your current chunk
     usage: /<command>
     permission: proshield.use
-
   trust:
     description: Trust a player with optional role
     usage: /<command> <player> [role]
     permission: proshield.use
     aliases: [addtrust]
-
   untrust:
     description: Remove trust from a player
     usage: /<command> <player>
     permission: proshield.use
     aliases: [removetrust]
-
   roles:
     description: Manage claim roles via GUI
     usage: /<command>
     permission: proshield.use
-
   transfer:
     description: Transfer claim ownership to another player
     usage: /<command> <player>
     permission: proshield.use
-
-  flags:
-    description: Manage claim flags via GUI
-    usage: /<command>
-    permission: proshield.flags
-    aliases: [cf]
 
 permissions:
   # General Use

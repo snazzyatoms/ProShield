@@ -1,83 +1,68 @@
 package com.snazzyatoms.proshield.gui.listeners;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.roles.RolePermissions;
-import org.bukkit.ChatColor;
-import org.bukkit.Sound;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
+import java.util.UUID;
 
+/**
+ * RoleFlagsListener
+ *
+ * Handles toggling permissions in the Role Flags menu.
+ * Syncs changes to ClaimRoleManager.savePermissions().
+ */
 public class RoleFlagsListener implements Listener {
 
-    private final ProShield plugin;
-    private final PlotManager plots;
+    private final PlotManager plotManager;
     private final ClaimRoleManager roles;
     private final GUIManager gui;
+    private final MessagesUtil messages;
 
-    public RoleFlagsListener(ProShield plugin, PlotManager plots, ClaimRoleManager roles, GUIManager gui) {
-        this.plugin = plugin;
-        this.plots = plots;
+    public RoleFlagsListener(PlotManager plotManager, ClaimRoleManager roles, GUIManager gui, MessagesUtil messages) {
+        this.plotManager = plotManager;
         this.roles = roles;
         this.gui = gui;
+        this.messages = messages;
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onRoleFlagsClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        if (e.getClickedInventory() == null || e.getClickedInventory() != e.getView().getTopInventory()) return;
-        if (e.getCurrentItem() == null || !e.getCurrentItem().hasItemMeta()) return;
+    @EventHandler
+    public void onClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (event.getView().getTitle() == null) return;
 
-        String title = ChatColor.stripColor(e.getView().getTitle()).toLowerCase();
-        if (!title.startsWith("role flags: ")) return;
+        String title = event.getView().getTitle();
+        if (!title.startsWith("§bRole Flags: ")) return;
 
-        e.setCancelled(true);
-        Plot plot = plots.getPlot(player.getLocation());
+        event.setCancelled(true);
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) return;
 
-        String roleId = title.replace("role flags: ", "").trim();
-        RolePermissions perms = roles.getRolePermissions(plot.getId(), roleId);
+        String roleId = title.replace("§bRole Flags: ", "").toLowerCase();
+        UUID claimId = plot.getId();
+        RolePermissions perms = roles.getRolePermissions(claimId, roleId);
 
-        String label = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName()).toLowerCase();
-        switch (label) {
-            case "build blocks" -> perms.setCanBuild(!perms.canBuild());
-            case "open containers" -> perms.setCanContainers(!perms.canContainers());
-            case "manage trust" -> perms.setCanManageTrust(!perms.canManageTrust());
-            case "unclaim land" -> perms.setCanUnclaim(!perms.canUnclaim());
-            case "back" -> {
-                gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-                return;
-            }
+        switch (event.getSlot()) {
+            case 10 -> perms.setCanBuild(!perms.canBuild());
+            case 11 -> perms.setCanContainers(!perms.canContainers());
+            case 12 -> perms.setCanManageTrust(!perms.canManageTrust());
+            case 13 -> perms.setCanUnclaim(!perms.canUnclaim());
             default -> { return; }
         }
 
-        roles.savePermissions(plot.getId(), roleId, perms);
+        // Persist changes
+        roles.savePermissions(claimId, roleId, perms);
 
-        ItemMeta meta = e.getCurrentItem().getItemMeta();
-        if (meta != null) {
-            boolean on = switch (label) {
-                case "build blocks" -> perms.canBuild();
-                case "open containers" -> perms.canContainers();
-                case "manage trust" -> perms.canManageTrust();
-                case "unclaim land" -> perms.canUnclaim();
-                default -> false;
-            };
-            meta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Toggle permission",
-                on ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled"
-            ));
-            e.getCurrentItem().setItemMeta(meta);
-        }
+        messages.send(player, "flags.toggle", roleId + " updated");
 
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+        // Refresh menu
+        gui.openRoleFlagsMenu(player, plot, roleId);
     }
 }

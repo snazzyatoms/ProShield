@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ClaimCommandHandler;
@@ -21,9 +22,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProShield extends JavaPlugin {
 
-    /* -------------------------------------------------------
-     * Singletons / Managers
-     * ------------------------------------------------------- */
     private static ProShield instance;
 
     private MessagesUtil messages;
@@ -34,16 +32,12 @@ public class ProShield extends JavaPlugin {
     private GUIManager guiManager;
     private CompassManager compassManager;
 
-    /* Debug toggle used by MessagesUtil.debug(...) */
     private boolean debugEnabled = false;
 
     public static ProShield getInstance() {
         return instance;
     }
 
-    /* -------------------------------------------------------
-     * Lifecycle
-     * ------------------------------------------------------- */
     @Override
     public void onEnable() {
         instance = this;
@@ -56,18 +50,18 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
-        // GUI stack
+        // GUI + cache
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
         compassManager = new CompassManager(this, guiManager);
 
-        // Commands
+        // Register commands (unified into 2 executors)
         registerCommands();
 
-        // Listeners
+        // Register listeners
         registerListeners();
 
-        // Background tasks (repel, borders)
+        // Background tasks
         scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
@@ -81,23 +75,21 @@ public class ProShield extends JavaPlugin {
         getLogger().info("ProShield disabled.");
     }
 
-    /* -------------------------------------------------------
-     * Wiring
-     * ------------------------------------------------------- */
     private void registerCommands() {
-        // Root /proshield command (admin + utility)
+        // Root /proshield
         if (getCommand("proshield") != null) {
-            getCommand("proshield").setExecutor(
-                new ProShieldCommand(this, plotManager, guiManager, compassManager)
-            );
+            ProShieldCommand rootCmd = new ProShieldCommand(this, plotManager, guiManager, compassManager);
+            getCommand("proshield").setExecutor(rootCmd);
+            getCommand("proshield").setTabCompleter(rootCmd);
         }
 
-        // Unified player claim command handler
-        ClaimCommandHandler claimHandler = new ClaimCommandHandler(this, plotManager, roleManager);
+        // Grouped claim/trust/etc
+        ClaimCommandHandler claimCmd = new ClaimCommandHandler(this, plotManager, roleManager, messages);
         String[] claimCommands = {"claim", "unclaim", "trust", "untrust", "roles", "transfer"};
         for (String cmd : claimCommands) {
             if (getCommand(cmd) != null) {
-                getCommand(cmd).setExecutor(claimHandler);
+                getCommand(cmd).setExecutor(claimCmd);
+                getCommand(cmd).setTabCompleter(claimCmd);
             }
         }
     }
@@ -105,7 +97,6 @@ public class ProShield extends JavaPlugin {
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Protection listeners
         Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager, roleManager, messages), this);
@@ -122,41 +113,17 @@ public class ProShield extends JavaPlugin {
         } catch (Throwable ignored) {}
     }
 
-    /* -------------------------------------------------------
-     * Getters
-     * ------------------------------------------------------- */
-    public MessagesUtil getMessagesUtil() {
-        return messages;
-    }
+    // Getters
+    public MessagesUtil getMessagesUtil() { return messages; }
+    public PlotManager getPlotManager() { return plotManager; }
+    public ClaimRoleManager getRoleManager() { return roleManager; }
+    public GUICache getGuiCache() { return guiCache; }
+    public GUIManager getGuiManager() { return guiManager; }
+    public CompassManager getCompassManager() { return compassManager; }
 
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
-
-    public ClaimRoleManager getRoleManager() {
-        return roleManager;
-    }
-
-    public GUICache getGuiCache() {
-        return guiCache;
-    }
-
-    public GUIManager getGuiManager() {
-        return guiManager;
-    }
-
-    public CompassManager getCompassManager() {
-        return compassManager;
-    }
-
-    public boolean isDebugEnabled() {
-        return debugEnabled;
-    }
-
-    public void setDebugEnabled(boolean enabled) {
-        this.debugEnabled = enabled;
-    }
-
+    // Debug toggles
+    public boolean isDebugEnabled() { return debugEnabled; }
+    public void setDebugEnabled(boolean enabled) { this.debugEnabled = enabled; }
     public void toggleDebug() {
         this.debugEnabled = !this.debugEnabled;
         if (messages != null) {

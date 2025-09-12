@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
@@ -11,8 +12,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.UUID;
-
 /**
  * Unified claim-related commands for players:
  * /claim, /unclaim, /trust, /untrust, /roles, /transfer, /flags
@@ -22,12 +21,14 @@ public class ClaimCommandHandler implements CommandExecutor {
     private final ProShield plugin;
     private final PlotManager plots;
     private final ClaimRoleManager roles;
+    private final GUIManager gui;
     private final MessagesUtil messages;
 
     public ClaimCommandHandler(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
         this.plugin = plugin;
         this.plots = plots;
         this.roles = roles;
+        this.gui = plugin.getGuiManager();
         this.messages = plugin.getMessagesUtil();
     }
 
@@ -82,8 +83,10 @@ public class ClaimCommandHandler implements CommandExecutor {
             messages.send(player, "trust.usage", "{role}", "member");
             return;
         }
-        // TODO: implement trust logic with roles
-        messages.send(player, "trust.added", "{player}", args[0], "{claim}", "this claim");
+        // TODO: Full trust system (hook into ClaimRoleManager)
+        messages.send(player, "trust.added",
+                "{player}", args[0],
+                "{claim}", "this claim");
     }
 
     private void handleUntrust(Player player, String[] args) {
@@ -91,12 +94,19 @@ public class ClaimCommandHandler implements CommandExecutor {
             messages.send(player, "untrust.usage");
             return;
         }
-        // TODO: implement untrust logic
-        messages.send(player, "untrust.removed", "{player}", args[0], "{claim}", "this claim");
+        // TODO: Full untrust system (hook into ClaimRoleManager)
+        messages.send(player, "untrust.removed",
+                "{player}", args[0],
+                "{claim}", "this claim");
     }
 
     private void handleRoles(Player player) {
-        // TODO: open roles GUI via GUIManager
+        Plot plot = plots.getPlot(player.getLocation());
+        if (plot == null) {
+            messages.send(player, "roles.no-claim");
+            return;
+        }
+        gui.openMenu(player, "roles");
         messages.send(player, "roles.opened");
     }
 
@@ -105,12 +115,18 @@ public class ClaimCommandHandler implements CommandExecutor {
             messages.send(player, "transfer.usage");
             return;
         }
-        // TODO: implement ownership transfer
-        messages.send(player, "transfer.success", "{player}", args[0], "{claim}", "this claim");
+        // TODO: Implement ownership transfer
+        messages.send(player, "transfer.success",
+                "{player}", args[0],
+                "{claim}", "this claim");
     }
 
     private void handleFlags(Player player) {
-        // TODO: open flags GUI via GUIManager
-        messages.send(player, "flags.no-claim");
+        Plot plot = plots.getPlot(player.getLocation());
+        if (plot == null) {
+            messages.send(player, "flags.no-claim");
+            return;
+        }
+        gui.openMenu(player, "flags");
     }
 }

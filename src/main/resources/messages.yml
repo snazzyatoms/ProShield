@@ -4,8 +4,13 @@
 # =========================================================
 # Supports:
 #   - Color codes: use '&'
-#   - Placeholders: {player}, {claim}, {role}, {owner}, {state}, {count}
-# All prior keys preserved; cleaned and future-proofed.
+#   - Placeholders (dynamic values inserted at runtime):
+#       {player} → Target player’s name
+#       {claim}  → Claim name or identifier
+#       {role}   → Role display name (Trusted, Builder, etc.)
+#       {owner}  → Claim owner’s name
+#       {state}  → Current toggle state (ENABLED / DISABLED)
+#       {count}  → Numerical values (e.g., number of claims purged)
 # =========================================================
 
 prefix: "&3[ProShield]&r "

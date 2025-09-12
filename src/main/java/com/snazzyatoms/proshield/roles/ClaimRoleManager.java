@@ -11,7 +11,9 @@ import java.util.*;
  * - Handles roles inside claims
  * - Supports trust/untrust, transfer, and permission checks
  *
- * Consolidated for v1.2.5+
+ * Fixed for v1.2.5:
+ *   • Removed reliance on getOwnerName()/setOwnerName()
+ *   • Uses UUIDs for ownership transfer
  */
 public class ClaimRoleManager {
 
@@ -46,11 +48,21 @@ public class ClaimRoleManager {
     }
 
     public boolean transferOwnership(Plot plot, String newOwnerName) {
+        UUID newOwnerId = null;
+
+        // Resolve UUID from Bukkit’s player database
+        try {
+            newOwnerId = plotManager.getPlugin().getServer()
+                    .getOfflinePlayer(newOwnerName).getUniqueId();
+        } catch (Exception ignored) {}
+
+        if (newOwnerId == null) return false;
+
         // Prevent transferring to same player
-        if (plot.getOwnerName().equalsIgnoreCase(newOwnerName)) return false;
+        if (plot.isOwner(newOwnerId)) return false;
 
         // Update plot owner
-        plot.setOwnerName(newOwnerName);
+        plot.setOwner(newOwnerId);
 
         // Clear cached roles (fresh start for new owner)
         roleCache.remove(plot.getId());

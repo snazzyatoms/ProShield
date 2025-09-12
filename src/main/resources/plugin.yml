@@ -11,18 +11,18 @@ description: >
 
 commands:
   proshield:
-    description: Root ProShield command (admin + utilities)
-    usage: /<command> [reload|debug|compass|flags]
+    description: Root ProShield command (admin + utility dispatcher)
+    usage: /<command> [reload|debug|compass|flags ...]
     aliases: [ps, shield]
     permission: proshield.use
 
   claim:
-    description: Claim the chunk you are standing in
+    description: Claim your current chunk
     usage: /<command>
     permission: proshield.use
 
   unclaim:
-    description: Unclaim the chunk you are standing in
+    description: Unclaim your current chunk
     usage: /<command>
     permission: proshield.use
 

@@ -10,12 +10,19 @@ import org.bukkit.entity.Monster;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
+/**
+ * EntityBorderRepelTask
+ * - Pushes mobs back when they approach claim borders
+ *
+ * Fixed for v1.2.5:
+ *   • Uses Plot#getWorldName(), getX(), getZ()
+ *   • Null-safe for world lookups
+ */
 public class EntityBorderRepelTask extends BukkitRunnable {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
 
-    private final boolean repelEnabled;
     private final double radius;
     private final double pushX;
     private final double pushY;
@@ -24,7 +31,6 @@ public class EntityBorderRepelTask extends BukkitRunnable {
         this.plugin = plugin;
         this.plotManager = plotManager;
 
-        this.repelEnabled = plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
         this.radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.0);
         this.pushX = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
         this.pushY = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
@@ -32,24 +38,21 @@ public class EntityBorderRepelTask extends BukkitRunnable {
 
     @Override
     public void run() {
-        if (!repelEnabled) return;
-
         for (World world : Bukkit.getWorlds()) {
             for (LivingEntity entity : world.getLivingEntities()) {
                 if (!(entity instanceof Monster mob)) continue;
 
                 Location loc = mob.getLocation();
+                Plot insidePlot = plotManager.getPlot(loc);
 
-                // If mob is not inside a claim, check if near border
-                if (plotManager.getPlot(loc) == null) {
-                    Plot nearest = getNearbyPlot(loc);
-                    if (nearest != null) {
-                        Location nearestEdge = getNearestEdge(loc, nearest);
-                        if (nearestEdge != null && loc.distance(nearestEdge) <= radius) {
-                            Vector push = loc.toVector().subtract(nearestEdge.toVector()).normalize();
-                            push.setX(push.getX() * pushX);
-                            push.setZ(push.getZ() * pushX);
-                            push.setY(pushY);
+                if (insidePlot == null) {
+                    // Check if mob is near a claim border
+                    Plot nearbyPlot = getNearbyPlot(loc);
+                    if (nearbyPlot != null) {
+                        Location center = getPlotCenter(nearbyPlot);
+                        if (center != null) {
+                            Vector push = loc.toVector().subtract(center.toVector());
+                            push.normalize().multiply(pushX).setY(pushY);
                             mob.setVelocity(push);
                         }
                     }
@@ -58,39 +61,25 @@ public class EntityBorderRepelTask extends BukkitRunnable {
         }
     }
 
-    /**
-     * Finds the nearest edge of a plot relative to a location.
-     */
-    private Location getNearestEdge(Location loc, Plot plot) {
-        int x = plot.getX() << 4; // chunkX * 16
-        int z = plot.getZ() << 4; // chunkZ * 16
-        int maxX = x + 15;
-        int maxZ = z + 15;
-
-        double clampedX = Math.max(x, Math.min(loc.getX(), maxX));
-        double clampedZ = Math.max(z, Math.min(loc.getZ(), maxZ));
-
-        return new Location(loc.getWorld(), clampedX, loc.getY(), clampedZ);
-    }
-
-    /**
-     * Returns a nearby plot if within radius.
-     */
     private Plot getNearbyPlot(Location loc) {
-        Plot plot = plotManager.getPlot(loc);
-        if (plot != null) return plot;
+        for (Plot plot : plotManager.getAllPlots()) {
+            Location center = getPlotCenter(plot);
+            if (center == null) continue;
+            if (!center.getWorld().equals(loc.getWorld())) continue;
 
-        // Check surrounding chunks (8 directions)
-        int cx = loc.getChunk().getX();
-        int cz = loc.getChunk().getZ();
-        String world = loc.getWorld().getName();
-
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                Plot p = plotManager.getPlot(world, cx + dx, cz + dz);
-                if (p != null) return p;
+            if (center.distance(loc) <= radius) {
+                return plot;
             }
         }
         return null;
+    }
+
+    private Location getPlotCenter(Plot plot) {
+        World world = Bukkit.getWorld(plot.getWorldName());
+        if (world == null) return null;
+
+        int blockX = plot.getX() * 16 + 8;
+        int blockZ = plot.getZ() * 16 + 8;
+        return new Location(world, blockX, world.getHighestBlockYAt(blockX, blockZ), blockZ);
     }
 }

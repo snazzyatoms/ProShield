@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -10,28 +11,29 @@ import org.bukkit.Location;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * PlotManager
- * - Handles all claim/plot lifecycle
- * - Manages trust, roles, and claim checks
- * - Unified version (1.2.0 → 1.2.5)
- */
 public class PlotManager {
 
     private final ProShield plugin;
+    private final ClaimRoleManager roleManager;
+
+    // plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
+
+    // Admin bypass set
+    private final Set<UUID> bypass = ConcurrentHashMap.newKeySet();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+        this.roleManager = null;
     }
+
+    public ProShield getPlugin() { return plugin; }
 
     public Collection<Plot> getAllPlots() {
         return Collections.unmodifiableCollection(plots.values());
     }
 
-    public Plot getPlotById(UUID id) {
-        return plots.get(id);
-    }
+    public Plot getPlotById(UUID id) { return plots.get(id); }
 
     public Plot getPlot(Location location) {
         if (location == null) return null;
@@ -45,21 +47,16 @@ public class PlotManager {
         return null;
     }
 
-    /** Alias for older code. */
-    public Plot getPlotAt(Chunk chunk) {
-        return getPlot(chunk);
-    }
+    public Plot getPlotAt(Chunk chunk) { return getPlot(chunk); }
 
-    /** Get claim display name or "Wilderness". */
     public String getClaimName(Location location) {
         Plot plot = getPlot(location);
         return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
     }
 
-    /* ------------------------------------------------------
-     * Claim lifecycle
-     * ------------------------------------------------------ */
     public Plot createPlot(UUID owner, Chunk chunk) {
+        Plot existing = getPlot(chunk);
+        if (existing != null) return existing;
         Plot plot = new Plot(chunk, owner);
         plots.put(plot.getId(), plot);
         saveAsync(plot);
@@ -69,27 +66,26 @@ public class PlotManager {
     public void removePlot(Plot plot) {
         if (plot == null) return;
         plots.remove(plot.getId());
-        // TODO: persist removal to storage
+        // TODO persist removal
     }
 
     public void saveAsync(Plot plot) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // TODO: write to disk/database
+            // TODO persist plot
         });
     }
 
     public void saveAll() {
-        plots.values().forEach(this::saveAsync);
+        for (Plot p : plots.values()) saveAsync(p);
     }
 
-    /* ------------------------------------------------------
-     * Permission checks
-     * ------------------------------------------------------ */
+    // -----------------------------
+    // Trust / Access helpers
+    // -----------------------------
     public boolean isTrustedOrOwner(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
-        if (plot == null) return true; // Wilderness
+        if (plot == null) return true;
         if (plot.isOwner(playerId)) return true;
-
         ClaimRole role = plot.getRole(playerId);
         return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
     }
@@ -106,5 +102,20 @@ public class PlotManager {
         if (plot == null) return false;
         ClaimRole role = plot.getRole(playerId);
         return role != null && role.canManage();
+    }
+
+    // -----------------------------
+    // Admin bypass
+    // -----------------------------
+    public boolean isBypass(UUID playerId) { return bypass.contains(playerId); }
+
+    public boolean toggleBypass(UUID playerId) {
+        if (bypass.contains(playerId)) {
+            bypass.remove(playerId);
+            return false;
+        } else {
+            bypass.add(playerId);
+            return true;
+        }
     }
 }

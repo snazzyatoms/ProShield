@@ -3,38 +3,45 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
 import org.bukkit.scheduler.BukkitRunnable;
 
-/**
- * Periodically despawns mobs inside claims
- * Also prevents mobs from targeting players inside claims.
- */
 public class EntityMobRepelTask extends BukkitRunnable {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
 
+    private final boolean despawnInside;
+
     public EntityMobRepelTask(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
+
+        this.despawnInside = plugin.getConfig().getBoolean("protection.mobs.despawn-inside", true);
     }
 
     @Override
     public void run() {
-        Bukkit.getWorlds().forEach(world -> {
-            world.getEntitiesByClass(Monster.class).forEach(mob -> {
-                Plot plot = plotManager.getPlot(mob.getLocation());
-                if (plot != null) {
-                    // Despawn mob inside claim
+        for (World world : Bukkit.getWorlds()) {
+            for (LivingEntity entity : world.getLivingEntities()) {
+                if (!(entity instanceof Monster mob)) continue;
+
+                Location loc = mob.getLocation();
+                Plot plot = plotManager.getPlot(loc);
+
+                if (plot != null && despawnInside) {
+                    // Instantly despawn mobs that enter claims
                     mob.remove();
-                } else {
-                    // Wilderness: clear targeting if player is inside a claim
-                    if (mob.getTarget() != null && plotManager.getPlot(mob.getTarget().getLocation()) != null) {
-                        mob.setTarget(null);
-                    }
+                } else if (plot != null) {
+                    // "Invisible effect" → reset target if mob is inside a claim
+                    mob.setTarget(null);
                 }
-            });
-        });
+            }
+        }
     }
 }

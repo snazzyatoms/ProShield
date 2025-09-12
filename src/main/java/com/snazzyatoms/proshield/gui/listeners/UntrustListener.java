@@ -41,7 +41,7 @@ public class UntrustListener implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
-        if (title == null || !title.contains("Untrust")) return; // safe even if colors change
+        if (title == null || !title.toLowerCase().contains("untrust")) return;
 
         event.setCancelled(true);
 
@@ -51,7 +51,6 @@ public class UntrustListener implements Listener {
             return;
         }
 
-        // Get target (set earlier via rememberTarget)
         String targetName = gui.getRememberedTarget(player);
         if (targetName == null) {
             messages.send(player, "error.player-not-found", Map.of("player", "unknown"));
@@ -61,24 +60,25 @@ public class UntrustListener implements Listener {
         UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
         UUID claimId = plot.getId();
 
-        switch (event.getSlot()) {
+        boolean updated = switch (event.getSlot()) {
             case 10, 11, 12 -> {
-                // Remove player role and persist
                 roles.clearRole(claimId, targetId);
 
-                // Send placeholder-based message
                 Map<String, String> placeholders = new HashMap<>();
                 placeholders.put("player", targetName);
                 placeholders.put("claim", plot.getDisplayNameSafe());
 
                 messages.send(player, "untrust.removed", placeholders);
+                yield true;
             }
             case 26 -> {
                 gui.openMain(player);
-                return;
+                yield false;
             }
-            default -> { return; }
-        }
+            default -> false;
+        };
+
+        if (!updated) return;
 
         // Refresh roles GUI
         gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));

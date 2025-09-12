@@ -41,12 +41,11 @@ public class TrustListener implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getView().getTitle() == null) return;
-
         String title = event.getView().getTitle();
-        if (!title.contains("Trust")) return; // safer than hardcoding colors
+        if (title == null || !title.contains("Trust")) return; // safer than hardcoding
 
         event.setCancelled(true);
+
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) {
             messages.send(player, "error.no-claim");
@@ -63,28 +62,29 @@ public class TrustListener implements Listener {
         UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
         UUID claimId = plot.getId();
 
-        ClaimRole assignedRole = null;
-        switch (event.getSlot()) {
-            case 10 -> assignedRole = ClaimRole.TRUSTED;
-            case 11 -> assignedRole = ClaimRole.BUILDER;
-            case 12 -> assignedRole = ClaimRole.MODERATOR;
+        ClaimRole assignedRole = switch (event.getSlot()) {
+            case 10 -> ClaimRole.TRUSTED;
+            case 11 -> ClaimRole.BUILDER;
+            case 12 -> ClaimRole.MODERATOR;
             case 26 -> {
                 gui.openMain(player);
-                return;
+                yield null;
             }
-            default -> { return; }
-        }
+            default -> null;
+        };
 
-        if (assignedRole != null) {
-            roles.assignRole(claimId, targetId, assignedRole);
+        if (assignedRole == null) return;
 
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("player", targetName);
-            placeholders.put("claim", plot.getDisplayNameSafe());
-            placeholders.put("role", assignedRole.getDisplayName());
+        // Apply role and persist
+        roles.assignRole(claimId, targetId, assignedRole);
 
-            messages.send(player, "trust.added", placeholders);
-        }
+        // Send placeholder-based message
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("player", targetName);
+        placeholders.put("claim", plot.getDisplayNameSafe());
+        placeholders.put("role", assignedRole.getDisplayName());
+
+        messages.send(player, "trust.added", placeholders);
 
         // Save plot and refresh
         plots.saveAsync(plot);

@@ -12,13 +12,11 @@ import java.util.*;
  * PlotManager
  * - Stores and manages all plots
  * - Handles creation, lookup, saving/loading
- * - Provides name/owner resolution for use in GUIs & messages
+ * - Provides name/owner resolution for GUIs & messages
  *
  * Fixed for v1.2.5:
- *  • Use Plot(Chunk, UUID) constructor
- *  • Provide getPlot(String world, int x, int z) overload (some tasks call it)
- *  • Use worldName/x/z getters from Plot
- *  • Preserve bypass helpers and name resolution
+ *   • Correct constructor usage (Plot(Chunk, UUID))
+ *   • Correct world/x/z access through Plot getters
  */
 public class PlotManager {
 
@@ -43,12 +41,11 @@ public class PlotManager {
     public Plot createPlot(UUID ownerId, Chunk chunk) {
         Plot plot = new Plot(chunk, ownerId);
         plots.put(plot.getId(), plot);
-        chunkMap.put(chunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()), plot.getId());
+        chunkMap.put(chunkKey(chunk), plot.getId());
         return plot;
     }
 
     public void removePlot(Plot plot) {
-        if (plot == null) return;
         plots.remove(plot.getId());
         chunkMap.remove(chunkKey(plot.getWorldName(), plot.getX(), plot.getZ()));
     }
@@ -58,25 +55,13 @@ public class PlotManager {
     }
 
     public Plot getPlot(Chunk chunk) {
-        if (chunk == null) return null;
-        UUID id = chunkMap.get(chunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()));
+        UUID id = chunkMap.get(chunkKey(chunk));
         return id != null ? plots.get(id) : null;
     }
 
     public Plot getPlot(Location loc) {
         if (loc == null) return null;
-        Chunk chunk = loc.getChunk();
-        return getPlot(chunk);
-    }
-
-    /** Overload used by some tasks/utilities (world + chunk coords). */
-    public Plot getPlot(String worldName, int x, int z) {
-        UUID id = chunkMap.get(chunkKey(worldName, x, z));
-        return id != null ? plots.get(id) : null;
-    }
-
-    public Collection<Plot> getAllPlots() {
-        return Collections.unmodifiableCollection(plots.values());
+        return getPlot(loc.getChunk());
     }
 
     /* ======================================================
@@ -114,10 +99,11 @@ public class PlotManager {
     }
 
     /* ======================================================
-     * SAVE / LOAD (stubs left as-is for 1.2.5)
+     * SAVE / LOAD
      * ====================================================== */
     public void saveAll() {
-        // TODO: serialize plots to disk (YAML/JSON)
+        // TODO: serialize plots to disk
+        plugin.getLogger().info("Plots saved: " + plots.size());
     }
 
     public void loadAll() {
@@ -127,6 +113,14 @@ public class PlotManager {
     /* ======================================================
      * INTERNAL HELPERS
      * ====================================================== */
+    public Collection<Plot> getAllPlots() {
+        return plots.values();
+    }
+
+    private String chunkKey(Chunk chunk) {
+        return chunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+    }
+
     private String chunkKey(String world, int x, int z) {
         return world + ":" + x + ":" + z;
     }

@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/commands/TrustCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -6,110 +5,73 @@ import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.Locale;
 import java.util.UUID;
 
 public class TrustCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
+    private final PlotManager plots;
     private final ClaimRoleManager roles;
-    private final MessagesUtil messages;
 
-    public TrustCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
+    public TrustCommand(ProShield plugin, PlotManager plots, ClaimRoleManager roles) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
+        this.plots = plots;
         this.roles = roles;
-        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-
         if (!(sender instanceof Player player)) {
-            messages.send(sender, "error.players-only");
+            sender.sendMessage(ChatColor.RED + "Only players can use this command.");
             return true;
         }
 
-        if (!player.hasPermission("proshield.use")) {
-            messages.send(player, "error.no-permission");
+        Plot plot = plots.getPlot(player.getLocation());
+        if (plot == null) {
+            player.sendMessage(ChatColor.RED + "⛔ You are not standing inside a claim.");
             return true;
+        }
+
+        if (!plot.isOwner(player.getUniqueId())) {
+            if (!roles.canManageTrust(plot.getId(), player.getUniqueId())) {
+                player.sendMessage(ChatColor.RED + "⛔ You do not have permission to manage trust here.");
+                return true;
+            }
         }
 
         if (args.length < 1) {
-            messages.send(player, "usage.trust", "/" + label + " <player> [role]");
+            player.sendMessage(ChatColor.YELLOW + "Usage: /trust <player> [role]");
             return true;
         }
 
-        // Resolve target (allow offline)
-        OfflinePlayer targetOP = Bukkit.getPlayerExact(args[0]);
-        if (targetOP == null) {
-            targetOP = Bukkit.getOfflinePlayer(args[0]);
-            if (targetOP == null || targetOP.getUniqueId() == null) {
-                messages.send(player, "error.player-not-found", args[0]);
-                return true;
-            }
-        }
-
-        UUID target = targetOP.getUniqueId();
-        if (player.getUniqueId().equals(target)) {
-            messages.send(player, "trust.cannot-self");
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+        if (target == null || target.getUniqueId() == null) {
+            player.sendMessage(ChatColor.RED + "⛔ Player not found.");
             return true;
         }
 
-        // Role (optional; default BUILDER)
-        ClaimRole role = ClaimRole.BUILDER;
-        if (args.length >= 2) {
-            String r = args[1].toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
-            try {
-                role = ClaimRole.valueOf(r);
-            } catch (IllegalArgumentException iae) {
-                messages.send(player, "trust.invalid-role", args[1]);
-                return true;
-            }
-        }
+        String roleName = (args.length >= 2) ? args[1].toLowerCase() : "trusted";
+        ClaimRole role = ClaimRole.fromString(roleName);
+        if (role == null) role = ClaimRole.TRUSTED;
 
-        // Must be inside a claim
-        Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot == null) {
-            messages.send(player, "error.not-in-claim");
-            return true;
-        }
+        plot.getTrusted().put(target.getUniqueId(), role);
+        plugin.getPlotManager().saveAsync(plot);
 
-        // Only owner/admin can manage trust
-        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
-            messages.send(player, "error.cannot-modify-claim");
-            return true;
-        }
+        // Role manager also tracks this
+        roles.assignRole(plot.getId(), target.getUniqueId(), roleName);
 
-        // Already trusted?
-        if (plot.getTrusted().containsKey(target)) {
-            messages.send(player, "trust.already-trusted",
-                    targetOP.getName() != null ? targetOP.getName() : target.toString());
-            return true;
-        }
-
-        // Use ClaimRoleManager to apply trust & save
-        roles.trustPlayer(plot, target, role);
-
-        // Feedback
-        String targetName = targetOP.getName() != null ? targetOP.getName() : target.toString();
-        messages.send(player, "trust.added", targetName, role.name());
-
-        // Notify target if online
-        if (targetOP.isOnline()) {
-            Player tp = targetOP.getPlayer();
-            if (tp != null) {
-                messages.send(tp, "trust.you-were-trusted", plot.getDisplayNameSafe(), role.name());
-            }
+        player.sendMessage(ChatColor.GREEN + "✅ " + target.getName() + " is now trusted as " + role.name() + ".");
+        if (target.isOnline()) {
+            target.getPlayer().sendMessage(ChatColor.YELLOW + "You have been trusted in " + plot.getDisplayNameSafe() +
+                    " as " + role.name() + ".");
         }
 
         return true;

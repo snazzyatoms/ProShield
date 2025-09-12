@@ -57,7 +57,7 @@ public class ProShield extends JavaPlugin {
         // Listeners
         registerListeners();
 
-        // Tasks (mobs + border repel)
+        // Background tasks (repel)
         scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
@@ -77,9 +77,6 @@ public class ProShield extends JavaPlugin {
             getCommand("proshield").setExecutor(
                 new ProShieldCommand(this, plotManager, guiManager, compassManager)
             );
-            getCommand("proshield").setTabCompleter(
-                new ProShieldCommand(this, plotManager, guiManager, compassManager)
-            );
         }
 
         // Player dispatcher for claim-related commands
@@ -88,14 +85,8 @@ public class ProShield extends JavaPlugin {
 
         if (getCommand("claim") != null) getCommand("claim").setExecutor(playerCommandDispatcher);
         if (getCommand("unclaim") != null) getCommand("unclaim").setExecutor(playerCommandDispatcher);
-        if (getCommand("trust") != null) {
-            getCommand("trust").setExecutor(playerCommandDispatcher);
-            getCommand("trust").setTabCompleter(playerCommandDispatcher);
-        }
-        if (getCommand("untrust") != null) {
-            getCommand("untrust").setExecutor(playerCommandDispatcher);
-            getCommand("untrust").setTabCompleter(playerCommandDispatcher);
-        }
+        if (getCommand("trust") != null) getCommand("trust").setExecutor(playerCommandDispatcher);
+        if (getCommand("untrust") != null) getCommand("untrust").setExecutor(playerCommandDispatcher);
         if (getCommand("roles") != null) getCommand("roles").setExecutor(playerCommandDispatcher);
         if (getCommand("transfer") != null) getCommand("transfer").setExecutor(playerCommandDispatcher);
     }
@@ -104,21 +95,20 @@ public class ProShield extends JavaPlugin {
         // GUI
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Unified plot protections
+        // Claims / protections
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
     }
 
     private void scheduleTasks() {
-        // Read config toggles
-        boolean repelMobs = getConfig().getBoolean("protection.mobs.border-repel.enabled", true);
-        boolean despawnMobs = getConfig().getBoolean("protection.mobs.despawn-inside", true);
-
-        if (repelMobs) {
-            new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 3);
+        // Mob repel (despawn + pushback)
+        if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)
+                || getConfig().getBoolean("protection.mobs.despawn-inside", true)) {
+            new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5);
         }
 
-        if (despawnMobs) {
-            new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5);
+        // Border repel only
+        if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
+            new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 3);
         }
     }
 

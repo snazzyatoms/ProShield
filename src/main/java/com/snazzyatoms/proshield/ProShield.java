@@ -44,7 +44,7 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
-        // GUI stack
+        // GUI
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
         compassManager = new CompassManager(this, guiManager);
@@ -87,13 +87,12 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerListeners() {
-        // GUI
+        // GUI listener
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Unified plot protections, claim messages & mob repel
+        // Unified plot protections & claim messages
         Bukkit.getPluginManager().registerEvents(
-            new PlotListener(this, plotManager, roleManager, messages),
-            this
+            new PlotListener(this, plotManager, roleManager, messages), this
         );
     }
 

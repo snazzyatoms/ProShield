@@ -71,12 +71,12 @@ public class RolesListener implements Listener {
             case 11 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.MANAGER);
                 placeholders.put("role", ClaimRole.MANAGER.getDisplayName());
-                messages.send(player, "trust.added", placeholders);
+                messages.send(player, "roles.updated", placeholders);
             }
             case 13 -> {
                 roles.assignRole(claimId, targetId, ClaimRole.TRUSTED);
                 placeholders.put("role", ClaimRole.TRUSTED.getDisplayName());
-                messages.send(player, "trust.added", placeholders);
+                messages.send(player, "roles.updated", placeholders);
             }
             case 15 -> {
                 roles.clearRole(claimId, targetId);

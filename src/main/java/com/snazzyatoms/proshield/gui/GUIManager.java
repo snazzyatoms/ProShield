@@ -72,6 +72,12 @@ public class GUIManager {
                     ConfigurationSection itemSec = items.getConfigurationSection(slotKey);
                     if (itemSec == null) continue;
 
+                    // --- Permission Check ---
+                    String permission = itemSec.getString("permission");
+                    if (permission != null && !permission.isBlank() && !player.hasPermission(permission)) {
+                        continue; // skip this item if player lacks permission
+                    }
+
                     Material mat = Material.matchMaterial(itemSec.getString("material", "BARRIER"));
                     if (mat == null) mat = Material.BARRIER;
 

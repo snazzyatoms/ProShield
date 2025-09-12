@@ -13,7 +13,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.*;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Handles all player-facing claim commands:
@@ -24,7 +25,7 @@ import java.util.*;
  * - /roles
  * - /transfer <player>
  *
- * Consolidated dispatcher for versions 1.2.0 → 1.2.5
+ * Consolidated dispatcher for versions 1.2.0 → 1.2.6
  */
 public class PlayerCommandDispatcher implements CommandExecutor {
 
@@ -33,7 +34,10 @@ public class PlayerCommandDispatcher implements CommandExecutor {
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    public PlayerCommandDispatcher(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
+    public PlayerCommandDispatcher(ProShield plugin,
+                                   PlotManager plotManager,
+                                   ClaimRoleManager roleManager,
+                                   MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.roleManager = roleManager;
@@ -66,7 +70,8 @@ public class PlayerCommandDispatcher implements CommandExecutor {
     private void handleClaim(Player player) {
         Chunk chunk = player.getLocation().getChunk();
         if (plotManager.getPlot(chunk) != null) {
-            messages.send(player, "claim.already-owned");
+            messages.send(player, "claim.already-owned",
+                    Map.of("owner", plotManager.getPlot(chunk).getOwnerNameSafe()));
             return;
         }
 
@@ -88,7 +93,7 @@ public class PlayerCommandDispatcher implements CommandExecutor {
 
         if (!plot.isOwner(player.getUniqueId()) &&
             !roleManager.canUnclaim(player.getUniqueId(), plot.getId())) {
-            messages.send(player, "error.no-permission");
+            messages.send(player, "error.not-owner");
             return;
         }
 
@@ -101,7 +106,8 @@ public class PlayerCommandDispatcher implements CommandExecutor {
      * ====================================================== */
     private void handleTrust(Player player, String[] args) {
         if (args.length < 1) {
-            messages.send(player, "trust.usage");
+            messages.send(player, "trust.usage",
+                    Map.of("usage", "/trust <player> [role]"));
             return;
         }
 
@@ -119,7 +125,7 @@ public class PlayerCommandDispatcher implements CommandExecutor {
         }
 
         String targetName = args[0];
-        String role = args.length > 1 ? args[1] : "trusted";
+        String role = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "trusted";
 
         boolean success = roleManager.trustPlayer(plot, targetName, role);
         if (success) {
@@ -135,7 +141,8 @@ public class PlayerCommandDispatcher implements CommandExecutor {
      * ====================================================== */
     private void handleUntrust(Player player, String[] args) {
         if (args.length < 1) {
-            messages.send(player, "untrust.usage");
+            messages.send(player, "untrust.usage",
+                    Map.of("usage", "/untrust <player>"));
             return;
         }
 
@@ -187,7 +194,8 @@ public class PlayerCommandDispatcher implements CommandExecutor {
      * ====================================================== */
     private void handleTransfer(Player player, String[] args) {
         if (args.length < 1) {
-            messages.send(player, "transfer.usage");
+            messages.send(player, "transfer.usage",
+                    Map.of("usage", "/transfer <player>"));
             return;
         }
 

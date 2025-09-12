@@ -1,106 +1,86 @@
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.roles.ClaimRole;
-
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /**
- * Represents a claimed plot of land.
- * Each plot is identified by its chunk and has an owner, trusted players with roles,
- * and customizable flags.
+ * Represents a claimed plot of land in ProShield.
+ * Holds the chunk + owner UUID, trusted players, and settings.
  */
 public class Plot {
 
-    private final UUID id;                   // Unique plot ID
-    private final UUID owner;                // Owner UUID
-    private final Chunk chunk;               // The claimed chunk
-    private final Map<UUID, ClaimRole> trusted; // Trusted players + their role
-    private final Map<String, Boolean> flags;   // Claim flags (e.g., explosions, fire)
+    private final Chunk chunk;
+    private UUID owner;
+    private final Set<UUID> trusted = new HashSet<>();
+    private final PlotSettings settings;
 
     public Plot(Chunk chunk, UUID owner) {
-        this.id = UUID.randomUUID();
         this.chunk = chunk;
         this.owner = owner;
-        this.trusted = new HashMap<>();
-        this.flags = new HashMap<>();
+        this.settings = new PlotSettings();
     }
 
-    // Alternate constructor for loading from storage
-    public Plot(UUID id, UUID owner, Chunk chunk, Map<UUID, ClaimRole> trusted, Map<String, Boolean> flags) {
-        this.id = id;
-        this.owner = owner;
-        this.chunk = chunk;
-        this.trusted = trusted != null ? new HashMap<>(trusted) : new HashMap<>();
-        this.flags = flags != null ? new HashMap<>(flags) : new HashMap<>();
-    }
+    // --- Core Getters ---
 
-    public UUID getId() {
-        return id;
+    public Chunk getChunk() {
+        return chunk;
     }
 
     public UUID getOwner() {
         return owner;
     }
 
-    public boolean isOwner(UUID uuid) {
-        return owner.equals(uuid);
+    public void setOwner(UUID newOwner) {
+        this.owner = newOwner;
     }
 
-    public Chunk getChunk() {
-        return chunk;
+    public String getName() {
+        return owner != null ? owner.toString() : "Unowned";
     }
 
-    public String getOwnerNameSafe() {
-        return (owner != null) ? owner.toString() : "Unknown";
+    public String getWorldName() {
+        return chunk.getWorld().getName();
     }
 
-    public Map<UUID, ClaimRole> getTrusted() {
+    public int getX() {
+        return chunk.getX();
+    }
+
+    public int getZ() {
+        return chunk.getZ();
+    }
+
+    public PlotSettings getSettings() {
+        return settings;
+    }
+
+    // --- Trusted Players ---
+
+    public void addTrusted(UUID player) {
+        trusted.add(player);
+    }
+
+    public void removeTrusted(UUID player) {
+        trusted.remove(player);
+    }
+
+    public boolean isTrusted(UUID player) {
+        return trusted.contains(player);
+    }
+
+    public Set<UUID> getTrusted() {
         return trusted;
     }
 
-    public void trust(UUID uuid, ClaimRole role) {
-        trusted.put(uuid, role);
-    }
-
-    public void untrust(UUID uuid) {
-        trusted.remove(uuid);
-    }
-
-    public boolean isTrusted(UUID uuid) {
-        return trusted.containsKey(uuid);
-    }
-
-    public ClaimRole getRole(UUID uuid) {
-        return trusted.getOrDefault(uuid, ClaimRole.VISITOR);
-    }
-
-    public Map<String, Boolean> getFlags() {
-        return flags;
-    }
-
-    public boolean hasFlag(String flag) {
-        return flags.getOrDefault(flag, false);
-    }
-
-    public void setFlag(String flag, boolean enabled) {
-        flags.put(flag, enabled);
-    }
-
-    public String getDisplayNameSafe() {
-        return "Plot@" + chunk.getX() + "," + chunk.getZ();
-    }
-
-    @Override
-    public String toString() {
-        return "Plot{" +
-                "id=" + id +
-                ", owner=" + owner +
-                ", chunk=" + chunk +
-                ", trusted=" + trusted +
-                ", flags=" + flags +
-                '}';
+    public Set<String> getTrustedNames() {
+        Set<String> names = new HashSet<>();
+        for (UUID id : trusted) {
+            names.add(id.toString()); // Could hook into Bukkit.getOfflinePlayer(id).getName()
+        }
+        return names;
     }
 }

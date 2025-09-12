@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
 /**
@@ -9,14 +10,13 @@ package com.snazzyatoms.proshield.roles;
  * Order is important → progression is from lowest (VISITOR) to highest (OWNER).
  */
 public enum ClaimRole {
-
-    NONE("None", "§7No special permissions."),
     VISITOR("Visitor", "§7Minimal access, can only enter claim."),
-    TRUSTED("Trusted", "§bCan walk around but limited interaction."),
-    BUILDER("Builder", "§2Can place and break blocks, use buttons, levers."),
-    CONTAINER("Container", "§6Can access chests, furnaces, hoppers."),
-    MODERATOR("Moderator", "§cCan trust/untrust players, toggle flags (if allowed)."),
-    CO_OWNER("Co-Owner", "§eNearly full rights, except transfer ownership."),
+    MEMBER("Member", "§aBasic access to walk and interact."),
+    TRUSTED("Trusted", "§bCan interact with doors, buttons, etc."),
+    BUILDER("Builder", "§2Can place and break blocks."),
+    CONTAINER("Container", "§6Can open chests, furnaces, hoppers."),
+    MODERATOR("Moderator", "§cCan manage PvP, entities, containers."),
+    MANAGER("Manager", "§eFull management rights except transfer."),
     OWNER("Owner", "§dClaim owner, full permissions.");
 
     private final String displayName;
@@ -67,6 +67,6 @@ public enum ClaimRole {
                 return role;
             }
         }
-        return NONE;
+        return null;
     }
 }

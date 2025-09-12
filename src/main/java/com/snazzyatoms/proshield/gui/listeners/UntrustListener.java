@@ -18,8 +18,7 @@ import java.util.UUID;
  * UntrustListener
  *
  * Handles the Untrust Menu GUI interactions.
- * - Lets owners/co-owners remove trusted players from claims.
- * - Calls ClaimRoleManager.clearRole for persistence.
+ * Lets owners/co-owners remove trusted players from claims.
  */
 public class UntrustListener implements Listener {
 
@@ -43,7 +42,7 @@ public class UntrustListener implements Listener {
         if (event.getView().getTitle() == null) return;
 
         String title = event.getView().getTitle();
-        if (!title.equalsIgnoreCase("§bUntrust Menu")) return;
+        if (!title.contains("Untrust")) return; // safer than hardcoding color codes
 
         event.setCancelled(true);
         Plot plot = plots.getPlot(player.getLocation());
@@ -65,7 +64,6 @@ public class UntrustListener implements Listener {
         switch (event.getSlot()) {
             case 10, 11, 12 -> { // Untrust action
                 roles.clearRole(claimId, targetId);
-                plot.getTrusted().remove(targetId);
                 plots.saveAsync(plot);
                 messages.send(player, "untrust.removed", targetName);
             }
@@ -76,7 +74,7 @@ public class UntrustListener implements Listener {
             default -> { return; }
         }
 
-        // Refresh menu
+        // Refresh roles GUI
         gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
     }
 }

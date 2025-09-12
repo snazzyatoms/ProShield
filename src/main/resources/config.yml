@@ -1,60 +1,3 @@
-# ==========================================================
-# ProShield Configuration
-# Version: 1.2.5 (Finalized for release build)
-# ==========================================================
-# Notes:
-#   - Use '&' for colors
-#   - Placeholders supported in messages:
-#       {player}, {claim}, {role}, {owner}, {state}, {count}
-# ==========================================================
-
-# ----------------------------------------------------------
-# General Settings
-# ----------------------------------------------------------
-settings:
-  give-compass-on-join: true
-
-# ----------------------------------------------------------
-# Protection Settings
-# ----------------------------------------------------------
-protection:
-  fire:
-    enabled: false
-    burn: false
-    spread: false
-    ignite:
-      flint_and_steel: false
-      lava: false
-      lightning: false
-
-  explosions:
-    enabled: false
-
-  buckets:
-    enabled: false
-
-  mobs:
-    border-repel:
-      enabled: true
-      radius: 3.0           # distance mobs are repelled at claim edge
-      horizontal-push: 0.7  # sideways push
-      vertical-push: 0.25   # upward push
-    despawn-inside: true     # mobs instantly removed if inside a claim
-
-  entities:
-    wilderness:
-      item-frames: false
-      vehicles: false
-
-# ----------------------------------------------------------
-# Messages
-# ----------------------------------------------------------
-messages:
-  prefix: "&3[ProShield]&r "
-  debug-prefix: "&8[Debug]&r "
-  show-wilderness: false
-  admin-flag-chat: true
-
 # ----------------------------------------------------------
 # GUI Menus (Config-driven)
 # ----------------------------------------------------------
@@ -97,6 +40,24 @@ gui:
           material: IRON_SWORD
           name: "&cFlags"
           action: "menu:flags"
+
+        # --- Admin-only entries (require permission) ---
+        "20":
+          material: PLAYER_HEAD
+          name: "&aTrust Players (Admin)"
+          action: "menu:trust"
+          permission: "proshield.admin"
+        "21":
+          material: BOOK
+          name: "&6Roles (Admin)"
+          action: "menu:roles"
+          permission: "proshield.admin"
+        "22":
+          material: IRON_SWORD
+          name: "&cFlags (Admin)"
+          action: "menu:flags"
+          permission: "proshield.admin"
+
         "26":
           material: BARRIER
           name: "&cClose"
@@ -164,54 +125,3 @@ gui:
           material: BARRIER
           name: "&cBack"
           action: "menu:main"
-
-    admin:
-      title: "&4ProShield Admin Menu"
-      size: 27
-      items:
-        "11":
-          material: PLAYER_HEAD
-          name: "&aTrust Players"
-          action: "menu:trust"
-        "13":
-          material: BOOK
-          name: "&6Roles"
-          action: "menu:roles"
-        "15":
-          material: IRON_SWORD
-          name: "&cFlags"
-          action: "menu:flags"
-        "26":
-          material: BARRIER
-          name: "&cBack"
-          action: "menu:main"
-
-# ----------------------------------------------------------
-# Sounds
-# ----------------------------------------------------------
-sounds:
-  button-click: "UI_BUTTON_CLICK"
-  claim-success: "ENTITY_PLAYER_LEVELUP"
-  unclaim-success: "ENTITY_ITEM_BREAK"
-  flag-toggle: "BLOCK_NOTE_BLOCK_PLING"
-  admin-action: "ENTITY_EXPERIENCE_ORB_PICKUP"
-
-# ----------------------------------------------------------
-# Claim Defaults
-# ----------------------------------------------------------
-claims:
-  default-flags:
-    pvp: false
-    explosions: false
-    fire: false
-    entity-grief: false
-    redstone: true
-    containers: false
-    animals: false
-    vehicles: false
-    armor-stands: false
-    item-frames: false
-    buckets: false
-    pets: false
-    mob-repel: true
-    mob-despawn: true

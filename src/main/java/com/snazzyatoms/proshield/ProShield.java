@@ -1,16 +1,13 @@
 // src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.commands.ClaimCommandHandler;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
+import com.snazzyatoms.proshield.commands.ClaimCommandHandler;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.plots.ClaimMessageListener;
-import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
-import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
-import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.plots.*;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
@@ -39,18 +36,25 @@ public class ProShield extends JavaPlugin {
         instance = this;
         saveDefaultConfig();
 
-        // Managers
+        // Utilities
         messages = new MessagesUtil(this);
+
+        // Core managers
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
+        // GUI + compass
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
         compassManager = new CompassManager(this, guiManager);
 
-        // Register commands + listeners
+        // Register commands
         registerCommands();
+
+        // Register listeners
         registerListeners();
+
+        // Background tasks
         scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
@@ -65,21 +69,19 @@ public class ProShield extends JavaPlugin {
     }
 
     /* -------------------------------------------------------
-     * Command Registration
+     * Commands
      * ------------------------------------------------------- */
     private void registerCommands() {
-        // Root admin/debug command
         if (getCommand("proshield") != null) {
             getCommand("proshield").setExecutor(
                 new ProShieldCommand(this, plotManager, guiManager, compassManager)
             );
         }
 
-        // Unified handler for all claim-related commands
-        ClaimCommandHandler claimHandler = new ClaimCommandHandler(this, plotManager, roleManager, guiManager, compassManager);
-
-        String[] claimCommands = { "claim", "unclaim", "trust", "untrust", "roles", "transfer", "flags" };
-        for (String cmd : claimCommands) {
+        // Unified claim handler for claim/unclaim/trust/untrust/roles/transfer
+        ClaimCommandHandler claimHandler = new ClaimCommandHandler(this, plotManager, roleManager, guiManager);
+        String[] claimCmds = {"claim", "unclaim", "trust", "untrust", "roles", "transfer"};
+        for (String cmd : claimCmds) {
             if (getCommand(cmd) != null) {
                 getCommand(cmd).setExecutor(claimHandler);
             }
@@ -87,22 +89,26 @@ public class ProShield extends JavaPlugin {
     }
 
     /* -------------------------------------------------------
-     * Listener Registration
+     * Listeners
      * ------------------------------------------------------- */
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+
+        // Protection listeners
+        Bukkit.getPluginManager().registerEvents(new BlockProtectionListener(this, plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new InteractionProtectionListener(this, plotManager, roleManager), this);
+        Bukkit.getPluginManager().registerEvents(new ItemProtectionListener(plotManager, roleManager, messages), this);
+        Bukkit.getPluginManager().registerEvents(new BucketProtectionListener(this, plotManager, roleManager), this);
         Bukkit.getPluginManager().registerEvents(new ClaimMessageListener(this, plotManager, messages), this);
-        // Other protection listeners can be unified later as we condense
     }
 
     /* -------------------------------------------------------
-     * Tasks
+     * Background Tasks
      * ------------------------------------------------------- */
     private void scheduleTasks() {
         try {
             new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 5);
         } catch (Throwable ignored) {}
-
         try {
             new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, 20L * 3);
         } catch (Throwable ignored) {}
@@ -123,7 +129,6 @@ public class ProShield extends JavaPlugin {
      * ------------------------------------------------------- */
     public boolean isDebugEnabled() { return debugEnabled; }
     public void setDebugEnabled(boolean enabled) { this.debugEnabled = enabled; }
-
     public void toggleDebug() {
         this.debugEnabled = !this.debugEnabled;
         if (messages != null) {

@@ -3,59 +3,56 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Player;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
 public class EntityBorderRepelTask extends BukkitRunnable {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
 
-    private boolean repelEnabled;
-    private double repelRadius;
-    private double pushX;
-    private double pushY;
+    private final double radius;
+    private final double pushH;
+    private final double pushV;
 
     public EntityBorderRepelTask(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        loadSettings();
-    }
 
-    private void loadSettings() {
-        ConfigurationSection cfg = plugin.getConfig().getConfigurationSection("protection.mobs.border-repel");
-        if (cfg == null) return;
-
-        repelEnabled = cfg.getBoolean("enabled", true);
-        repelRadius = cfg.getDouble("radius", 3.0);
-        pushX = cfg.getDouble("horizontal-push", 0.7);
-        pushY = cfg.getDouble("vertical-push", 0.25);
+        radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 3.0);
+        pushH  = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
+        pushV  = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
     }
 
     @Override
     public void run() {
-        if (!repelEnabled) return;
+        Bukkit.getWorlds().forEach(world -> {
+            for (LivingEntity entity : world.getLivingEntities()) {
+                if (entity.getCustomName() != null || entity.getType().isAlive() == false) continue;
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Plot plot = plotManager.getPlot(player.getLocation());
-            if (plot == null) continue;
+                Location loc = entity.getLocation();
+                Chunk chunk = loc.getChunk();
 
-            for (Entity entity : player.getNearbyEntities(repelRadius, repelRadius, repelRadius)) {
-                if (entity instanceof Monster mob) {
-                    if (!plot.contains(entity.getLocation())) {
-                        Vector push = entity.getLocation().toVector()
-                                .subtract(player.getLocation().toVector())
-                                .normalize()
-                                .multiply(pushX)
-                                .setY(pushY);
-                        mob.setVelocity(push);
+                Plot plot = plotManager.getPlot(chunk);
+                if (plot == null) continue; // wilderness
+
+                // Repel entity near border
+                Location center = chunk.getBlock(8, loc.getBlockY(), 8).getLocation();
+                double dx = loc.getX() - center.getX();
+                double dz = loc.getZ() - center.getZ();
+
+                double distSq = dx * dx + dz * dz;
+                if (distSq <= radius * radius) {
+                    double mag = Math.sqrt(dx * dx + dz * dz);
+                    if (mag > 0) {
+                        entity.setVelocity(entity.getVelocity().add(
+                            new org.bukkit.util.Vector(dx / mag * pushH, pushV, dz / mag * pushH)
+                        ));
                     }
                 }
             }
-        }
+        });
     }
 }

@@ -2,127 +2,85 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.roles.ClaimRole;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 
+import java.time.Instant;
 import java.util.*;
 
-/**
- * Represents a claimed plot of land in ProShield.
- */
 public class Plot {
 
-    private final UUID id; // Unique identifier for this plot
+    private final UUID id;
+    private final UUID owner;
     private final Chunk chunk;
-    private UUID owner;
 
-    // Players with roles inside this claim
-    private final Map<UUID, ClaimRole> roles = new HashMap<>();
+    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
 
-    private final PlotSettings settings;
+    // --- Expiry Tracking ---
+    private Instant lastActive; // last time claim was interacted with
 
     public Plot(Chunk chunk, UUID owner) {
         this.id = UUID.randomUUID();
-        this.chunk = chunk;
         this.owner = owner;
-        this.settings = new PlotSettings();
+        this.chunk = chunk;
+        this.lastActive = Instant.now(); // start as active
     }
-
-    // --- Core Identifiers ---
 
     public UUID getId() {
         return id;
-    }
-
-    public Chunk getChunk() {
-        return chunk;
     }
 
     public UUID getOwner() {
         return owner;
     }
 
-    public void setOwner(UUID newOwner) {
-        this.owner = newOwner;
-    }
-
-    public boolean isOwner(UUID playerId) {
-        return owner != null && owner.equals(playerId);
-    }
-
-    // --- Display ---
-
-    public String getName() {
-        return owner != null ? owner.toString() : "Unowned";
+    public Chunk getChunk() {
+        return chunk;
     }
 
     public String getDisplayNameSafe() {
-        if (owner == null) return "Unowned";
-        String name = Bukkit.getOfflinePlayer(owner).getName();
-        return (name != null) ? name : owner.toString();
+        return "Claim@" + chunk.getX() + "," + chunk.getZ();
     }
 
-    public String getWorldName() {
-        return chunk.getWorld().getName();
+    public void trust(UUID player, ClaimRole role) {
+        trusted.put(player, role);
+        touch();
     }
 
-    public int getX() {
-        return chunk.getX();
+    public void untrust(UUID player) {
+        trusted.remove(player);
+        touch();
     }
 
-    public int getZ() {
-        return chunk.getZ();
+    public ClaimRole getRole(UUID player) {
+        return trusted.getOrDefault(player, ClaimRole.VISITOR);
     }
 
-    // --- Settings ---
-
-    public PlotSettings getSettings() {
-        return settings;
-    }
-
-    // --- Roles ---
-
-    /** Primary accessor (new system). */
-    public ClaimRole getRole(UUID playerId) {
-        if (isOwner(playerId)) {
-            return ClaimRole.OWNER;
-        }
-        return roles.getOrDefault(playerId, ClaimRole.NONE);
-    }
-
-    public void setRole(UUID playerId, ClaimRole role) {
-        if (role == ClaimRole.NONE) {
-            roles.remove(playerId);
-        } else {
-            roles.put(playerId, role);
-        }
-    }
-
-    public boolean containsKey(UUID playerId) {
-        return roles.containsKey(playerId);
-    }
-
-    public void put(UUID playerId, ClaimRole role) {
-        roles.put(playerId, role);
-    }
-
-    /** Modern accessor (preferred). */
-    public Map<UUID, ClaimRole> getRoles() {
-        return roles;
-    }
-
-    /** 🔄 Legacy alias for compatibility. */
-    public Map<UUID, ClaimRole> getTrusted() {
-        return roles;
-    }
-
-    /** Get trusted player names for GUI. */
     public Set<String> getTrustedNames() {
         Set<String> names = new HashSet<>();
-        for (UUID id : roles.keySet()) {
-            String name = Bukkit.getOfflinePlayer(id).getName();
-            names.add((name != null) ? name : id.toString());
+        for (UUID uuid : trusted.keySet()) {
+            names.add(uuid.toString()); // replace with Bukkit API lookup if needed
         }
         return names;
+    }
+
+    /* ======================================================
+     * Expiry Logic
+     * ====================================================== */
+
+    /** Mark the plot as active now */
+    public void touch() {
+        lastActive = Instant.now();
+    }
+
+    /** True if claim has expired based on config value */
+    public boolean isExpired() {
+        long maxDays = 30; // fallback
+        try {
+            maxDays = com.snazzyatoms.proshield.ProShield.getInstance()
+                    .getConfig().getLong("claims.expiry-days", 30);
+        } catch (Exception ignored) {}
+
+        Instant expireAt = lastActive.plusSeconds(maxDays * 86400);
+        return Instant.now().isAfter(expireAt);
     }
 }

@@ -19,8 +19,7 @@ import java.util.UUID;
  * TrustListener
  *
  * Handles the Trust Menu GUI interactions.
- * - Lets owners/co-owners assign roles to trusted players.
- * - Calls ClaimRoleManager.assignRole for persistence.
+ * Lets owners/co-owners assign roles to trusted players.
  */
 public class TrustListener implements Listener {
 
@@ -44,7 +43,7 @@ public class TrustListener implements Listener {
         if (event.getView().getTitle() == null) return;
 
         String title = event.getView().getTitle();
-        if (!title.equalsIgnoreCase("§bTrust Menu")) return;
+        if (!title.contains("Trust")) return; // safer than hardcoding color
 
         event.setCancelled(true);
         Plot plot = plots.getPlot(player.getLocation());
@@ -65,15 +64,15 @@ public class TrustListener implements Listener {
 
         switch (event.getSlot()) {
             case 10 -> { // Trust as Trusted
-                roles.assignRole(claimId, targetId, ClaimRole.TRUSTED.name().toLowerCase());
+                roles.assignRole(claimId, targetId, ClaimRole.TRUSTED);
                 messages.send(player, "trust.added", targetName);
             }
             case 11 -> { // Trust as Builder
-                roles.assignRole(claimId, targetId, ClaimRole.BUILDER.name().toLowerCase());
+                roles.assignRole(claimId, targetId, ClaimRole.BUILDER);
                 messages.send(player, "trust.added", targetName + " as Builder");
             }
             case 12 -> { // Trust as Moderator
-                roles.assignRole(claimId, targetId, ClaimRole.MODERATOR.name().toLowerCase());
+                roles.assignRole(claimId, targetId, ClaimRole.MODERATOR);
                 messages.send(player, "trust.added", targetName + " as Moderator");
             }
             case 26 -> { // Back button

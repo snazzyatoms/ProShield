@@ -1,70 +1,56 @@
-package com.snazzyatoms.proshield.plots;
+package com.snazzyatoms.proshield.commands;
 
+import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
-import org.bukkit.Location;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
-import java.util.*;
+public class UnclaimCommand implements CommandExecutor {
 
-public class Plot {
+    private final ProShield plugin;
+    private final PlotManager plotManager;
+    private final ClaimRoleManager roles;
+    private final MessagesUtil messages;
 
-    private final UUID id;          // Unique claim id
-    private final UUID owner;       // Owner of the claim
-    private final Chunk chunk;      // Chunk reference
-
-    private final Set<String> trustedPlayers = new HashSet<>();
-    private String claimName;
-
-    public Plot(Chunk chunk, UUID owner) {
-        this.id = UUID.randomUUID();
-        this.chunk = chunk;
-        this.owner = owner;
+    public UnclaimCommand(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles) {
+        this.plugin = plugin;
+        this.plotManager = plotManager;
+        this.roles = roles;
+        this.messages = plugin.getMessagesUtil();
     }
 
-    public UUID getId() {
-        return id;
-    }
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (!(sender instanceof Player player)) {
+            messages.send(sender, "error.players-only");
+            return true;
+        }
 
-    public UUID getOwner() {
-        return owner;
-    }
+        Chunk chunk = player.getLocation().getChunk();
+        Plot plot = plotManager.getPlot(chunk);
 
-    public Chunk getChunk() {
-        return chunk;
-    }
+        if (plot == null) {
+            messages.send(player, "unclaim.not-claimed");
+            return true;
+        }
 
-    public String getClaimName() {
-        return claimName != null ? claimName : "Claim " + chunk.getX() + "," + chunk.getZ();
-    }
+        if (!plot.isOwner(player.getUniqueId())) {
+            if (!roles.canUnclaim(plot.getId(), player.getUniqueId())) {
+                messages.send(player, "error.cannot-modify-claim");
+                return true;
+            }
+        }
 
-    public void setClaimName(String claimName) {
-        this.claimName = claimName;
-    }
+        // Remove claim
+        plotManager.removePlot(plot);
 
-    public void addTrusted(String name) {
-        trustedPlayers.add(name.toLowerCase());
-    }
-
-    public void removeTrusted(String name) {
-        trustedPlayers.remove(name.toLowerCase());
-    }
-
-    public boolean isTrusted(String name) {
-        return trustedPlayers.contains(name.toLowerCase());
-    }
-
-    public List<String> getTrustedNames() {
-        return new ArrayList<>(trustedPlayers);
-    }
-
-    public String getOwnerNameSafe() {
-        return owner != null ? owner.toString() : "Unknown";
-    }
-
-    public boolean isOwner(UUID uuid) {
-        return owner.equals(uuid);
-    }
-
-    public boolean contains(Location loc) {
-        return loc.getChunk().equals(this.chunk);
+        messages.send(player, "unclaim.success", chunk.getX() + "", chunk.getZ() + "");
+        return true;
     }
 }

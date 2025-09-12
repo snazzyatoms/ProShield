@@ -1,6 +1,8 @@
+// src/main/java/com/snazzyatoms/proshield/gui/listeners/RolesListener.java
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
@@ -24,11 +26,13 @@ public class RolesListener implements Listener {
     private final ProShield plugin;
     private final ClaimRoleManager roles;
     private final PlotManager plotManager;
+    private final GUIManager gui;
 
-    public RolesListener(ProShield plugin, ClaimRoleManager roles, PlotManager plotManager) {
+    public RolesListener(ProShield plugin, ClaimRoleManager roles, PlotManager plotManager, GUIManager gui) {
         this.plugin = plugin;
         this.roles = roles;
         this.plotManager = plotManager;
+        this.gui = gui;
     }
 
     @EventHandler
@@ -37,11 +41,11 @@ public class RolesListener implements Listener {
         if (event.getCurrentItem() == null) return;
 
         String title = event.getView().getTitle();
-        if (!title.contains("Roles")) return;
+        if (!title.toLowerCase().contains("roles")) return; // more flexible check
 
         event.setCancelled(true);
 
-        // get the plot at the player's current location
+        // Get the plot at the player's current location
         Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
             player.sendMessage("§cYou are not inside a claim.");
@@ -50,7 +54,7 @@ public class RolesListener implements Listener {
 
         UUID plotId = plot.getId();
 
-        // determine target from the clicked skull, if any
+        // Determine target from clicked skull
         UUID targetId = null;
         ItemStack clicked = event.getCurrentItem();
         if (clicked.hasItemMeta() && clicked.getItemMeta() instanceof SkullMeta skullMeta) {
@@ -65,9 +69,8 @@ public class RolesListener implements Listener {
             return;
         }
 
-        // assign roles based on clicked slot
-        int slot = event.getRawSlot();
-        switch (slot) {
+        // Assign roles based on clicked slot
+        switch (event.getRawSlot()) {
             case 11 -> {
                 roles.assignRole(plotId, targetId, ClaimRole.MANAGER);
                 player.sendMessage("§a" + Bukkit.getOfflinePlayer(targetId).getName() + " is now Manager in this claim!");
@@ -80,7 +83,10 @@ public class RolesListener implements Listener {
                 roles.clearRole(plotId, targetId);
                 player.sendMessage("§cRole for " + Bukkit.getOfflinePlayer(targetId).getName() + " was cleared.");
             }
-            default -> { }
+            default -> { return; }
         }
+
+        // Refresh GUI so changes are visible immediately
+        gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
     }
 }

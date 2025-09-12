@@ -5,6 +5,10 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 
 import java.util.*;
 
+/**
+ * ClaimRoleManager
+ * Handles trusted players, roles, and per-claim role permissions.
+ */
 public class ClaimRoleManager {
 
     private final PlotManager plotManager;
@@ -19,7 +23,6 @@ public class ClaimRoleManager {
     /* -------------------------------------------------------
      * Core Role Logic
      * ------------------------------------------------------- */
-
     public boolean canBuild(UUID playerId, Plot plot) {
         if (plot == null) return true; // wilderness
         if (plot.isOwner(playerId)) return true;
@@ -42,17 +45,6 @@ public class ClaimRoleManager {
         return perms.canInteract();
     }
 
-    public boolean canUnclaim(UUID playerId, Plot plot) {
-        if (plot == null) return false;
-        if (plot.isOwner(playerId)) return true;
-
-        ClaimRole role = plot.getTrusted().get(playerId);
-        if (role == null) return false;
-
-        RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
-        return perms.canUnclaim();
-    }
-
     public boolean canManageTrust(UUID claimId, UUID playerId) {
         Plot plot = plotManager.getPlotById(claimId);
         if (plot == null) return false;
@@ -61,22 +53,33 @@ public class ClaimRoleManager {
         ClaimRole role = plot.getTrusted().get(playerId);
         if (role == null) return false;
 
-        RolePermissions perms = getRolePermissions(plot.getId(), role.name().toLowerCase());
+        RolePermissions perms = getRolePermissions(claimId, role.name().toLowerCase());
         return perms.canManageTrust();
     }
 
-    public boolean isOwnerOrManager(UUID playerId, Plot plot) {
+    public boolean canUnclaim(UUID claimId, UUID playerId) {
+        Plot plot = plotManager.getPlotById(claimId);
         if (plot == null) return false;
         if (plot.isOwner(playerId)) return true;
 
         ClaimRole role = plot.getTrusted().get(playerId);
-        return role == ClaimRole.MANAGER;
+        if (role == null) return false;
+
+        RolePermissions perms = getRolePermissions(claimId, role.name().toLowerCase());
+        return perms.canUnclaim();
+    }
+
+    public boolean isOwnerOrCoOwner(UUID playerId, Plot plot) {
+        if (plot == null) return false;
+        if (plot.isOwner(playerId)) return true;
+
+        ClaimRole role = plot.getTrusted().get(playerId);
+        return role == ClaimRole.MANAGER; // treat MANAGER as co-owner
     }
 
     /* -------------------------------------------------------
      * Trust / Untrust
      * ------------------------------------------------------- */
-
     public void trustPlayer(Plot plot, UUID playerId, ClaimRole role) {
         plot.getTrusted().put(playerId, role);
         plotManager.saveAsync(plot);
@@ -90,25 +93,26 @@ public class ClaimRoleManager {
     /* -------------------------------------------------------
      * Role Management
      * ------------------------------------------------------- */
-
     public void setRole(Plot plot, UUID playerId, ClaimRole role) {
         if (plot.isOwner(playerId)) return; // never override owner
         plot.getTrusted().put(playerId, role);
         plotManager.saveAsync(plot);
     }
 
-    public ClaimRole getRole(Plot plot, UUID playerId) {
-        if (plot.isOwner(playerId)) return ClaimRole.OWNER;
-        return plot.getTrusted().getOrDefault(playerId, ClaimRole.VISITOR);
-    }
-
+    /** For GUI string-based access */
     public String getRole(UUID claimId, UUID playerId) {
         Plot plot = plotManager.getPlotById(claimId);
-        if (plot == null) return "Visitor";
+        if (plot == null) return "None";
         if (plot.isOwner(playerId)) return "Owner";
 
         ClaimRole role = plot.getTrusted().get(playerId);
         return (role != null) ? role.name() : "Trusted";
+    }
+
+    /** Raw ClaimRole */
+    public ClaimRole getRole(Plot plot, UUID playerId) {
+        if (plot.isOwner(playerId)) return ClaimRole.OWNER;
+        return plot.getTrusted().getOrDefault(playerId, ClaimRole.VISITOR);
     }
 
     public void clearAllRoles(Plot plot) {
@@ -116,41 +120,38 @@ public class ClaimRoleManager {
         plotManager.saveAsync(plot);
     }
 
-    // convenience for GUI listeners
     public void assignRole(UUID claimId, UUID playerId, String roleName) {
         Plot plot = plotManager.getPlotById(claimId);
-        if (plot != null) {
-            ClaimRole role = ClaimRole.fromString(roleName);
-            if (role != null) {
-                setRole(plot, playerId, role);
-            }
-        }
+        if (plot == null) return;
+        ClaimRole role = ClaimRole.fromString(roleName);
+        if (role == null) role = ClaimRole.TRUSTED;
+        plot.getTrusted().put(playerId, role);
+        plotManager.saveAsync(plot);
     }
 
     public void clearRole(UUID claimId, UUID playerId) {
         Plot plot = plotManager.getPlotById(claimId);
-        if (plot != null) {
-            plot.getTrusted().remove(playerId);
-            plotManager.saveAsync(plot);
-        }
-    }
-
-    public void savePermissions(UUID claimId, String roleId, RolePermissions perms) {
-        setRolePermissions(claimId, roleId, perms);
+        if (plot == null) return;
+        plot.getTrusted().remove(playerId);
+        plotManager.saveAsync(plot);
     }
 
     /* -------------------------------------------------------
      * Role Permissions
      * ------------------------------------------------------- */
-
     public RolePermissions getRolePermissions(UUID claimId, String roleId) {
         rolePermissions.putIfAbsent(claimId, new HashMap<>());
         Map<String, RolePermissions> map = rolePermissions.get(claimId);
-        return map.computeIfAbsent(roleId.toLowerCase(), k -> RolePermissions.defaultsFor(roleId));
+        return map.computeIfAbsent(roleId.toLowerCase(), RolePermissions::defaultsFor);
     }
 
     public void setRolePermissions(UUID claimId, String roleId, RolePermissions perms) {
         rolePermissions.putIfAbsent(claimId, new HashMap<>());
         rolePermissions.get(claimId).put(roleId.toLowerCase(), perms);
+    }
+
+    public void savePermissions(UUID claimId, String roleId, RolePermissions perms) {
+        setRolePermissions(claimId, roleId, perms);
+        // persist to plots.yml if needed later
     }
 }

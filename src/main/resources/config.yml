@@ -4,10 +4,12 @@
 # ==========================================================
 # Notes:
 #   - Use '&' for colors
-#   - Actions supported:
+#   - Actions supported in GUI:
 #       command:<text> → runs a command as player
 #       menu:<menuKey> → opens another menu
 #       close           → closes inventory
+#   - Placeholders:
+#       {player}, {claim}, {role}, {owner}, {state}, {count}
 # ==========================================================
 
 # ----------------------------------------------------------
@@ -62,7 +64,177 @@ messages:
 # ----------------------------------------------------------
 gui:
   menus:
-    # (menus as you already have them — omitted for brevity)
+
+    main:
+      title: "&bProShield Menu"
+      size: 27
+      items:
+        "10":
+          material: GRASS_BLOCK
+          name: "&aClaim Chunk"
+          lore:
+            - "&7Claim your current chunk"
+            - "&7Protect it from griefers"
+          action: "command:proshield claim"
+        "11":
+          material: BARRIER
+          name: "&cUnclaim Chunk"
+          lore:
+            - "&7Unclaim your current chunk"
+            - "&7Free it up for others"
+          action: "command:proshield unclaim"
+        "12":
+          material: PAPER
+          name: "&eClaim Info"
+          lore:
+            - "&7View claim owner and trusted players"
+          action: "command:proshield info"
+        "13":
+          material: PLAYER_HEAD
+          name: "&aTrust Menu"
+          lore:
+            - "&7Trust another player"
+          action: "menu:trust"
+        "14":
+          material: SKELETON_SKULL
+          name: "&cUntrust Menu"
+          lore:
+            - "&7Remove a trusted player"
+          action: "menu:untrust"
+        "15":
+          material: BOOK
+          name: "&6Roles"
+          lore:
+            - "&7Assign roles to trusted players"
+          action: "menu:roles"
+        "16":
+          material: IRON_SWORD
+          name: "&cFlags"
+          lore:
+            - "&7Toggle claim protections"
+          action: "menu:flags"
+        "26":
+          material: BARRIER
+          name: "&cClose"
+          lore:
+            - "&7Exit menu"
+          action: "close"
+
+    trust:
+      title: "&aTrust Player"
+      size: 27
+      items:
+        "13":
+          material: PLAYER_HEAD
+          name: "&aEnter Player"
+          lore:
+            - "&7Type the player’s name in chat"
+          action: "command:proshield trust"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "menu:main"
+
+    untrust:
+      title: "&cUntrust Player"
+      size: 27
+      items:
+        "13":
+          material: SKELETON_SKULL
+          name: "&cEnter Player"
+          lore:
+            - "&7Type the player’s name in chat"
+          action: "command:proshield untrust"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "menu:main"
+
+    flags:
+      title: "&dClaim Flags"
+      size: 27
+      items:
+        "10":
+          material: TNT
+          name: "&cExplosions"
+          lore:
+            - "&7Toggle TNT & creeper damage"
+          action: "command:proshield flag explosions"
+        "11":
+          material: WATER_BUCKET
+          name: "&bBuckets"
+          lore:
+            - "&7Toggle water/lava placement"
+          action: "command:proshield flag buckets"
+        "12":
+          material: ITEM_FRAME
+          name: "&6Item Frames"
+          lore:
+            - "&7Toggle item frame protection"
+          action: "command:proshield flag item-frames"
+        "13":
+          material: ARMOR_STAND
+          name: "&eArmor Stands"
+          lore:
+            - "&7Toggle armor stand protection"
+          action: "command:proshield flag armor-stands"
+        "14":
+          material: CHEST
+          name: "&aContainers"
+          lore:
+            - "&7Toggle chest/furnace/hopper access"
+          action: "command:proshield flag containers"
+        "15":
+          material: BONE
+          name: "&dPets"
+          lore:
+            - "&7Toggle pet interaction"
+          action: "command:proshield flag pets"
+        "16":
+          material: IRON_SWORD
+          name: "&cPvP"
+          lore:
+            - "&7Toggle PvP combat"
+          action: "command:proshield flag pvp"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "menu:main"
+
+    admin:
+      title: "&4ProShield Admin Menu"
+      size: 27
+      items:
+        "11":
+          material: PLAYER_HEAD
+          name: "&aTrust Players"
+          lore:
+            - "&7Manage trust in any claim"
+          action: "menu:trust"
+        "13":
+          material: BOOK
+          name: "&6Roles"
+          lore:
+            - "&7Manage roles in any claim"
+          action: "menu:roles"
+        "15":
+          material: IRON_SWORD
+          name: "&cFlags"
+          lore:
+            - "&7Manage flags in any claim"
+          action: "menu:flags"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "menu:main"
 
 # ----------------------------------------------------------
 # Sounds
@@ -75,9 +247,10 @@ sounds:
   admin-action: "ENTITY_EXPERIENCE_ORB_PICKUP"
 
 # ----------------------------------------------------------
-# Claim Defaults & Expiry
+# Claim Defaults
 # ----------------------------------------------------------
 claims:
+  expiry-days: 30   # ⏳ Claims older than this will expire (0 = disable)
   default-flags:
     pvp: false
     explosions: false
@@ -93,7 +266,3 @@ claims:
     pets: false
     mob-repel: true
     mob-despawn: true
-
-  # 🕒 Claim expiry (in days)
-  # Claims inactive longer than this will auto-expire & purge.
-  expiry-days: 30

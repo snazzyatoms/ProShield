@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,9 +11,16 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * GUIManager (config-driven)
+ *
+ * - Builds menus dynamically from config.yml
+ * - Provides access to "actions" for GUIListener
+ */
 public class GUIManager {
 
     private final ProShield plugin;
@@ -24,60 +30,85 @@ public class GUIManager {
     }
 
     /**
-     * Open a menu by config key.
+     * Opens a menu by name (from config).
      */
-    public void openMenu(Player player, String menuKey) {
-        Inventory inv = buildMenu(menuKey);
-        if (inv != null) {
-            player.openInventory(inv);
-        } else {
-            plugin.getLogger().warning("Tried to open missing menu: " + menuKey);
+    public void openMenu(Player player, String menuName) {
+        ConfigurationSection menu = plugin.getConfig().getConfigurationSection("gui.menus." + menuName);
+        if (menu == null) {
+            plugin.getLogger().warning("Menu not found: " + menuName);
+            return;
         }
+
+        String title = ChatColor.translateAlternateColorCodes('&', menu.getString("title", "&cMenu"));
+        int size = menu.getInt("size", 27);
+        Inventory inv = Bukkit.createInventory(null, size, title);
+
+        ConfigurationSection items = menu.getConfigurationSection("items");
+        if (items != null) {
+            for (String key : items.getKeys(false)) {
+                try {
+                    int slot = Integer.parseInt(key);
+                    ConfigurationSection sec = items.getConfigurationSection(key);
+
+                    String matName = sec.getString("material", "BARRIER");
+                    Material mat = Material.matchMaterial(matName);
+                    if (mat == null) mat = Material.BARRIER;
+
+                    String name = ChatColor.translateAlternateColorCodes('&', sec.getString("name", ""));
+                    List<String> lore = sec.getStringList("lore");
+                    lore.replaceAll(line -> ChatColor.translateAlternateColorCodes('&', line));
+
+                    ItemStack item = new ItemStack(mat);
+                    ItemMeta meta = item.getItemMeta();
+                    if (meta != null) {
+                        meta.setDisplayName(name);
+                        meta.setLore(lore);
+                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                        item.setItemMeta(meta);
+                    }
+
+                    inv.setItem(slot, item);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to load GUI item in menu " + menuName + " at slot " + key);
+                }
+            }
+        }
+
+        player.openInventory(inv);
     }
 
     /**
-     * Builds an inventory menu dynamically from config.yml
+     * Checks if the title belongs to a ProShield menu.
      */
-    public Inventory buildMenu(String menuKey) {
-        ConfigurationSection menus = plugin.getConfig().getConfigurationSection("ui.menus");
-        if (menus == null || !menus.isConfigurationSection(menuKey)) return null;
-
-        ConfigurationSection menu = menus.getConfigurationSection(menuKey);
-        String title = ChatColor.translateAlternateColorCodes('&', menu.getString("title", "Menu"));
-        int size = menu.getInt("size", 27);
-
-        Inventory inv = Bukkit.createInventory(null, size, title);
-        ConfigurationSection items = menu.getConfigurationSection("items");
-        if (items == null) return inv;
-
-        for (String key : items.getKeys(false)) {
-            ConfigurationSection item = items.getConfigurationSection(key);
-            if (item == null) continue;
-
-            int slot = item.getInt("slot", -1);
-            Material mat = Material.matchMaterial(item.getString("material", "BARRIER"));
-            if (mat == null || slot < 0 || slot >= size) continue;
-
-            String name = ChatColor.translateAlternateColorCodes('&', item.getString("name", key));
-            List<String> lore = new ArrayList<>();
-            for (String l : item.getStringList("lore")) {
-                lore.add(ChatColor.translateAlternateColorCodes('&', l));
+    public boolean isProShieldMenu(String title) {
+        ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
+        if (menus == null) return false;
+        for (String key : menus.getKeys(false)) {
+            String t = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&',
+                    plugin.getConfig().getString("gui.menus." + key + ".title", "")));
+            if (t.equalsIgnoreCase(ChatColor.stripColor(title))) {
+                return true;
             }
+        }
+        return false;
+    }
 
-            ItemStack stack = new ItemStack(mat);
-            ItemMeta meta = stack.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(name);
-                if (!lore.isEmpty()) meta.setLore(lore);
-                if (item.getBoolean("hide-attributes", true)) {
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                }
-                stack.setItemMeta(meta);
+    /**
+     * Get the actions of an item in a given menu.
+     */
+    public List<String> getItemActions(String menuTitle, int slot) {
+        ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
+        if (menus == null) return Collections.emptyList();
+
+        for (String key : menus.getKeys(false)) {
+            String t = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&',
+                    plugin.getConfig().getString("gui.menus." + key + ".title", "")));
+            if (t.equalsIgnoreCase(ChatColor.stripColor(menuTitle))) {
+                String path = "gui.menus." + key + ".items." + slot + ".actions";
+                return plugin.getConfig().getStringList(path);
             }
-
-            inv.setItem(slot, stack);
         }
 
-        return inv;
+        return Collections.emptyList();
     }
 }

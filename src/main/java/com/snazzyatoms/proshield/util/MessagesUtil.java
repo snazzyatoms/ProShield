@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/util/MessagesUtil.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -10,21 +9,21 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 /**
  * MessagesUtil
  * - Handles message loading, prefixing, placeholders, broadcasting
- * - Expanded with multiple send(...) overloads to match all plugin calls
- * - Expanded with debug(...) overloads used across listeners
- * - Preserves reload() and broadcastConsole() logic
+ * - Provides multiple send(...) overloads for flexibility
+ * - Supports Map-based placeholders {player}, {claim}, {role}, etc.
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
     private FileConfiguration config;
 
-    /** Global prefix (legacy support for listeners) */
+    /** Global prefix (legacy fallback) */
     public static final String PREFIX = ChatColor.DARK_AQUA + "[ProShield] " + ChatColor.RESET;
 
     public MessagesUtil(ProShield plugin) {
@@ -57,7 +56,7 @@ public class MessagesUtil {
      * SEND METHODS (overloaded)
      * ====================================================== */
 
-    /** Full signature (core): key + default message */
+    /** Core: key + default message */
     public void send(CommandSender sender, String key, String def) {
         if (sender == null) return;
         String msg = get(key, def);
@@ -66,12 +65,12 @@ public class MessagesUtil {
         }
     }
 
-    /** Overload: key only (no default, uses key if missing). */
+    /** Overload: key only */
     public void send(CommandSender sender, String key) {
         send(sender, key, "&cMissing message: " + key);
     }
 
-    /** Overload: key + replacements ({} placeholders). */
+    /** Overload: positional replacements ({}) */
     public void send(CommandSender sender, String key, String... replacements) {
         if (sender == null) return;
         String msg = get(key, "&cMissing message: " + key);
@@ -85,11 +84,24 @@ public class MessagesUtil {
         sender.sendMessage(PREFIX + msg);
     }
 
+    /** ✅ Overload: Map-based replacements ({key}) */
+    public void send(CommandSender sender, String key, Map<String, String> placeholders) {
+        if (sender == null) return;
+        String msg = get(key, "&cMissing message: " + key);
+
+        if (placeholders != null && !placeholders.isEmpty()) {
+            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                msg = msg.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
+        }
+
+        sender.sendMessage(PREFIX + msg);
+    }
+
     /* ======================================================
      * BROADCAST / CONSOLE
      * ====================================================== */
 
-    /** Broadcast to console with optional console sender. */
     public void broadcastConsole(String key, ConsoleCommandSender console) {
         String msg = get(key, "&cMissing broadcast: " + key);
         if (console != null) {
@@ -99,13 +111,11 @@ public class MessagesUtil {
         }
     }
 
-    /** Broadcast to all players and console. */
     public void broadcastAll(String key) {
         String msg = get(key, "&cMissing broadcast: " + key);
         plugin.getServer().broadcastMessage(PREFIX + msg);
     }
 
-    /** Send multi-line messages (for help menus, etc.). */
     public void sendList(CommandSender sender, String key) {
         if (sender == null) return;
         List<String> lines = config.getStringList(key);
@@ -128,7 +138,6 @@ public class MessagesUtil {
         return ChatColor.DARK_GRAY + "[Debug] " + ChatColor.RESET;
     }
 
-    /** Debug with plugin context (kept for calls like debug(plugin, msg)) */
     public void debug(ProShield plugin, String message) {
         if (plugin == null || message == null) return;
         if (plugin.isDebugEnabled()) {
@@ -136,7 +145,6 @@ public class MessagesUtil {
         }
     }
 
-    /** Debug simple string (to console only). */
     public void debug(String message) {
         if (message == null) return;
         if (plugin.isDebugEnabled()) {
@@ -144,7 +152,6 @@ public class MessagesUtil {
         }
     }
 
-    /** Debug to a CommandSender (player or console). */
     public void debug(CommandSender sender, String message) {
         if (sender == null || message == null) return;
         if (plugin.isDebugEnabled()) {

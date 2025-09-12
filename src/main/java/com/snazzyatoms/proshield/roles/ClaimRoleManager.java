@@ -2,82 +2,77 @@
 package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.plots.Plot;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 
-import java.util.*;
+import java.util.Locale;
+import java.util.UUID;
 
-/**
- * Manages claim roles, trusted players, and ownership transfers.
- * Consolidated from v1.2.0 → v1.2.5 with helper methods for tab completion.
- */
 public class ClaimRoleManager {
 
-    // Map: plotId -> (playerName -> role)
-    private final Map<UUID, Map<String, ClaimRole>> claimRoles = new HashMap<>();
+    private final com.snazzyatoms.proshield.plots.PlotManager plotManager;
 
-    /* ======================================================
-     * Trust / Untrust
-     * ====================================================== */
-
-    public boolean trustPlayer(Plot plot, String playerName, String roleName) {
-        ClaimRole role = ClaimRole.fromName(roleName);
-        if (role == null || role == ClaimRole.NONE) {
-            return false;
-        }
-
-        claimRoles.computeIfAbsent(plot.getId(), k -> new HashMap<>())
-                  .put(playerName.toLowerCase(Locale.ROOT), role);
-        return true;
-    }
-
-    public boolean untrustPlayer(Plot plot, String playerName) {
-        Map<String, ClaimRole> roles = claimRoles.get(plot.getId());
-        if (roles == null) return false;
-
-        return roles.remove(playerName.toLowerCase(Locale.ROOT)) != null;
-    }
-
-    public ClaimRole getRole(Plot plot, String playerName) {
-        Map<String, ClaimRole> roles = claimRoles.get(plot.getId());
-        if (roles == null) return ClaimRole.NONE;
-
-        return roles.getOrDefault(playerName.toLowerCase(Locale.ROOT), ClaimRole.NONE);
-    }
-
-    public boolean isTrusted(Plot plot, String playerName) {
-        return getRole(plot, playerName) != ClaimRole.NONE;
-    }
-
-    /* ======================================================
-     * Ownership
-     * ====================================================== */
-
-    public boolean transferOwnership(Plot plot, String newOwner) {
-        if (plot == null) return false;
-
-        UUID oldOwner = plot.getOwner();
-        if (oldOwner == null) return false;
-
-        // Reassign
-        plot.setOwnerName(newOwner);
-        return true;
+    public ClaimRoleManager(com.snazzyatoms.proshield.plots.PlotManager plotManager) {
+        this.plotManager = plotManager;
     }
 
     public boolean canUnclaim(UUID playerId, UUID plotId) {
-        // For now, only owners can unclaim. Could extend later.
-        return false;
+        Plot plot = plotManager.getPlotById(plotId);
+        if (plot == null) return false;
+        if (plot.isOwner(playerId)) return true;
+        ClaimRole role = plot.getRole(playerId);
+        return role != null && role.canUnclaim();
     }
 
-    /* ======================================================
-     * Roles List (for Tab Completion)
-     * ====================================================== */
+    public boolean trustPlayer(Plot plot, String targetName, String roleName) {
+        if (plot == null || targetName == null || targetName.isEmpty()) return false;
 
-    public List<String> getAllRoles() {
-        List<String> roles = new ArrayList<>();
-        for (ClaimRole role : ClaimRole.values()) {
-            if (role != ClaimRole.NONE && role != ClaimRole.VISITOR) {
-                roles.add(role.name().toLowerCase(Locale.ROOT));
-            }
+        OfflinePlayer op = Bukkit.getOfflinePlayer(targetName);
+        UUID targetId = op.getUniqueId();
+        ClaimRole role = parseRole(roleName);
+        if (role == null) return false;
+
+        plot.assignRole(targetId, role);
+        return true;
+    }
+
+    public boolean untrustPlayer(Plot plot, String targetName) {
+        if (plot == null || targetName == null || targetName.isEmpty()) return false;
+        OfflinePlayer op = Bukkit.getOfflinePlayer(targetName);
+        UUID targetId = op.getUniqueId();
+        plot.clearRole(targetId);
+        return true;
+    }
+
+    public boolean transferOwnership(Plot plot, String targetName) {
+        if (plot == null || targetName == null || targetName.isEmpty()) return false;
+        OfflinePlayer op = Bukkit.getOfflinePlayer(targetName);
+        if (op == null) return false;
+        plot.setOwner(op.getUniqueId());
+        return true;
+    }
+
+    public ClaimRole getRole(UUID claimId, UUID playerId) {
+        Plot plot = plotManager.getPlotById(claimId);
+        return (plot != null) ? plot.getRole(playerId) : null;
+    }
+
+    private ClaimRole parseRole(String name) {
+        if (name == null) return ClaimRole.TRUSTED;
+        switch (name.toLowerCase(Locale.ROOT)) {
+            case "visitor" -> { return ClaimRole.VISITOR; }
+            case "trusted" -> { return ClaimRole.TRUSTED; }
+            case "builder" -> { return ClaimRole.BUILDER; }
+            case "container" -> { return ClaimRole.CONTAINER; }
+            case "moderator" -> { return ClaimRole.MODERATOR; }
+            case "manager" -> { return ClaimRole.MANAGER; }
+            case "owner" -> { return ClaimRole.OWNER; }
+            default -> { return null; }
         }
-        return roles;
+    }
+
+    // For roles GUI in future (kept simple)
+    public RolePermissions getRolePermissions(UUID claimId, String key) {
+        return new RolePermissions(); // stub with defaults enabled/disabled as your impl requires
     }
 }

@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -87,7 +88,7 @@ public class PlotManager {
         if (plot == null) return true; // not claimed, free to interact
         if (plot.isOwner(playerId)) return true;
 
-        ClaimRole role = plot.getTrusted().get(playerId);
+        ClaimRole role = plot.getRole(playerId);
         return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
     }
 
@@ -98,7 +99,7 @@ public class PlotManager {
         Plot plot = getPlot(loc);
         if (plot == null) return true;
 
-        ClaimRole role = plot.getTrusted().get(playerId);
+        ClaimRole role = plot.getRole(playerId);
         return role != null && role.canInteract();
     }
 
@@ -109,7 +110,7 @@ public class PlotManager {
         Plot plot = getPlot(loc);
         if (plot == null) return false;
 
-        ClaimRole role = plot.getTrusted().get(playerId);
+        ClaimRole role = plot.getRole(playerId);
         return role != null && role.canManage();
     }
 }

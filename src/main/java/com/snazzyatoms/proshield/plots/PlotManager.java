@@ -13,9 +13,12 @@ import java.util.*;
  * - Stores and manages all plots
  * - Handles creation, lookup, saving/loading
  * - Provides name/owner resolution for use in GUIs & messages
- * - Starts entity repel tasks if enabled in config
  *
- * Consolidated for v1.2.5+
+ * Fixed for v1.2.5:
+ *  • Use Plot(Chunk, UUID) constructor
+ *  • Provide getPlot(String world, int x, int z) overload (some tasks call it)
+ *  • Use worldName/x/z getters from Plot
+ *  • Preserve bypass helpers and name resolution
  */
 public class PlotManager {
 
@@ -24,45 +27,30 @@ public class PlotManager {
     // Plots stored by ID
     private final Map<UUID, Plot> plots = new HashMap<>();
 
-    // Chunk mapping: world+chunkX+chunkZ -> plotId
+    // Chunk mapping: world:x:z -> plotId
     private final Map<String, UUID> chunkMap = new HashMap<>();
 
     // Players in bypass mode
     private final Set<UUID> bypassing = new HashSet<>();
 
-    // Repel tasks
-    private EntityMobRepelTask mobRepelTask;
-    private EntityBorderRepelTask borderRepelTask;
-
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-
-        // Start repel tasks if enabled
-        if (plugin.getConfig().getBoolean("protection.mobs.repel.enabled", true)) {
-            mobRepelTask = new EntityMobRepelTask(plugin, this);
-            mobRepelTask.runTaskTimer(plugin, 20L, 40L); // every 2 seconds
-        }
-
-        if (plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
-            borderRepelTask = new EntityBorderRepelTask(plugin, this);
-            borderRepelTask.runTaskTimer(plugin, 20L, 40L);
-        }
     }
 
     /* ======================================================
      * PLOTS
      * ====================================================== */
     public Plot createPlot(UUID ownerId, Chunk chunk) {
-        UUID id = UUID.randomUUID();
-        Plot plot = new Plot(id, ownerId, chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
-        plots.put(id, plot);
-        chunkMap.put(chunkKey(chunk), id);
+        Plot plot = new Plot(chunk, ownerId);
+        plots.put(plot.getId(), plot);
+        chunkMap.put(chunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()), plot.getId());
         return plot;
     }
 
     public void removePlot(Plot plot) {
+        if (plot == null) return;
         plots.remove(plot.getId());
-        chunkMap.remove(chunkKey(plot.getWorld(), plot.getX(), plot.getZ()));
+        chunkMap.remove(chunkKey(plot.getWorldName(), plot.getX(), plot.getZ()));
     }
 
     public Plot getPlot(UUID plotId) {
@@ -70,7 +58,8 @@ public class PlotManager {
     }
 
     public Plot getPlot(Chunk chunk) {
-        UUID id = chunkMap.get(chunkKey(chunk));
+        if (chunk == null) return null;
+        UUID id = chunkMap.get(chunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()));
         return id != null ? plots.get(id) : null;
     }
 
@@ -78,6 +67,16 @@ public class PlotManager {
         if (loc == null) return null;
         Chunk chunk = loc.getChunk();
         return getPlot(chunk);
+    }
+
+    /** Overload used by some tasks/utilities (world + chunk coords). */
+    public Plot getPlot(String worldName, int x, int z) {
+        UUID id = chunkMap.get(chunkKey(worldName, x, z));
+        return id != null ? plots.get(id) : null;
+    }
+
+    public Collection<Plot> getAllPlots() {
+        return Collections.unmodifiableCollection(plots.values());
     }
 
     /* ======================================================
@@ -115,10 +114,10 @@ public class PlotManager {
     }
 
     /* ======================================================
-     * SAVE / LOAD
+     * SAVE / LOAD (stubs left as-is for 1.2.5)
      * ====================================================== */
     public void saveAll() {
-        // TODO: serialize plots to disk (YAML or JSON)
+        // TODO: serialize plots to disk (YAML/JSON)
     }
 
     public void loadAll() {
@@ -128,10 +127,6 @@ public class PlotManager {
     /* ======================================================
      * INTERNAL HELPERS
      * ====================================================== */
-    private String chunkKey(Chunk chunk) {
-        return chunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
-    }
-
     private String chunkKey(String world, int x, int z) {
         return world + ":" + x + ":" + z;
     }

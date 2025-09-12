@@ -1,15 +1,15 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (Config-Driven GUI + Claim Expiry)
+# Version: 1.2.6 (Config-Driven GUI + Unified Plots)
 # ==========================================================
 # Notes:
 #   - Use '&' for colors
-#   - Actions supported in GUI:
+#   - Placeholders supported in messages:
+#       {player}, {claim}, {role}, {owner}, {state}, {count}
+#   - GUI menus are fully configurable, actions can be:
 #       command:<text> → runs a command as player
 #       menu:<menuKey> → opens another menu
 #       close           → closes inventory
-#   - Placeholders:
-#       {player}, {claim}, {role}, {owner}, {state}, {count}
 # ==========================================================
 
 # ----------------------------------------------------------
@@ -17,6 +17,11 @@
 # ----------------------------------------------------------
 settings:
   give-compass-on-join: true
+  # Default claim name if none set
+  default-claim-name: "Unnamed Claim"
+  # Expiration system (based on Plot.lastActive)
+  claims-expire-days: 30
+  purge-on-expire: true
 
 # ----------------------------------------------------------
 # Protection Settings
@@ -81,7 +86,6 @@ gui:
           name: "&cUnclaim Chunk"
           lore:
             - "&7Unclaim your current chunk"
-            - "&7Free it up for others"
           action: "command:proshield unclaim"
         "12":
           material: PAPER
@@ -250,7 +254,6 @@ sounds:
 # Claim Defaults
 # ----------------------------------------------------------
 claims:
-  expiry-days: 30   # ⏳ Claims older than this will expire (0 = disable)
   default-flags:
     pvp: false
     explosions: false

@@ -1,12 +1,11 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,107 +14,109 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * Unified GUI Listener
- *
- * - Listens to all ProShield menu clicks.
- * - Reads "action:" from config.yml to determine what happens.
+ * Unified GUI listener
+ * - Handles ALL menu clicks from config-driven menus
+ * - Reads "actions" from config.yml and executes them
  * - Supports:
- *    - "command:/something" → Runs a Bukkit command as player
- *    - "open:menuName"      → Opens another menu defined in config.yml
- *    - "custom:actionName"  → Runs plugin-specific logic (trust/untrust/roles/etc.)
- *
- * This removes the need for multiple small listeners and unifies everything here.
+ *    command:<cmd>  → run command
+ *    open:<menu>    → open another GUI menu
+ *    custom:<id>    → plugin-specific handlers (trust, untrust, roles, transfer, etc.)
+ *    command:close  → close the inventory
  */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager gui;
+    private final GUIManager guiManager;
     private final PlotManager plots;
-    private final ClaimRoleManager roles;
     private final MessagesUtil messages;
 
-    public GUIListener(ProShield plugin, GUIManager gui, PlotManager plots, ClaimRoleManager roles, MessagesUtil messages) {
+    public GUIListener(ProShield plugin, GUIManager guiManager, PlotManager plots, MessagesUtil messages) {
         this.plugin = plugin;
-        this.gui = gui;
+        this.guiManager = guiManager;
         this.plots = plots;
-        this.roles = roles;
         this.messages = messages;
     }
 
     @EventHandler
-    public void onClick(InventoryClickEvent event) {
+    public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         Inventory inv = event.getInventory();
         String title = event.getView().getTitle();
 
-        // ✅ Only handle ProShield menus
-        if (!gui.isProShieldMenu(title)) return;
+        // Check if this inventory matches a configured menu
+        ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
+        if (menus == null) return;
+
+        String menuKey = menus.getKeys(false).stream()
+                .filter(k -> title.equalsIgnoreCase(plugin.getConfig().getString("gui.menus." + k + ".title")))
+                .findFirst().orElse(null);
+
+        if (menuKey == null) return;
 
         event.setCancelled(true);
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null) return;
 
-        // Get actions from config
-        List<String> actions = gui.getItemActions(title, event.getSlot());
+        int slot = event.getRawSlot();
+        ConfigurationSection itemSec = plugin.getConfig().getConfigurationSection("gui.menus." + menuKey + ".items." + slot);
+        if (itemSec == null) return;
+
+        List<String> actions = itemSec.getStringList("actions");
         if (actions == null || actions.isEmpty()) return;
 
         for (String action : actions) {
-            handleAction(player, title, action);
+            handleAction(player, action, menuKey);
         }
     }
 
-    /**
-     * Central action dispatcher.
-     */
-    private void handleAction(Player player, String menuTitle, String action) {
+    private void handleAction(Player player, String action, String currentMenu) {
         if (action.startsWith("command:")) {
             String cmd = action.substring("command:".length()).trim();
-            Bukkit.dispatchCommand(player, cmd);
-
+            if (cmd.equalsIgnoreCase("close")) {
+                player.closeInventory();
+            } else {
+                Bukkit.dispatchCommand(player, cmd);
+            }
         } else if (action.startsWith("open:")) {
             String menu = action.substring("open:".length()).trim();
-            gui.openMenu(player, menu);
-
+            guiManager.openMenu(player, menu);
         } else if (action.startsWith("custom:")) {
-            String key = action.substring("custom:".length()).trim();
-            runCustomAction(player, menuTitle, key);
-
-        } else {
-            plugin.getLogger().warning("Unknown GUI action: " + action);
+            String custom = action.substring("custom:".length()).trim();
+            handleCustomAction(player, custom);
         }
     }
 
     /**
-     * Custom hard-coded actions (plugin-specific).
+     * Handles custom plugin-specific actions that can't be represented
+     * as just "open menu" or "run command".
      */
-    private void runCustomAction(Player player, String menuTitle, String key) {
-        Plot plot = plots.getPlot(player.getLocation());
-        switch (key.toLowerCase()) {
+    private void handleCustomAction(Player player, String custom) {
+        switch (custom.toLowerCase()) {
             case "trustplayer" -> {
-                messages.send(player, "trust.opened");
-                // In future: open chat prompt or GUI for trust
+                messages.send(player, "trust.added", "Type the player’s name in chat to trust them.");
+                player.closeInventory();
             }
             case "untrustplayer" -> {
-                messages.send(player, "untrust.opened");
-                // In future: open chat prompt or GUI for untrust
+                messages.send(player, "untrust.removed", "Type the player’s name in chat to untrust them.");
+                player.closeInventory();
             }
-            case "roles" -> {
-                if (plot == null) {
-                    messages.send(player, "roles.no-claim");
-                } else {
-                    gui.openRolesMenu(player, plot, player.hasPermission("proshield.admin"));
-                }
-            }
-            case "flags" -> {
-                gui.openFlagsMenu(player, player.hasPermission("proshield.admin"));
+            case "transferclaim" -> {
+                messages.send(player, "transfer.success", "Type the player’s name in chat to transfer ownership.");
+                player.closeInventory();
             }
             case "info" -> {
-                gui.openInfoMenu(player, plot);
+                Plot plot = plots.getPlot(player.getLocation());
+                if (plot == null) {
+                    messages.send(player, "claim.not-owner", "You are not inside a claim.");
+                } else {
+                    messages.send(player, "claim.info", "Owner: " + plot.getOwner().toString());
+                }
             }
-            default -> plugin.getLogger().warning("Unhandled custom action: " + key);
+            case "roles" -> {
+                Plot plot = plots.getPlot(player.getLocation());
+                guiManager.openRolesMenu(player, plot);
+            }
+            default -> messages.debug(player, "Unknown custom action: " + custom);
         }
     }
 }

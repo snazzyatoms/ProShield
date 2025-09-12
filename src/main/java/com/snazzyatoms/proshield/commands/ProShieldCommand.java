@@ -4,82 +4,87 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-public class ProShieldCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final GUIManager guiManager;
     private final CompassManager compassManager;
-    private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plotManager, GUIManager guiManager, CompassManager compassManager) {
+    public ProShieldCommand(ProShield plugin, PlotManager plotManager,
+                            GUIManager guiManager, CompassManager compassManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.guiManager = guiManager;
         this.compassManager = compassManager;
-        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("§bProShield §7→ Use /proshield [reload|debug|compass|flag]");
+            sender.sendMessage("§bProShield §7v" + plugin.getDescription().getVersion());
+            sender.sendMessage("§7Use §e/proshield help §7for commands.");
             return true;
         }
 
         String sub = args[0].toLowerCase();
-
         switch (sub) {
             case "reload" -> {
                 if (!sender.hasPermission("proshield.admin.reload")) {
-                    messages.send(sender, "error.no-permission");
+                    sender.sendMessage("§cNo permission.");
                     return true;
                 }
                 plugin.reloadConfig();
-                messages.reload();
+                plugin.getMessagesUtil().reload();
                 sender.sendMessage("§aProShield configuration reloaded.");
             }
             case "debug" -> {
-                if (!sender.hasPermission("proshield.admin")) {
-                    messages.send(sender, "error.no-permission");
-                    return true;
-                }
                 plugin.toggleDebug();
-                sender.sendMessage("§eDebug mode: " + (plugin.isDebugEnabled() ? "§aENABLED" : "§cDISABLED"));
+                sender.sendMessage("§eDebug mode: " + (plugin.isDebugEnabled() ? "§aON" : "§cOFF"));
             }
             case "compass" -> {
                 if (!(sender instanceof Player player)) {
-                    messages.send(sender, "error.player-only");
+                    sender.sendMessage("§cPlayers only.");
                     return true;
                 }
-                if (!sender.hasPermission("proshield.compass")) {
-                    messages.send(sender, "error.no-permission");
-                    return true;
-                }
-                compassManager.giveCompass(player, true);
-                sender.sendMessage("§aProShield compass given!");
+                compassManager.giveCompass(player, player.isOp());
+                sender.sendMessage("§aCompass given.");
             }
-            case "flag" -> {
+            case "flags" -> {
                 if (!(sender instanceof Player player)) {
-                    messages.send(sender, "error.player-only");
+                    sender.sendMessage("§cPlayers only.");
                     return true;
                 }
-                if (args.length < 2) {
-                    sender.sendMessage("§cUsage: /proshield flag <flag>");
-                    return true;
-                }
-                String flag = args[1].toLowerCase();
-                // TODO: hook into your flag system
-                sender.sendMessage("§eToggled flag: §b" + flag);
+                guiManager.openMenu(player, "flags");
             }
-            default -> sender.sendMessage("§cUnknown subcommand. Use /proshield [reload|debug|compass|flag]");
+            default -> {
+                sender.sendMessage("§cUnknown subcommand. Use §e/proshield help");
+            }
         }
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
+        if (args.length == 1) {
+            List<String> options = Arrays.asList("reload", "debug", "compass", "flags");
+            String current = args[0].toLowerCase();
+            List<String> matches = new ArrayList<>();
+            for (String opt : options) {
+                if (opt.startsWith(current)) matches.add(opt);
+            }
+            return matches;
+        }
+        return List.of();
     }
 }

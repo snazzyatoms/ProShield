@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,8 +11,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages all plots in the world.
- * Handles creation, lookup, saving, and trusted role access.
+ * PlotManager
+ * - Manages all plots in the world.
+ * - Handles creation, lookup, saving, and trusted role access.
+ * - Future-proofed with aliases for legacy method names.
  */
 public class PlotManager {
 
@@ -23,9 +24,21 @@ public class PlotManager {
     // Map of plotId -> Plot
     private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
 
+    /**
+     * Modern constructor (preferred).
+     */
     public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
         this.plugin = plugin;
         this.roleManager = roleManager;
+    }
+
+    /**
+     * Legacy constructor for compatibility.
+     * RoleManager will be null if not passed.
+     */
+    public PlotManager(ProShield plugin) {
+        this.plugin = plugin;
+        this.roleManager = null;
     }
 
     public ProShield getPlugin() {
@@ -53,6 +66,23 @@ public class PlotManager {
             }
         }
         return null;
+    }
+
+    /**
+     * Alias for backwards compatibility.
+     * Older code calls getPlotAt(...).
+     */
+    public Plot getPlotAt(Chunk chunk) {
+        return getPlot(chunk);
+    }
+
+    /**
+     * Get a safe display name for the claim at this location.
+     * Returns "Wilderness" if unclaimed.
+     */
+    public String getClaimName(Location location) {
+        Plot plot = getPlot(location);
+        return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
     }
 
     public Plot createPlot(UUID owner, Chunk chunk) {
@@ -85,7 +115,7 @@ public class PlotManager {
      */
     public boolean isTrustedOrOwner(UUID playerId, Location loc) {
         Plot plot = getPlot(loc);
-        if (plot == null) return true; // not claimed, free to interact
+        if (plot == null) return true; // not claimed
         if (plot.isOwner(playerId)) return true;
 
         ClaimRole role = plot.getRole(playerId);

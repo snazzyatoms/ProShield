@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.gui;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.roles.RolePermissions;
 import org.bukkit.Bukkit;
@@ -95,19 +96,22 @@ public class GUIManager {
     public void openRolesGUI(Player player, Plot plot, boolean fromAdmin) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.GOLD + "Manage Roles");
 
-        List<String> trusted = (plot != null) ? plot.getTrustedNames() : Collections.emptyList();
+        List<String> trusted = (plot != null)
+                ? new ArrayList<>(plot.getTrustedNames()) // ensure mutable List
+                : Collections.emptyList();
 
         int slot = 10;
         if (!trusted.isEmpty()) {
             for (String name : trusted.stream().limit(15).toList()) {
                 UUID claimId = plot.getId();
                 UUID targetId = Bukkit.getOfflinePlayer(name).getUniqueId();
-                String role = roles.getRole(claimId, targetId);
-                if (role == null || role.isEmpty()) role = "Trusted";
+                ClaimRole role = roles.getRole(claimId, targetId);
+
+                String roleName = (role != null) ? role.getDisplayName() : "Trusted";
 
                 inv.setItem(slot++, makeSkull(name, ChatColor.YELLOW, name,
                         Arrays.asList(ChatColor.GRAY + "Click to manage roles",
-                                ChatColor.YELLOW + "Current Role: " + role)));
+                                ChatColor.YELLOW + "Current Role: " + roleName)));
                 if (slot == 17) slot = 19;
             }
         } else {
@@ -129,8 +133,8 @@ public class GUIManager {
 
         UUID claimId = plot.getId();
         UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
-        String current = roles.getRole(claimId, targetId);
-        if (current == null || current.isEmpty()) current = "Trusted";
+        ClaimRole currentRole = roles.getRole(claimId, targetId);
+        String current = (currentRole != null) ? currentRole.getDisplayName() : "Trusted";
 
         inv.setItem(10, makeMenuItem(Material.STONE_PICKAXE, ChatColor.YELLOW, "Builder",
                 Arrays.asList(ChatColor.GRAY + "Build & break blocks",
@@ -164,7 +168,10 @@ public class GUIManager {
      * ROLE FLAGS MENU
      * ==================================================== */
     public void openRoleFlagsMenu(Player owner, Plot plot, String roleId) {
-        String key = (roleId == null || roleId.isEmpty() || roleId.equalsIgnoreCase("Trusted")) ? "trusted" : roleId.toLowerCase();
+        String key = (roleId == null || roleId.isEmpty() || roleId.equalsIgnoreCase("Trusted"))
+                ? "trusted"
+                : roleId.toLowerCase();
+
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.AQUA + "Role Flags: " + key);
 
         UUID claimId = plot.getId();
@@ -253,7 +260,7 @@ public class GUIManager {
                     Arrays.asList(ChatColor.GRAY + plot.getDisplayNameSafe()), false));
 
             inv.setItem(15, makeMenuItem(Material.PAPER, ChatColor.GOLD, "Trusted Players",
-                    Arrays.asList(ChatColor.GRAY + String.join(", ", plot.getTrustedNames())), false));
+                    Arrays.asList(ChatColor.GRAY + String.join(", ", new ArrayList<>(plot.getTrustedNames()))), false));
         }
 
         inv.setItem(26, makeMenuItem(Material.BARRIER, ChatColor.DARK_RED, "Back",

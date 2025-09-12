@@ -3,17 +3,17 @@ package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
+import com.snazzyatoms.proshield.compass.CompassListener;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
+import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
+import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
 import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
-import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import com.snazzyatoms.proshield.util.ClaimPreviewTask;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -45,9 +45,9 @@ public class ProShield extends JavaPlugin {
 
         // Core managers
         plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(plotManager);
+        roleManager = new ClaimRoleManager(this, plotManager);
 
-        // GUI stack
+        // GUI + Compass
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
         compassManager = new CompassManager(this, guiManager);
@@ -69,10 +69,6 @@ public class ProShield extends JavaPlugin {
         if (plotManager != null) {
             plotManager.saveAll();
         }
-
-        // ✅ Stop all claim preview particle tasks
-        ClaimPreviewTask.stopAll();
-
         getLogger().info("ProShield disabled.");
     }
 
@@ -102,6 +98,9 @@ public class ProShield extends JavaPlugin {
 
         // Claims / protections
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
+
+        // Compass
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
     }
 
     private void scheduleTasks() {

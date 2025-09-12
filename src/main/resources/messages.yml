@@ -1,6 +1,6 @@
 # =========================================================
 # ProShield Messages
-# Version: 1.2.6 (sync with dispatcher)
+# Version: 1.2.6 (sync with dispatcher + admin)
 # =========================================================
 # Supports:
 #   - Color codes: use '&'
@@ -96,12 +96,19 @@ transfer:
 # Admin Messages
 # ---------------------------------------------------------
 admin:
+  usage: "&eUsage: /proshield <reload|debug|compass|flags ...>"
   bypass-on: "&eBypass &aENABLED"
   bypass-off: "&eBypass &cDISABLED"
   debug-on: "&eDebug mode &aENABLED"
   debug-off: "&eDebug mode &cDISABLED"
   reload: "&aConfiguration reloaded."
   keep-items-toggled: "&aKeep items in claims: {state}"
+  help:
+    - "&b--- ProShield Admin Help ---"
+    - "&e/proshield reload &7→ Reload configs"
+    - "&e/proshield debug &7→ Toggle debug mode"
+    - "&e/proshield compass &7→ Give yourself a compass"
+    - "&e/proshield flags &7→ Manage claim flags"
 
   # Wilderness toggle
   wilderness-toggle-on: "&aWilderness entry messages ENABLED."

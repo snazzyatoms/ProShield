@@ -1,160 +1,103 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
+// src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
 
+import org.bukkit.Chunk;
+
+import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * PlotManager
- * - Manages all plots in the world.
- * - Handles creation, lookup, saving, and trusted role access.
- * - Unified with flag management.
+ * Plot
+ * Represents a single claimed chunk.
+ * Stores owner, trusted players, roles, flags, and metadata.
  */
-public class PlotManager {
+public class Plot {
 
-    private final ProShield plugin;
-    private final ClaimRoleManager roleManager;
+    private final UUID id;
+    private final Chunk chunk;
+    private final UUID owner;
 
-    // Map of plotId -> Plot
-    private final Map<UUID, Plot> plots = new ConcurrentHashMap<>();
+    // Trusted players and roles
+    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
 
-    public PlotManager(ProShield plugin, ClaimRoleManager roleManager) {
-        this.plugin = plugin;
-        this.roleManager = roleManager;
+    // Claim display name
+    private String displayName;
+
+    // Flags (pvp, explosions, fire, etc.)
+    private final Map<String, Boolean> flags = new HashMap<>();
+
+    // Metadata
+    private Instant lastActive;
+
+    public Plot(Chunk chunk, UUID owner) {
+        this.id = UUID.randomUUID();
+        this.chunk = chunk;
+        this.owner = owner;
+        this.displayName = "Claim-" + id.toString().substring(0, 8);
+        this.lastActive = Instant.now();
     }
 
-    public ProShield getPlugin() {
-        return plugin;
+    /* ----------------------------
+     * Getters / Setters
+     * ---------------------------- */
+    public UUID getId() { return id; }
+
+    public Chunk getChunk() { return chunk; }
+
+    public UUID getOwner() { return owner; }
+
+    public boolean isOwner(UUID uuid) { return owner.equals(uuid); }
+
+    public String getDisplayNameSafe() {
+        return (displayName != null && !displayName.isEmpty()) ? displayName : "Unnamed Claim";
     }
 
-    public Collection<Plot> getAllPlots() {
-        return Collections.unmodifiableCollection(plots.values());
+    public void setDisplayName(String name) {
+        this.displayName = (name != null && !name.isEmpty()) ? name : "Unnamed Claim";
     }
 
-    public Plot getPlotById(UUID id) {
-        return plots.get(id);
+    public Instant getLastActive() { return lastActive; }
+
+    public void updateActivity() { this.lastActive = Instant.now(); }
+
+    /* ----------------------------
+     * Trusted Players
+     * ---------------------------- */
+    public ClaimRole getRole(UUID uuid) {
+        return trusted.getOrDefault(uuid, ClaimRole.VISITOR);
     }
 
-    public Plot getPlot(Location location) {
-        if (location == null) return null;
-        return getPlot(location.getChunk());
+    public void setRole(UUID uuid, ClaimRole role) {
+        trusted.put(uuid, role);
     }
 
-    public Plot getPlot(Chunk chunk) {
-        for (Plot plot : plots.values()) {
-            if (plot.getChunk().equals(chunk)) {
-                return plot;
-            }
+    public void removeRole(UUID uuid) {
+        trusted.remove(uuid);
+    }
+
+    public Set<String> getTrustedNames() {
+        // Names can be resolved asynchronously if needed
+        Set<String> names = new HashSet<>();
+        for (UUID uuid : trusted.keySet()) {
+            names.add(uuid.toString()); // TODO: hook into Bukkit.getOfflinePlayer
         }
-        return null;
+        return names;
     }
 
-    /** Alias for backwards compatibility */
-    public Plot getPlotAt(Chunk chunk) {
-        return getPlot(chunk);
+    /* ----------------------------
+     * Flags
+     * ---------------------------- */
+    public void setFlag(String flag, boolean value) {
+        flags.put(flag.toLowerCase(), value);
     }
 
-    /** Get safe display name (or Wilderness if none). */
-    public String getClaimName(Location location) {
-        Plot plot = getPlot(location);
-        return (plot != null) ? plot.getDisplayNameSafe() : "Wilderness";
+    public boolean getFlag(String flag) {
+        return flags.getOrDefault(flag.toLowerCase(), false);
     }
 
-    public Plot createPlot(UUID owner, Chunk chunk) {
-        Plot plot = new Plot(chunk, owner);
-
-        // Load default flags from config
-        ConfigurationSection defaults = plugin.getConfig().getConfigurationSection("claims.default-flags");
-        if (defaults != null) {
-            for (String key : defaults.getKeys(false)) {
-                boolean val = defaults.getBoolean(key, false);
-                plot.setFlag(key, val);
-            }
-        }
-
-        plots.put(plot.getId(), plot);
-        saveAsync(plot);
-        return plot;
-    }
-
-    public void removePlot(Plot plot) {
-        if (plot == null) return;
-        plots.remove(plot.getId());
-        // TODO: persist removal to storage
-    }
-
-    public void saveAsync(Plot plot) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // TODO: save plot to disk/database
-        });
-    }
-
-    public void saveAll() {
-        for (Plot plot : plots.values()) {
-            saveAsync(plot);
-        }
-    }
-
-    /* -------------------------------------------------------
-     * Flag management
-     * ------------------------------------------------------- */
-
-    public boolean getFlag(Location loc, String flag) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-        return plot.getFlag(flag);
-    }
-
-    public void setFlag(Location loc, String flag, boolean state) {
-        Plot plot = getPlot(loc);
-        if (plot != null) {
-            plot.setFlag(flag, state);
-            saveAsync(plot);
-        }
-    }
-
-    public boolean toggleFlag(Location loc, String flag) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-        boolean newState = plot.toggleFlag(flag);
-        saveAsync(plot);
-        return newState;
-    }
-
-    /* -------------------------------------------------------
-     * Permission helpers
-     * ------------------------------------------------------- */
-
-    public boolean isTrustedOrOwner(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return true; // not claimed
-        if (plot.isOwner(playerId)) return true;
-
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role != ClaimRole.NONE && role != ClaimRole.VISITOR;
-    }
-
-    public boolean canInteract(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return true;
-
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role.canInteract();
-    }
-
-    public boolean canManage(UUID playerId, Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot == null) return false;
-
-        ClaimRole role = plot.getRole(playerId);
-        return role != null && role.canManage();
+    public Map<String, Boolean> getFlags() {
+        return Collections.unmodifiableMap(flags);
     }
 }

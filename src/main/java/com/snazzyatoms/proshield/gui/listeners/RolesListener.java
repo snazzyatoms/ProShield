@@ -1,5 +1,6 @@
 package com.snazzyatoms.proshield.gui.listeners;
 
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
@@ -7,6 +8,8 @@ import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,66 +18,81 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import java.util.UUID;
 
 /**
- * RolesListener
+ * Handles clicks inside the Roles and Role Assignment GUIs.
  *
- * Handles assigning / clearing roles in the Roles GUI.
- * Syncs changes to ClaimRoleManager.assignRole() and clearRole().
+ * ✅ Uses ClaimRoleManager.assignRole / clearRole
+ * ✅ Persists changes via PlotManager
+ * ✅ Sends messages back to players
  */
 public class RolesListener implements Listener {
 
-    private final PlotManager plots;
+    private final ProShield plugin;
+    private final PlotManager plotManager;
     private final ClaimRoleManager roles;
-    private final GUIManager gui;
+    private final GUIManager guiManager;
     private final MessagesUtil messages;
 
-    public RolesListener(PlotManager plots, ClaimRoleManager roles, GUIManager gui, MessagesUtil messages) {
-        this.plots = plots;
+    public RolesListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roles, GUIManager guiManager) {
+        this.plugin = plugin;
+        this.plotManager = plotManager;
         this.roles = roles;
-        this.gui = gui;
-        this.messages = messages;
+        this.guiManager = guiManager;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @EventHandler
-    public void onClick(InventoryClickEvent event) {
+    public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getView().getTitle() == null) return;
+        if (event.getCurrentItem() == null || event.getView().getTitle() == null) return;
 
-        String title = event.getView().getTitle();
-        if (!title.startsWith("§bRoles for ")) return;
-
-        event.setCancelled(true);
-        Plot plot = plots.getPlot(player.getLocation());
+        String title = ChatColor.stripColor(event.getView().getTitle());
+        Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) return;
 
-        String targetName = title.replace("§bRoles for ", "");
-        UUID claimId = plot.getId();
-        UUID targetId = Bukkit.getOfflinePlayer(targetName).getUniqueId();
+        // Roles overview
+        if (title.equalsIgnoreCase("Manage Roles")) {
+            event.setCancelled(true);
 
-        switch (event.getSlot()) {
-            case 10 -> {
-                roles.assignRole(claimId, targetId, "builder");
-                messages.send(player, "roles.assigned", targetName + " -> BUILDER");
+            if (event.getCurrentItem().getType().toString().contains("PLAYER_HEAD")) {
+                String targetName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
+                guiManager.openRoleAssignmentMenu(player, plot, targetName, player.hasPermission("proshield.admin"));
             }
-            case 12 -> {
-                roles.assignRole(claimId, targetId, "moderator");
-                messages.send(player, "roles.assigned", targetName + " -> MODERATOR");
-            }
-            case 14 -> {
-                roles.clearRole(claimId, targetId);
-                messages.send(player, "roles.cleared", targetName);
-            }
-            case 22 -> {
-                gui.openRoleFlagsMenu(player, plot, "moderator");
-                return;
-            }
-            case 26 -> {
-                gui.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
-                return;
-            }
-            default -> { return; }
         }
 
-        // Refresh assignment menu
-        gui.openRoleAssignmentMenu(player, plot, targetName, player.hasPermission("proshield.admin"));
+        // Role assignment
+        if (title.startsWith("Roles for ")) {
+            event.setCancelled(true);
+
+            String targetName = title.substring("Roles for ".length());
+            OfflinePlayer targetOP = Bukkit.getOfflinePlayer(targetName);
+            if (targetOP == null || targetOP.getUniqueId() == null) return;
+            UUID targetId = targetOP.getUniqueId();
+
+            switch (event.getCurrentItem().getType()) {
+                case STONE_PICKAXE -> { // Builder
+                    roles.assignRole(plot.getId(), targetId, ClaimRole.BUILDER);
+                    messages.send(player, "roles.assigned", targetName, "Builder");
+                    plotManager.saveAsync(plot);
+                }
+                case CROSSBOW -> { // Moderator
+                    roles.assignRole(plot.getId(), targetId, ClaimRole.MODERATOR);
+                    messages.send(player, "roles.assigned", targetName, "Moderator");
+                    plotManager.saveAsync(plot);
+                }
+                case BOOK -> { // Clear role
+                    roles.clearRole(plot.getId(), targetId);
+                    messages.send(player, "roles.cleared", targetName);
+                    plotManager.saveAsync(plot);
+                }
+                case LEVER -> { // Open role flags
+                    guiManager.openRoleFlagsMenu(player, plot, roles.getRole(plot, targetId).name());
+                }
+                case BARRIER -> { // Back
+                    guiManager.openRolesGUI(player, plot, player.hasPermission("proshield.admin"));
+                }
+                default -> {
+                }
+            }
+        }
     }
 }

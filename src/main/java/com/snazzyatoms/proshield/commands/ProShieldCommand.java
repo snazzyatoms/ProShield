@@ -13,16 +13,6 @@ import org.bukkit.entity.Player;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Root /proshield command
- * Handles:
- * - /proshield reload
- * - /proshield debug
- * - /proshield bypass
- * - /proshield compass
- * - /proshield admin (GUI)
- * - /proshield help
- */
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
@@ -56,7 +46,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 plugin.reloadConfig();
                 messages.send(sender, "admin.reload");
             }
-
             case "debug" -> {
                 if (!sender.hasPermission("proshield.admin")) {
                     messages.send(sender, "error.no-permission");
@@ -65,7 +54,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 plugin.toggleDebug();
                 messages.send(sender, plugin.isDebugEnabled() ? "admin.debug-on" : "admin.debug-off");
             }
-
             case "bypass" -> {
                 if (!(sender instanceof Player player)) {
                     messages.send(sender, "error.player-only");
@@ -79,7 +67,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 boolean newState = plotManager.toggleBypass(id);
                 messages.send(player, newState ? "admin.bypass-on" : "admin.bypass-off");
             }
-
             case "compass" -> {
                 if (!(sender instanceof Player player)) {
                     messages.send(sender, "error.player-only");
@@ -92,7 +79,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 compassManager.giveCompass(player);
                 messages.send(player, "compass.given");
             }
-
             case "admin" -> {
                 if (!(sender instanceof Player player)) {
                     messages.send(sender, "error.player-only");
@@ -104,87 +90,29 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 }
                 guiManager.openMenu(player, "admin");
             }
-
-            case "help" -> {
-                showHelp(sender);
-            }
-
-            default -> {
-                messages.send(sender, "error.unknown-command");
-            }
+            case "help" -> showHelp(sender);
+            default -> messages.send(sender, "error.unknown-command");
         }
         return true;
     }
 
-    /**
-     * Shows help based on permissions, merging player and admin help dynamically.
-     */
     private void showHelp(CommandSender sender) {
-        List<String> lines = new ArrayList<>();
-
-        // Always add player help
-        lines.addAll(messages.getConfigList("help.player"));
-
-        // Add admin help if applicable
+        List<String> lines = new ArrayList<>(messages.getConfigList("help.player"));
         if (sender.hasPermission("proshield.admin")) {
             lines.addAll(messages.getConfigList("help.admin"));
         }
-
-        for (String line : lines) {
-            sender.sendMessage(line);
-        }
+        for (String line : lines) sender.sendMessage(line);
     }
 
-    /* ======================================================
-     * TAB COMPLETION
-     * ====================================================== */
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        String name = cmd.getName().toLowerCase(Locale.ROOT);
-
-        // /proshield subcommands
-        if (name.equals("proshield")) {
-            if (args.length == 1) {
-                List<String> subs = new ArrayList<>(List.of("help"));
-                if (sender.hasPermission("proshield.admin.reload")) subs.add("reload");
-                if (sender.hasPermission("proshield.admin")) {
-                    subs.addAll(Arrays.asList("debug", "bypass", "compass", "admin"));
-                }
-                return subs.stream()
-                        .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT)))
-                        .collect(Collectors.toList());
-            }
+        if (!cmd.getName().equalsIgnoreCase("proshield")) return Collections.emptyList();
+        if (args.length == 1) {
+            List<String> subs = new ArrayList<>(List.of("help"));
+            if (sender.hasPermission("proshield.admin.reload")) subs.add("reload");
+            if (sender.hasPermission("proshield.admin")) subs.addAll(Arrays.asList("debug", "bypass", "compass", "admin"));
+            return subs.stream().filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT))).collect(Collectors.toList());
         }
-
-        // /trust completions
-        if (name.equals("trust")) {
-            if (args.length == 1) {
-                // Suggest online players
-                return Bukkit.getOnlinePlayers().stream()
-                        .map(Player::getName)
-                        .filter(p -> p.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
-                        .collect(Collectors.toList());
-            } else if (args.length == 2) {
-                // Suggest roles
-                List<String> roles = Arrays.asList("visitor", "trusted", "builder", "container", "moderator", "manager");
-                if (sender.hasPermission("proshield.admin")) {
-                    roles = new ArrayList<>(roles);
-                    roles.add("owner"); // admin-only suggestion
-                }
-                return roles.stream()
-                        .filter(r -> r.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
-                        .collect(Collectors.toList());
-            }
-        }
-
-        // /untrust completions
-        if (name.equals("untrust") && args.length == 1) {
-            return Bukkit.getOnlinePlayers().stream()
-                    .map(Player::getName)
-                    .filter(p -> p.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
-                    .collect(Collectors.toList());
-        }
-
         return Collections.emptyList();
     }
 }

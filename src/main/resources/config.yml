@@ -2,8 +2,15 @@
 # ProShield Configuration
 # Version: 1.2.5+
 # ==========================================================
-# All protection features can be globally toggled here.
-# Individual claims may override via the /flags GUI.
+# General Notes:
+#   - Use '&' for color codes
+#   - Placeholders (dynamic values inserted at runtime):
+#       {player} → Player’s name
+#       {claim}  → Claim name or ID
+#       {role}   → Role name (Trusted, Builder, etc.)
+#       {owner}  → Claim owner’s name
+#       {state}  → Toggle state (ENABLED / DISABLED)
+#       {count}  → Numbers (e.g., claims purged)
 # ==========================================================
 
 # ==========================================================
@@ -19,7 +26,7 @@ settings:
 # ==========================================================
 protection:
   # -------------------------
-  # Fire settings
+  # Fire
   # -------------------------
   fire:
     enabled: false
@@ -31,30 +38,30 @@ protection:
       lightning: false
 
   # -------------------------
-  # Explosion settings
+  # Explosions
   # -------------------------
   explosions:
     enabled: false
 
   # -------------------------
-  # Bucket settings
+  # Buckets
   # -------------------------
   buckets:
-    enabled: false   # 🪣 Block empty + fill together
+    enabled: false   # 🪣 Blocks empty + fill together
 
   # -------------------------
-  # Mob settings
+  # Mobs
   # -------------------------
   mobs:
     border-repel:
       enabled: true
-      radius: 3.0          # 🔹 Distance mobs are pushed from claim edge
+      radius: 3.0          # 🔹 Distance mobs are pushed away from claim edge
       horizontal-push: 0.7 # 🔹 Sideways push strength
       vertical-push: 0.25  # 🔹 Upward push strength
     despawn-inside: true   # 🧟 Despawn mobs that enter claims
 
   # -------------------------
-  # Wilderness entity settings
+  # Wilderness Entities
   # -------------------------
   entities:
     wilderness:
@@ -62,7 +69,7 @@ protection:
       vehicles: false
 
 # ==========================================================
-# Messages and GUI
+# Messages & GUI
 # ==========================================================
 messages:
   prefix: "&3[ProShield]&r "
@@ -75,7 +82,9 @@ messages:
   admin-flag-chat: true
 
 gui:
-  # Menu titles (use '&' formatting for consistency)
+  # -------------------------
+  # Menu Titles
+  # -------------------------
   main:
     title: "&bProShield Menu"
   flags:
@@ -95,7 +104,9 @@ gui:
     debug:
       toggle-flag-chat: true
 
-  # Hover tooltips for GUI items
+  # -------------------------
+  # Tooltips
+  # -------------------------
   tooltips:
     claim: "&aClaim this chunk.\n&7Protect it from griefing!"
     unclaim: "&cUnclaim this chunk.\n&7Releases it back to wilderness."
@@ -110,9 +121,9 @@ gui:
     admin-purge: "&4Purge expired claims."
     back: "&7Return to the previous menu."
 
-    # ======================================================
-    # Role-specific tooltips
-    # ======================================================
+    # -------------------------
+    # Role Tooltips
+    # -------------------------
     visitor: "&7Visitor\n&8No rights inside the claim."
     member: "&aMember\n&7Basic rights: enter & use doors."
     trusted: "&bTrusted\n&7Can build + interact inside claim."

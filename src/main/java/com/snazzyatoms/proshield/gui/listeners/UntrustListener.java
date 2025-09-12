@@ -40,12 +40,11 @@ public class UntrustListener implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getView().getTitle() == null) return;
-
         String title = event.getView().getTitle();
-        if (!title.contains("Untrust")) return; // safe even if colors change
+        if (title == null || !title.contains("Untrust")) return; // safe even if colors change
 
         event.setCancelled(true);
+
         Plot plot = plots.getPlot(player.getLocation());
         if (plot == null) {
             messages.send(player, "error.no-claim");
@@ -63,16 +62,18 @@ public class UntrustListener implements Listener {
         UUID claimId = plot.getId();
 
         switch (event.getSlot()) {
-            case 10, 11, 12 -> { // Untrust action
-                roles.clearRole(claimId, targetId); // handles persistence
+            case 10, 11, 12 -> {
+                // Remove player role and persist
+                roles.clearRole(claimId, targetId);
 
+                // Send placeholder-based message
                 Map<String, String> placeholders = new HashMap<>();
                 placeholders.put("player", targetName);
                 placeholders.put("claim", plot.getDisplayNameSafe());
 
                 messages.send(player, "untrust.removed", placeholders);
             }
-            case 26 -> { // Back button
+            case 26 -> {
                 gui.openMain(player);
                 return;
             }

@@ -1,6 +1,8 @@
 package com.snazzyatoms.proshield.gui.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.entity.Player;
@@ -10,14 +12,19 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 
 import java.util.UUID;
 
+/**
+ * Handles clicks inside the Roles GUI.
+ */
 public class RolesListener implements Listener {
 
     private final ProShield plugin;
     private final ClaimRoleManager roles;
+    private final PlotManager plotManager;
 
-    public RolesListener(ProShield plugin, ClaimRoleManager roles) {
+    public RolesListener(ProShield plugin, ClaimRoleManager roles, PlotManager plotManager) {
         this.plugin = plugin;
         this.roles = roles;
+        this.plotManager = plotManager;
     }
 
     @EventHandler
@@ -30,10 +37,16 @@ public class RolesListener implements Listener {
 
         event.setCancelled(true);
 
-        UUID plotId = roles.getOpenPlot(player.getUniqueId());
-        if (plotId == null) return;
+        // get the plot at the player's current location
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) {
+            player.sendMessage("§cYou are not inside a claim.");
+            return;
+        }
 
-        // Example logic: assign different roles based on clicked slot
+        UUID plotId = plot.getId();
+
+        // Example logic: assign roles based on clicked slot
         int slot = event.getRawSlot();
         if (slot == 11) {
             roles.assignRole(plotId, player.getUniqueId(), ClaimRole.MANAGER);

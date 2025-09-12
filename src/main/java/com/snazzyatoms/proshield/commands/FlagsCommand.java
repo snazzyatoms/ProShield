@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/commands/FlagsCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -9,13 +8,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-/**
- * /flags command
- *
- * ✅ Opens the Claim Flags menu through GUIManager.
- * ✅ Requires proshield.flags permission.
- * ✅ Uses ProShield plugin for messages instead of GUIManager#getPlugin().
- */
 public class FlagsCommand implements CommandExecutor {
 
     private final ProShield plugin;
@@ -40,7 +32,6 @@ public class FlagsCommand implements CommandExecutor {
             return true;
         }
 
-        // ✅ Open the Claim Flags menu
         boolean fromAdmin = player.hasPermission("proshield.admin");
         guiManager.openFlagsMenu(player, fromAdmin);
         return true;

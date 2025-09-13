@@ -29,7 +29,7 @@ public class GUIManager {
     private final NamespacedKey menuKeyTag;
     private final NamespacedKey targetNameTag;
 
-    // Default descriptions for claim flags
+    // Descriptions for claim flags
     private static final Map<String, String> FLAG_DESCRIPTIONS = new HashMap<>();
     static {
         FLAG_DESCRIPTIONS.put("explosions", "&7Toggle TNT and creeper damage inside claim");
@@ -42,7 +42,7 @@ public class GUIManager {
         FLAG_DESCRIPTIONS.put("safezone", "&7Turns your claim into a safe zone (blocks hostile spawns & damage)");
     }
 
-    // Default per-player permissions (toggle keys -> description)
+    // Per-player permission toggles
     private static final Map<String, String> ROLE_PERMISSIONS = new LinkedHashMap<>();
     static {
         ROLE_PERMISSIONS.put("build", "&7Allow building & block breaking");
@@ -61,9 +61,7 @@ public class GUIManager {
         this.targetNameTag = new NamespacedKey(plugin, "targetName");
     }
 
-    /** ======================================================
-     * Entry point for menus
-     * ====================================================== */
+    /* Entry point for menus */
     public void openMenu(Player player, String menuKey) {
         ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
         if (menus == null) return;
@@ -87,9 +85,7 @@ public class GUIManager {
         playClick(player);
     }
 
-    /** ======================================================
-     * Role Editor GUI (per trusted player)
-     * ====================================================== */
+    /* Role Editor GUI (per trusted player) */
     public void openRoleEditor(Player owner, String targetName) {
         Plot plot = plotManager.getPlot(owner.getLocation());
         if (plot == null) {
@@ -141,19 +137,15 @@ public class GUIManager {
         }
         inv.setItem(22, roleItem);
 
-        // Back button
+        // Back & Close
         inv.setItem(25, createNavItem(Material.ARROW, ChatColor.YELLOW + "Back", "Return to Untrust Menu"));
-
-        // Close button
         inv.setItem(26, createNavItem(Material.BARRIER, ChatColor.RED + "Close", "Click to close this menu"));
 
         owner.openInventory(inv);
         playClick(owner);
     }
 
-    /** ======================================================
-     * Dynamic Menus
-     * ====================================================== */
+    /* Dynamic Menus */
     private void buildTrustMenu(Player player, Inventory inv) {
         Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) return;
@@ -194,9 +186,7 @@ public class GUIManager {
         }
     }
 
-    /** ======================================================
-     * Static Menus
-     * ====================================================== */
+    /* Static Menus */
     private void buildStaticMenu(Player player, ConfigurationSection menu, Inventory inv, int size) {
         ConfigurationSection items = menu.getConfigurationSection("items");
         if (items == null) return;
@@ -236,15 +226,13 @@ public class GUIManager {
         }
     }
 
-    /** ======================================================
-     * Utility
-     * ====================================================== */
+    /* Utility */
     private List<String> formatLore(List<String> input, Player player, ConfigurationSection itemSec) {
         List<String> out = new ArrayList<>();
         String action = itemSec.getString("action", "");
         String state = "";
 
-        if (action.toLowerCase().startsWith("command:proshield flag ")) {
+        if (action != null && action.toLowerCase().startsWith("command:proshield flag ")) {
             String[] split = action.split(" ");
             if (split.length >= 3) {
                 String flagKey = split[2].toLowerCase();
@@ -256,9 +244,11 @@ public class GUIManager {
             }
         }
 
-        if (input.isEmpty()) return out;
-        for (String line : input) {
-            out.add(ChatColor.translateAlternateColorCodes('&', line.replace("{state}", state)));
+        if (input != null) {
+            for (String line : input) {
+                String replaced = state.isEmpty() ? line : line.replace("{state}", state);
+                out.add(ChatColor.translateAlternateColorCodes('&', replaced));
+            }
         }
         return out;
     }
@@ -280,8 +270,6 @@ public class GUIManager {
 
     private void playClick(Player player) {
         String sound = plugin.getConfig().getString("sounds.button-click", "UI_BUTTON_CLICK");
-        try {
-            player.playSound(player.getLocation(), sound, 1f, 1f);
-        } catch (Exception ignored) {}
+        try { player.playSound(player.getLocation(), sound, 1f, 1f); } catch (Exception ignored) {}
     }
 }

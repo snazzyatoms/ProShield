@@ -96,49 +96,66 @@ gui:
           lore:
             - "&7Claim your current chunk"
           action: "command:claim"
+
         "11":
           material: BARRIER
           name: "&cUnclaim Chunk"
           lore:
             - "&7Unclaim your current chunk"
           action: "command:unclaim"
+
         "12":
           material: PAPER
           name: "&eClaim Info"
           action: "command:proshield info"
+
         "13":
           material: PLAYER_HEAD
           name: "&aTrust Menu"
           action: "menu:trust"
+
         "14":
           material: SKELETON_SKULL
           name: "&cUntrust Menu"
           action: "menu:untrust"
+
         "15":
           material: BOOK
           name: "&6Roles"
           action: "menu:roles"
+
         "16":
           material: IRON_SWORD
           name: "&cFlags"
           action: "menu:flags"
 
-        # --- Admin-only entries (require permission) ---
+        # --- Admin-only entries (require permission or OP) ---
         "20":
           material: PLAYER_HEAD
           name: "&aTrust Players (Admin)"
           action: "menu:trust"
           permission: "proshield.admin"
+
         "21":
           material: BOOK
           name: "&6Roles (Admin)"
           action: "menu:roles"
           permission: "proshield.admin"
+
         "22":
           material: IRON_SWORD
           name: "&cFlags (Admin)"
           action: "menu:flags"
           permission: "proshield.admin"
+
+        "23":
+          material: REDSTONE_TORCH
+          name: "&cReload Config"
+          lore:
+            - "&7Reloads ProShield config"
+            - "&7Requires admin permission or OP"
+          action: "command:proshield reload"
+          permission: "proshield.admin.reload"
 
         "26":
           material: BARRIER

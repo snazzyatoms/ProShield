@@ -1,7 +1,8 @@
-// src/main/java/com/snazzyatoms/proshield/gui/CompassListener.java
-package com.snazzyatoms.proshield.gui;
+// src/main/java/com/snazzyatoms/proshield/compass/CompassListener.java
+package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

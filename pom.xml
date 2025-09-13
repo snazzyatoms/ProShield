@@ -66,7 +66,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Enforce Java version (safety net for JitPack/local builds) -->
+            <!-- Enforce Java version -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
@@ -88,7 +88,7 @@
                 </executions>
             </plugin>
 
-            <!-- Ensure UTF-8 encoding -->
+            <!-- UTF-8 encoding -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -98,14 +98,15 @@
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin (only needed if you later bundle external libs) -->
+            <!-- Shade plugin (disabled by default) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.5.0</version>
                 <executions>
                     <execution>
-                        <phase>package</phase>
+                        <id>shade</id>
+                        <phase>none</phase> <!-- disabled unless manually enabled -->
                         <goals>
                             <goal>shade</goal>
                         </goals>

@@ -42,25 +42,11 @@ public class ClaimRoleManager {
             this.role = role.toLowerCase(Locale.ROOT);
         }
 
-        public String getRole() {
-            return role;
-        }
-
-        public void setRole(String role) {
-            this.role = role.toLowerCase(Locale.ROOT);
-        }
-
-        public boolean getPermission(String key, boolean def) {
-            return permissions.getOrDefault(key.toLowerCase(Locale.ROOT), def);
-        }
-
-        public void setPermission(String key, boolean value) {
-            permissions.put(key.toLowerCase(Locale.ROOT), value);
-        }
-
-        public Map<String, Boolean> getAllPermissions() {
-            return new HashMap<>(permissions);
-        }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role.toLowerCase(Locale.ROOT); }
+        public boolean getPermission(String key, boolean def) { return permissions.getOrDefault(key.toLowerCase(Locale.ROOT), def); }
+        public void setPermission(String key, boolean value) { permissions.put(key.toLowerCase(Locale.ROOT), value); }
+        public Map<String, Boolean> getAllPermissions() { return new HashMap<>(permissions); }
     }
 
     /* ======================================================
@@ -69,7 +55,6 @@ public class ClaimRoleManager {
     public boolean trustPlayer(Plot plot, String playerName, String role) {
         UUID plotId = plot.getId();
         Map<String, PlayerRoleData> map = roleCache.computeIfAbsent(plotId, k -> new HashMap<>());
-
         if (map.containsKey(playerName)) return false;
         map.put(playerName, new PlayerRoleData(role));
         return true;
@@ -78,7 +63,6 @@ public class ClaimRoleManager {
     public boolean untrustPlayer(Plot plot, String playerName) {
         UUID plotId = plot.getId();
         Map<String, PlayerRoleData> map = roleCache.get(plotId);
-
         if (map == null || !map.containsKey(playerName)) return false;
         map.remove(playerName);
         return true;
@@ -86,20 +70,12 @@ public class ClaimRoleManager {
 
     public boolean transferOwnership(Plot plot, String newOwnerName) {
         if (newOwnerName == null || newOwnerName.isBlank()) return false;
-
         OfflinePlayer offline = Bukkit.getOfflinePlayer(newOwnerName);
         if (offline == null || offline.getUniqueId() == null) return false;
-
         UUID newOwnerId = offline.getUniqueId();
-
-        // Prevent transferring to same player
-        if (plot.isOwner(newOwnerId)) return false;
-
-        // Update plot owner
+        if (plot.isOwner(newOwnerId)) return false; // same player
         plot.setOwner(newOwnerId);
-
-        // Clear cached roles (fresh start for new owner)
-        roleCache.remove(plot.getId());
+        roleCache.remove(plot.getId()); // clear roles for new owner
         return true;
     }
 
@@ -118,7 +94,7 @@ public class ClaimRoleManager {
         return map != null && map.containsKey(playerName);
     }
 
-    /** 🔑 Get all trusted players + their roles for GUI menus */
+    /** Get all trusted players + their roles for GUI menus */
     public Map<String, String> getTrusted(UUID plotId) {
         Map<String, PlayerRoleData> map = roleCache.getOrDefault(plotId, Collections.emptyMap());
         Map<String, String> out = new HashMap<>();
@@ -126,7 +102,7 @@ public class ClaimRoleManager {
         return out;
     }
 
-    /** 🔑 Get all permissions for a trusted player */
+    /** Permissions API */
     public Map<String, Boolean> getPermissions(UUID plotId, String playerName) {
         Map<String, PlayerRoleData> map = roleCache.get(plotId);
         if (map == null) return Collections.emptyMap();
@@ -134,20 +110,16 @@ public class ClaimRoleManager {
         return data != null ? data.getAllPermissions() : Collections.emptyMap();
     }
 
-    /** 🔑 Toggle a specific permission */
     public void setPermission(UUID plotId, String playerName, String key, boolean value) {
         Map<String, PlayerRoleData> map = roleCache.get(plotId);
         if (map == null) return;
         PlayerRoleData data = map.get(playerName);
-        if (data != null) {
-            data.setPermission(key, value);
-        }
+        if (data != null) data.setPermission(key, value);
     }
 
     /* ======================================================
      * PERMISSION CHECKS
      * ====================================================== */
-
     public boolean canManage(UUID playerId, UUID plotId) {
         return hasPermission(playerId, plotId, "build", Set.of("owner", "co-owner", "builder"));
     }
@@ -171,8 +143,7 @@ public class ClaimRoleManager {
         Plot plot = plotManager.getPlot(plotId);
         if (plot == null) return false;
 
-        // Owners always allowed
-        if (plot.isOwner(playerId)) return true;
+        if (plot.isOwner(playerId)) return true; // owner bypass
 
         String playerName = plotManager.getPlayerName(playerId);
         if (playerName == null) return false;
@@ -183,12 +154,10 @@ public class ClaimRoleManager {
         PlayerRoleData data = map.get(playerName);
         if (data == null) return false;
 
-        // Check override first
         if (data.getAllPermissions().containsKey(permKey)) {
-            return data.getPermission(permKey, false);
+            return data.getPermission(permKey, false); // explicit override
         }
 
-        // Otherwise, fall back to role-based default
         String role = data.getRole();
         return role != null && allowedRoles.contains(role.toLowerCase(Locale.ROOT));
     }

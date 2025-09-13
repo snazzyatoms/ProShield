@@ -15,7 +15,7 @@ commands:
     usage: /<command> [reload|debug|bypass|compass|admin|help]
     aliases: [ps, shield]
     permission: proshield.use
-    tab-completer: com.snazzyatoms.proshield.commands.ProShieldCommand
+    # tab-completer removed, because it's not implemented in code right now
 
   claim:
     description: Claim your current chunk
@@ -32,14 +32,13 @@ commands:
     usage: /<command> <player> [role]
     permission: proshield.use
     aliases: [addtrust]
-    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
+    # tab-completer removed, not implemented yet
 
   untrust:
     description: Remove trust from a player
     usage: /<command> <player>
     permission: proshield.use
     aliases: [removetrust]
-    tab-completer: com.snazzyatoms.proshield.commands.PlayerCommandDispatcher
 
   roles:
     description: Manage claim roles via GUI

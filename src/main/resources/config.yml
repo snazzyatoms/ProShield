@@ -5,7 +5,7 @@
 # Notes:
 #   - Use '&' for colors
 #   - Placeholders supported in messages:
-#       {player}, {claim}, {role}, {owner}, {state}, {count}
+#       {player}, {claim}, {role}, {owner}, {state}, {count}, {mob}
 # ==========================================================
 
 # ----------------------------------------------------------
@@ -40,7 +40,9 @@ protection:
       horizontal-push: 0.7   # sideways push
       vertical-push: 0.25    # upward push
       play-sound: true       # 🔊 toggle repel sound (server-wide)
-      sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR" # per repel event
+      sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
+      debug: false           # 🐛 toggle repel debug messages
+      debug-message: "&8[Debug]&7 Repelled {mob} near {player} at claim {claim}"
     despawn-inside: true      # mobs instantly removed if inside a claim
 
   entities:
@@ -87,7 +89,6 @@ help:
 # ----------------------------------------------------------
 gui:
   menus:
-
     main:
       title: "&bProShield Menu"
       size: 27

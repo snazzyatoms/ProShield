@@ -3,8 +3,7 @@ package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.compass.CompassListener;
-import com.snazzyatoms.proshield.compass.CompassManager;
+import com.snazzyatoms.proshield.gui.CompassListener;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
@@ -26,7 +25,6 @@ public class ProShield extends JavaPlugin {
 
     private GUICache guiCache;
     private GUIManager guiManager;
-    private CompassManager compassManager;
 
     private boolean debugEnabled = false;
 
@@ -46,10 +44,9 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
-        // GUI + Compass
+        // GUI
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
-        compassManager = new CompassManager(this, guiManager);
 
         // Commands
         registerCommands();
@@ -72,13 +69,13 @@ public class ProShield extends JavaPlugin {
         // Root /proshield command
         if (getCommand("proshield") != null) {
             getCommand("proshield").setExecutor(
-                new ProShieldCommand(this, plotManager, guiManager, compassManager)
+                new ProShieldCommand(this, plotManager, guiManager, null)
             );
         }
 
         // Player dispatcher for claim-related commands
         PlayerCommandDispatcher playerCommandDispatcher =
-            new PlayerCommandDispatcher(this, plotManager, roleManager, messages);
+            new PlayerCommandDispatcher(this, plotManager, messages);
 
         if (getCommand("claim") != null) getCommand("claim").setExecutor(playerCommandDispatcher);
         if (getCommand("unclaim") != null) getCommand("unclaim").setExecutor(playerCommandDispatcher);
@@ -95,8 +92,8 @@ public class ProShield extends JavaPlugin {
         // Claims / protections
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
 
-        // Compass
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
+        // Compass (moved into gui package)
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
 
         // Mobs (safezones + repel)
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
@@ -108,7 +105,6 @@ public class ProShield extends JavaPlugin {
     public ClaimRoleManager getRoleManager() { return roleManager; }
     public GUICache getGuiCache() { return guiCache; }
     public GUIManager getGuiManager() { return guiManager; }
-    public CompassManager getCompassManager() { return compassManager; }
 
     // Debug support
     public boolean isDebugEnabled() { return debugEnabled; }

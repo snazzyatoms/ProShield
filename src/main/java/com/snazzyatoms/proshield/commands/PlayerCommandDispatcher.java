@@ -38,6 +38,18 @@ public class PlayerCommandDispatcher implements CommandExecutor {
                 plotManager.removePlot(player.getLocation());
                 messages.send(player, "&cUnclaimed this chunk.");
             }
+            case "trust" -> {
+                messages.send(player, "&eTrust command is not yet implemented in v1.2.5.");
+            }
+            case "untrust" -> {
+                messages.send(player, "&eUntrust command is not yet implemented in v1.2.5.");
+            }
+            case "roles" -> {
+                messages.send(player, "&eRoles command is not yet implemented in v1.2.5.");
+            }
+            case "transfer" -> {
+                messages.send(player, "&eTransfer command is not yet implemented in v1.2.5.");
+            }
             default -> {
                 messages.send(player, "&cUnknown player command.");
             }

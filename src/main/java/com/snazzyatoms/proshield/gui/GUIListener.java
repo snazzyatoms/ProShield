@@ -2,6 +2,8 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
@@ -10,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
 
@@ -29,13 +32,68 @@ public class GUIListener implements Listener {
         Inventory inv = event.getInventory();
         if (inv == null) return;
 
-        String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null) return;
+        String rawTitle = event.getView().getTitle();
+        if (rawTitle == null) return;
+        String title = ChatColor.stripColor(rawTitle);
 
+        event.setCancelled(true); // Always prevent taking items
+
+        // ======================================================
+        // 1. Handle Role Editor menu (dynamic)
+        // ======================================================
+        if (title.startsWith("Role Editor: ")) {
+            String targetName = ChatColor.stripColor(rawTitle).replace("Role Editor: ", "").trim();
+            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+            if (plot == null) return;
+
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || !clicked.hasItemMeta()) return;
+
+            String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+            ClaimRoleManager roleManager = plugin.getRoleManager();
+
+            // Handle Close button
+            if ("Close".equalsIgnoreCase(name)) {
+                player.closeInventory();
+                return;
+            }
+
+            // Handle toggles
+            String key = name.toLowerCase();
+            if (key.equals("build") || key.equals("interact") ||
+                key.equals("containers") || key.equals("vehicles") ||
+                key.equals("unclaim")) {
+
+                boolean current = roleManager.getPermissions(plot.getId(), targetName)
+                        .getOrDefault(key, false);
+                roleManager.setPermission(plot.getId(), targetName, key, !current);
+
+                // Refresh menu
+                Bukkit.getScheduler().runTask(plugin, () -> guiManager.openRoleEditor(player, targetName));
+            }
+            return;
+        }
+
+        // ======================================================
+        // 2. Handle Untrust menu → open Role Editor
+        // ======================================================
+        if (title.equalsIgnoreCase("Untrust Player")) {
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || !clicked.hasItemMeta()) return;
+
+            String targetName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+            if (targetName == null || targetName.isEmpty()) return;
+
+            Bukkit.getScheduler().runTask(plugin, () -> guiManager.openRoleEditor(player, targetName));
+            return;
+        }
+
+        // ======================================================
+        // 3. Handle config-driven menus (main, trust, flags, etc.)
+        // ======================================================
         ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
         if (menus == null) return;
 
-        // Find which menu matches this inventory by title
         String menuKey = null;
         for (String key : menus.getKeys(false)) {
             String cfgTitle = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&',
@@ -46,8 +104,6 @@ public class GUIListener implements Listener {
             }
         }
         if (menuKey == null) return; // Not a ProShield menu
-
-        event.setCancelled(true); // Prevent item movement
 
         int slot = event.getRawSlot();
         ConfigurationSection menu = menus.getConfigurationSection(menuKey);
@@ -62,7 +118,6 @@ public class GUIListener implements Listener {
         String action = item.getString("action", "").trim();
         if (action.isEmpty()) return;
 
-        // Normalize lowercase only for comparisons
         String lower = action.toLowerCase();
 
         if (lower.startsWith("command:")) {
@@ -72,13 +127,10 @@ public class GUIListener implements Listener {
             if (cmd.equalsIgnoreCase("proshield reload")) {
                 if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
                     plugin.reloadConfig();
-                    // Play feedback sound only (no chat spam)
                     String sound = plugin.getConfig().getString("sounds.admin-action", "ENTITY_EXPERIENCE_ORB_PICKUP");
                     try {
                         player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-                    } catch (Exception ignored) {
-                        // ignore invalid sound keys
-                    }
+                    } catch (Exception ignored) {}
                 }
                 return;
             }

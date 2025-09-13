@@ -10,23 +10,57 @@ import java.util.*;
 
 /**
  * ClaimRoleManager
- * - Handles roles inside claims
+ * - Handles roles & per-player permissions inside claims
  * - Supports trust/untrust, transfer, and permission checks
  *
- * Fixed for v1.2.5:
- *   • Constructor simplified → only requires PlotManager
- *   • Uses Bukkit directly for UUID resolution during ownership transfer
- *   • Added getTrusted() → expose trusted players for GUI menus
+ * v1.2.5 Enhanced:
+ *   • Per-player permission toggles stored per claim
+ *   • Each trusted player has a role + individual permissions
+ *   • Flexible GUI-ready structure for fine control
  */
 public class ClaimRoleManager {
 
     private final PlotManager plotManager;
 
-    // Maps: plotId -> {playerName -> roleName}
-    private final Map<UUID, Map<String, String>> roleCache = new HashMap<>();
+    /**
+     * Maps: plotId -> {playerName -> PlayerRoleData}
+     */
+    private final Map<UUID, Map<String, PlayerRoleData>> roleCache = new HashMap<>();
 
     public ClaimRoleManager(PlotManager plotManager) {
         this.plotManager = plotManager;
+    }
+
+    /* ======================================================
+     * PLAYER ROLE DATA
+     * ====================================================== */
+    public static class PlayerRoleData {
+        private String role;
+        private final Map<String, Boolean> permissions = new HashMap<>();
+
+        public PlayerRoleData(String role) {
+            this.role = role.toLowerCase(Locale.ROOT);
+        }
+
+        public String getRole() {
+            return role;
+        }
+
+        public void setRole(String role) {
+            this.role = role.toLowerCase(Locale.ROOT);
+        }
+
+        public boolean getPermission(String key, boolean def) {
+            return permissions.getOrDefault(key.toLowerCase(Locale.ROOT), def);
+        }
+
+        public void setPermission(String key, boolean value) {
+            permissions.put(key.toLowerCase(Locale.ROOT), value);
+        }
+
+        public Map<String, Boolean> getAllPermissions() {
+            return new HashMap<>(permissions);
+        }
     }
 
     /* ======================================================
@@ -34,16 +68,16 @@ public class ClaimRoleManager {
      * ====================================================== */
     public boolean trustPlayer(Plot plot, String playerName, String role) {
         UUID plotId = plot.getId();
-        Map<String, String> map = roleCache.computeIfAbsent(plotId, k -> new HashMap<>());
+        Map<String, PlayerRoleData> map = roleCache.computeIfAbsent(plotId, k -> new HashMap<>());
 
         if (map.containsKey(playerName)) return false;
-        map.put(playerName, role.toLowerCase(Locale.ROOT));
+        map.put(playerName, new PlayerRoleData(role));
         return true;
     }
 
     public boolean untrustPlayer(Plot plot, String playerName) {
         UUID plotId = plot.getId();
-        Map<String, String> map = roleCache.get(plotId);
+        Map<String, PlayerRoleData> map = roleCache.get(plotId);
 
         if (map == null || !map.containsKey(playerName)) return false;
         map.remove(playerName);
@@ -73,60 +107,89 @@ public class ClaimRoleManager {
      * ROLE QUERIES
      * ====================================================== */
     public String getRole(UUID plotId, String playerName) {
-        Map<String, String> map = roleCache.get(plotId);
+        Map<String, PlayerRoleData> map = roleCache.get(plotId);
         if (map == null) return null;
-        return map.get(playerName);
+        PlayerRoleData data = map.get(playerName);
+        return data != null ? data.getRole() : null;
     }
 
     public boolean isTrusted(UUID plotId, String playerName) {
-        Map<String, String> map = roleCache.get(plotId);
+        Map<String, PlayerRoleData> map = roleCache.get(plotId);
         return map != null && map.containsKey(playerName);
     }
 
-    /** 🔑 New: Get all trusted players + roles for a claim */
+    /** 🔑 Get all trusted players + their roles for GUI menus */
     public Map<String, String> getTrusted(UUID plotId) {
-        return roleCache.getOrDefault(plotId, Collections.emptyMap());
+        Map<String, PlayerRoleData> map = roleCache.getOrDefault(plotId, Collections.emptyMap());
+        Map<String, String> out = new HashMap<>();
+        map.forEach((name, data) -> out.put(name, data.getRole()));
+        return out;
+    }
+
+    /** 🔑 Get all permissions for a trusted player */
+    public Map<String, Boolean> getPermissions(UUID plotId, String playerName) {
+        Map<String, PlayerRoleData> map = roleCache.get(plotId);
+        if (map == null) return Collections.emptyMap();
+        PlayerRoleData data = map.get(playerName);
+        return data != null ? data.getAllPermissions() : Collections.emptyMap();
+    }
+
+    /** 🔑 Toggle a specific permission */
+    public void setPermission(UUID plotId, String playerName, String key, boolean value) {
+        Map<String, PlayerRoleData> map = roleCache.get(plotId);
+        if (map == null) return;
+        PlayerRoleData data = map.get(playerName);
+        if (data != null) {
+            data.setPermission(key, value);
+        }
     }
 
     /* ======================================================
      * PERMISSION CHECKS
      * ====================================================== */
 
-    /** Build & destroy blocks, buckets, vehicles */
     public boolean canManage(UUID playerId, UUID plotId) {
-        return hasRole(playerId, plotId, Set.of("owner", "co-owner", "builder"));
+        return hasPermission(playerId, plotId, "build", Set.of("owner", "co-owner", "builder"));
     }
 
-    /** Doors, levers, buttons, crops */
     public boolean canInteract(UUID playerId, UUID plotId) {
-        return hasRole(playerId, plotId, Set.of("owner", "co-owner", "builder", "trusted"));
+        return hasPermission(playerId, plotId, "interact", Set.of("owner", "co-owner", "builder", "trusted"));
     }
 
-    /** Containers: chests, hoppers, furnaces, shulkers */
     public boolean canContainers(UUID playerId, UUID plotId) {
-        return hasRole(playerId, plotId, Set.of("owner", "co-owner", "builder"));
+        return hasPermission(playerId, plotId, "containers", Set.of("owner", "co-owner", "builder"));
     }
 
-    /** Special case: allow unclaiming */
     public boolean canUnclaim(UUID playerId, UUID plotId) {
-        return hasRole(playerId, plotId, Set.of("owner", "co-owner"));
+        return hasPermission(playerId, plotId, "unclaim", Set.of("owner", "co-owner"));
     }
 
     /* ======================================================
      * INTERNAL HELPERS
      * ====================================================== */
-    private boolean hasRole(UUID playerId, UUID plotId, Set<String> allowed) {
+    private boolean hasPermission(UUID playerId, UUID plotId, String permKey, Set<String> allowedRoles) {
         Plot plot = plotManager.getPlot(plotId);
         if (plot == null) return false;
 
-        // Direct owner check
+        // Owners always allowed
         if (plot.isOwner(playerId)) return true;
 
-        // Look up cached role by name
         String playerName = plotManager.getPlayerName(playerId);
         if (playerName == null) return false;
 
-        String role = getRole(plotId, playerName);
-        return role != null && allowed.contains(role.toLowerCase(Locale.ROOT));
+        Map<String, PlayerRoleData> map = roleCache.get(plotId);
+        if (map == null) return false;
+
+        PlayerRoleData data = map.get(playerName);
+        if (data == null) return false;
+
+        // Check override first
+        if (data.getAllPermissions().containsKey(permKey)) {
+            return data.getPermission(permKey, false);
+        }
+
+        // Otherwise, fall back to role-based default
+        String role = data.getRole();
+        return role != null && allowedRoles.contains(role.toLowerCase(Locale.ROOT));
     }
 }

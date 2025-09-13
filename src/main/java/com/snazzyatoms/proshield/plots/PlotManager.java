@@ -1,113 +1,55 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotListener.java
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.entity.*;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.*;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.entity.Player;
 
-import java.util.UUID;
+import java.util.*;
 
-public class PlotListener implements Listener {
-
+public class PlotManager {
     private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
-    private final MessagesUtil messages;
+    private final Map<UUID, Plot> plots = new HashMap<>();
+    private final Map<String, UUID> playerNames = new HashMap<>();
 
-    public PlotListener(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
+    public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.roleManager = roleManager;
-        this.messages = messages;
     }
 
-    /* ======================================================
-     * ENTITY SPAWN CONTROL
-     * ====================================================== */
-    @EventHandler
-    public void onMobSpawn(EntitySpawnEvent event) {
-        if (!(event.getEntity() instanceof Monster)) return; // only hostile mobs
-
-        Location loc = event.getLocation();
-        Plot plot = plotManager.getPlotAt(loc);
-        if (plot != null) {
-            event.setCancelled(true);
-            if (plugin.isDebugEnabled()) {
-                plugin.getLogger().info("[Debug] Cancelled spawn of " + event.getEntityType() +
-                        " in claim " + plot.getDisplayNameSafe());
-            }
-        }
+    public Plot getPlot(Location loc) {
+        if (loc == null) return null;
+        Chunk chunk = loc.getChunk();
+        UUID id = new UUID(chunk.getX(), chunk.getZ());
+        return plots.get(id);
     }
 
-    /* ======================================================
-     * DAMAGE PREVENTION (Players + Pets)
-     * ====================================================== */
-    @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
-        Entity victim = event.getEntity();
-        Entity damager = event.getDamager();
-
-        // Player in claim safe zone
-        if (victim instanceof Player player) {
-            Plot plot = plotManager.getPlotAt(player.getLocation());
-            if (plot != null && !player.isOp()) {
-                if (damager instanceof Monster || damager instanceof Projectile) {
-                    event.setCancelled(true);
-                    player.sendMessage(ChatColor.RED + "You are safe inside your claim.");
-                }
-            }
-        }
-
-        // Pets in claim safe zone
-        if (victim instanceof Tameable pet && pet.isTamed()) {
-            AnimalTamer owner = pet.getOwner();
-            if (owner instanceof Player ownerPlayer) {
-                Plot plot = plotManager.getPlotAt(pet.getLocation());
-                if (plot != null && !ownerPlayer.isOp()) {
-                    if (damager instanceof Monster || damager instanceof Projectile) {
-                        event.setCancelled(true);
-                        ownerPlayer.sendMessage(ChatColor.YELLOW + "Your pet is safe inside your claim.");
-                    }
-                }
-            }
-        }
+    public Plot getPlot(UUID id) {
+        return plots.get(id);
     }
 
-    /* ======================================================
-     * TARGETING PREVENTION
-     * ====================================================== */
-    @EventHandler
-    public void onEntityTarget(EntityTargetLivingEntityEvent event) {
-        if (!(event.getEntity() instanceof Monster)) return;
-        if (!(event.getTarget() instanceof Player target)) return;
-
-        Plot plot = plotManager.getPlotAt(target.getLocation());
-        if (plot == null) return;
-
-        UUID id = target.getUniqueId();
-
-        // Safe if owner or trusted
-        if (plot.isOwner(id) || roleManager.isTrusted(plot.getId(), target.getName()) || target.isOp()) {
-            event.setCancelled(true);
-            if (plugin.isDebugEnabled()) {
-                plugin.getLogger().info("[Debug] Cancelled targeting of " + target.getName() +
-                        " inside claim " + plot.getDisplayNameSafe());
-            }
-        }
+    public void createPlot(Player owner, Location loc) {
+        Chunk chunk = loc.getChunk();
+        UUID id = new UUID(chunk.getX(), chunk.getZ());
+        Plot plot = new Plot(id, owner.getUniqueId());
+        plots.put(id, plot);
+        playerNames.put(owner.getName(), owner.getUniqueId());
     }
 
-    /* ======================================================
-     * OPTIONAL: BORDER EFFECTS (particles, repel, etc.)
-     * ====================================================== */
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        // Placeholder: you can later add border previews or repel here
+    public void removePlot(Location loc) {
+        Chunk chunk = loc.getChunk();
+        UUID id = new UUID(chunk.getX(), chunk.getZ());
+        plots.remove(id);
+    }
+
+    public void saveAll() {
+        // TODO: persist to disk (left as future feature)
+    }
+
+    public String getPlayerName(UUID id) {
+        for (Map.Entry<String, UUID> entry : playerNames.entrySet()) {
+            if (entry.getValue().equals(id)) return entry.getKey();
+        }
+        return "Unknown";
     }
 }

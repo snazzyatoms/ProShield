@@ -9,8 +9,6 @@ import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.MobProtectionListener;
-import com.snazzyatoms.proshield.plots.EntityBorderRepelTask; // if still used elsewhere
-import com.snazzyatoms.proshield.plots.EntityMobRepelTask;   // if still used elsewhere
 import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
@@ -46,8 +44,6 @@ public class ProShield extends JavaPlugin {
 
         // Core managers
         plotManager = new PlotManager(this);
-
-        // ✅ One-line constructor fix (no plugin arg)
         roleManager = new ClaimRoleManager(plotManager);
 
         // GUI + Compass
@@ -60,9 +56,6 @@ public class ProShield extends JavaPlugin {
 
         // Listeners
         registerListeners();
-
-        // Background tasks (optional legacy tasks)
-        scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
     }
@@ -99,27 +92,14 @@ public class ProShield extends JavaPlugin {
         // GUI
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Claims / protections (ensure PlotListener no longer contains mob handlers)
+        // Claims / protections
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
 
         // Compass
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
 
-        // ✅ New: Comprehensive mob protection & repel
+        // Mobs (safezones + repel)
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
-    }
-
-    private void scheduleTasks() {
-        // You may keep or remove these if MobProtectionListener fully replaces them
-        int mobRepelInterval = getConfig().getInt("protection.mobs.mob-repel-task-interval", 100);
-        int borderRepelInterval = getConfig().getInt("protection.mobs.border-repel.interval-ticks", 60);
-
-        if (getConfig().getBoolean("protection.mobs.despawn-inside", true)) {
-            new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, mobRepelInterval);
-        }
-        if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
-            new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, borderRepelInterval);
-        }
     }
 
     // Getters

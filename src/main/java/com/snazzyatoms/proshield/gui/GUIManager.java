@@ -46,7 +46,7 @@ public class GUIManager {
         String title = ChatColor.translateAlternateColorCodes('&', menu.getString("title", "&7Menu"));
 
         int size = menu.getInt("size", 27);
-        if (size % 9 != 0) size = 27;
+        if (size % 9 != 0) size = 27; // safeguard
         Inventory inv = Bukkit.createInventory(null, size, title);
 
         ConfigurationSection items = menu.getConfigurationSection("items");
@@ -59,7 +59,7 @@ public class GUIManager {
                     ConfigurationSection itemSec = items.getConfigurationSection(slotKey);
                     if (itemSec == null) continue;
 
-                    // Permission check: hide item if player lacks permission (unless op)
+                    // Permission check: hide item if player lacks permission (operators always see it)
                     String perm = itemSec.getString("permission");
                     if (perm != null && !perm.isBlank() &&
                             !player.hasPermission(perm) && !player.isOp()) {
@@ -99,14 +99,21 @@ public class GUIManager {
         String state = "";
 
         // Detect if it's a flag item
-        if (action.startsWith("command:proshield flag")) {
+        if (action.toLowerCase().startsWith("command:proshield flag ")) {
             String[] split = action.split(" ");
             if (split.length >= 3) {
                 String flagKey = split[2].toLowerCase();
 
                 Plot plot = plotManager.getPlot(player.getLocation());
-                boolean flagValue = (plot != null) && plot.getFlag(flagKey, plugin.getConfig()
-                        .getBoolean("claims.default-flags." + flagKey, false));
+                boolean flagValue;
+
+                if (plot != null) {
+                    flagValue = plot.getFlag(flagKey,
+                            plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false));
+                } else {
+                    // No plot: fall back to defaults
+                    flagValue = plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false);
+                }
 
                 state = flagValue ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled";
             }

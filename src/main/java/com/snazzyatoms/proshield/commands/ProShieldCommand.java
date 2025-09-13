@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -56,14 +57,6 @@ public class ProShieldCommand implements CommandExecutor {
                     plugin.toggleDebug();
                     messages.send(player, "&eDebug mode: " + plugin.isDebugEnabled());
                 }
-            }
-            case "bypass" -> {
-                // Placeholder: bypass handling will be reintroduced in v2.0
-                messages.send(player, "&cBypass mode is not available in this version.");
-            }
-            case "compass" -> {
-                // Placeholder: compass is now GUI-driven
-                messages.send(player, "&eUse the ProShield Compass item to open the menu.");
             }
             default -> {
                 messages.send(player, "&cUnknown subcommand.");

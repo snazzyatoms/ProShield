@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/util/ClaimPreview.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.plots.Plot;
@@ -15,16 +14,16 @@ import org.bukkit.scheduler.BukkitRunnable;
  * ✅ Fixed for v1.2.5:
  * - Uses Particle.VILLAGER_HAPPY (available in 1.20.1 API).
  * - Integrated with ClaimPreviewTask to track and cancel tasks cleanly.
- * - Preserves particle border logic from earlier versions.
+ * - Uses Plot#getWorld(), Plot#getChunkX(), Plot#getChunkZ().
  */
 public class ClaimPreview {
 
     public static void show(Player player, Plot plot) {
-        World world = Bukkit.getWorld(plot.getWorldName());
+        World world = plot.getWorld(); // ✅ assume Plot stores a World reference
         if (world == null) return;
 
-        int bx = plot.getX() << 4; // chunk to block coords
-        int bz = plot.getZ() << 4;
+        int bx = plot.getChunkX() << 4; // chunk to block coords
+        int bz = plot.getChunkZ() << 4;
 
         // Schedule repeating particle preview
         BukkitRunnable runnable = new BukkitRunnable() {
@@ -67,7 +66,7 @@ public class ClaimPreview {
     private static void spawnParticle(Player player, World world, double x, double y, double z) {
         Location loc = new Location(world, x + 0.5, y, z + 0.5);
         player.spawnParticle(
-                Particle.VILLAGER_HAPPY, // ✅ rolled back for 1.20.1 support
+                Particle.VILLAGER_HAPPY,
                 loc,
                 3, // count
                 0.2, 0.2, 0.2, // offsets

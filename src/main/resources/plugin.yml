@@ -12,10 +12,9 @@ description: >
 commands:
   proshield:
     description: Root ProShield command (admin + utility dispatcher)
-    usage: /<command> [reload|debug|bypass|compass|admin|help]
+    usage: /<command> [reload|debug|help]
     aliases: [ps, shield]
     permission: proshield.use
-    # tab-completer removed, because it's not implemented in code right now
 
   claim:
     description: Claim your current chunk
@@ -32,7 +31,6 @@ commands:
     usage: /<command> <player> [role]
     permission: proshield.use
     aliases: [addtrust]
-    # tab-completer removed, not implemented yet
 
   untrust:
     description: Remove trust from a player
@@ -60,22 +58,13 @@ permissions:
     description: Allow players to toggle claim flags (in their own claims)
     default: true
 
-  # Compass & Tools
-  proshield.compass:
-    description: Receive/use ProShield compass
-    default: op
-
-  proshield.bypass:
-    description: Toggle bypass mode
-    default: op
-
   proshield.unlimited:
     description: Ignore max-claims limit
     default: op
 
   # Admin Core
   proshield.admin:
-    description: Access admin tools (compass, bypass, force unclaim, purge, admin menu)
+    description: Access admin tools (force unclaim, purge, admin menu)
     default: op
 
   proshield.admin.reload:

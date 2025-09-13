@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -14,14 +13,14 @@ import org.bukkit.entity.Player;
 public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final GUIManager guiManager;
     private final PlotManager plotManager;
+    private final GUIManager guiManager;
     private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, GUIManager guiManager, PlotManager plotManager, MessagesUtil messages) {
+    public ProShieldCommand(ProShield plugin, PlotManager plotManager, GUIManager guiManager, MessagesUtil messages) {
         this.plugin = plugin;
-        this.guiManager = guiManager;
         this.plotManager = plotManager;
+        this.guiManager = guiManager;
         this.messages = messages;
     }
 
@@ -54,23 +53,17 @@ public class ProShieldCommand implements CommandExecutor {
             }
             case "debug" -> {
                 if (player.isOp()) {
-                    plugin.setDebugEnabled(!plugin.isDebugEnabled());
+                    plugin.toggleDebug();
                     messages.send(player, "&eDebug mode: " + plugin.isDebugEnabled());
                 }
             }
             case "bypass" -> {
-                if (player.isOp()) {
-                    if (plugin.getBypassing().contains(player.getUniqueId())) {
-                        plugin.getBypassing().remove(player.getUniqueId());
-                        messages.send(player, "&cBypass disabled.");
-                    } else {
-                        plugin.getBypassing().add(player.getUniqueId());
-                        messages.send(player, "&aBypass enabled.");
-                    }
-                }
+                // Placeholder: bypass handling will be reintroduced in v2.0
+                messages.send(player, "&cBypass mode is not available in this version.");
             }
             case "compass" -> {
-                plugin.getCompassManager().giveCompass(player);
+                // Placeholder: compass is now GUI-driven
+                messages.send(player, "&eUse the ProShield Compass item to open the menu.");
             }
             default -> {
                 messages.send(player, "&cUnknown subcommand.");

@@ -34,7 +34,8 @@ public class MobProtectionListener implements Listener {
     public void onMobSpawn(EntitySpawnEvent event) {
         if (!(event.getEntity() instanceof Monster)) return;
         Plot plot = plotManager.getPlot(event.getLocation());
-        if (plot != null && plot.getFlag("safezone", plugin.getConfig().getBoolean("claims.default-flags.safezone", true))) {
+        if (plot != null && plot.getFlag("safezone",
+                plugin.getConfig().getBoolean("claims.default-flags.safezone", true))) {
             event.setCancelled(true);
         }
     }
@@ -43,7 +44,8 @@ public class MobProtectionListener implements Listener {
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot != null && plot.getFlag("safezone", plugin.getConfig().getBoolean("claims.default-flags.safezone", true))) {
+        if (plot != null && plot.getFlag("safezone",
+                plugin.getConfig().getBoolean("claims.default-flags.safezone", true))) {
             if (event.getDamager() instanceof Monster) {
                 event.setCancelled(true);
             }
@@ -54,7 +56,8 @@ public class MobProtectionListener implements Listener {
     public void onEntityTarget(EntityTargetLivingEntityEvent event) {
         if (!(event.getTarget() instanceof Player player)) return;
         Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot != null && plot.getFlag("safezone", plugin.getConfig().getBoolean("claims.default-flags.safezone", true))) {
+        if (plot != null && plot.getFlag("safezone",
+                plugin.getConfig().getBoolean("claims.default-flags.safezone", true))) {
             if (event.getEntity() instanceof Monster) {
                 event.setCancelled(true);
             }
@@ -76,7 +79,12 @@ public class MobProtectionListener implements Listener {
                 double pushY = cfg.getDouble("protection.mobs.border-repel.vertical-push", 0.25);
 
                 boolean playSound = cfg.getBoolean("protection.mobs.border-repel.play-sound", true);
-                String repelSound = cfg.getString("protection.mobs.border-repel.sound-type", "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR");
+
+                // Prefer per-section sound, fallback to global
+                String repelSound = cfg.getString("protection.mobs.border-repel.sound-type", null);
+                if (repelSound == null || repelSound.isBlank()) {
+                    repelSound = cfg.getString("sounds.repel-sound", "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR");
+                }
 
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     Plot plot = plotManager.getPlot(player.getLocation());
@@ -86,8 +94,10 @@ public class MobProtectionListener implements Listener {
                     for (Entity e : nearby) {
                         if (!(e instanceof Monster)) continue;
 
-                        // Push mobs away
-                        Vector dir = e.getLocation().toVector().subtract(player.getLocation().toVector()).normalize();
+                        // Push mobs away from the claim owner
+                        Vector dir = e.getLocation().toVector()
+                                .subtract(player.getLocation().toVector())
+                                .normalize();
                         dir.setY(0.25); // upward component
                         e.setVelocity(dir.multiply(pushX).setY(pushY));
 
@@ -95,7 +105,9 @@ public class MobProtectionListener implements Listener {
                         if (playSound) {
                             try {
                                 player.playSound(player.getLocation(), repelSound, 0.5f, 1.0f);
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) {
+                                // silently ignore invalid sound keys
+                            }
                         }
                     }
                 }

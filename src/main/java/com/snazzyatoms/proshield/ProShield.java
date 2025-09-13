@@ -8,8 +8,9 @@ import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.plots.EntityBorderRepelTask;
-import com.snazzyatoms.proshield.plots.EntityMobRepelTask;
+import com.snazzyatoms.proshield.plots.MobProtectionListener;
+import com.snazzyatoms.proshield.plots.EntityBorderRepelTask; // if still used elsewhere
+import com.snazzyatoms.proshield.plots.EntityMobRepelTask;   // if still used elsewhere
 import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
@@ -45,7 +46,9 @@ public class ProShield extends JavaPlugin {
 
         // Core managers
         plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(plotManager); // ✅ fixed constructor
+
+        // ✅ One-line constructor fix (no plugin arg)
+        roleManager = new ClaimRoleManager(plotManager);
 
         // GUI + Compass
         guiCache = new GUICache();
@@ -58,7 +61,7 @@ public class ProShield extends JavaPlugin {
         // Listeners
         registerListeners();
 
-        // Background tasks (repel)
+        // Background tasks (optional legacy tasks)
         scheduleTasks();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
@@ -96,69 +99,40 @@ public class ProShield extends JavaPlugin {
         // GUI
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Claims / protections
+        // Claims / protections (ensure PlotListener no longer contains mob handlers)
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
 
         // Compass
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, compassManager), this);
+
+        // ✅ New: Comprehensive mob protection & repel
+        Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
     }
 
     private void scheduleTasks() {
-        // Configurable task intervals
+        // You may keep or remove these if MobProtectionListener fully replaces them
         int mobRepelInterval = getConfig().getInt("protection.mobs.mob-repel-task-interval", 100);
         int borderRepelInterval = getConfig().getInt("protection.mobs.border-repel.interval-ticks", 60);
 
-        // Mob repel (despawn + reset target)
         if (getConfig().getBoolean("protection.mobs.despawn-inside", true)) {
             new EntityMobRepelTask(this, plotManager).runTaskTimer(this, 20L, mobRepelInterval);
-            if (isDebugEnabled()) {
-                getLogger().info("[Debug] Mob repel task scheduled every " + mobRepelInterval + " ticks.");
-            }
         }
-
-        // Border repel
         if (getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) {
             new EntityBorderRepelTask(this, plotManager).runTaskTimer(this, 20L, borderRepelInterval);
-            if (isDebugEnabled()) {
-                getLogger().info("[Debug] Border repel task scheduled every " + borderRepelInterval + " ticks.");
-            }
         }
     }
 
     // Getters
-    public MessagesUtil getMessagesUtil() {
-        return messages;
-    }
-
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
-
-    public ClaimRoleManager getRoleManager() {
-        return roleManager;
-    }
-
-    public GUICache getGuiCache() {
-        return guiCache;
-    }
-
-    public GUIManager getGuiManager() {
-        return guiManager;
-    }
-
-    public CompassManager getCompassManager() {
-        return compassManager;
-    }
+    public MessagesUtil getMessagesUtil() { return messages; }
+    public PlotManager getPlotManager() { return plotManager; }
+    public ClaimRoleManager getRoleManager() { return roleManager; }
+    public GUICache getGuiCache() { return guiCache; }
+    public GUIManager getGuiManager() { return guiManager; }
+    public CompassManager getCompassManager() { return compassManager; }
 
     // Debug support
-    public boolean isDebugEnabled() {
-        return debugEnabled;
-    }
-
-    public void setDebugEnabled(boolean enabled) {
-        this.debugEnabled = enabled;
-    }
-
+    public boolean isDebugEnabled() { return debugEnabled; }
+    public void setDebugEnabled(boolean enabled) { this.debugEnabled = enabled; }
     public void toggleDebug() {
         this.debugEnabled = !this.debugEnabled;
         if (messages != null) {

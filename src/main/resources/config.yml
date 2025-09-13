@@ -171,31 +171,69 @@ gui:
         "10":
           material: TNT
           name: "&cExplosions"
+          lore:
+            - "&7Toggle TNT and creeper damage inside claim"
+            - "&7Current: {state}"
           action: "command:proshield flag explosions"
+
         "11":
           material: WATER_BUCKET
           name: "&bBuckets"
+          lore:
+            - "&7Allow/disallow bucket use inside claim"
+            - "&7Covers water & lava placement"
+            - "&7Current: {state}"
           action: "command:proshield flag buckets"
+
         "12":
           material: ITEM_FRAME
           name: "&6Item Frames"
+          lore:
+            - "&7Protect item frames from breaking/rotation"
+            - "&7Current: {state}"
           action: "command:proshield flag item-frames"
+
         "13":
           material: ARMOR_STAND
           name: "&eArmor Stands"
+          lore:
+            - "&7Prevent others from moving/destroying armor stands"
+            - "&7Current: {state}"
           action: "command:proshield flag armor-stands"
+
         "14":
           material: CHEST
           name: "&aContainers"
+          lore:
+            - "&7Allow or block access to chests, hoppers, furnaces, shulkers"
+            - "&7Current: {state}"
           action: "command:proshield flag containers"
+
         "15":
           material: BONE
           name: "&dPets"
+          lore:
+            - "&7Prevent damage to wolves, cats, and other tamed pets"
+            - "&7Current: {state}"
           action: "command:proshield flag pets"
+
         "16":
           material: IRON_SWORD
           name: "&cPvP"
+          lore:
+            - "&7Enable or disable player-vs-player combat inside claim"
+            - "&7Current: {state}"
           action: "command:proshield flag pvp"
+
+        "17":
+          material: SHIELD
+          name: "&aSafe Zone"
+          lore:
+            - "&7Turns your claim into a safe zone"
+            - "&7Blocks hostile spawns and damage"
+            - "&7Current: {state}"
+          action: "command:proshield flag safezone"
+
         "26":
           material: BARRIER
           name: "&cBack"
@@ -230,3 +268,4 @@ claims:
     pets: false
     mob-repel: true
     mob-despawn: true
+    safezone: true   # ✅ new default (claims start as safe zones)

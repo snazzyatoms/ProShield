@@ -1,9 +1,8 @@
-// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.gui.CompassListener;
+import com.snazzyatoms.proshield.compass.CompassListener; // ✅ FIXED import
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
@@ -92,7 +91,7 @@ public class ProShield extends JavaPlugin {
         // Claims / protections
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
 
-        // Compass (moved into gui package)
+        // Compass (✅ now pulling from compass package)
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
 
         // Mobs (safezones + repel)

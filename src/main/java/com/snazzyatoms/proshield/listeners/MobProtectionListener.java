@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
@@ -81,7 +82,7 @@ public class MobProtectionListener implements Listener {
                 boolean playSound = cfg.getBoolean("protection.mobs.border-repel.play-sound", true);
                 boolean debug = cfg.getBoolean("protection.mobs.border-repel.debug", false);
                 String debugMsg = cfg.getString("protection.mobs.border-repel.debug-message",
-                        "&8[Debug]&7 Repelled {mob} near {player} at claim {claim}");
+                        "&8[Debug]&7 Repelled {mob} near {player} at claim {claim} @ {location}");
 
                 // Prefer per-section sound, fallback to global
                 String repelSound = cfg.getString("protection.mobs.border-repel.sound-type", null);
@@ -119,10 +120,15 @@ public class MobProtectionListener implements Listener {
                                     ? plot.getOwner()
                                     : plot.getId().toString();
 
+                            Location loc = e.getLocation();
+                            String locString = String.format("X:%.0f Y:%.0f Z:%.0f",
+                                    loc.getX(), loc.getY(), loc.getZ());
+
                             String formatted = debugMsg
                                     .replace("{player}", player.getName())
                                     .replace("{mob}", e.getType().name())
-                                    .replace("{claim}", claimName);
+                                    .replace("{claim}", claimName)
+                                    .replace("{location}", locString);
                             player.sendMessage(formatted.replace("&", "§"));
                         }
                     }

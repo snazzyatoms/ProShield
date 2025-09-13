@@ -2,131 +2,80 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.command.*;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-/**
- * ProShieldCommand
- * - Root /proshield command
- * - Handles reload, debug, bypass, compass, admin menu
- *
- * Fixed for v1.2.5:
- *   • Removed invalid MessagesUtil#getConfigList calls
- *   • Uses plugin.getConfig().getStringList() for help sections
- *   • Updated /proshield admin to open "main" menu (admin entries hidden if no permission)
- */
-public class ProShieldCommand implements CommandExecutor, TabCompleter {
+public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
     private final GUIManager guiManager;
-    private final CompassManager compassManager;
+    private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plotManager, GUIManager guiManager, CompassManager compassManager) {
+    public ProShieldCommand(ProShield plugin, GUIManager guiManager, PlotManager plotManager, MessagesUtil messages) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
         this.guiManager = guiManager;
-        this.compassManager = compassManager;
-        this.messages = plugin.getMessagesUtil();
+        this.plotManager = plotManager;
+        this.messages = messages;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (args.length == 0) {
-            showHelp(sender);
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + "Players only.");
             return true;
         }
 
-        String sub = args[0].toLowerCase(Locale.ROOT);
+        if (args.length == 0) {
+            guiManager.openMenu(player, "main");
+            return true;
+        }
+
+        String sub = args[0].toLowerCase();
         switch (sub) {
-            case "reload" -> {
-                if (!sender.hasPermission("proshield.admin.reload")) {
-                    messages.send(sender, "error.no-permission");
-                    return true;
+            case "help" -> {
+                for (String line : plugin.getConfig().getStringList("help.player")) {
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
                 }
-                plugin.reloadConfig();
-                messages.send(sender, "admin.reload");
+            }
+            case "reload" -> {
+                if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
+                    plugin.reloadConfig();
+                    messages.send(player, "&aProShield config reloaded.");
+                } else {
+                    messages.send(player, "&cNo permission.");
+                }
             }
             case "debug" -> {
-                if (!sender.hasPermission("proshield.admin")) {
-                    messages.send(sender, "error.no-permission");
-                    return true;
+                if (player.isOp()) {
+                    plugin.setDebugEnabled(!plugin.isDebugEnabled());
+                    messages.send(player, "&eDebug mode: " + plugin.isDebugEnabled());
                 }
-                plugin.toggleDebug();
-                messages.send(sender, plugin.isDebugEnabled() ? "admin.debug-on" : "admin.debug-off");
             }
             case "bypass" -> {
-                if (!(sender instanceof Player player)) {
-                    messages.send(sender, "error.player-only");
-                    return true;
+                if (player.isOp()) {
+                    if (plugin.getBypassing().contains(player.getUniqueId())) {
+                        plugin.getBypassing().remove(player.getUniqueId());
+                        messages.send(player, "&cBypass disabled.");
+                    } else {
+                        plugin.getBypassing().add(player.getUniqueId());
+                        messages.send(player, "&aBypass enabled.");
+                    }
                 }
-                if (!sender.hasPermission("proshield.admin")) {
-                    messages.send(sender, "error.no-permission");
-                    return true;
-                }
-                UUID id = player.getUniqueId();
-                boolean newState = plotManager.toggleBypass(id);
-                messages.send(player, newState ? "admin.bypass-on" : "admin.bypass-off");
             }
             case "compass" -> {
-                if (!(sender instanceof Player player)) {
-                    messages.send(sender, "error.player-only");
-                    return true;
-                }
-                if (!sender.hasPermission("proshield.compass")) {
-                    messages.send(sender, "error.no-permission");
-                    return true;
-                }
-                compassManager.giveCompass(player);
-                messages.send(player, "compass.given");
+                plugin.getCompassManager().giveCompass(player);
             }
-            case "admin" -> {
-                if (!(sender instanceof Player player)) {
-                    messages.send(sender, "error.player-only");
-                    return true;
-                }
-                if (!sender.hasPermission("proshield.admin")) {
-                    messages.send(sender, "error.no-permission");
-                    return true;
-                }
-                // Open unified main menu (admin items show only if permission is present)
-                guiManager.openMenu(player, "main");
+            default -> {
+                messages.send(player, "&cUnknown subcommand.");
             }
-            case "help" -> showHelp(sender);
-            default -> messages.send(sender, "error.unknown-command");
         }
         return true;
-    }
-
-    private void showHelp(CommandSender sender) {
-        List<String> lines = new ArrayList<>(plugin.getConfig().getStringList("help.player"));
-        if (sender.hasPermission("proshield.admin")) {
-            lines.addAll(plugin.getConfig().getStringList("help.admin"));
-        }
-        for (String line : lines) sender.sendMessage(line);
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        if (!cmd.getName().equalsIgnoreCase("proshield")) return Collections.emptyList();
-        if (args.length == 1) {
-            List<String> subs = new ArrayList<>(List.of("help"));
-            if (sender.hasPermission("proshield.admin.reload")) subs.add("reload");
-            if (sender.hasPermission("proshield.admin")) {
-                subs.addAll(Arrays.asList("debug", "bypass", "compass", "admin"));
-            }
-            return subs.stream()
-                    .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT)))
-                    .collect(Collectors.toList());
-        }
-        return Collections.emptyList();
     }
 }

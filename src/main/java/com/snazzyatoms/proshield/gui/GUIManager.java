@@ -15,12 +15,27 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GUIManager {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
+
+    // Default descriptions for flags
+    private static final Map<String, String> FLAG_DESCRIPTIONS = new HashMap<>();
+    static {
+        FLAG_DESCRIPTIONS.put("explosions", "&7Toggle TNT and creeper damage inside claim");
+        FLAG_DESCRIPTIONS.put("buckets", "&7Allow/disallow bucket use (water & lava)");
+        FLAG_DESCRIPTIONS.put("item-frames", "&7Protect item frames from breaking/rotation");
+        FLAG_DESCRIPTIONS.put("armor-stands", "&7Prevent others moving/destroying armor stands");
+        FLAG_DESCRIPTIONS.put("containers", "&7Control access to chests, hoppers, furnaces, shulkers");
+        FLAG_DESCRIPTIONS.put("pets", "&7Prevent damage to tamed pets (wolves, cats, etc.)");
+        FLAG_DESCRIPTIONS.put("pvp", "&7Enable or disable PvP combat inside claim");
+        FLAG_DESCRIPTIONS.put("safezone", "&7Turns your claim into a safe zone (blocks hostile spawns & damage)");
+    }
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -92,17 +107,18 @@ public class GUIManager {
 
     /**
      * Format lore lines with color codes and replace placeholders like {state}.
+     * Adds default flag descriptions if lore is empty or missing.
      */
     private List<String> formatLore(List<String> input, Player player, ConfigurationSection itemSec) {
         List<String> out = new ArrayList<>();
         String action = itemSec.getString("action", "");
         String state = "";
 
-        // Detect if it's a flag item
+        String flagKey = null;
         if (action.toLowerCase().startsWith("command:proshield flag ")) {
             String[] split = action.split(" ");
             if (split.length >= 3) {
-                String flagKey = split[2].toLowerCase();
+                flagKey = split[2].toLowerCase();
 
                 Plot plot = plotManager.getPlot(player.getLocation());
                 boolean flagValue;
@@ -119,11 +135,19 @@ public class GUIManager {
             }
         }
 
-        for (String line : input) {
-            if (line.contains("{state}")) {
-                out.add(ChatColor.translateAlternateColorCodes('&', line.replace("{state}", state)));
-            } else {
-                out.add(ChatColor.translateAlternateColorCodes('&', line));
+        if (input == null || input.isEmpty()) {
+            // Inject default description + state if lore not provided
+            if (flagKey != null && FLAG_DESCRIPTIONS.containsKey(flagKey)) {
+                out.add(ChatColor.translateAlternateColorCodes('&', FLAG_DESCRIPTIONS.get(flagKey)));
+                out.add(ChatColor.GRAY + "Current: " + state);
+            }
+        } else {
+            for (String line : input) {
+                if (line.contains("{state}")) {
+                    out.add(ChatColor.translateAlternateColorCodes('&', line.replace("{state}", state)));
+                } else {
+                    out.add(ChatColor.translateAlternateColorCodes('&', line));
+                }
             }
         }
         return out;

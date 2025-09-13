@@ -2,58 +2,46 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.command.*;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
-import java.util.Locale;
-import java.util.UUID;
 
 public class PlayerCommandDispatcher implements CommandExecutor {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    public PlayerCommandDispatcher(ProShield plugin, PlotManager plotManager, ClaimRoleManager roleManager, MessagesUtil messages) {
+    public PlayerCommandDispatcher(ProShield plugin, PlotManager plotManager, MessagesUtil messages) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        this.roleManager = roleManager;
         this.messages = messages;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Players only.");
+            sender.sendMessage(ChatColor.RED + "Players only.");
             return true;
         }
 
-        if (command.getName().equalsIgnoreCase("proshield") && args.length >= 2 && args[0].equalsIgnoreCase("flag")) {
-            Plot plot = plotManager.getPlot(player.getLocation());
-            if (plot == null) {
-                player.sendMessage("§cYou must be inside your claim to toggle flags.");
-                return true;
+        switch (label.toLowerCase()) {
+            case "claim" -> {
+                plotManager.createPlot(player, player.getLocation());
+                messages.send(player, "&aClaimed this chunk.");
             }
-
-            UUID pid = player.getUniqueId();
-            if (!plot.isOwner(pid) && !player.isOp()) {
-                player.sendMessage("§cYou do not own this claim.");
-                return true;
+            case "unclaim" -> {
+                plotManager.removePlot(player.getLocation());
+                messages.send(player, "&cUnclaimed this chunk.");
             }
-
-            String flag = args[1].toLowerCase(Locale.ROOT);
-            boolean current = plot.getFlag(flag, plugin.getConfig().getBoolean("claims.default-flags." + flag, false));
-            plot.setFlag(flag, !current);
-
-            player.sendMessage("§aFlag '" + flag + "' is now " + (!current ? "§aEnabled" : "§cDisabled"));
-            return true;
+            default -> {
+                messages.send(player, "&cUnknown player command.");
+            }
         }
-
-        return false;
+        return true;
     }
 }

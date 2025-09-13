@@ -1,37 +1,43 @@
-// src/main/java/com/snazzyatoms/proshield/gui/CompassManager.java
-package com.snazzyatoms.proshield.gui;
+// src/main/java/com/snazzyatoms/proshield/compass/CompassManager.java
+package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
+import com.snazzyatoms.proshield.gui.GUIManager;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Collections;
-
 public class CompassManager {
+
     private final ProShield plugin;
+    private final GUIManager guiManager;
 
-    public CompassManager(ProShield plugin) {
+    public CompassManager(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
+        this.guiManager = guiManager;
     }
 
-    public ItemStack createCompass() {
-        ItemStack item = new ItemStack(Material.COMPASS);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
-            meta.setLore(Collections.singletonList(ChatColor.GRAY + "Right-click to open ProShield menu"));
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
+    /**
+     * Gives the ProShield compass to a player.
+     */
     public void giveCompass(Player player) {
-        if (!plugin.getConfig().getBoolean("settings.give-compass-on-join", true)) return;
-        if (!player.getInventory().contains(Material.COMPASS)) {
-            player.getInventory().addItem(createCompass());
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§bProShield Compass");
+            compass.setItemMeta(meta);
+        }
+        player.getInventory().addItem(compass);
+    }
+
+    /**
+     * Gives the compass to all players online (e.g., on reload).
+     */
+    public void giveCompassToAll() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            giveCompass(player);
         }
     }
 }

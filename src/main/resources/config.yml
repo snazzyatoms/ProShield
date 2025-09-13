@@ -75,10 +75,11 @@ help:
 
   admin:
     - "&cProShield Help &7- Admin"
-    - "&c/proshield reload &7→ Reload the config"
+    - "&c/proshield reload &7→ Reload the config (or use GUI Reload button)"
     - "&c/proshield debug &7→ Toggle debug mode"
     - "&c/proshield bypass &7→ Toggle bypass mode"
     - "&c/proshield admin &7→ Open the admin menu"
+    - "&c[GUI] &7Open the ProShield Menu with your compass to use the Reload Config button"
 
 # ----------------------------------------------------------
 # GUI Menus (Config-driven)
@@ -160,6 +161,8 @@ gui:
         "26":
           material: BARRIER
           name: "&cClose"
+          lore:
+            - "&7Closes this menu"
           action: "close"
 
     trust:
@@ -261,6 +264,8 @@ gui:
         "26":
           material: BARRIER
           name: "&cBack"
+          lore:
+            - "&7Return to main menu"
           action: "menu:main"
 
 # ----------------------------------------------------------

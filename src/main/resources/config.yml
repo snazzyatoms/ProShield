@@ -75,11 +75,10 @@ help:
 
   admin:
     - "&cProShield Help &7- Admin"
-    - "&c/proshield reload &7→ Reload the config (or use GUI Reload button)"
+    - "&c/proshield reload &7→ Reload the config"
     - "&c/proshield debug &7→ Toggle debug mode"
     - "&c/proshield bypass &7→ Toggle bypass mode"
     - "&c/proshield admin &7→ Open the admin menu"
-    - "&c[GUI] &7Open the ProShield Menu with your compass to use the Reload Config button"
 
 # ----------------------------------------------------------
 # GUI Menus (Config-driven)
@@ -108,26 +107,40 @@ gui:
         "12":
           material: PAPER
           name: "&eClaim Info"
+          lore:
+            - "&7View details about this claim"
           action: "command:proshield info"
 
         "13":
           material: PLAYER_HEAD
           name: "&aTrust Menu"
+          lore:
+            - "&7Trust nearby players"
+            - "&7and manage access"
           action: "menu:trust"
 
         "14":
           material: SKELETON_SKULL
           name: "&cUntrust Menu"
+          lore:
+            - "&7Manage and remove"
+            - "&7trusted players"
           action: "menu:untrust"
 
         "15":
           material: BOOK
           name: "&6Roles"
+          lore:
+            - "&7Manage roles of"
+            - "&7trusted players"
           action: "menu:roles"
 
         "16":
           material: IRON_SWORD
           name: "&cFlags"
+          lore:
+            - "&7Toggle claim settings"
+            - "&7and protections"
           action: "menu:flags"
 
         # --- Admin-only entries (require permission or OP) ---
@@ -162,7 +175,7 @@ gui:
           material: BARRIER
           name: "&cClose"
           lore:
-            - "&7Closes this menu"
+            - "&7Close this menu"
           action: "close"
 
     trust:
@@ -172,10 +185,15 @@ gui:
         "13":
           material: PLAYER_HEAD
           name: "&aEnter Player"
+          lore:
+            - "&7Click to enter"
+            - "&7a player's name"
           action: "command:trust"
         "26":
           material: BARRIER
           name: "&cBack"
+          lore:
+            - "&7Return to main menu"
           action: "menu:main"
 
     untrust:
@@ -185,10 +203,15 @@ gui:
         "13":
           material: SKELETON_SKULL
           name: "&cEnter Player"
+          lore:
+            - "&7Click to enter"
+            - "&7a player's name"
           action: "command:untrust"
         "26":
           material: BARRIER
           name: "&cBack"
+          lore:
+            - "&7Return to main menu"
           action: "menu:main"
 
     flags:

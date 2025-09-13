@@ -79,6 +79,9 @@ public class MobProtectionListener implements Listener {
                 double pushY = cfg.getDouble("protection.mobs.border-repel.vertical-push", 0.25);
 
                 boolean playSound = cfg.getBoolean("protection.mobs.border-repel.play-sound", true);
+                boolean debug = cfg.getBoolean("protection.mobs.border-repel.debug", false);
+                String debugMsg = cfg.getString("protection.mobs.border-repel.debug-message",
+                        "&8[Debug]&7 Repelled {mob} near {player} at claim {claim}");
 
                 // Prefer per-section sound, fallback to global
                 String repelSound = cfg.getString("protection.mobs.border-repel.sound-type", null);
@@ -94,7 +97,7 @@ public class MobProtectionListener implements Listener {
                     for (Entity e : nearby) {
                         if (!(e instanceof Monster)) continue;
 
-                        // Push mobs away from the claim owner
+                        // Push mobs away
                         Vector dir = e.getLocation().toVector()
                                 .subtract(player.getLocation().toVector())
                                 .normalize();
@@ -108,6 +111,15 @@ public class MobProtectionListener implements Listener {
                             } catch (Exception ignored) {
                                 // silently ignore invalid sound keys
                             }
+                        }
+
+                        // Debug message
+                        if (debug && debugMsg != null) {
+                            String formatted = debugMsg
+                                    .replace("{player}", player.getName())
+                                    .replace("{mob}", e.getType().name())
+                                    .replace("{claim}", plot.getId().toString());
+                            player.sendMessage(formatted.replace("&", "§"));
                         }
                     }
                 }

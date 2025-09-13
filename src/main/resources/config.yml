@@ -36,10 +36,12 @@ protection:
   mobs:
     border-repel:
       enabled: true
-      radius: 3.0           # distance mobs are repelled at claim edge
-      horizontal-push: 0.7  # sideways push
-      vertical-push: 0.25   # upward push
-    despawn-inside: true     # mobs instantly removed if inside a claim
+      radius: 3.0            # distance mobs are repelled at claim edge
+      horizontal-push: 0.7   # sideways push
+      vertical-push: 0.25    # upward push
+      play-sound: true       # 🔊 toggle repel sound (server-wide)
+      sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
+    despawn-inside: true      # mobs instantly removed if inside a claim
 
   entities:
     wilderness:
@@ -300,6 +302,7 @@ sounds:
   unclaim-success: "ENTITY_ITEM_BREAK"
   flag-toggle: "BLOCK_NOTE_BLOCK_PLING"
   admin-action: "ENTITY_EXPERIENCE_ORB_PICKUP"
+  repel-sound: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"  # 🔊 fallback/global repel sound
 
 # ----------------------------------------------------------
 # Claim Defaults

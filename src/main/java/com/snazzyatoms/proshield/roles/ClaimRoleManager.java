@@ -16,6 +16,7 @@ import java.util.*;
  * Fixed for v1.2.5:
  *   • Constructor simplified → only requires PlotManager
  *   • Uses Bukkit directly for UUID resolution during ownership transfer
+ *   • Added getTrusted() → expose trusted players for GUI menus
  */
 public class ClaimRoleManager {
 
@@ -80,6 +81,11 @@ public class ClaimRoleManager {
     public boolean isTrusted(UUID plotId, String playerName) {
         Map<String, String> map = roleCache.get(plotId);
         return map != null && map.containsKey(playerName);
+    }
+
+    /** 🔑 New: Get all trusted players + roles for a claim */
+    public Map<String, String> getTrusted(UUID plotId) {
+        return roleCache.getOrDefault(plotId, Collections.emptyMap());
     }
 
     /* ======================================================

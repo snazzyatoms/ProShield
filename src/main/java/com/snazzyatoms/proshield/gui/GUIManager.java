@@ -4,9 +4,11 @@ package com.snazzyatoms.proshield.gui;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -14,15 +16,13 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GUIManager {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
+    private final ClaimRoleManager roleManager;
 
     // Default descriptions for flags
     private static final Map<String, String> FLAG_DESCRIPTIONS = new HashMap<>();
@@ -40,6 +40,7 @@ public class GUIManager {
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
         this.plotManager = plugin.getPlotManager();
+        this.roleManager = plugin.getRoleManager();
     }
 
     /**
@@ -59,11 +60,27 @@ public class GUIManager {
         }
 
         String title = ChatColor.translateAlternateColorCodes('&', menu.getString("title", "&7Menu"));
-
         int size = menu.getInt("size", 27);
         if (size % 9 != 0) size = 27; // safeguard
         Inventory inv = Bukkit.createInventory(null, size, title);
 
+        // Special handling for dynamic menus
+        if (menuKey.equalsIgnoreCase("trust")) {
+            buildTrustMenu(player, inv);
+        } else if (menuKey.equalsIgnoreCase("untrust")) {
+            buildUntrustMenu(player, inv);
+        } else {
+            // Normal config-driven menus
+            buildStaticMenu(player, menu, inv, size);
+        }
+
+        player.openInventory(inv);
+    }
+
+    /**
+     * Build normal menus from config (main, flags, roles etc.)
+     */
+    private void buildStaticMenu(Player player, ConfigurationSection menu, Inventory inv, int size) {
         ConfigurationSection items = menu.getConfigurationSection("items");
         if (items != null) {
             for (String slotKey : items.getKeys(false)) {
@@ -101,8 +118,59 @@ public class GUIManager {
                 }
             }
         }
+    }
 
-        player.openInventory(inv);
+    /**
+     * Build Trust menu dynamically (shows nearby players).
+     */
+    private void buildTrustMenu(Player player, Inventory inv) {
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) return;
+
+        int slot = 0;
+        for (Player nearby : player.getWorld().getPlayers()) {
+            if (nearby.equals(player)) continue;
+            if (nearby.getLocation().distance(player.getLocation()) > 10) continue; // within 10 blocks
+
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+            ItemMeta meta = head.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.GREEN + nearby.getName());
+                List<String> lore = new ArrayList<>();
+                lore.add(ChatColor.YELLOW + "Click to trust this player");
+                meta.setLore(lore);
+                head.setItemMeta(meta);
+            }
+            inv.setItem(slot++, head);
+            if (slot >= inv.getSize() - 1) break;
+        }
+    }
+
+    /**
+     * Build Untrust menu dynamically (shows currently trusted players).
+     */
+    private void buildUntrustMenu(Player player, Inventory inv) {
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) return;
+
+        Map<String, String> trusted = roleManager.getTrusted(plot.getId());
+        if (trusted == null || trusted.isEmpty()) return;
+
+        int slot = 0;
+        for (String name : trusted.keySet()) {
+            OfflinePlayer offline = Bukkit.getOfflinePlayer(name);
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+            ItemMeta meta = head.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.RED + name);
+                List<String> lore = new ArrayList<>();
+                lore.add(ChatColor.YELLOW + "Click to untrust this player");
+                meta.setLore(lore);
+                head.setItemMeta(meta);
+            }
+            inv.setItem(slot++, head);
+            if (slot >= inv.getSize() - 1) break;
+        }
     }
 
     /**
@@ -136,7 +204,6 @@ public class GUIManager {
         }
 
         if (input == null || input.isEmpty()) {
-            // Inject default description + state if lore not provided
             if (flagKey != null && FLAG_DESCRIPTIONS.containsKey(flagKey)) {
                 out.add(ChatColor.translateAlternateColorCodes('&', FLAG_DESCRIPTIONS.get(flagKey)));
                 out.add(ChatColor.GRAY + "Current: " + state);

@@ -115,10 +115,14 @@ public class MobProtectionListener implements Listener {
 
                         // Debug message
                         if (debug && debugMsg != null) {
+                            String claimName = (plot.getOwner() != null)
+                                    ? plot.getOwner()
+                                    : plot.getId().toString();
+
                             String formatted = debugMsg
                                     .replace("{player}", player.getName())
                                     .replace("{mob}", e.getType().name())
-                                    .replace("{claim}", plot.getId().toString());
+                                    .replace("{claim}", claimName);
                             player.sendMessage(formatted.replace("&", "§"));
                         }
                     }

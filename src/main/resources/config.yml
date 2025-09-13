@@ -40,7 +40,7 @@ protection:
       horizontal-push: 0.7   # sideways push
       vertical-push: 0.25    # upward push
       play-sound: true       # 🔊 toggle repel sound (server-wide)
-      sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
+      sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR" # per repel event
     despawn-inside: true      # mobs instantly removed if inside a claim
 
   entities:

@@ -52,8 +52,15 @@ protection:
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
-  show-wilderness: false
+  show-wilderness: true
   admin-flag-chat: true
+
+  # Claim entry/exit messages
+  enter-own: "&aYou entered your claim."
+  enter-other: "&aYou entered {owner}'s claim."
+  leave-own: "&cYou left your claim."
+  leave-other: "&cYou left {owner}'s claim."
+  wilderness: "&7You entered the wilderness."
 
 # ----------------------------------------------------------
 # Help Messages
@@ -268,4 +275,4 @@ claims:
     pets: false
     mob-repel: true
     mob-despawn: true
-    safezone: true   # ✅ new default (claims start as safe zones)
+    safezone: true   # ✅ claims start as safe zones by default

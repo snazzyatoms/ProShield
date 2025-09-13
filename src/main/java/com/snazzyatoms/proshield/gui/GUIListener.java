@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -17,12 +16,17 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Set;
+
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
     private final NamespacedKey menuKeyTag;
     private final NamespacedKey targetNameTag;
+
+    // Allowed toggle keys (kept in sync with ROLE_PERMISSIONS in GUIManager)
+    private static final Set<String> TOGGLE_KEYS = Set.of("build", "interact", "containers", "vehicles", "unclaim");
 
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
@@ -46,8 +50,10 @@ public class GUIListener implements Listener {
         String menuTag = pdc.get(menuKeyTag, PersistentDataType.STRING);
         String targetName = pdc.get(targetNameTag, PersistentDataType.STRING);
 
+        if (menuTag == null) return;
+
         // ======================================================
-        // 1. Handle Role Editor (dynamic per-player perms)
+        // 1. Role Editor (per-player perms)
         // ======================================================
         if ("role-editor".equalsIgnoreCase(menuTag) && targetName != null) {
             Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
@@ -56,79 +62,99 @@ public class GUIListener implements Listener {
             String key = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
             ClaimRoleManager roleManager = plugin.getRoleManager();
 
-            // Close button
-            if (key.equalsIgnoreCase("close")) {
+            if (key.equals("close")) {
                 player.closeInventory();
+                playClick(player);
                 return;
             }
 
-            // Back button
-            if (key.equalsIgnoreCase("back")) {
+            if (key.equals("back")) {
+                playClick(player);
                 Bukkit.getScheduler().runTask(plugin, () -> guiManager.openMenu(player, "untrust"));
                 return;
             }
 
-            // Toggle permissions
-            if (roleManager.getPermissions(plot.getId(), targetName).containsKey(key)) {
+            if (TOGGLE_KEYS.contains(key)) {
                 boolean current = roleManager.getPermissions(plot.getId(), targetName).getOrDefault(key, false);
                 roleManager.setPermission(plot.getId(), targetName, key, !current);
 
-                // Refresh menu
+                if (plugin.getConfig().getBoolean("messages.debug-prefix", false)) {
+                    plugin.getLogger().info("[Debug] " + player.getName() + " toggled " + key +
+                            " for " + targetName + " in claim " + plot.getId() + " → " + !current);
+                }
+
+                playClick(player);
                 Bukkit.getScheduler().runTask(plugin, () -> guiManager.openRoleEditor(player, targetName));
             }
             return;
         }
 
         // ======================================================
-        // 2. Handle Untrust menu → open Role Editor
+        // 2. Untrust menu → open Role Editor
         // ======================================================
         if ("untrust".equalsIgnoreCase(menuTag) && targetName != null) {
+            playClick(player);
             Bukkit.getScheduler().runTask(plugin, () -> guiManager.openRoleEditor(player, targetName));
             return;
         }
 
         // ======================================================
-        // 3. Handle static/config-driven menus
+        // 3. Static/config-driven menus
         // ======================================================
-        if (menuTag != null && menuTag.startsWith("static:")) {
-            String action = plugin.getConfig()
-                    .getConfigurationSection("gui.menus." + menuTag.substring(7) + ".items")
-                    .getConfigurationSection(String.valueOf(event.getRawSlot()))
-                    .getString("action", "")
-                    .trim();
+        if (menuTag.startsWith("static:")) {
+            String menuName = menuTag.substring(7);
+            ConfigurationSection menu = plugin.getConfig().getConfigurationSection("gui.menus." + menuName);
+            if (menu == null) return;
 
+            ConfigurationSection items = menu.getConfigurationSection("items");
+            if (items == null) return;
+
+            ConfigurationSection item = items.getConfigurationSection(String.valueOf(event.getRawSlot()));
+            if (item == null) return;
+
+            String action = item.getString("action", "").trim();
             if (action.isEmpty()) return;
 
-            String lower = action.toLowerCase();
-
-            if (lower.startsWith("command:")) {
-                String cmd = action.substring("command:".length()).trim();
-
-                if (cmd.equalsIgnoreCase("proshield reload")) {
-                    if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
-                        plugin.reloadConfig();
-                        String sound = plugin.getConfig().getString("sounds.admin-action", "ENTITY_EXPERIENCE_ORB_PICKUP");
-                        try {
-                            player.playSound(player.getLocation(), sound, 1f, 1f);
-                        } catch (Exception ignored) {}
-                    }
-                    return;
-                }
-
-                if (!cmd.isEmpty()) Bukkit.dispatchCommand(player, cmd);
-
-            } else if (lower.startsWith("menu:")) {
-                String targetMenu = action.substring("menu:".length()).trim();
-                if (!targetMenu.isEmpty()) {
-                    guiManager.openMenu(player, targetMenu);
-                }
-
-            } else if (lower.equals("close")) {
-                player.closeInventory();
-
-            } else {
-                plugin.getLogger().warning("[GUI] Unknown action in " + menuTag + " slot " + event.getRawSlot() + ": " + action);
-            }
+            handleAction(player, action);
+            playClick(player);
         }
+    }
+
+    private void handleAction(Player player, String action) {
+        String lower = action.toLowerCase();
+
+        if (lower.startsWith("command:")) {
+            String cmd = action.substring("command:".length()).trim();
+
+            if (cmd.equalsIgnoreCase("proshield reload")) {
+                if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
+                    plugin.reloadConfig();
+                    String sound = plugin.getConfig().getString("sounds.admin-action", "ENTITY_EXPERIENCE_ORB_PICKUP");
+                    try {
+                        player.playSound(player.getLocation(), sound, 1f, 1f);
+                    } catch (Exception ignored) {}
+                }
+                return;
+            }
+
+            if (!cmd.isEmpty()) Bukkit.dispatchCommand(player, cmd);
+
+        } else if (lower.startsWith("menu:")) {
+            String targetMenu = action.substring("menu:".length()).trim();
+            if (!targetMenu.isEmpty()) guiManager.openMenu(player, targetMenu);
+
+        } else if (lower.equals("close")) {
+            player.closeInventory();
+
+        } else {
+            plugin.getLogger().warning("[GUI] Unknown action: " + action);
+        }
+    }
+
+    private void playClick(Player player) {
+        String sound = plugin.getConfig().getString("sounds.button-click", "UI_BUTTON_CLICK");
+        try {
+            player.playSound(player.getLocation(), sound, 1f, 1f);
+        } catch (Exception ignored) {}
     }
 }

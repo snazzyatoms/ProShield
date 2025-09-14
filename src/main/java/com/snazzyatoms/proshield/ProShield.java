@@ -53,6 +53,7 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new AdminGUIListener(guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this); // ✅ NEW
 
         getLogger().info("ProShield enabled!");
     }

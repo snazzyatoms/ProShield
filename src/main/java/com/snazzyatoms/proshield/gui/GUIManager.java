@@ -167,4 +167,70 @@ public class GUIManager {
 
         // --- ROLES MENU ---
         if (title.contains("Trusted Players")) {
-            if (name.equalsIgnore
+            if (name.equalsIgnoreCase("back")) {
+                openMenu(player, "main");
+            } else {
+                plugin.getMessagesUtil().send(player, "&7This feature is still being developed.");
+            }
+        }
+    }
+
+    private void toggleFlag(Plot plot, String flag, Player player) {
+        boolean current = plot.getFlag(flag, false);
+        plot.setFlag(flag, !current);
+
+        MessagesUtil messages = plugin.getMessagesUtil();
+        if (current) {
+            messages.send(player, "&c" + flag + " disabled.");
+        } else {
+            messages.send(player, "&a" + flag + " enabled.");
+        }
+    }
+
+    private void showPendingRequests(Player player) {
+        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+        if (pending.isEmpty()) {
+            plugin.getMessagesUtil().send(player, "&7No pending requests.");
+            return;
+        }
+
+        for (ExpansionRequest req : pending) {
+            String pName = Bukkit.getOfflinePlayer(req.getPlayerId()).getName();
+            plugin.getMessagesUtil().send(player,
+                    "&eRequest: " + pName + " +" + req.getExtraRadius() + " blocks (" +
+                            (System.currentTimeMillis() - req.getRequestTime()) / 1000 + "s ago)");
+        }
+    }
+
+    private void handleExpansionApproval(Player player) {
+        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+        if (pending.isEmpty()) {
+            plugin.getMessagesUtil().send(player, "&7No requests to approve.");
+            return;
+        }
+
+        ExpansionRequest req = pending.get(0);
+        ExpansionQueue.approveRequest(req);
+
+        Player target = Bukkit.getPlayer(req.getPlayerId());
+        if (target != null) {
+            target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
+        }
+        plugin.getMessagesUtil().send(player, "&aRequest approved.");
+    }
+
+    public static void provideManualReason(Player admin, String reason, ProShield plugin) {
+        ExpansionRequest req = awaitingReason.remove(admin.getUniqueId());
+        if (req == null) {
+            plugin.getMessagesUtil().send(admin, "&7No pending request to deny.");
+            return;
+        }
+
+        ExpansionQueue.denyRequest(req, reason);
+        Player target = Bukkit.getPlayer(req.getPlayerId());
+        if (target != null) {
+            target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
+        }
+        plugin.getMessagesUtil().send(admin, "&cRequest denied (" + reason + ").");
+    }
+}

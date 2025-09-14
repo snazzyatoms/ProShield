@@ -2,17 +2,12 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.gui.AdminGUIListener;
-import com.snazzyatoms.proshield.gui.ChatListener;
-import com.snazzyatoms.proshield.gui.GUIListener;
-import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.gui.AdminGUIManager;
+import com.snazzyatoms.proshield.gui.*;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.HashSet;
@@ -25,12 +20,15 @@ public class ProShield extends JavaPlugin {
 
     private MessagesUtil messages;
     private GUIManager guiManager;
-    private AdminGUIManager adminGuiManager;
-    private ClaimRoleManager roleManager;
     private PlotManager plotManager;
+    private ClaimRoleManager roleManager;
 
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
+
+    public static ProShield getInstance() {
+        return instance;
+    }
 
     @Override
     public void onEnable() {
@@ -38,24 +36,27 @@ public class ProShield extends JavaPlugin {
 
         saveDefaultConfig();
 
-        messages = new MessagesUtil(this);
-        guiManager = new GUIManager(this);
-        adminGuiManager = new AdminGUIManager(this);
-        roleManager = new ClaimRoleManager();
-        plotManager = new PlotManager(this);
+        this.messages = new MessagesUtil(this);
+        this.plotManager = new PlotManager(this);
+        this.roleManager = new ClaimRoleManager(this);
+        this.guiManager = new GUIManager(this);
 
-        // --- Register command ---
-        PluginCommand cmd = getCommand("proshield");
-        if (cmd != null) {
-            cmd.setExecutor(new ProShieldCommand(this, guiManager, plotManager, messages));
-        }
-
-        // --- Register listeners ---
+        // Register GUI listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new AdminGUIListener(guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
 
-        getLogger().info("✅ ProShield enabled successfully!");
+        // Register unified command executor
+        ProShieldCommand executor = new ProShieldCommand(this, guiManager, plotManager, messages);
+        registerCommand("proshield", executor);
+        registerCommand("claim", executor);
+        registerCommand("unclaim", executor);
+        registerCommand("trust", executor);
+        registerCommand("untrust", executor);
+        registerCommand("roles", executor);
+        registerCommand("transfer", executor);
+
+        getLogger().info("✅ ProShield enabled.");
     }
 
     @Override
@@ -63,9 +64,13 @@ public class ProShield extends JavaPlugin {
         getLogger().info("❌ ProShield disabled.");
     }
 
-    // --- Getters ---
-    public static ProShield getInstance() {
-        return instance;
+    private void registerCommand(String name, ProShieldCommand executor) {
+        PluginCommand cmd = getCommand(name);
+        if (cmd != null) {
+            cmd.setExecutor(executor);
+        } else {
+            getLogger().warning("Command not found in plugin.yml: " + name);
+        }
     }
 
     public MessagesUtil getMessagesUtil() {
@@ -76,16 +81,12 @@ public class ProShield extends JavaPlugin {
         return guiManager;
     }
 
-    public AdminGUIManager getAdminGuiManager() {
-        return adminGuiManager;
+    public PlotManager getPlotManager() {
+        return plotManager;
     }
 
     public ClaimRoleManager getRoleManager() {
         return roleManager;
-    }
-
-    public PlotManager getPlotManager() {
-        return plotManager;
     }
 
     public Set<UUID> getBypassing() {
@@ -97,6 +98,6 @@ public class ProShield extends JavaPlugin {
     }
 
     public void toggleDebug() {
-        this.debugEnabled = !this.debugEnabled;
+        debugEnabled = !debugEnabled;
     }
 }

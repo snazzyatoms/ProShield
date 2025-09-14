@@ -13,9 +13,13 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class GUIManager {
+
     private final ProShield plugin;
     private final PlotManager plotManager;
 
@@ -24,125 +28,161 @@ public class GUIManager {
         this.plotManager = plugin.getPlotManager();
     }
 
+    // -------------------------
+    // Open menu
+    // -------------------------
     public void openMenu(Player player, String menu) {
-        switch (menu.toLowerCase()) {
-            case "main" -> player.openInventory(buildMainMenu());
-            case "flags" -> player.openInventory(buildFlagsMenu(player));
-            case "roles" -> player.openInventory(buildRolesMenu(player));
-            case "untrust" -> player.openInventory(buildUntrustMenu(player));
-            default -> player.sendMessage(ChatColor.RED + "Unknown menu: " + menu);
+        switch (menu.toLowerCase(Locale.ROOT)) {
+            case "flags" -> openFlagsMenu(player);
+            case "roles" -> openRolesMenu(player);
+            default -> openMainMenu(player);
         }
     }
 
-    /* ---------------------- GUI Builders ---------------------- */
-
-    private Inventory buildMainMenu() {
+    // -------------------------
+    // Main Menu
+    // -------------------------
+    private void openMainMenu(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.AQUA + "ProShield Menu");
 
-        inv.setItem(11, createItem(Material.GRASS_BLOCK, ChatColor.GREEN + "Claim Land", "Claim this area", "command:claim"));
-        inv.setItem(12, createItem(Material.BOOK, ChatColor.YELLOW + "Claim Info", "View details about this claim", "command:proshield info"));
-        inv.setItem(13, createItem(Material.BARRIER, ChatColor.RED + "Unclaim", "Remove your claim", "command:unclaim"));
-        inv.setItem(14, createItem(Material.OAK_SIGN, ChatColor.BLUE + "Manage Flags", "Toggle claim settings", "menu:flags"));
-        inv.setItem(15, createItem(Material.PLAYER_HEAD, ChatColor.LIGHT_PURPLE + "Manage Roles", "Manage trusted players", "menu:roles"));
+        inv.setItem(10, makeItem(Material.GRASS_BLOCK, "&aClaim Land", "&7Claim this chunk of land"));
+        inv.setItem(11, makeItem(Material.BOOK, "&eClaim Info", "&7View details about this claim"));
+        inv.setItem(12, makeItem(Material.REDSTONE_BLOCK, "&cUnclaim Land", "&7Remove your current claim"));
+        inv.setItem(13, makeItem(Material.PLAYER_HEAD, "&bTrusted Players", "&7Manage trusted players & roles"));
+        inv.setItem(14, makeItem(Material.LEVER, "&dClaim Flags", "&7Toggle protection flags"));
+        inv.setItem(15, makeItem(Material.BARRIER, "&cAdmin Tools", "&7Admin options"));
 
-        return inv;
+        player.openInventory(inv);
     }
 
-    private Inventory buildFlagsMenu(Player player) {
+    // -------------------------
+    // Flags Menu
+    // -------------------------
+    private void openFlagsMenu(Player player) {
+        Plot plot = plotManager.getPlot(player.getLocation());
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.LIGHT_PURPLE + "Claim Flags");
 
-        Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot == null) {
-            inv.setItem(13, createItem(Material.BARRIER, ChatColor.RED + "No Claim", "You are not standing in a claim", "static:none"));
-            return inv;
-        }
+        // Get current flags for this plot (with defaults from config if missing)
+        Map<String, Boolean> flags = plot != null ? plot.getFlags() : Map.of();
 
-        boolean pvp = plot.getFlag("pvp", false);
-        inv.setItem(11, createItem(Material.IRON_SWORD, ChatColor.RED + "PvP",
-                "Enable/disable PvP in this claim", "command:proshield flag pvp",
-                "&7Current: " + (pvp ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled")));
+        inv.setItem(10, makeFlagItem(Material.TNT, "Explosions",
+                "Toggles TNT and creeper block damage",
+                getFlagState(flags, "explosions")));
 
-        boolean mobSpawns = plot.getFlag("mobspawns", true);
-        inv.setItem(12, createItem(Material.ZOMBIE_HEAD, ChatColor.DARK_GREEN + "Mob Spawns",
-                "Toggle hostile mob spawning", "command:proshield flag mobspawns",
-                "&7Current: " + (mobSpawns ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled")));
+        inv.setItem(11, makeFlagItem(Material.WATER_BUCKET, "Buckets",
+                "Controls lava/water bucket use",
+                getFlagState(flags, "buckets")));
 
-        inv.setItem(26, createItem(Material.ARROW, ChatColor.GRAY + "Back", "Return to main menu", "menu:main"));
-        return inv;
+        inv.setItem(12, makeFlagItem(Material.ITEM_FRAME, "Item Frames",
+                "Protects item frames from grief",
+                getFlagState(flags, "item-frames")));
+
+        inv.setItem(13, makeFlagItem(Material.ARMOR_STAND, "Armor Stands",
+                "Prevents breaking/moving armor stands",
+                getFlagState(flags, "armor-stands")));
+
+        inv.setItem(14, makeFlagItem(Material.CHEST, "Containers",
+                "Locks chests, barrels, hoppers, furnaces",
+                getFlagState(flags, "containers")));
+
+        inv.setItem(15, makeFlagItem(Material.BONE, "Pets",
+                "Protects wolves, cats, horses, and pets",
+                getFlagState(flags, "pets")));
+
+        inv.setItem(16, makeFlagItem(Material.IRON_SWORD, "PvP",
+                "Enable or disable player-vs-player combat",
+                getFlagState(flags, "pvp")));
+
+        inv.setItem(17, makeFlagItem(Material.SHIELD, "Safe Zone",
+                "Blocks hostile mob spawns & damage",
+                getFlagState(flags, "safezone")));
+
+        inv.setItem(26, makeItem(Material.BARRIER, "&cBack", "&7Return to main menu"));
+
+        player.openInventory(inv);
     }
 
-    private Inventory buildRolesMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.AQUA + "Trusted Roles");
+    // -------------------------
+    // Roles Menu
+    // -------------------------
+    private void openRolesMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.YELLOW + "Trusted Players & Roles");
 
-        Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot == null) {
-            inv.setItem(13, createItem(Material.BARRIER, ChatColor.RED + "No Claim", "You are not standing in a claim", "static:none"));
-            return inv;
-        }
+        // Placeholder if no trusted players exist
+        inv.setItem(13, makeItem(Material.PAPER,
+                "&7No Trusted Players",
+                "&8You haven't trusted anyone yet.",
+                "&8Use /trust <player> to add one."));
 
-        Set<UUID> trusted = plot.getTrusted();
-        if (trusted.isEmpty()) {
-            inv.setItem(13, createItem(Material.BARRIER, ChatColor.GRAY + "No trusted players", "No players have been trusted yet", "static:none"));
-        } else {
-            int slot = 10;
-            for (UUID uuid : trusted) {
-                String name = Bukkit.getOfflinePlayer(uuid).getName();
-                inv.setItem(slot++, createItem(Material.PLAYER_HEAD, ChatColor.YELLOW + name, "Trusted player", "command:untrust " + name));
-            }
-        }
+        inv.setItem(26, makeItem(Material.BARRIER, "&cBack", "&7Return to main menu"));
 
-        inv.setItem(26, createItem(Material.ARROW, ChatColor.GRAY + "Back", "Return to main menu", "menu:main"));
-        return inv;
+        player.openInventory(inv);
     }
 
-    private Inventory buildUntrustMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.RED + "Untrust Players");
-
-        Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot == null) {
-            inv.setItem(13, createItem(Material.BARRIER, ChatColor.RED + "No Claim", "You are not standing in a claim", "static:none"));
-            return inv;
-        }
-
-        Set<UUID> trusted = plot.getTrusted();
-        if (trusted.isEmpty()) {
-            inv.setItem(13, createItem(Material.BARRIER, ChatColor.GRAY + "No trusted players", "No players to untrust", "static:none"));
-        } else {
-            int slot = 10;
-            for (UUID uuid : trusted) {
-                String name = Bukkit.getOfflinePlayer(uuid).getName();
-                inv.setItem(slot++, createItem(Material.PLAYER_HEAD, ChatColor.YELLOW + name, "Click to untrust", "command:untrust " + name));
-            }
-        }
-
-        inv.setItem(26, createItem(Material.ARROW, ChatColor.GRAY + "Back", "Return to roles menu", "menu:roles"));
-        return inv;
-    }
-
-    /* ---------------------- Utility ---------------------- */
-
-    private ItemStack createItem(Material mat, String name, String desc, String action, String... extraLore) {
+    // -------------------------
+    // Utility: Create item
+    // -------------------------
+    private ItemStack makeItem(Material mat, String name, String... loreLines) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(name);
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
 
             List<String> lore = new ArrayList<>();
-            if (desc != null && !desc.isEmpty()) {
-                lore.add(ChatColor.GRAY + desc);
-            }
-            if (extraLore != null) {
-                for (String s : extraLore) {
-                    lore.add(ChatColor.translateAlternateColorCodes('&', s));
-                }
+            for (String line : loreLines) {
+                lore.add(ChatColor.translateAlternateColorCodes('&', line));
             }
             meta.setLore(lore);
 
-            // ✅ hide vanilla attributes so only lore shows
-            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_UNBREAKABLE);
-
+            // Remove "When in Main Hand" vanilla attributes
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+            meta.addItemFlags(ItemFlag.HIDE_DESTROYS);
+            meta.addItemFlags(ItemFlag.HIDE_PLACED_ON);
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    // -------------------------
+    // Utility: Create flag item
+    // -------------------------
+    private ItemStack makeFlagItem(Material mat, String flagName, String description, boolean state) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GOLD + flagName);
+
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + description);
+            lore.add(" ");
+            lore.add(ChatColor.WHITE + "Current: " + formatFlagState(state, flagName));
+
+            meta.setLore(lore);
+
+            // Remove vanilla attribute text
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    // -------------------------
+    // State Formatting
+    // -------------------------
+    private String formatFlagState(boolean state, String flagName) {
+        if (state) {
+            return ChatColor.GREEN + "ON " + ChatColor.GRAY + "(" + flagName + " allowed)";
+        } else {
+            return ChatColor.RED + "OFF " + ChatColor.GRAY + "(" + flagName + " blocked)";
+        }
+    }
+
+    // -------------------------
+    // Helper: get flag with default
+    // -------------------------
+    private boolean getFlagState(Map<String, Boolean> flags, String key) {
+        return flags.getOrDefault(key.toLowerCase(Locale.ROOT),
+                plugin.getConfig().getBoolean("claims.default-flags." + key, false));
     }
 }

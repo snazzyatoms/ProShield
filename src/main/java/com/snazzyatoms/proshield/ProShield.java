@@ -3,12 +3,9 @@ package com.snazzyatoms.proshield;
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.compass.CompassListener;
-import com.snazzyatoms.proshield.expansion.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.gui.admin.AdminGUIListener;
-import com.snazzyatoms.proshield.gui.admin.AdminGUIManager;
 import com.snazzyatoms.proshield.plots.MobProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
@@ -31,9 +28,8 @@ public class ProShield extends JavaPlugin {
 
     private GUICache guiCache;
     private GUIManager guiManager;
-    private AdminGUIManager adminGUIManager;
 
-    // Server-wide bypass set
+    // Server-wide bypass set (restored)
     private final Set<UUID> bypassing = new HashSet<>();
 
     private boolean debugEnabled = false;
@@ -47,20 +43,13 @@ public class ProShield extends JavaPlugin {
         instance = this;
         saveDefaultConfig();
 
-        // Core utils
         messages = new MessagesUtil(this);
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
-        // GUI
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
-        adminGUIManager = new AdminGUIManager(this);
 
-        // Expansion system
-        ExpansionRequestManager.clear(); // start fresh each reboot
-
-        // Commands + listeners
         registerCommands();
         registerListeners();
 
@@ -72,7 +61,6 @@ public class ProShield extends JavaPlugin {
         if (plotManager != null) {
             plotManager.saveAll();
         }
-        ExpansionRequestManager.clear();
         getLogger().info("ProShield disabled.");
     }
 
@@ -95,8 +83,13 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerListeners() {
+        // GUI click events
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new AdminGUIListener(this, adminGUIManager), this);
+
+        // NEW: GUIManager also listens for manual deny chat reasons
+        Bukkit.getPluginManager().registerEvents(guiManager, this);
+
+        // Plot + compass + mob listeners
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
@@ -108,9 +101,8 @@ public class ProShield extends JavaPlugin {
     public ClaimRoleManager getRoleManager() { return roleManager; }
     public GUICache getGuiCache() { return guiCache; }
     public GUIManager getGuiManager() { return guiManager; }
-    public AdminGUIManager getAdminGUIManager() { return adminGUIManager; }
 
-    // Bypass set
+    // Bypass set (restored)
     public Set<UUID> getBypassing() { return bypassing; }
 
     // Debug support

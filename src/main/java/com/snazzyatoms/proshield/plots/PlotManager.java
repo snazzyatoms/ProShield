@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,7 +11,7 @@ public class PlotManager {
     private final ProShield plugin;
     private final Map<UUID, Plot> plots = new HashMap<>();
     private final Map<String, UUID> playerNames = new HashMap<>();
-    private final Map<UUID, Integer> claimRadii = new HashMap<>(); // ✅ track per-player radius
+    private final Map<UUID, Integer> claimRadii = new HashMap<>(); // ✅ tracks custom expansion radius per player
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
@@ -36,7 +35,7 @@ public class PlotManager {
         plots.put(id, plot);
         playerNames.put(owner.getName(), owner.getUniqueId());
 
-        // ✅ set default radius from config
+        // Set default radius if no expansion yet
         int defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
         claimRadii.put(owner.getUniqueId(), defaultRadius);
     }
@@ -58,29 +57,22 @@ public class PlotManager {
         return "Unknown";
     }
 
-    // ======================================================
-    // ✅ Expansion Support
-    // ======================================================
-
-    public int getClaimRadius(UUID playerId) {
-        return claimRadii.getOrDefault(
-            playerId,
-            plugin.getConfig().getInt("claims.default-radius", 50)
-        );
-    }
-
+    // ✅ Expansion support
     public void expandClaim(UUID playerId, int extraRadius) {
-        int current = getClaimRadius(playerId);
+        int current = claimRadii.getOrDefault(playerId,
+                plugin.getConfig().getInt("claims.default-radius", 50));
         int newRadius = current + extraRadius;
-
-        // ✅ Update memory
         claimRadii.put(playerId, newRadius);
 
-        // ✅ Respect instant-apply toggle
-        if (plugin.getConfig().getBoolean("claims.instant-apply", true)) {
-            plugin.getLogger().info("Expanded claim radius for " + playerId + " to " + newRadius + " blocks instantly.");
-        } else {
-            plugin.getLogger().info("Expansion queued for " + playerId + " (restart required). New radius: " + newRadius);
+        Player player = plugin.getServer().getPlayer(playerId);
+        if (player != null) {
+            player.sendMessage(plugin.getMessagesUtil().color(
+                    "&aYour claim radius has been expanded to &e" + newRadius + " &ablocks."));
         }
+    }
+
+    public int getClaimRadius(UUID playerId) {
+        return claimRadii.getOrDefault(playerId,
+                plugin.getConfig().getInt("claims.default-radius", 50));
     }
 }

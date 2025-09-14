@@ -21,12 +21,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
 
-/**
- * GUIManager
- * - Handles menus: Main, Flags, Roles, Admin/Expansion, Deny Reasons
- * - Trusted players menu shows heads with roles + overrides
- * - Supports per-player permissions and role cycling
- */
 public class GUIManager {
 
     private final ProShield plugin;
@@ -151,10 +145,8 @@ public class GUIManager {
                     meta.setLore(lore);
                 }
 
-                if (meta != null) {
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    stack.setItemMeta(meta);
-                }
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                stack.setItemMeta(meta);
 
                 inv.setItem(slot, stack);
             }
@@ -182,37 +174,6 @@ public class GUIManager {
         int size = menuSec != null ? menuSec.getInt("size", 27) : 27;
 
         Inventory inv = Bukkit.createInventory(null, size, title);
-
-        if (menuSec != null) {
-            ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
-            if (itemsSec != null) {
-                for (String slotStr : itemsSec.getKeys(false)) {
-                    int slot = parseIntSafe(slotStr, -1);
-                    if (slot < 0) continue;
-                    ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
-                    if (itemSec == null) continue;
-
-                    Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
-                    if (mat == null) mat = Material.STONE;
-
-                    ItemStack stack = new ItemStack(mat);
-                    ItemMeta meta = stack.getItemMeta();
-                    if (meta == null) continue;
-
-                    String name = itemSec.getString("name", "");
-                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
-
-                    List<String> lore = itemSec.getStringList("lore");
-                    if (lore != null && !lore.isEmpty()) {
-                        lore.replaceAll(s -> ChatColor.translateAlternateColorCodes('&', s));
-                        meta.setLore(lore);
-                    }
-
-                    stack.setItemMeta(meta);
-                    inv.setItem(slot, stack);
-                }
-            }
-        }
 
         ClaimRoleManager rm = plugin.getRoleManager();
         Map<String, String> trusted = rm.getTrusted(plot.getId());
@@ -305,9 +266,9 @@ public class GUIManager {
                 case "pets" -> toggleFlag(plot, "pets", player);
                 case "pvp" -> toggleFlag(plot, "pvp", player);
                 case "safe zone" -> toggleFlag(plot, "safezone", player);
-                case "back" -> openMenu(player, "main");
+                case "back" -> { openMenu(player, "main"); return; }
             }
-            if (!name.equalsIgnoreCase("back")) openMenu(player, "flags");
+            openMenu(player, "flags");
             return;
         }
 
@@ -341,7 +302,6 @@ public class GUIManager {
             ExpansionQueue.denyRequest(req, name);
             plugin.getMessagesUtil().send(player, "&cRequest denied (" + name + ").");
             openMenu(player, "admin-expansions");
-            return;
         }
     }
 

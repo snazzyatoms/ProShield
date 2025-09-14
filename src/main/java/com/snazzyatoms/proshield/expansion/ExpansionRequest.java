@@ -1,8 +1,16 @@
 // src/main/java/com/snazzyatoms/proshield/expansion/ExpansionRequest.java
 package com.snazzyatoms.proshield.expansion;
 
+import com.snazzyatoms.proshield.plots.Plot;
+
 import java.util.UUID;
 
+/**
+ * ExpansionRequest
+ * ----------------
+ * Represents a player's request to expand their claim.
+ * Keeps track of status, time, denial reason, and ties into Plot.
+ */
 public class ExpansionRequest {
 
     public enum Status {
@@ -47,7 +55,10 @@ public class ExpansionRequest {
     }
 
     // --- State transitions ---
-    public void approve() {
+    public void approve(Plot plot) {
+        if (plot != null && status == Status.PENDING) {
+            plot.expand(extraRadius); // 🔑 actually expand claim
+        }
         this.status = Status.APPROVED;
         this.denialReason = null;
     }

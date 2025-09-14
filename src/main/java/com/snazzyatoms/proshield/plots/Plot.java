@@ -1,6 +1,8 @@
 // src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
+import org.bukkit.Chunk;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,12 +28,18 @@ public class Plot {
     // Expansion radius (default = 0 means just the chunk itself)
     private int extraRadius = 0;
 
+    // Existing constructor
     public Plot(UUID owner, String worldName, int chunkX, int chunkZ) {
         this.id = UUID.randomUUID();
         this.owner = owner;
         this.worldName = worldName;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
+    }
+
+    // ✅ New convenience constructor for Bukkit Chunk
+    public Plot(UUID owner, Chunk chunk) {
+        this(owner, chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
     }
 
     // --- Core info ---

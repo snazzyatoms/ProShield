@@ -1,53 +1,54 @@
 // src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class Plot {
     private final UUID id;
-    private UUID owner;
-    private String world;
+    private final UUID owner;
+    private final String worldName;
+    private final int chunkX;
+    private final int chunkZ;
 
-    private int centerX;
-    private int centerZ;
-    private int radius;
-
-    private final Set<UUID> trusted = new HashSet<>();
     private final Map<String, Boolean> flags = new HashMap<>();
 
-    public Plot(UUID id, UUID owner) {
+    public Plot(UUID id, UUID owner, String worldName, int chunkX, int chunkZ) {
         this.id = id;
         this.owner = owner;
+        this.worldName = worldName;
+        this.chunkX = chunkX;
+        this.chunkZ = chunkZ;
     }
 
-    // --- IDs & ownership ---
-    public UUID getId() { return id; }
-    public UUID getOwner() { return owner; }
-    public void setOwner(UUID owner) { this.owner = owner; }
-    public boolean isOwner(UUID uuid) { return owner != null && owner.equals(uuid); }
-
-    // --- Location ---
-    public void setCenter(int x, int z) {
-        this.centerX = x;
-        this.centerZ = z;
+    public UUID getId() {
+        return id;
     }
-    public int getCenterX() { return centerX; }
-    public int getCenterZ() { return centerZ; }
 
-    public void setRadius(int radius) { this.radius = radius; }
-    public int getRadius() { return radius; }
+    public UUID getOwner() {
+        return owner;
+    }
 
-    public void setWorld(String world) { this.world = world; }
-    public String getWorld() { return world; }
+    // ✅ Added so ClaimPreview compiles
+    public String getWorldName() {
+        return worldName;
+    }
 
-    // --- Trust ---
-    public void addTrusted(UUID uuid) { trusted.add(uuid); }
-    public void removeTrusted(UUID uuid) { trusted.remove(uuid); }
-    public boolean isTrusted(UUID uuid) { return trusted.contains(uuid); }
-    public Set<UUID> getTrusted() { return Collections.unmodifiableSet(trusted); }
+    public int getX() {
+        return chunkX;
+    }
 
-    // --- Flags ---
-    public void setFlag(String key, boolean value) { flags.put(key.toLowerCase(Locale.ROOT), value); }
-    public boolean getFlag(String key, boolean def) { return flags.getOrDefault(key.toLowerCase(Locale.ROOT), def); }
-    public Map<String, Boolean> getFlags() { return flags; }
+    public int getZ() {
+        return chunkZ;
+    }
+
+    // Flag management
+    public boolean getFlag(String flag, boolean def) {
+        return flags.getOrDefault(flag, def);
+    }
+
+    public void setFlag(String flag, boolean value) {
+        flags.put(flag, value);
+    }
 }

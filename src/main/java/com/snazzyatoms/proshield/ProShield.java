@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield;
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.compass.CompassListener;
+import com.snazzyatoms.proshield.gui.ChatListener;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
@@ -86,8 +87,8 @@ public class ProShield extends JavaPlugin {
         // GUI click events
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // NEW: GUIManager also listens for manual deny chat reasons
-        Bukkit.getPluginManager().registerEvents(guiManager, this);
+        // Manual deny reason via chat
+        Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
 
         // Plot + compass + mob listeners
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);

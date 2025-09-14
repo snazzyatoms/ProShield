@@ -57,7 +57,7 @@ public class PlotManager {
         return "Unknown";
     }
 
-    // ✅ Expansion support
+    // ✅ Expansion support (player-initiated)
     public void expandClaim(UUID playerId, int extraRadius) {
         int current = claimRadii.getOrDefault(playerId,
                 plugin.getConfig().getInt("claims.default-radius", 50));
@@ -68,6 +68,37 @@ public class PlotManager {
         if (player != null) {
             player.sendMessage(plugin.getMessagesUtil().color(
                     "&aYour claim radius has been expanded to &e" + newRadius + " &ablocks."));
+        }
+    }
+
+    // ✅ Expansion support (called by Admin GUI Approve button)
+    public void expandPlot(UUID playerId, int extraRadius, Player admin) {
+        expandClaim(playerId, extraRadius);
+
+        Player target = plugin.getServer().getPlayer(playerId);
+        if (target != null) {
+            target.sendMessage(plugin.getMessagesUtil().color(
+                    plugin.getConfig().getString("messages.expansion-approved", 
+                    "&aYour claim expansion (+{blocks} blocks) was approved!")
+                            .replace("{blocks}", String.valueOf(extraRadius))
+            ));
+        }
+
+        if (admin != null) {
+            admin.sendMessage(plugin.getMessagesUtil().color(
+                    "&aApproved expansion of &e" + extraRadius + " &ablocks for &b" + getPlayerName(playerId)));
+        }
+    }
+
+    // ✅ Deny support (called by Admin GUI Deny Reasons menu)
+    public void denyExpansion(UUID playerId, String reason) {
+        Player target = plugin.getServer().getPlayer(playerId);
+        if (target != null) {
+            target.sendMessage(plugin.getMessagesUtil().color(
+                    plugin.getConfig().getString("messages.expansion-denied",
+                    "&cYour claim expansion request was denied: {reason}")
+                            .replace("{reason}", reason)
+            ));
         }
     }
 

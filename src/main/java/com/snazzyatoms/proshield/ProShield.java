@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -35,10 +34,13 @@ public class ProShield extends JavaPlugin {
 
         saveDefaultConfig();
 
-        messages = new MessagesUtil(this);
+        messages    = new MessagesUtil(this);
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
-        guiManager = new GUIManager(this);
+        guiManager  = new GUIManager(this);
+
+        // 🔄 Load trusted/roles persistence
+        roleManager.loadAll();
 
         // Register command executor
         ProShieldCommand executor = new ProShieldCommand(this, guiManager, plotManager, messages);
@@ -54,13 +56,21 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new AdminGUIListener(guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this), this); // ✅ fixed constructor
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this), this);
 
         getLogger().info("ProShield enabled!");
     }
 
     @Override
     public void onDisable() {
+        // 💾 Save trusted/roles persistence
+        if (roleManager != null) {
+            try {
+                roleManager.saveAll();
+            } catch (Exception e) {
+                getLogger().warning("Failed to save roles.yml on shutdown: " + e.getMessage());
+            }
+        }
         getLogger().info("ProShield disabled!");
     }
 
@@ -90,5 +100,9 @@ public class ProShield extends JavaPlugin {
 
     public void toggleDebug() {
         debugEnabled = !debugEnabled;
+    }
+
+    public boolean isBypassing(UUID id) {
+        return bypassing.contains(id);
     }
 }

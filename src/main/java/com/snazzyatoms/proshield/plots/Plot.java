@@ -1,39 +1,31 @@
 // src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
+import org.bukkit.Location;
+
 import java.util.*;
 
 public class Plot {
     private final UUID id;
     private UUID owner;
-
-    // ✅ Added for ClaimPreview & utilities
-    private final String worldName;
-    private final int x; // chunk X
-    private final int z; // chunk Z
-
     private final Set<UUID> trusted = new HashSet<>();
     private final Map<String, Boolean> flags = new HashMap<>();
+    private final Location center; // ✅ center point of claim
 
-    public Plot(UUID id, UUID owner, String worldName, int x, int z) {
+    public Plot(UUID id, UUID owner, Location center) {
         this.id = id;
         this.owner = owner;
-        this.worldName = worldName;
-        this.x = x;
-        this.z = z;
+        this.center = center;
     }
 
     public UUID getId() { return id; }
     public UUID getOwner() { return owner; }
     public void setOwner(UUID owner) { this.owner = owner; }
+    public Location getCenter() { return center; }
 
     public boolean isOwner(UUID uuid) {
         return owner != null && owner.equals(uuid);
     }
-
-    public String getWorldName() { return worldName; }
-    public int getX() { return x; }
-    public int getZ() { return z; }
 
     public void addTrusted(UUID uuid) { trusted.add(uuid); }
     public void removeTrusted(UUID uuid) { trusted.remove(uuid); }

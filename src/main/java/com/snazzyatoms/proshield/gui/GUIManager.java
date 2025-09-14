@@ -23,13 +23,10 @@ import java.util.*;
 
 /**
  * GUIManager
- * ----------
  * - Main, Flags, Admin/Expansion GUIs
- * - Roles GUI (dynamic): lists trusted players as heads with pagination
- * - Per-player settings UI (role cycle + explicit permission overrides)
- *
- * ✅ All methods needed by callers are public.
- * ✅ No features removed; only fixes/expansions done.
+ * - Roles GUI: list trusted players as heads, click to manage, shift-click to untrust
+ * - Per-player permission toggles (build, interact, containers, unclaim)
+ * - Role cycle: trusted -> builder -> co-owner -> trusted
  */
 public class GUIManager {
 
@@ -38,16 +35,13 @@ public class GUIManager {
     // Expansion deny "other" reason capture
     private static final Map<UUID, ExpansionRequest> awaitingReason = new HashMap<>();
 
-    // Role chat action ("add"), and target plot for role operations
+    // Role chat action ("add")
     private static final Map<UUID, String> awaitingRoleAction = new HashMap<>();
-    private static final Map<UUID, UUID> awaitingRolePlot = new HashMap<>();
-
-    // Pagination state for roles UI (viewer -> page index)
-    private static final Map<UUID, Integer> rolesPage = new HashMap<>();
+    private static final Map<UUID, UUID> awaitingRolePlot = new HashMap<>(); // which plot player is targeting for role ops
 
     // Supported per-player permission keys
     private static final List<String> PERM_KEYS = List.of("build", "interact", "containers", "unclaim");
-    // Role cycle order
+    // Roles cycle order (owner excluded from GUI assignment)
     private static final List<String> ROLE_ORDER = List.of("trusted", "builder", "co-owner");
 
     public GUIManager(ProShield plugin) {
@@ -65,7 +59,6 @@ public class GUIManager {
         awaitingReason.remove(player.getUniqueId());
         awaitingRoleAction.remove(player.getUniqueId());
         awaitingRolePlot.remove(player.getUniqueId());
-        rolesPage.remove(player.getUniqueId());
     }
 
     public static boolean isAwaitingRoleAction(Player player) {
@@ -81,7 +74,7 @@ public class GUIManager {
     }
 
     /* =====================================================
-     * Hook for ChatListener role input (kept public static)
+     * Optional hook for ChatListener
      * ===================================================== */
     public static void handleRoleChatInput(Player adminOrOwner, String message, ProShield plugin) {
         String action = awaitingRoleAction.remove(adminOrOwner.getUniqueId());
@@ -91,13 +84,12 @@ public class GUIManager {
             return;
         }
 
-        Plot plot = plugin.getPlotManager().getPlotById(plotId);
+        Plot plot = plugin.getPlotManager().getPlot(plotId);
         if (plot == null) {
             plugin.getMessagesUtil().send(adminOrOwner, "&cThat claim no longer exists.");
             return;
         }
 
-        // Currently we support "add" via chat (trust player as 'trusted')
         if (action.equalsIgnoreCase("add")) {
             String targetName = message.trim();
             if (targetName.isEmpty()) {
@@ -128,7 +120,7 @@ public class GUIManager {
      * ================ */
     public void openMenu(Player player, String menuName) {
         if (menuName.equalsIgnoreCase("roles")) {
-            openRolesMenu(player, 0); // dynamic + page 0 by default
+            openRolesMenu(player); // dynamic menu
             return;
         }
 
@@ -164,15 +156,32 @@ public class GUIManager {
 
                 List<String> lore = itemSec.getStringList("lore");
                 if (lore != null && !lore.isEmpty()) {
-                    for (int i = 0; i < lore.size(); i++) {
-                        lore.set(i, ChatColor.translateAlternateColorCodes('&', lore.get(i)));
-                    }
+                    lore.replaceAll(s -> ChatColor.translateAlternateColorCodes('&', s));
                     meta.setLore(lore);
                 }
+
+                // 🛠 Ensure attributes are hidden for items like swords
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
 
                 stack.setItemMeta(meta);
                 inv.setItem(slot, stack);
             }
+        }
+
+        // 🛠 Fallback for flags menu if config missing
+        if (menuName.equalsIgnoreCase("flags") && (itemsSec == null || itemsSec.getKeys(false).isEmpty())) {
+            String[] flags = {"explosions","buckets","item-frames","armor-stands","containers","pets","pvp","safezone"};
+            int i = 10;
+            for (String f : flags) {
+                ItemStack it = new ItemStack(Material.PAPER);
+                ItemMeta meta = it.getItemMeta();
+                meta.setDisplayName(ChatColor.YELLOW + f);
+                meta.setLore(List.of(ChatColor.GRAY + "Click to toggle"));
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                it.setItemMeta(meta);
+                inv.setItem(i++, it);
+            }
+            inv.setItem(size - 1, simple(Material.BARRIER, ChatColor.RED + "Back", List.of(ChatColor.GRAY + "Return")));
         }
 
         player.openInventory(inv);
@@ -181,7 +190,7 @@ public class GUIManager {
     /* ==========================
      * Roles menu (dynamic heads)
      * ========================== */
-    private void openRolesMenu(Player player, int page) {
+    private void openRolesMenu(Player player) {
         Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
         if (plot == null) {
             plugin.getMessagesUtil().send(player, "&cYou must stand inside a claim to manage roles.");
@@ -192,7 +201,6 @@ public class GUIManager {
             return;
         }
 
-        // Title and size from config if present
         ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus.roles");
         String title = "&bTrusted Players";
         int size = 27;
@@ -203,7 +211,6 @@ public class GUIManager {
         title = ChatColor.translateAlternateColorCodes('&', title);
         Inventory inv = Bukkit.createInventory(null, size, title);
 
-        // Static config items (Add/Remove/Back)
         if (menuSec != null) {
             ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
             if (itemsSec != null) {
@@ -229,45 +236,26 @@ public class GUIManager {
                         meta.setLore(lore);
                     }
 
+                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+
                     stack.setItemMeta(meta);
                     inv.setItem(slot, stack);
                 }
             }
         }
 
-        // Build trusted list and paginate
         ClaimRoleManager rm = plugin.getRoleManager();
-        Map<String, String> trusted = rm.getTrusted(plot.getId()); // name -> role
+        Map<String, String> trusted = rm.getTrusted(plot.getId());
+        int[] fillSlots = headFillPattern(size);
+        int idx = 0;
 
-        int[] fill = headFillPattern(size);      // places for heads
-        int pageSize = fill.length;
-        List<Map.Entry<String, String>> entries = new ArrayList<>(trusted.entrySet());
-        entries.sort(Comparator.comparing(Map.Entry::getKey, String.CASE_INSENSITIVE_ORDER));
-
-        int totalPages = Math.max(1, (int) Math.ceil(entries.size() / (double) pageSize));
-        int safePage = Math.max(0, Math.min(page, totalPages - 1));
-        rolesPage.put(player.getUniqueId(), safePage);
-
-        int start = safePage * pageSize;
-        int end = Math.min(start + pageSize, entries.size());
-        for (int i = start, headIdx = 0; i < end && headIdx < fill.length; i++, headIdx++) {
-            Map.Entry<String, String> e = entries.get(i);
-            int slot = fill[headIdx];
+        for (Map.Entry<String, String> e : trusted.entrySet()) {
+            if (idx >= fillSlots.length) break;
+            int slot = fillSlots[idx++];
             ItemStack head = createPlayerHead(e.getKey(), e.getValue(), plot.getId());
             inv.setItem(slot, head);
         }
 
-        // Pagination controls: use slot 18 for Prev, slot 26 for Next if size >= 27
-        if (size >= 27) {
-            if (safePage > 0) {
-                inv.setItem(18, simple(Material.ARROW, ChatColor.YELLOW + "Previous Page", List.of(ChatColor.GRAY + "Page " + (safePage) + "/" + totalPages)));
-            }
-            if (safePage < totalPages - 1) {
-                inv.setItem(26, simple(Material.ARROW, ChatColor.YELLOW + "Next Page", List.of(ChatColor.GRAY + "Page " + (safePage + 2) + "/" + totalPages)));
-            }
-        }
-
-        // Remember which plot this player is managing
         awaitingRolePlot.put(player.getUniqueId(), plot.getId());
         player.openInventory(inv);
     }
@@ -279,10 +267,7 @@ public class GUIManager {
             OfflinePlayer off = Bukkit.getOfflinePlayer(playerName);
             if (off != null) meta.setOwningPlayer(off);
             meta.setDisplayName(ChatColor.AQUA + playerName + ChatColor.GRAY + " (" + role + ")");
-
-            // Lore: UUID + permissions state
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.DARK_GRAY + "UUID: " + (off != null ? off.getUniqueId() : "unknown"));
             lore.add(ChatColor.GRAY + "Role: " + ChatColor.YELLOW + role);
 
             Map<String, Boolean> perms = plugin.getRoleManager().getPermissions(plotId, playerName);
@@ -313,7 +298,6 @@ public class GUIManager {
     }
 
     private int[] headFillPattern(int size) {
-        // Nice centered rows; supports 27/36/45 (and falls back)
         if (size <= 27) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25};
         if (size <= 36) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34};
         return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34, 37,38,39,40,41,42,43};
@@ -330,7 +314,6 @@ public class GUIManager {
         String role = rm.getRole(plotId, targetName);
         if (role == null) role = "trusted";
 
-        // Role cycler
         ItemStack roleItem = new ItemStack(Material.NAME_TAG);
         {
             ItemMeta meta = roleItem.getItemMeta();
@@ -343,7 +326,6 @@ public class GUIManager {
         }
         inv.setItem(10, roleItem);
 
-        // Permission toggles
         Map<String, Boolean> overrides = rm.getPermissions(plotId, targetName);
         int[] permSlots = new int[]{12, 13, 14, 15};
         for (int i = 0; i < PERM_KEYS.size() && i < permSlots.length; i++) {
@@ -352,7 +334,6 @@ public class GUIManager {
             inv.setItem(permSlots[i], toggleItem(key, value));
         }
 
-        // Back button
         inv.setItem(26, simple(Material.BARRIER, ChatColor.RED + "Back", List.of(ChatColor.GRAY + "Return to roles")));
 
         viewer.openInventory(inv);
@@ -364,6 +345,7 @@ public class GUIManager {
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName((value ? ChatColor.GREEN : ChatColor.RED) + key.toUpperCase(Locale.ROOT));
         meta.setLore(List.of(ChatColor.GRAY + "Click to toggle"));
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         it.setItemMeta(meta);
         return it;
     }
@@ -373,6 +355,7 @@ public class GUIManager {
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName(name);
         if (lore != null && !lore.isEmpty()) meta.setLore(lore);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         it.setItemMeta(meta);
         return it;
     }
@@ -390,9 +373,9 @@ public class GUIManager {
         // --- MAIN MENU ---
         if (title.contains("ProShield Menu")) {
             switch (name.toLowerCase(Locale.ROOT)) {
-                case "claim land" -> player.performCommand("claim");
+                case "claim land" -> player.performCommand("proshield claim"); // fixed
                 case "claim info" -> player.performCommand("proshield info");
-                case "unclaim land" -> player.performCommand("unclaim");
+                case "unclaim land" -> player.performCommand("proshield unclaim"); // fixed
                 case "trusted players" -> openMenu(player, "roles");
                 case "claim flags" -> openMenu(player, "flags");
                 case "admin tools" -> openMenu(player, "admin-expansions");
@@ -416,7 +399,10 @@ public class GUIManager {
                 case "pets" -> toggleFlag(plot, "pets", player);
                 case "pvp" -> toggleFlag(plot, "pvp", player);
                 case "safe zone" -> toggleFlag(plot, "safezone", player);
-                case "back" -> openMenu(player, "main");
+                case "back" -> {
+                    openMenu(player, "main"); // fixed back button
+                    return;
+                }
             }
             if (!name.equalsIgnoreCase("back")) openMenu(player, "flags");
             return;
@@ -444,179 +430,4 @@ public class GUIManager {
             ExpansionRequest req = pending.get(0);
             if (name.equalsIgnoreCase("back")) { openMenu(player, "admin-expansions"); return; }
             if (name.equalsIgnoreCase("other")) {
-                awaitingReason.put(player.getUniqueId(), req);
-                plugin.getMessagesUtil().send(player, "&eType your denial reason in chat...");
-                player.closeInventory();
-                return;
-            }
-            ExpansionQueue.denyRequest(req, name);
-            plugin.getMessagesUtil().send(player, "&cRequest denied (" + name + ").");
-            openMenu(player, "admin-expansions");
-            return;
-        }
-
-        // --- ROLES MENU (list + pagination) ---
-        if (title.contains("Trusted Players")) {
-            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
-            if (plot == null) { plugin.getMessagesUtil().send(player, "&cStand inside your claim."); return; }
-
-            // pagination arrows
-            if (event.getCurrentItem().getType() == Material.ARROW) {
-                Integer page = rolesPage.getOrDefault(player.getUniqueId(), 0);
-                if (name.toLowerCase(Locale.ROOT).contains("previous")) page = Math.max(0, page - 1);
-                else if (name.toLowerCase(Locale.ROOT).contains("next")) page = page + 1; // openRolesMenu bounds it
-                openRolesMenu(player, page);
-                return;
-            }
-
-            // control buttons
-            switch (name.toLowerCase(Locale.ROOT)) {
-                case "add player" -> {
-                    awaitingRoleAction.put(player.getUniqueId(), "add");
-                    awaitingRolePlot.put(player.getUniqueId(), plot.getId());
-                    plugin.getMessagesUtil().send(player, "&eType the name of the player to trust...");
-                    player.closeInventory();
-                    return;
-                }
-                case "remove player" -> {
-                    plugin.getMessagesUtil().send(player, "&7Shift-click a head to untrust. Click a head to manage.");
-                    return;
-                }
-                case "back" -> { openMenu(player, "main"); return; }
-            }
-            // If clicked a head -> either untrust (shift) or manage
-            if (event.getCurrentItem().getType() == Material.PLAYER_HEAD) {
-                String display = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
-                String targetName = display;
-                int paren = targetName.indexOf(" (");
-                if (paren > 0) targetName = targetName.substring(0, paren);
-
-                if (event.isShiftClick()) {
-                    boolean removed = plugin.getRoleManager().untrustPlayer(plot, targetName);
-                    if (removed) {
-                        plugin.getMessagesUtil().send(player, "&cUntrusted &e" + targetName + "&c.");
-                    } else {
-                        plugin.getMessagesUtil().send(player, "&7" + targetName + " wasn't trusted.");
-                    }
-                    Integer page = rolesPage.getOrDefault(player.getUniqueId(), 0);
-                    openRolesMenu(player, page);
-                } else {
-                    openPlayerDetailMenu(player, plot.getId(), targetName);
-                }
-            }
-            return;
-        }
-
-        // --- PLAYER DETAIL MENU ---
-        if (ChatColor.stripColor(title).startsWith("Player Settings:")) {
-            String raw = ChatColor.stripColor(title);
-            String prefix = "Player Settings: ";
-            if (!raw.startsWith(prefix)) return;
-            String targetName = raw.substring(prefix.length()).trim();
-
-            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
-            if (plot == null) { plugin.getMessagesUtil().send(player, "&cStand inside your claim."); return; }
-
-            ClaimRoleManager rm = plugin.getRoleManager();
-
-            // Back
-            if (name.equalsIgnoreCase("back")) {
-                Integer page = rolesPage.getOrDefault(player.getUniqueId(), 0);
-                openRolesMenu(player, page);
-                return;
-            }
-
-            // Role cycle
-            if (name.startsWith("Role:")) {
-                String currentRole = rm.getRole(plot.getId(), targetName);
-                if (currentRole == null) currentRole = "trusted";
-                String nextRole = nextRole(currentRole);
-                Map<String, Boolean> existing = rm.getPermissions(plot.getId(), targetName);
-
-                // change role by re-trusting with new role (preserve overrides)
-                rm.untrustPlayer(plot, targetName);
-                rm.trustPlayer(plot, targetName, nextRole);
-                for (Map.Entry<String, Boolean> e : existing.entrySet()) {
-                    rm.setPermission(plot.getId(), targetName, e.getKey(), e.getValue());
-                }
-                plugin.getMessagesUtil().send(player, "&e" + targetName + "&7 is now role &6" + nextRole + "&7.");
-                openPlayerDetailMenu(player, plot.getId(), targetName);
-                return;
-            }
-
-            // Permission toggles
-            String lower = name.toLowerCase(Locale.ROOT);
-            for (String k : PERM_KEYS) {
-                if (lower.startsWith(k)) {
-                    Map<String, Boolean> perms = rm.getPermissions(plot.getId(), targetName);
-                    boolean current = perms.getOrDefault(k, false);
-                    rm.setPermission(plot.getId(), targetName, k, !current);
-                    plugin.getMessagesUtil().send(player, "&7Set &e" + k + " &7for &e" + targetName + " &7to " + (current ? "&cOFF" : "&aON"));
-                    openPlayerDetailMenu(player, plot.getId(), targetName);
-                    return;
-                }
-            }
-        }
-    }
-
-    private String nextRole(String current) {
-        String c = current.toLowerCase(Locale.ROOT);
-        int i = ROLE_ORDER.indexOf(c);
-        if (i < 0) return ROLE_ORDER.get(0);
-        return ROLE_ORDER.get((i + 1) % ROLE_ORDER.size());
-    }
-
-    /* ==========
-     * Helpers
-     * ========== */
-    private void toggleFlag(Plot plot, String flag, Player player) {
-        boolean current = plot.getFlag(flag, false);
-        plot.setFlag(flag, !current);
-        MessagesUtil messages = plugin.getMessagesUtil();
-        messages.send(player, current ? "&c" + flag + " disabled." : "&a" + flag + " enabled.");
-    }
-
-    private void showPendingRequests(Player player) {
-        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
-        if (pending.isEmpty()) {
-            plugin.getMessagesUtil().send(player, "&7No pending requests.");
-            return;
-        }
-        for (ExpansionRequest req : pending) {
-            String pName = Bukkit.getOfflinePlayer(req.getPlayerId()).getName();
-            plugin.getMessagesUtil().send(player,
-                    "&eRequest: " + pName + " +" + req.getExtraRadius() + " blocks (" +
-                            (System.currentTimeMillis() - req.getRequestTime()) / 1000 + "s ago)");
-        }
-    }
-
-    private void handleExpansionApproval(Player player) {
-        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
-        if (pending.isEmpty()) {
-            plugin.getMessagesUtil().send(player, "&7No requests to approve.");
-            return;
-        }
-        ExpansionRequest req = pending.get(0);
-        ExpansionQueue.approveRequest(req);
-        Player target = Bukkit.getPlayer(req.getPlayerId());
-        if (target != null) target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
-        plugin.getMessagesUtil().send(player, "&aRequest approved.");
-    }
-
-    /** Kept public static so ChatListener (and other flows) can call it directly. */
-    public static void provideManualReason(Player admin, String reason, ProShield plugin) {
-        ExpansionRequest req = awaitingReason.remove(admin.getUniqueId());
-        if (req == null) {
-            plugin.getMessagesUtil().send(admin, "&7No pending request to deny.");
-            return;
-        }
-        ExpansionQueue.denyRequest(req, reason);
-        Player target = Bukkit.getPlayer(req.getPlayerId());
-        if (target != null) target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
-        plugin.getMessagesUtil().send(admin, "&cRequest denied (" + reason + ").");
-    }
-
-    private int parseIntSafe(String s, int def) {
-        try { return Integer.parseInt(s); } catch (Exception e) { return def; }
-    }
-}
+                awaitingReason.put(player

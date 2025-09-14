@@ -1,6 +1,8 @@
 // src/main/java/com/snazzyatoms/proshield/expansion/ExpansionQueue.java
 package com.snazzyatoms.proshield.expansion;
 
+import com.snazzyatoms.proshield.plots.Plot;
+
 import java.util.*;
 
 /**
@@ -48,17 +50,21 @@ public class ExpansionQueue {
     }
 
     /**
-     * Approve a request instantly.
+     * Approve a request and expand the associated plot.
      */
-    public static void approveRequest(ExpansionRequest request) {
-        request.approve();
+    public static void approveRequest(ExpansionRequest request, Plot plot) {
+        if (request != null && request.isPending()) {
+            request.approve(plot); // ✅ calls plot.expand(extraRadius)
+        }
     }
 
     /**
      * Deny a request with a reason.
      */
     public static void denyRequest(ExpansionRequest request, String reason) {
-        request.deny(reason);
+        if (request != null && request.isPending()) {
+            request.deny(reason);
+        }
     }
 
     /**

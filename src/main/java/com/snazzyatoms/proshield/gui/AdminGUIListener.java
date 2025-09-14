@@ -11,9 +11,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.UUID;
+import java.util.*;
 
 public class AdminGUIListener implements Listener {
 
@@ -24,6 +25,9 @@ public class AdminGUIListener implements Listener {
 
     // Track which request an admin is reviewing
     private UUID selectedRequest = null;
+
+    // Track admins waiting to enter denial reason
+    private final Map<UUID, UUID> awaitingReason = new HashMap<>();
 
     public AdminGUIListener(ProShield plugin,
                             AdminGUIManager adminGUIManager,
@@ -71,7 +75,8 @@ public class AdminGUIListener implements Listener {
                                     Player target = Bukkit.getPlayer(selectedRequest);
                                     if (target != null) {
                                         target.sendMessage(plugin.getMessagesUtil()
-                                                .format("&aYour claim was expanded by +" + req.getExtraRadius() + " blocks!"));
+                                                .format(plugin.getConfig().getString("messages.expansion-approved")
+                                                        .replace("{blocks}", String.valueOf(req.getExtraRadius()))));
                                     }
                                 }
                                 requestManager.removeRequest(selectedRequest);
@@ -87,13 +92,11 @@ public class AdminGUIListener implements Listener {
                         if (selectedRequest != null) {
                             ExpansionRequest req = requestManager.getRequestByPlayer(selectedRequest);
                             if (req != null) {
-                                Player target = Bukkit.getPlayer(selectedRequest);
-                                if (target != null) {
-                                    target.sendMessage(plugin.getMessagesUtil()
-                                            .format("&cYour claim expansion request was denied by an admin."));
-                                }
-                                requestManager.removeRequest(selectedRequest);
-                                player.sendMessage(ChatColor.YELLOW + "Expansion denied.");
+                                // Prompt admin for denial reason
+                                awaitingReason.put(player.getUniqueId(), selectedRequest);
+                                player.closeInventory();
+                                player.sendMessage(ChatColor.YELLOW + "Type a reason in chat for denying this request.");
+                                player.sendMessage(ChatColor.GRAY + "(Type 'cancel' to abort.)");
                             } else {
                                 player.sendMessage(ChatColor.RED + "No request selected.");
                             }
@@ -117,6 +120,37 @@ public class AdminGUIListener implements Listener {
                     }
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void onAdminChat(AsyncPlayerChatEvent event) {
+        Player admin = event.getPlayer();
+        UUID adminId = admin.getUniqueId();
+
+        if (!awaitingReason.containsKey(adminId)) return;
+
+        event.setCancelled(true); // block from global chat
+        String msg = event.getMessage();
+        UUID playerId = awaitingReason.remove(adminId);
+
+        if (msg.equalsIgnoreCase("cancel")) {
+            admin.sendMessage(ChatColor.RED + "Denial cancelled.");
+            return;
+        }
+
+        ExpansionRequest req = requestManager.getRequestByPlayer(playerId);
+        if (req != null) {
+            Player target = Bukkit.getPlayer(playerId);
+            if (target != null) {
+                target.sendMessage(plugin.getMessagesUtil()
+                        .format(plugin.getConfig().getString("messages.expansion-denied")
+                                .replace("{reason}", msg)));
+            }
+            requestManager.removeRequest(playerId);
+            admin.sendMessage(ChatColor.YELLOW + "Expansion denied with reason: " + msg);
+        } else {
+            admin.sendMessage(ChatColor.RED + "That request no longer exists.");
         }
     }
 }

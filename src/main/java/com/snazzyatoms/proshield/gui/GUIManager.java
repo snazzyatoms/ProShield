@@ -188,7 +188,8 @@ public class GUIManager {
         }
 
         for (ExpansionRequest req : ExpansionRequestManager.getRequests()) {
-            String pName = Bukkit.getOfflinePlayer(req.getPlayerId()).getName(); // ✅ FIXED
+            UUID playerId = req.getPlayerId(); // explicit UUID
+            String pName = Bukkit.getOfflinePlayer(playerId).getName();
             plugin.getMessagesUtil().send(player,
                     "&eRequest: " + pName + " +" + req.getExtraRadius() + " blocks (" +
                             (System.currentTimeMillis() - req.getRequestTime()) / 1000 + "s ago)");
@@ -202,10 +203,11 @@ public class GUIManager {
         }
 
         ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
-        plugin.getPlotManager().expandClaim(req.getPlayerId(), req.getExtraRadius());
+        UUID playerId = req.getPlayerId(); // explicit UUID
+        plugin.getPlotManager().expandClaim(playerId, req.getExtraRadius());
         ExpansionRequestManager.removeRequest(req);
 
-        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
+        Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
             target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
         }
@@ -216,7 +218,8 @@ public class GUIManager {
     private void denyWithReason(Player admin, ExpansionRequest req, String reason) {
         ExpansionRequestManager.removeRequest(req);
 
-        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
+        UUID playerId = req.getPlayerId(); // explicit UUID
+        Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
         }
@@ -233,7 +236,8 @@ public class GUIManager {
 
         ExpansionRequestManager.removeRequest(req);
 
-        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
+        UUID playerId = req.getPlayerId(); // explicit UUID
+        Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
         }

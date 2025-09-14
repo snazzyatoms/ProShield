@@ -195,7 +195,7 @@ sounds:
   repel-sound: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
 
 claims:
-  default-radius: 50   # ✅ new claim size
+  default-radius: 50   # ✅ expanded default size
   default-flags:
     pvp: false
     explosions: false

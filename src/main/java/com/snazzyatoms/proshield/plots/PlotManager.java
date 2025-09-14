@@ -1,13 +1,19 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
+import org.bukkit.World;
 
 import java.util.*;
 
+/**
+ * PlotManager
+ * -----------
+ * Manages all claimed plots on the server.
+ */
 public class PlotManager {
 
     private final ProShield plugin;
@@ -21,40 +27,52 @@ public class PlotManager {
         return world + ":" + x + ":" + z;
     }
 
-    private String key(Chunk chunk) {
-        return key(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+    public Plot getPlot(Location loc) {
+        Chunk chunk = loc.getChunk();
+        return plots.get(key(loc.getWorld().getName(), chunk.getX(), chunk.getZ()));
     }
 
-    // --- Core API ---
-    public Plot createPlot(Player player, Location loc) {
+    public boolean isClaimed(Location loc) {
+        return getPlot(loc) != null;
+    }
+
+    public Plot createPlot(UUID owner, Location loc) {
         Chunk chunk = loc.getChunk();
-        Plot plot = new Plot(player.getUniqueId(), chunk);
-        plots.put(key(chunk), plot);
+        String world = loc.getWorld().getName();
+        Plot plot = new Plot(owner, world, chunk.getX(), chunk.getZ());
+        plots.put(key(world, chunk.getX(), chunk.getZ()), plot);
         return plot;
     }
 
     public void removePlot(Location loc) {
-        plots.remove(key(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ()));
-    }
-
-    public Plot getPlot(Location loc) {
-        return plots.get(key(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ()));
-    }
-
-    public void expandClaim(UUID playerId, int extraRadius) {
-        for (Plot plot : plots.values()) {
-            if (plot.getOwner().equals(playerId)) {
-                plot.expand(extraRadius);
-            }
-        }
-    }
-
-    // --- Utility ---
-    public String getPlayerName(UUID uuid) {
-        return Optional.ofNullable(Bukkit.getOfflinePlayer(uuid).getName()).orElse(uuid.toString());
+        Chunk chunk = loc.getChunk();
+        plots.remove(key(loc.getWorld().getName(), chunk.getX(), chunk.getZ()));
     }
 
     public Collection<Plot> getAllPlots() {
         return plots.values();
+    }
+
+    public void clear() {
+        plots.clear();
+    }
+
+    /**
+     * Utility: lookup plot by internal ID (for role manager & admin tools).
+     */
+    public Plot getPlotById(UUID plotId) {
+        for (Plot p : plots.values()) {
+            if (p.getId().equals(plotId)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Optional: get player-friendly name for a UUID.
+     */
+    public String getPlayerName(UUID uuid) {
+        return Bukkit.getOfflinePlayer(uuid).getName();
     }
 }

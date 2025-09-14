@@ -2,17 +2,20 @@
 package com.snazzyatoms.proshield.plots;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class Plot {
     private final UUID id;
-    private final UUID owner;
+    private UUID owner; // ⚡ must not be final if we allow transfer
     private final String worldName;
     private final int chunkX;
     private final int chunkZ;
 
     private final Map<String, Boolean> flags = new HashMap<>();
+    private final Set<UUID> trusted = new HashSet<>();
 
     public Plot(UUID id, UUID owner, String worldName, int chunkX, int chunkZ) {
         this.id = id;
@@ -28,6 +31,26 @@ public class Plot {
 
     public UUID getOwner() {
         return owner;
+    }
+
+    public void setOwner(UUID newOwner) {
+        this.owner = newOwner;
+    }
+
+    public boolean isOwner(UUID playerId) {
+        return owner != null && owner.equals(playerId);
+    }
+
+    public boolean isTrusted(UUID playerId) {
+        return isOwner(playerId) || trusted.contains(playerId);
+    }
+
+    public void addTrusted(UUID playerId) {
+        trusted.add(playerId);
+    }
+
+    public void removeTrusted(UUID playerId) {
+        trusted.remove(playerId);
     }
 
     // ✅ Added so ClaimPreview compiles

@@ -1,115 +1,116 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
-import org.bukkit.Bukkit;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
-import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
+
+import java.util.Locale;
 
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
-    private final NamespacedKey menuKeyTag;
-    private final NamespacedKey targetNameTag;
+    private final PlotManager plotManager;
+    private final MessagesUtil messages;
 
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
         this.guiManager = guiManager;
-        this.menuKeyTag = new NamespacedKey(plugin, "menuKey");
-        this.targetNameTag = new NamespacedKey(plugin, "targetName");
+        this.plotManager = plugin.getPlotManager();
+        this.messages = plugin.getMessagesUtil();
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getCurrentItem() == null) return;
 
-        event.setCancelled(true); // no item movement
+        String title = event.getView().getTitle();
         ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-
         ItemMeta meta = clicked.getItemMeta();
-        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        if (meta == null) return;
 
-        String menuTag = pdc.get(menuKeyTag, PersistentDataType.STRING);
-        String targetName = pdc.get(targetNameTag, PersistentDataType.STRING);
+        event.setCancelled(true); // prevent taking items out of GUI
 
-        // Role editor (toggle per-player perms)
-        if ("role-editor".equalsIgnoreCase(menuTag) && targetName != null) {
-            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
-            if (plot == null) return;
+        String name = ChatColor.stripColor(meta.getDisplayName());
 
-            String key = ChatColor.stripColor(meta.getDisplayName()).toLowerCase();
-            ClaimRoleManager roleManager = plugin.getRoleManager();
-
-            if (key.equalsIgnoreCase("back")) {
-                Bukkit.getScheduler().runTask(plugin, () -> guiManager.openMenu(player, "untrust"));
-                return;
-            }
-            if (key.equalsIgnoreCase("close")) {
-                player.closeInventory();
-                return;
-            }
-
-            // Toggle only known keys
-            if (roleManager.getPermissions(plot.getId(), targetName).containsKey(key)) {
-                boolean current = roleManager.getPermissions(plot.getId(), targetName).getOrDefault(key, false);
-                roleManager.setPermission(plot.getId(), targetName, key, !current);
-                Bukkit.getScheduler().runTask(plugin, () -> guiManager.openRoleEditor(player, targetName));
-            }
-            return;
-        }
-
-        // Trust menu: clicking a head trusts that player
-        if ("trust".equalsIgnoreCase(menuTag) && targetName != null) {
-            player.performCommand("trust " + targetName);
-            // Open role editor immediately for convenience
-            Bukkit.getScheduler().runTask(plugin, () -> guiManager.openRoleEditor(player, targetName));
-            return;
-        }
-
-        // Untrust menu: clicking a head opens role editor (from there they can untrust via /untrust if desired)
-        if ("untrust".equalsIgnoreCase(menuTag) && targetName != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> guiManager.openRoleEditor(player, targetName));
-            return;
-        }
-
-        // Static/config-driven menus
-        if (menuTag != null && menuTag.startsWith("static:")) {
-            String menuName = menuTag.substring("static:".length());
-            ConfigurationSection itemSec = plugin.getConfig()
-                .getConfigurationSection("gui.menus." + menuName + ".items." + event.getRawSlot());
-            if (itemSec == null) return;
-
-            String action = itemSec.getString("action", "").trim();
-            if (action.isEmpty()) return;
-
-            String lower = action.toLowerCase();
-
-            if (lower.startsWith("command:")) {
-                String cmd = action.substring("command:".length()).trim();
-                if (!cmd.isEmpty()) {
-                    // All "proshield flag X" routes hit ProShieldCommand.toggleFlag()
-                    player.performCommand(cmd);
+        // ------------------------
+        // MAIN MENU
+        // ------------------------
+        if (title.contains("ProShield Menu")) {
+            switch (name.toLowerCase(Locale.ROOT)) {
+                case "claim land" -> player.performCommand("claim");
+                case "claim info" -> player.performCommand("proshield info");
+                case "unclaim land" -> player.performCommand("unclaim");
+                case "trusted players" -> guiManager.openMenu(player, "roles");
+                case "claim flags" -> guiManager.openMenu(player, "flags");
+                case "admin tools" -> {
+                    if (player.isOp()) {
+                        messages.send(player, "&eAdmin tools not fully implemented yet.");
+                    } else {
+                        messages.send(player, "&cYou don’t have permission.");
+                    }
                 }
-            } else if (lower.startsWith("menu:")) {
-                String targetMenu = action.substring("menu:".length()).trim();
-                if (!targetMenu.isEmpty()) guiManager.openMenu(player, targetMenu);
-            } else if (lower.equals("close")) {
-                player.closeInventory();
-            } else {
-                plugin.getLogger().warning("[GUI] Unknown action in " + menuTag + " slot " + event.getRawSlot() + ": " + action);
             }
+        }
+
+        // ------------------------
+        // FLAGS MENU
+        // ------------------------
+        if (title.contains("Claim Flags")) {
+            Plot plot = plotManager.getPlot(player.getLocation());
+            if (plot == null) {
+                messages.send(player, "&cYou must stand inside a claim.");
+                return;
+            }
+
+            switch (name.toLowerCase(Locale.ROOT)) {
+                case "explosions" -> toggleFlag(plot, "explosions", player);
+                case "buckets" -> toggleFlag(plot, "buckets", player);
+                case "item frames" -> toggleFlag(plot, "item-frames", player);
+                case "armor stands" -> toggleFlag(plot, "armor-stands", player);
+                case "containers" -> toggleFlag(plot, "containers", player);
+                case "pets" -> toggleFlag(plot, "pets", player);
+                case "pvp" -> toggleFlag(plot, "pvp", player);
+                case "safe zone" -> toggleFlag(plot, "safezone", player);
+                case "back" -> guiManager.openMenu(player, "main");
+            }
+
+            // Refresh GUI so player sees updated toggle immediately
+            if (!name.equalsIgnoreCase("back")) {
+                guiManager.openMenu(player, "flags");
+            }
+        }
+
+        // ------------------------
+        // ROLES MENU
+        // ------------------------
+        if (title.contains("Trusted Players")) {
+            switch (name.toLowerCase(Locale.ROOT)) {
+                case "back" -> guiManager.openMenu(player, "main");
+                default -> messages.send(player, "&7This feature is still being developed.");
+            }
+        }
+    }
+
+    private void toggleFlag(Plot plot, String flag, Player player) {
+        boolean current = plot.getFlag(flag, false);
+        plot.setFlag(flag, !current);
+
+        if (current) {
+            messages.send(player, "&c" + flag + " disabled.");
+        } else {
+            messages.send(player, "&a" + flag + " enabled.");
         }
     }
 }

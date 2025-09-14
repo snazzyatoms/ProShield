@@ -8,6 +8,7 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -88,6 +89,30 @@ public class GUIManager {
 
                 stack.setItemMeta(meta);
                 inv.setItem(slot, stack);
+            }
+        }
+
+        // Inject trusted players dynamically if this is the roles menu
+        if (menuName.equalsIgnoreCase("roles")) {
+            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+            if (plot != null) {
+                int slot = 9; // start listing trusted players from slot 9 upwards
+                for (UUID trustedId : plot.getTrusted()) {
+                    if (slot >= size - 1) break; // avoid overwriting control buttons
+                    OfflinePlayer trustedPlayer = Bukkit.getOfflinePlayer(trustedId);
+
+                    ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+                    ItemMeta meta = head.getItemMeta();
+                    if (meta != null) {
+                        meta.setDisplayName(ChatColor.AQUA + trustedPlayer.getName());
+                        meta.setLore(Collections.singletonList(ChatColor.GRAY + "Trusted Player"));
+                        head.setItemMeta(meta);
+                    }
+                    inv.setItem(slot, head);
+                    slot++;
+                }
+            } else {
+                plugin.getMessagesUtil().send(player, "&cStand inside your claim to see trusted players.");
             }
         }
 

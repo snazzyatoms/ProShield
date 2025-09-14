@@ -2,7 +2,7 @@ jdk:
   - openjdk17
 
 before_install:
-  - echo "Using OpenJDK 17 for build"
+  - echo "Forcing a clean build at $(date)"
 
 install:
-  - mvn clean install -DskipTests
+  - mvn -B clean install -DskipTests

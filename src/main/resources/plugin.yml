@@ -11,18 +11,18 @@ description: >
 
 commands:
   proshield:
-    description: Root ProShield command (admin + utility dispatcher)
-    usage: /<command> [reload|debug|help]
+    description: Root ProShield command (player help + admin tools dispatcher)
+    usage: /<command> [help|reload|debug|bypass|admin]
     aliases: [ps, shield]
     permission: proshield.use
 
   claim:
-    description: Claim your current chunk
+    description: Claim your current land
     usage: /<command>
     permission: proshield.use
 
   unclaim:
-    description: Unclaim your current chunk
+    description: Unclaim your current land
     usage: /<command>
     permission: proshield.use
 
@@ -64,7 +64,7 @@ permissions:
 
   # Admin Core
   proshield.admin:
-    description: Access admin tools (force unclaim, purge, admin menu)
+    description: Access admin tools (admin GUI, expansion requests, purge, force unclaim)
     default: op
 
   proshield.admin.reload:

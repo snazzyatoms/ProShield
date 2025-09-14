@@ -20,23 +20,17 @@ public class PlotManager {
     private final Map<String, Plot> plots = new HashMap<>();
 
     /**
-     * Constructor now correctly accepts ProShield (plugin instance).
-     * This preserves all prior logic and ensures ProShield.java compiles cleanly.
+     * Constructor accepts ProShield (plugin instance).
+     * Preserves all prior logic and compiles with ProShield.java
      */
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
-    /**
-     * Generate a chunk key (world:x:z) for identifying plots.
-     */
     private String chunkKey(Location loc) {
         return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
     }
 
-    /**
-     * Claim a chunk for a player.
-     */
     public Plot claimPlot(UUID playerId, Location loc) {
         String key = chunkKey(loc);
         Plot plot = new Plot(playerId, loc.getWorld().getName(),
@@ -45,34 +39,22 @@ public class PlotManager {
         return plot;
     }
 
-    /**
-     * Unclaim a chunk.
-     */
     public void unclaimPlot(Location loc) {
         plots.remove(chunkKey(loc));
     }
 
-    /**
-     * Retrieve a plot for a given location.
-     */
     public Plot getPlot(Location loc) {
         return plots.get(chunkKey(loc));
     }
 
-    /**
-     * Expand an existing claim radius for a player.
-     */
     public void expandClaim(UUID playerId, int extraRadius) {
         for (Plot plot : plots.values()) {
             if (plot.getOwner().equals(playerId)) {
-                plot.expand(extraRadius);
+                plot.expand(extraRadius); // assumes Plot has expand()
             }
         }
     }
 
-    /**
-     * Get all plots.
-     */
     public Map<String, Plot> getPlots() {
         return plots;
     }

@@ -1,9 +1,8 @@
-// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.compass.CompassListener; // ✅ correct package
+import com.snazzyatoms.proshield.compass.CompassListener;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
@@ -30,10 +29,10 @@ public class ProShield extends JavaPlugin {
     private GUICache guiCache;
     private GUIManager guiManager;
 
-    private boolean debugEnabled = false;
-
-    // ✅ Bypass tracking (brought back, minimal)
+    // Server-wide bypass set (restored)
     private final Set<UUID> bypassing = new HashSet<>();
+
+    private boolean debugEnabled = false;
 
     public static ProShield getInstance() {
         return instance;
@@ -44,21 +43,14 @@ public class ProShield extends JavaPlugin {
         instance = this;
         saveDefaultConfig();
 
-        // Utilities
         messages = new MessagesUtil(this);
-
-        // Core managers
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(plotManager);
 
-        // GUI
         guiCache = new GUICache();
         guiManager = new GUIManager(this);
 
-        // Commands
         registerCommands();
-
-        // Listeners
         registerListeners();
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled.");
@@ -73,16 +65,14 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerCommands() {
-        // Root /proshield command
         if (getCommand("proshield") != null) {
             getCommand("proshield").setExecutor(
-                new ProShieldCommand(this, guiManager, plotManager, messages) // ✅ corrected ctor
+                new ProShieldCommand(this, guiManager, plotManager, messages)
             );
         }
 
-        // Player dispatcher for claim-related commands
         PlayerCommandDispatcher playerCommandDispatcher =
-            new PlayerCommandDispatcher(this, plotManager, messages);
+            new PlayerCommandDispatcher(this, plotManager, roleManager, messages);
 
         if (getCommand("claim") != null) getCommand("claim").setExecutor(playerCommandDispatcher);
         if (getCommand("unclaim") != null) getCommand("unclaim").setExecutor(playerCommandDispatcher);
@@ -93,16 +83,9 @@ public class ProShield extends JavaPlugin {
     }
 
     private void registerListeners() {
-        // GUI
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-
-        // Claims / protections
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
-
-        // Compass (in compass package)
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
-
-        // Mobs (safezones + repel)
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
     }
 
@@ -113,6 +96,9 @@ public class ProShield extends JavaPlugin {
     public GUICache getGuiCache() { return guiCache; }
     public GUIManager getGuiManager() { return guiManager; }
 
+    // Bypass set (restored)
+    public Set<UUID> getBypassing() { return bypassing; }
+
     // Debug support
     public boolean isDebugEnabled() { return debugEnabled; }
     public void setDebugEnabled(boolean enabled) { this.debugEnabled = enabled; }
@@ -122,7 +108,4 @@ public class ProShield extends JavaPlugin {
             messages.debug("Debug mode toggled: " + (this.debugEnabled ? "ON" : "OFF"));
         }
     }
-
-    // ✅ Bypass API
-    public Set<UUID> getBypassing() { return bypassing; }
 }

@@ -27,7 +27,7 @@ public class ChatListener implements Listener {
             return;
         }
 
-        // --- ROLES (trusted players add/remove) ---
+        // --- ROLES (trusted players add/remove via chat) ---
         if (GUIManager.isAwaitingRoleAction(player)) {
             event.setCancelled(true);
             String message = event.getMessage();

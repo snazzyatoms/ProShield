@@ -1,15 +1,13 @@
-// src/main/java/com/snazzyatoms/proshield/plots/MobProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
@@ -26,9 +24,9 @@ public class MobProtectionListener implements Listener {
         startRepelTask();
     }
 
-    /* Cancel hostile mob spawns in safezones */
+    // Cancel hostile mob spawns in safezones
     @EventHandler
-    public void onMobSpawn(EntitySpawnEvent event) {
+    public void onMobSpawn(CreatureSpawnEvent event) {
         if (!(event.getEntity() instanceof Monster)) return;
         Plot plot = plotManager.getPlot(event.getLocation());
         if (plot != null && plot.getFlag("safezone",
@@ -37,20 +35,40 @@ public class MobProtectionListener implements Listener {
         }
     }
 
-    /* Cancel hostile damage against players in safezones */
+    // Cancel damage to players in safezones (mobs & their projectiles)
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot != null && plot.getFlag("safezone",
+        if (plot == null || !plot.getFlag("safezone",
                 plugin.getConfig().getBoolean("claims.default-flags.safezone", true))) {
-            if (event.getDamager() instanceof Monster) {
+            return;
+        }
+
+        Entity damager = event.getDamager();
+
+        // Direct monster hit
+        if (damager instanceof Monster) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Projectile from monster (skeleton arrow, blaze fireball, etc.)
+        if (damager instanceof Projectile projectile) {
+            ProjectileSource src = projectile.getShooter();
+            if (src instanceof Monster) {
                 event.setCancelled(true);
+                return;
             }
+        }
+
+        // AreaEffectCloud from a monster (e.g., witch lingering)
+        if (damager instanceof AreaEffectCloud cloud && cloud.getSource() instanceof LivingEntity le && le instanceof Monster) {
+            event.setCancelled(true);
         }
     }
 
-    /* Cancel targeting of players in safezones */
+    // Cancel hostile targeting of players in safezones
     @EventHandler
     public void onEntityTarget(EntityTargetLivingEntityEvent event) {
         if (!(event.getTarget() instanceof Player player)) return;
@@ -63,7 +81,7 @@ public class MobProtectionListener implements Listener {
         }
     }
 
-    /* Repel mobs at claim borders (server-wide configurable sound) */
+    // Repel mobs at claim borders
     private void startRepelTask() {
         new BukkitRunnable() {
             @Override
@@ -76,8 +94,6 @@ public class MobProtectionListener implements Listener {
                 double pushY = cfg.getDouble("protection.mobs.border-repel.vertical-push", 0.25);
 
                 boolean playSound = cfg.getBoolean("protection.mobs.border-repel.play-sound", true);
-
-                // Prefer per-section sound, fallback to global
                 String repelSound = cfg.getString("protection.mobs.border-repel.sound-type", null);
                 if (repelSound == null || repelSound.isBlank()) {
                     repelSound = cfg.getString("sounds.repel-sound", "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR");
@@ -91,22 +107,18 @@ public class MobProtectionListener implements Listener {
                     for (Entity e : nearby) {
                         if (!(e instanceof Monster)) continue;
 
-                        // Push mobs away from the player
                         Vector dir = e.getLocation().toVector()
-                                .subtract(player.getLocation().toVector())
-                                .normalize();
-                        dir.setY(0.25); // slight lift
+                            .subtract(player.getLocation().toVector())
+                            .normalize();
+                        dir.setY(0.25);
                         e.setVelocity(dir.multiply(pushX).setY(pushY));
 
-                        // Optional sound feedback
                         if (playSound) {
-                            try {
-                                player.playSound(player.getLocation(), repelSound, 0.5f, 1.0f);
-                            } catch (Exception ignored) {/* ignore invalid sound keys */}
+                            try { player.playSound(player.getLocation(), repelSound, 0.5f, 1.0f); } catch (Exception ignored) {}
                         }
                     }
                 }
             }
-        }.runTaskTimer(plugin, 20L, 20L); // every second
+        }.runTaskTimer(plugin, 20L, 20L);
     }
 }

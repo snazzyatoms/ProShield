@@ -7,9 +7,9 @@ public class ExpansionQueue {
     private static final Map<UUID, List<ExpansionRequest>> requests = new HashMap<>();
 
     public static ExpansionRequest submitRequest(UUID playerId, int extraRadius) {
-        ExpansionRequest request = new ExpansionRequest(playerId, extraRadius);
-        requests.computeIfAbsent(playerId, k -> new ArrayList<>()).add(request);
-        return request;
+        ExpansionRequest req = new ExpansionRequest(playerId, extraRadius);
+        requests.computeIfAbsent(playerId, k -> new ArrayList<>()).add(req);
+        return req;
     }
 
     public static List<ExpansionRequest> getRequests(UUID playerId) {

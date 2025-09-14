@@ -1,8 +1,8 @@
-// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
@@ -11,6 +11,8 @@ import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.Arrays;
 
 public class ProShieldCommand implements CommandExecutor {
 
@@ -24,6 +26,43 @@ public class ProShieldCommand implements CommandExecutor {
         this.guiManager = guiManager;
         this.plotManager = plotManager;
         this.messages = messages;
+    }
+
+    private void giveCompass(Player player) {
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
+            meta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Right-click to open",
+                ChatColor.GRAY + "the ProShield menu"
+            ));
+            compass.setItemMeta(meta);
+        }
+        player.getInventory().addItem(compass);
+        messages.send(player, "&aGiven ProShield Compass.");
+    }
+
+    private void toggleFlag(Player player, String flagKey) {
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) {
+            messages.send(player, "&cYou are not standing in a claim.");
+            return;
+        }
+        if (!plot.isOwner(player.getUniqueId())) {
+            messages.send(player, "&cOnly the claim owner can change flags.");
+            return;
+        }
+
+        boolean current = plot.getFlag(flagKey, plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false));
+        boolean next = !current;
+        plot.setFlag(flagKey, next);
+
+        // sound feedback (optional)
+        String sound = plugin.getConfig().getString("sounds.flag-toggle", "BLOCK_NOTE_BLOCK_PLING");
+        try { player.playSound(player.getLocation(), sound, 1f, 1f); } catch (Exception ignored) {}
+
+        messages.send(player, "&eFlag &6" + flagKey + " &eis now " + (next ? "&aENABLED" : "&cDISABLED") + "&e.");
     }
 
     @Override
@@ -57,15 +96,13 @@ public class ProShieldCommand implements CommandExecutor {
 
             case "debug" -> {
                 if (player.isOp()) {
-                    plugin.setDebugEnabled(!plugin.isDebugEnabled());
-                    messages.send(player, "&eDebug mode: " + plugin.isDebugEnabled());
-                } else {
-                    messages.send(player, "&cNo permission.");
-                }
+                    plugin.toggleDebug();
+                    messages.send(player, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aON" : "&cOFF"));
+                } else messages.send(player, "&cNo permission.");
             }
 
             case "bypass" -> {
-                if (!player.isOp() && !player.hasPermission("proshield.bypass")) {
+                if (!player.hasPermission("proshield.bypass")) {
                     messages.send(player, "&cNo permission.");
                     return true;
                 }
@@ -79,31 +116,28 @@ public class ProShieldCommand implements CommandExecutor {
             }
 
             case "compass" -> {
-                if (!player.isOp() && !player.hasPermission("proshield.compass")) {
+                if (!player.hasPermission("proshield.compass")) {
                     messages.send(player, "&cNo permission.");
                     return true;
                 }
-                ItemStack compass = new ItemStack(Material.COMPASS);
-                ItemMeta meta = compass.getItemMeta();
-                if (meta != null) {
-                    meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
-                    compass.setItemMeta(meta);
-                }
-                player.getInventory().addItem(compass);
-                messages.send(player, "&aGiven ProShield Compass.");
+                giveCompass(player);
             }
 
             case "admin" -> {
-                if (player.isOp() || player.hasPermission("proshield.admin")) {
-                    guiManager.openMenu(player, "main");
-                } else {
-                    messages.send(player, "&cNo permission.");
+                // Just open the main menu; admin options are permission-gated in GUI
+                guiManager.openMenu(player, "main");
+            }
+
+            case "flag" -> {
+                if (args.length < 2) {
+                    messages.send(player, "&cUsage: /proshield flag <key>");
+                    return true;
                 }
+                toggleFlag(player, args[1].toLowerCase());
             }
 
             default -> messages.send(player, "&cUnknown subcommand.");
         }
-
         return true;
     }
 }

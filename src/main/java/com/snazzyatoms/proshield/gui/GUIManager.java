@@ -1,11 +1,10 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -15,7 +14,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.List;
 
 public class GUIManager {
-
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final MessagesUtil messages;
@@ -26,61 +24,80 @@ public class GUIManager {
         this.messages = messages;
     }
 
-    /**
-     * Opens the main ProShield GUI.
-     */
-    public void openMainMenu(Player player) {
-        Inventory gui = Bukkit.createInventory(null, 27, "§6ProShield Menu");
-
-        // Claim land button
-        gui.setItem(11, createItem(Material.GRASS_BLOCK, "§aClaim Land",
-                List.of("§7Protect your land", "§fRadius: " + plugin.getConfig().getInt("claims.default-radius", 50) + " blocks")));
-
-        // Claim info button
-        Plot plot = plotManager.getPlot(player.getLocation());
-        if (plot != null) {
-            int defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
-            int currentRadius = plotManager.getClaimRadius(plot.getId());
-
-            gui.setItem(13, createItem(Material.PAPER, "§eClaim Info",
-                    List.of(
-                            "§7Owner: §f" + plugin.getPlotManager().getPlayerName(plot.getOwner()),
-                            "§7Default Radius: §f" + defaultRadius + " blocks",
-                            "§7Current Radius: §f" + currentRadius + " blocks",
-                            "§7Protections:",
-                            "§f✔ Pets safe",
-                            "§f✔ Containers locked",
-                            "§f✔ Item Frames protected",
-                            "§f✔ Armor Stands protected",
-                            "§f✔ Explosions disabled",
-                            "§f✔ Fire spread disabled",
-                            "§f✔ Hostile mobs blocked"
-                    )));
-        } else {
-            gui.setItem(13, createItem(Material.PAPER, "§eClaim Info",
-                    List.of("§7No claim found here.", "§fUse /claim to start.")));
+    public void openMenu(Player player, String menuName) {
+        switch (menuName.toLowerCase()) {
+            case "main" -> openMainMenu(player);
+            case "flags" -> openFlagsMenu(player);
+            case "claiminfo" -> openClaimInfoMenu(player);
+            default -> player.sendMessage(ChatColor.RED + "Unknown menu: " + menuName);
         }
-
-        // Unclaim button
-        gui.setItem(15, createItem(Material.BARRIER, "§cUnclaim Land",
-                List.of("§7Remove your claim")));
-
-        player.openInventory(gui);
     }
 
-    /**
-     * Create an item with a custom name and lore.
-     */
-    private ItemStack createItem(Material material, String name, List<String> lore) {
-        ItemStack item = new ItemStack(material);
+    private void openMainMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.translateAlternateColorCodes('&', "&6ProShield Menu"));
+
+        inv.setItem(11, createItem(Material.GRASS_BLOCK, "&aClaim Land", List.of(
+                ChatColor.GRAY + "Protect your land",
+                ChatColor.WHITE + "Radius: " + plugin.getConfig().getInt("claims.default-radius", 50) + " blocks by default"
+        )));
+
+        inv.setItem(13, createItem(Material.PAPER, "&eClaim Info", List.of(
+                ChatColor.GRAY + "Shows your current claim details",
+                ChatColor.GRAY + "Protected: Pets, Containers, Frames, Stands",
+                ChatColor.GRAY + "Explosions/Fire disabled",
+                ChatColor.YELLOW + "Click to view details"
+        )));
+
+        inv.setItem(15, createItem(Material.BARRIER, "&cUnclaim Land", List.of(
+                ChatColor.GRAY + "Remove your claim"
+        )));
+
+        player.openInventory(inv);
+    }
+
+    private void openFlagsMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.translateAlternateColorCodes('&', "&dClaim Flags"));
+
+        // flags will be populated dynamically (this is placeholder example)
+        inv.setItem(26, createItem(Material.BARRIER, "&cBack", List.of("&7Return to main menu")));
+
+        player.openInventory(inv);
+    }
+
+    // ✅ New dynamic Claim Info menu
+    private void openClaimInfoMenu(Player player) {
+        int defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
+        int currentRadius = plotManager.getClaimRadius(player.getUniqueId());
+
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.translateAlternateColorCodes('&', "&eClaim Info"));
+
+        inv.setItem(11, createItem(Material.PAPER, "&aClaim Size", List.of(
+                ChatColor.GRAY + "Default Radius: " + defaultRadius + " blocks",
+                ChatColor.GRAY + "Current Radius: " + currentRadius + " blocks"
+        )));
+
+        inv.setItem(13, createItem(Material.SHIELD, "&aProtections", List.of(
+                ChatColor.GRAY + "✔ Pets",
+                ChatColor.GRAY + "✔ Containers",
+                ChatColor.GRAY + "✔ Item Frames",
+                ChatColor.GRAY + "✔ Armor Stands",
+                ChatColor.GRAY + "✘ Explosions",
+                ChatColor.GRAY + "✘ Fire"
+        )));
+
+        inv.setItem(15, createItem(Material.BARRIER, "&cBack", List.of("&7Return to main menu")));
+
+        player.openInventory(inv);
+    }
+
+    private ItemStack createItem(Material mat, String name, List<String> lore) {
+        ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(name);
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
             meta.setLore(lore);
-            // Remove attack/damage attributes for clarity
-            meta.setUnbreakable(true);
+            item.setItemMeta(meta);
         }
-        item.setItemMeta(meta);
         return item;
     }
 }

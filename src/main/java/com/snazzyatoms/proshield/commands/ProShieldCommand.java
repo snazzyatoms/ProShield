@@ -6,22 +6,23 @@ import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import org.bukkit.Material;
+import org.bukkit.command.*;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class ProShieldCommand implements CommandExecutor {
 
     private final ProShield plugin;
-    private final PlotManager plotManager;
     private final GUIManager guiManager;
+    private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, PlotManager plotManager, GUIManager guiManager, MessagesUtil messages) {
+    public ProShieldCommand(ProShield plugin, GUIManager guiManager, PlotManager plotManager, MessagesUtil messages) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
         this.guiManager = guiManager;
+        this.plotManager = plotManager;
         this.messages = messages;
     }
 
@@ -44,6 +45,7 @@ public class ProShieldCommand implements CommandExecutor {
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
                 }
             }
+
             case "reload" -> {
                 if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
                     plugin.reloadConfig();
@@ -52,16 +54,56 @@ public class ProShieldCommand implements CommandExecutor {
                     messages.send(player, "&cNo permission.");
                 }
             }
+
             case "debug" -> {
                 if (player.isOp()) {
-                    plugin.toggleDebug();
+                    plugin.setDebugEnabled(!plugin.isDebugEnabled());
                     messages.send(player, "&eDebug mode: " + plugin.isDebugEnabled());
+                } else {
+                    messages.send(player, "&cNo permission.");
                 }
             }
-            default -> {
-                messages.send(player, "&cUnknown subcommand.");
+
+            case "bypass" -> {
+                if (!player.isOp() && !player.hasPermission("proshield.bypass")) {
+                    messages.send(player, "&cNo permission.");
+                    return true;
+                }
+                if (plugin.getBypassing().contains(player.getUniqueId())) {
+                    plugin.getBypassing().remove(player.getUniqueId());
+                    messages.send(player, "&cBypass disabled.");
+                } else {
+                    plugin.getBypassing().add(player.getUniqueId());
+                    messages.send(player, "&aBypass enabled.");
+                }
             }
+
+            case "compass" -> {
+                if (!player.isOp() && !player.hasPermission("proshield.compass")) {
+                    messages.send(player, "&cNo permission.");
+                    return true;
+                }
+                ItemStack compass = new ItemStack(Material.COMPASS);
+                ItemMeta meta = compass.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
+                    compass.setItemMeta(meta);
+                }
+                player.getInventory().addItem(compass);
+                messages.send(player, "&aGiven ProShield Compass.");
+            }
+
+            case "admin" -> {
+                if (player.isOp() || player.hasPermission("proshield.admin")) {
+                    guiManager.openMenu(player, "main");
+                } else {
+                    messages.send(player, "&cNo permission.");
+                }
+            }
+
+            default -> messages.send(player, "&cUnknown subcommand.");
         }
+
         return true;
     }
 }

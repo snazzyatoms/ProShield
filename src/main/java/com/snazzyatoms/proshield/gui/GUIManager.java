@@ -21,6 +21,7 @@ public class GUIManager {
 
     private final ProShield plugin;
     private static final Map<UUID, ExpansionRequest> awaitingReason = new HashMap<>();
+    private static final Map<UUID, String> awaitingRoleAction = new HashMap<>(); // add/remove
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -32,6 +33,19 @@ public class GUIManager {
 
     public static void cancelAwaiting(Player player) {
         awaitingReason.remove(player.getUniqueId());
+        awaitingRoleAction.remove(player.getUniqueId());
+    }
+
+    public static boolean isAwaitingRoleAction(Player player) {
+        return awaitingRoleAction.containsKey(player.getUniqueId());
+    }
+
+    public static String getRoleAction(Player player) {
+        return awaitingRoleAction.get(player.getUniqueId());
+    }
+
+    public static void setRoleAction(Player player, String action) {
+        awaitingRoleAction.put(player.getUniqueId(), action);
     }
 
     public void openMenu(Player player, String menuName) {
@@ -167,11 +181,20 @@ public class GUIManager {
 
         // --- ROLES MENU ---
         if (title.contains("Trusted Players")) {
-            if (name.equalsIgnoreCase("back")) {
-                openMenu(player, "main");
-            } else {
-                plugin.getMessagesUtil().send(player, "&7This feature is still being developed.");
+            switch (name.toLowerCase(Locale.ROOT)) {
+                case "add player" -> {
+                    awaitingRoleAction.put(player.getUniqueId(), "add");
+                    plugin.getMessagesUtil().send(player, "&eType the name of the player you want to trust in chat...");
+                    player.closeInventory();
+                }
+                case "remove player" -> {
+                    awaitingRoleAction.put(player.getUniqueId(), "remove");
+                    plugin.getMessagesUtil().send(player, "&eType the name of the player you want to untrust in chat...");
+                    player.closeInventory();
+                }
+                case "back" -> openMenu(player, "main");
             }
+            return;
         }
     }
 

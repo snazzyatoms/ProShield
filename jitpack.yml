@@ -2,12 +2,7 @@ jdk:
   - openjdk17
 
 before_install:
-  - mvn clean
+  - echo "Using OpenJDK 17 for build"
 
 install:
-  - mvn -B install -DskipTests
-
-# Optional: ensure shade creates plugin jar in /target
-build:
-  commands:
-    - mvn -B package -DskipTests
+  - mvn clean install -DskipTests

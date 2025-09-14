@@ -2,233 +2,85 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.ExpansionRequest;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.*;
+import java.util.List;
 
-public class GUIManager implements Listener {
+public class GUIManager {
 
     private final ProShield plugin;
+    private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    // Track admin denial context
-    private final Map<UUID, ExpansionRequest> denyContext = new HashMap<>();
-    private final Map<UUID, ExpansionRequest> customDenyWaiting = new HashMap<>();
-
-    public GUIManager(ProShield plugin) {
+    public GUIManager(ProShield plugin, PlotManager plotManager, MessagesUtil messages) {
         this.plugin = plugin;
-        this.messages = plugin.getMessagesUtil();
+        this.plotManager = plotManager;
+        this.messages = messages;
     }
 
-    // === GENERIC MENU LOADER ===
-    private void loadConfiguredItems(Inventory inv, String path, ExpansionRequest context) {
-        ConfigurationSection items = plugin.getConfig().getConfigurationSection(path + ".items");
-        if (items == null) return;
+    /**
+     * Opens the main ProShield GUI.
+     */
+    public void openMainMenu(Player player) {
+        Inventory gui = Bukkit.createInventory(null, 27, "§6ProShield Menu");
 
-        for (String slotKey : items.getKeys(false)) {
-            int slot = Integer.parseInt(slotKey);
-            String matName = plugin.getConfig().getString(path + ".items." + slotKey + ".material", "BARRIER");
-            String displayName = plugin.getConfig().getString(path + ".items." + slotKey + ".name", "");
-            List<String> lore = plugin.getConfig().getStringList(path + ".items." + slotKey + ".lore");
+        // Claim land button
+        gui.setItem(11, createItem(Material.GRASS_BLOCK, "§aClaim Land",
+                List.of("§7Protect your land", "§fRadius: " + plugin.getConfig().getInt("claims.default-radius", 50) + " blocks")));
 
-            ItemStack stack = new ItemStack(Material.matchMaterial(matName), 1);
-            ItemMeta meta = stack.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', displayName));
-                List<String> loreLines = new ArrayList<>();
-                for (String line : lore) {
-                    loreLines.add(ChatColor.translateAlternateColorCodes('&', line));
-                }
-                meta.setLore(loreLines);
-                stack.setItemMeta(meta);
-            }
-            inv.setItem(slot, stack);
-        }
-    }
+        // Claim info button
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot != null) {
+            int defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
+            int currentRadius = plotManager.getClaimRadius(plot.getId());
 
-    private String getActionFromItem(ItemStack stack) {
-        if (stack == null || !stack.hasItemMeta() || !stack.getItemMeta().hasDisplayName()) return null;
-        // Simplified: action encoded in displayName OR config (for now just use name mapping)
-        String name = ChatColor.stripColor(stack.getItemMeta().getDisplayName());
-        return name.toLowerCase().replace(" ", "");
-    }
-
-    // === MAIN OPEN METHODS ===
-    public void openExpansionRequests(Player admin) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.AQUA + "Expansion Requests");
-
-        List<ExpansionRequest> requests = plugin.getExpansionQueue().getAll();
-        int slot = 0;
-        for (ExpansionRequest req : requests) {
-            if (slot >= 45) break; // max visible
-            ItemStack paper = new ItemStack(Material.PAPER);
-            ItemMeta meta = paper.getItemMeta();
-            if (meta != null) {
-                OfflinePlayer target = Bukkit.getOfflinePlayer(req.getPlayerId());
-                meta.setDisplayName(ChatColor.YELLOW + "Request from " + target.getName());
-                meta.setLore(Arrays.asList(
-                        ChatColor.GRAY + "Requested size: +" + req.getExtraBlocks() + " blocks",
-                        ChatColor.GRAY + "Status: " + req.getStatus()
-                ));
-                paper.setItemMeta(meta);
-            }
-            inv.setItem(slot++, paper);
+            gui.setItem(13, createItem(Material.PAPER, "§eClaim Info",
+                    List.of(
+                            "§7Owner: §f" + plugin.getPlotManager().getPlayerName(plot.getOwner()),
+                            "§7Default Radius: §f" + defaultRadius + " blocks",
+                            "§7Current Radius: §f" + currentRadius + " blocks",
+                            "§7Protections:",
+                            "§f✔ Pets safe",
+                            "§f✔ Containers locked",
+                            "§f✔ Item Frames protected",
+                            "§f✔ Armor Stands protected",
+                            "§f✔ Explosions disabled",
+                            "§f✔ Fire spread disabled",
+                            "§f✔ Hostile mobs blocked"
+                    )));
+        } else {
+            gui.setItem(13, createItem(Material.PAPER, "§eClaim Info",
+                    List.of("§7No claim found here.", "§fUse /claim to start.")));
         }
 
-        // Load static items (Back + Teaser)
-        loadConfiguredItems(inv, "gui.menus.expansion-requests", null);
-        admin.openInventory(inv);
+        // Unclaim button
+        gui.setItem(15, createItem(Material.BARRIER, "§cUnclaim Land",
+                List.of("§7Remove your claim")));
+
+        player.openInventory(gui);
     }
 
-    public void openDenyReasons(Player admin, ExpansionRequest req) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.RED + "Select Denial Reason");
-        loadConfiguredItems(inv, "gui.menus.deny-reasons", req);
-        admin.openInventory(inv);
-        denyContext.put(admin.getUniqueId(), req);
-    }
-
-    // === EVENT HANDLING ===
-    @EventHandler
-    public void onExpansionClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        String title = ChatColor.stripColor(e.getView().getTitle());
-        if (!title.equalsIgnoreCase("Expansion Requests")) return;
-
-        e.setCancelled(true);
-        ItemStack clicked = e.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-
-        String action = getActionFromItem(clicked);
-        if (action == null) return;
-
-        // If clicked on a request (paper)
-        if (clicked.getType() == Material.PAPER) {
-            int slot = e.getSlot();
-            List<ExpansionRequest> requests = plugin.getExpansionQueue().getAll();
-            if (slot < requests.size()) {
-                ExpansionRequest req = requests.get(slot);
-
-                // Open submenu: approve/deny
-                Inventory sub = Bukkit.createInventory(null, 27,
-                        ChatColor.GOLD + "Approve/Deny: " + Bukkit.getOfflinePlayer(req.getPlayerId()).getName());
-                // Approve
-                ItemStack green = new ItemStack(Material.LIME_WOOL);
-                ItemMeta gMeta = green.getItemMeta();
-                gMeta.setDisplayName(ChatColor.GREEN + "Approve Expansion");
-                green.setItemMeta(gMeta);
-                sub.setItem(11, green);
-                // Deny
-                ItemStack red = new ItemStack(Material.RED_WOOL);
-                ItemMeta rMeta = red.getItemMeta();
-                rMeta.setDisplayName(ChatColor.RED + "Deny Expansion");
-                red.setItemMeta(rMeta);
-                sub.setItem(15, red);
-
-                player.openInventory(sub);
-                denyContext.put(player.getUniqueId(), req);
-            }
-            return;
+    /**
+     * Create an item with a custom name and lore.
+     */
+    private ItemStack createItem(Material material, String name, List<String> lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            meta.setLore(lore);
+            // Remove attack/damage attributes for clarity
+            meta.setUnbreakable(true);
         }
-
-        if (action.equals("menu:admin")) {
-            plugin.getGuiManager().openAdminMenu(player);
-        }
-    }
-
-    @EventHandler
-    public void onApproveDenyClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        String title = ChatColor.stripColor(e.getView().getTitle());
-        if (!title.startsWith("Approve/Deny:")) return;
-
-        e.setCancelled(true);
-        ItemStack clicked = e.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-
-        ExpansionRequest req = denyContext.get(player.getUniqueId());
-        if (req == null) return;
-
-        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        if (name.equalsIgnoreCase("Approve Expansion")) {
-            plugin.getPlotManager().expandPlot(req.getPlayerId(), req.getExtraBlocks());
-            denyContext.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Expansion approved instantly!");
-            plugin.getExpansionQueue().remove(req);
-            openExpansionRequests(player);
-        } else if (name.equalsIgnoreCase("Deny Expansion")) {
-            openDenyReasons(player, req);
-        }
-    }
-
-    @EventHandler
-    public void onDenyReasonClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)) return;
-        String title = ChatColor.stripColor(e.getView().getTitle());
-        if (!title.equalsIgnoreCase("Select Denial Reason")) return;
-
-        e.setCancelled(true);
-        ItemStack clicked = e.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-
-        ExpansionRequest req = denyContext.get(player.getUniqueId());
-        if (req == null) return;
-
-        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        switch (name.toLowerCase()) {
-            case "too large" -> denyRequest(req, "Request too large");
-            case "abuse/grief risk" -> denyRequest(req, "Abuse or griefing risk");
-            case "not eligible yet" -> denyRequest(req, "Player not eligible yet");
-            case "custom reason" -> {
-                player.closeInventory();
-                player.sendMessage(ChatColor.YELLOW + "Type a custom denial reason in chat:");
-                customDenyWaiting.put(player.getUniqueId(), req);
-                return;
-            }
-            case "back" -> openExpansionRequests(player);
-        }
-        denyContext.remove(player.getUniqueId());
-        openExpansionRequests(player);
-    }
-
-    @EventHandler
-    public void onCustomDenyChat(AsyncPlayerChatEvent e) {
-        UUID adminId = e.getPlayer().getUniqueId();
-        if (!customDenyWaiting.containsKey(adminId)) return;
-
-        e.setCancelled(true);
-        ExpansionRequest req = customDenyWaiting.remove(adminId);
-        String reason = e.getMessage();
-
-        denyRequest(req, reason);
-        e.getPlayer().sendMessage(ChatColor.RED + "Denied with custom reason: " + reason);
-
-        Bukkit.getScheduler().runTask(plugin, () -> openExpansionRequests(e.getPlayer()));
-    }
-
-    private void denyRequest(ExpansionRequest req, String reason) {
-        OfflinePlayer target = Bukkit.getOfflinePlayer(req.getPlayerId());
-        if (target.isOnline()) {
-            ((Player) target).sendMessage(ChatColor.RED + "Your claim expansion was denied: " + reason);
-        }
-        plugin.getExpansionQueue().remove(req);
-    }
-
-    // Placeholder for opening admin menu
-    public void openAdminMenu(Player admin) {
-        admin.sendMessage(ChatColor.GRAY + "Admin menu placeholder (expand here).");
+        item.setItemMeta(meta);
+        return item;
     }
 }

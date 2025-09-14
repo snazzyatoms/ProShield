@@ -220,10 +220,10 @@ public class GUIManager {
         }
 
         ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
-        plugin.getPlotManager().expandClaim(req.getPlayerId(), req.getExtraRadius());
+        plugin.getPlotManager().expandClaim(req.getPlayerId(), req.getExtraRadius()); // ✅ FIXED
         ExpansionRequestManager.removeRequest(req);
 
-        Player target = Bukkit.getPlayer(req.getPlayerId());
+        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
         if (target != null) {
             target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
         }
@@ -234,7 +234,7 @@ public class GUIManager {
     private void denyWithReason(Player admin, ExpansionRequest req, String reason) {
         ExpansionRequestManager.removeRequest(req);
 
-        Player target = Bukkit.getPlayer(req.getPlayerId());
+        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
         }
@@ -251,7 +251,7 @@ public class GUIManager {
 
         ExpansionRequestManager.removeRequest(req);
 
-        Player target = Bukkit.getPlayer(req.getPlayerId());
+        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
         }

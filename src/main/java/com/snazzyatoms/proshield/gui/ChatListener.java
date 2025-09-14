@@ -1,7 +1,6 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,14 +16,14 @@ public class ChatListener implements Listener {
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
-        if (!(event.getPlayer() instanceof Player)) return;
         Player player = event.getPlayer();
+        if (!GUIManager.isAwaitingReason(player)) return;
 
-        if (GUIManager.isAwaitingReason(player)) {
-            event.setCancelled(true);
-            String reason = event.getMessage();
+        event.setCancelled(true);
+        String reason = event.getMessage();
+
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
             GUIManager.provideManualReason(player, reason, plugin);
-            player.sendMessage(ChatColor.YELLOW + "You denied a request with reason: " + reason);
-        }
+        });
     }
 }

@@ -27,6 +27,7 @@ public class GUIManager {
         this.plugin = plugin;
     }
 
+    // --- Expansion Deny Reasons ---
     public static boolean isAwaitingReason(Player player) {
         return awaitingReason.containsKey(player.getUniqueId());
     }
@@ -36,6 +37,7 @@ public class GUIManager {
         awaitingRoleAction.remove(player.getUniqueId());
     }
 
+    // --- Role Management ---
     public static boolean isAwaitingRoleAction(Player player) {
         return awaitingRoleAction.containsKey(player.getUniqueId());
     }
@@ -48,6 +50,7 @@ public class GUIManager {
         awaitingRoleAction.put(player.getUniqueId(), action);
     }
 
+    // --- Open Menu from Config ---
     public void openMenu(Player player, String menuName) {
         ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus." + menuName);
         if (menuSec == null) {
@@ -78,10 +81,8 @@ public class GUIManager {
                 meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
 
                 List<String> lore = itemSec.getStringList("lore");
-                if (lore != null && !lore.isEmpty()) {
-                    for (int i = 0; i < lore.size(); i++) {
-                        lore.set(i, ChatColor.translateAlternateColorCodes('&', lore.get(i)));
-                    }
+                if (!lore.isEmpty()) {
+                    lore.replaceAll(line -> ChatColor.translateAlternateColorCodes('&', line));
                     meta.setLore(lore);
                 }
 
@@ -93,6 +94,7 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
+    // --- Handle Clicks ---
     public void handleClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getCurrentItem() == null || event.getCurrentItem().getItemMeta() == null) return;
@@ -100,7 +102,7 @@ public class GUIManager {
         String title = event.getView().getTitle();
         String name = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
 
-        // --- MAIN MENU ---
+        // MAIN MENU
         if (title.contains("ProShield Menu")) {
             switch (name.toLowerCase(Locale.ROOT)) {
                 case "claim land" -> player.performCommand("claim");
@@ -113,7 +115,7 @@ public class GUIManager {
             return;
         }
 
-        // --- FLAGS MENU ---
+        // FLAGS MENU
         if (title.contains("Claim Flags")) {
             Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
             if (plot == null) {
@@ -139,7 +141,7 @@ public class GUIManager {
             return;
         }
 
-        // --- ADMIN EXPANSIONS MENU ---
+        // ADMIN EXPANSIONS MENU
         if (title.contains("Expansion Requests")) {
             switch (name.toLowerCase(Locale.ROOT)) {
                 case "pending requests" -> showPendingRequests(player);
@@ -150,7 +152,7 @@ public class GUIManager {
             return;
         }
 
-        // --- DENY REASONS MENU ---
+        // DENY REASONS MENU
         if (title.contains("Deny Reasons")) {
             List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
             if (pending.isEmpty()) {
@@ -179,7 +181,7 @@ public class GUIManager {
             return;
         }
 
-        // --- ROLES MENU ---
+        // ROLES MENU
         if (title.contains("Trusted Players")) {
             switch (name.toLowerCase(Locale.ROOT)) {
                 case "add player" -> {
@@ -198,16 +200,13 @@ public class GUIManager {
         }
     }
 
+    // --- Helpers ---
     private void toggleFlag(Plot plot, String flag, Player player) {
         boolean current = plot.getFlag(flag, false);
         plot.setFlag(flag, !current);
 
         MessagesUtil messages = plugin.getMessagesUtil();
-        if (current) {
-            messages.send(player, "&c" + flag + " disabled.");
-        } else {
-            messages.send(player, "&a" + flag + " enabled.");
-        }
+        messages.send(player, current ? "&c" + flag + " disabled." : "&a" + flag + " enabled.");
     }
 
     private void showPendingRequests(Player player) {

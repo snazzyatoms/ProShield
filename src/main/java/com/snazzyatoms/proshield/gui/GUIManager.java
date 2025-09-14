@@ -188,7 +188,7 @@ public class GUIManager {
         }
 
         for (ExpansionRequest req : ExpansionRequestManager.getRequests()) {
-            UUID playerId = req.getPlayerId(); // explicit UUID
+            UUID playerId = req.getPlayerId(); // ✅ explicit UUID
             String pName = Bukkit.getOfflinePlayer(playerId).getName();
             plugin.getMessagesUtil().send(player,
                     "&eRequest: " + pName + " +" + req.getExtraRadius() + " blocks (" +
@@ -203,7 +203,7 @@ public class GUIManager {
         }
 
         ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
-        UUID playerId = req.getPlayerId(); // explicit UUID
+        UUID playerId = req.getPlayerId(); // ✅ explicit UUID
         plugin.getPlotManager().expandClaim(playerId, req.getExtraRadius());
         ExpansionRequestManager.removeRequest(req);
 
@@ -218,7 +218,7 @@ public class GUIManager {
     private void denyWithReason(Player admin, ExpansionRequest req, String reason) {
         ExpansionRequestManager.removeRequest(req);
 
-        UUID playerId = req.getPlayerId(); // explicit UUID
+        UUID playerId = req.getPlayerId(); // ✅ explicit UUID
         Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
@@ -236,7 +236,7 @@ public class GUIManager {
 
         ExpansionRequestManager.removeRequest(req);
 
-        UUID playerId = req.getPlayerId(); // explicit UUID
+        UUID playerId = req.getPlayerId(); // ✅ explicit UUID
         Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);

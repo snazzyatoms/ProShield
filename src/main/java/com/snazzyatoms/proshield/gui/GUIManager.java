@@ -1,117 +1,97 @@
-package com.snazzyatoms.proshield.gui;
+// Inside GUIManager.java
 
-import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.ChatColor;
 
-import java.util.List;
+// ... rest of your imports and class header
 
-public class GUIManager {
-    private final ProShield plugin;
-    private final PlotManager plotManager;
-    private final MessagesUtil messages;
-
-    public GUIManager(ProShield plugin, PlotManager plotManager, MessagesUtil messages) {
-        this.plugin = plugin;
-        this.plotManager = plotManager;
-        this.messages = messages;
-    }
-
-    public void openMenu(Player player, String menuName) {
-        switch (menuName.toLowerCase()) {
-            case "main" -> openMainMenu(player);
-            case "flags" -> openFlagsMenu(player);
-            case "claiminfo" -> openClaimInfoMenu(player);
-            default -> player.sendMessage(ChatColor.RED + "Unknown menu: " + menuName);
-        }
-    }
-
-    private void openMainMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.translateAlternateColorCodes('&', "&6ProShield Menu"));
-
-        inv.setItem(11, createItem(Material.GRASS_BLOCK, "&aClaim Land", List.of(
-                ChatColor.GRAY + "Protect your land",
-                ChatColor.WHITE + "Radius: " + plugin.getConfig().getInt("claims.default-radius", 50) + " blocks by default"
-        )));
-
-        inv.setItem(13, createItem(Material.PAPER, "&eClaim Info", List.of(
-                ChatColor.GRAY + "Shows your current claim details",
-                ChatColor.YELLOW + "Click to view details"
-        )));
-
-        inv.setItem(15, createItem(Material.BARRIER, "&cUnclaim Land", List.of(
-                ChatColor.GRAY + "Remove your claim"
-        )));
-
-        player.openInventory(inv);
-    }
-
-    private void openFlagsMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.translateAlternateColorCodes('&', "&dClaim Flags"));
-
-        // flags will be dynamically populated
-        inv.setItem(26, createItem(Material.BARRIER, "&cBack", List.of("&7Return to main menu")));
-
-        player.openInventory(inv);
-    }
-
-    private void openClaimInfoMenu(Player player) {
-        int defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
-        int currentRadius = plotManager.getClaimRadius(player.getUniqueId());
-
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.translateAlternateColorCodes('&', "&eClaim Info"));
-
-        inv.setItem(11, createItem(Material.PAPER, "&aClaim Size", List.of(
-                ChatColor.GRAY + "Default Radius: " + defaultRadius + " blocks",
-                ChatColor.GRAY + "Current Radius: " + currentRadius + " blocks"
-        )));
-
-        inv.setItem(13, createItem(Material.SHIELD, "&aProtections", List.of(
-                ChatColor.GRAY + "✔ Pets",
-                ChatColor.GRAY + "✔ Containers",
-                ChatColor.GRAY + "✔ Item Frames",
-                ChatColor.GRAY + "✔ Armor Stands",
-                ChatColor.GRAY + "✘ Explosions",
-                ChatColor.GRAY + "✘ Fire"
-        )));
-
-        inv.setItem(15, createItem(Material.BARRIER, "&cBack", List.of("&7Return to main menu")));
-
-        player.openInventory(inv);
-    }
-
-    private ItemStack createItem(Material mat, String name, List<String> lore) {
-        ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
-            meta.setLore(lore);
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
-    // ✅ Handle Back button clicks
     public void handleClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getCurrentItem() == null) return;
+        if (event.getCurrentItem() == null || event.getCurrentItem().getItemMeta() == null) return;
 
-        ItemStack clicked = event.getCurrentItem();
-        if (!clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
+        String title = event.getView().getTitle();
+        String name = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
 
-        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        // ------------------------
+        // MAIN MENU
+        // ------------------------
+        if (title.contains("ProShield Menu")) {
+            switch (name.toLowerCase(Locale.ROOT)) {
+                case "claim land" -> player.performCommand("claim");
+                case "claim info" -> player.performCommand("proshield info");
+                case "unclaim land" -> player.performCommand("unclaim");
+                case "trusted players" -> openMenu(player, "roles");
+                case "claim flags" -> openMenu(player, "flags");
+                case "admin tools" -> openMenu(player, "admin-expansions");
+            }
+            return;
+        }
 
-        if (name.equalsIgnoreCase("Back")) {
-            event.setCancelled(true);
-            openMainMenu(player);
+        // ------------------------
+        // FLAGS MENU
+        // ------------------------
+        if (title.contains("Claim Flags")) {
+            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+            if (plot == null) {
+                plugin.getMessagesUtil().send(player, "&cYou must stand inside a claim.");
+                return;
+            }
+
+            switch (name.toLowerCase(Locale.ROOT)) {
+                case "explosions" -> toggleFlag(plot, "explosions", player);
+                case "buckets" -> toggleFlag(plot, "buckets", player);
+                case "item frames" -> toggleFlag(plot, "item-frames", player);
+                case "armor stands" -> toggleFlag(plot, "armor-stands", player);
+                case "containers" -> toggleFlag(plot, "containers", player);
+                case "pets" -> toggleFlag(plot, "pets", player);
+                case "pvp" -> toggleFlag(plot, "pvp", player);
+                case "safe zone" -> toggleFlag(plot, "safezone", player);
+                case "back" -> openMenu(player, "main");
+            }
+
+            if (!name.equalsIgnoreCase("back")) {
+                openMenu(player, "flags"); // refresh GUI
+            }
+            return;
+        }
+
+        // ------------------------
+        // ADMIN EXPANSIONS MENU
+        // ------------------------
+        if (title.contains("Expansion Requests")) {
+            switch (name.toLowerCase(Locale.ROOT)) {
+                case "approve selected" -> handleExpansionApproval(player);
+                case "deny selected" -> handleExpansionDenial(player);
+                case "back" -> openMenu(player, "main");
+            }
+            return;
+        }
+
+        // ------------------------
+        // ROLES MENU (placeholder for now)
+        // ------------------------
+        if (title.contains("Trusted Players")) {
+            if (name.equalsIgnoreCase("back")) {
+                openMenu(player, "main");
+            } else {
+                plugin.getMessagesUtil().send(player, "&7This feature is still being developed.");
+            }
         }
     }
-}
+
+    // ✅ Flag toggle logic (moved from old GUIListener)
+    private void toggleFlag(Plot plot, String flag, Player player) {
+        boolean current = plot.getFlag(flag, false);
+        plot.setFlag(flag, !current);
+
+        MessagesUtil messages = plugin.getMessagesUtil();
+        if (current) {
+            messages.send(player, "&c" + flag + " disabled.");
+        } else {
+            messages.send(player, "&a" + flag + " enabled.");
+        }
+    }

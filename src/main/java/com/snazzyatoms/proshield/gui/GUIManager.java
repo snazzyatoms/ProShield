@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,9 +11,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -29,7 +26,6 @@ public class GUIManager {
     private final NamespacedKey menuKeyTag;
     private final NamespacedKey targetNameTag;
 
-    // Descriptions for claim flags
     private static final Map<String, String> FLAG_DESCRIPTIONS = new HashMap<>();
     static {
         FLAG_DESCRIPTIONS.put("explosions", "&7Toggle TNT and creeper damage inside claim");
@@ -42,7 +38,6 @@ public class GUIManager {
         FLAG_DESCRIPTIONS.put("safezone", "&7Turns your claim into a safe zone (blocks hostile spawns & damage)");
     }
 
-    // Per-player permission toggles
     private static final Map<String, String> ROLE_PERMISSIONS = new LinkedHashMap<>();
     static {
         ROLE_PERMISSIONS.put("build", "&7Allow building & block breaking");
@@ -61,7 +56,6 @@ public class GUIManager {
         this.targetNameTag = new NamespacedKey(plugin, "targetName");
     }
 
-    /* Entry point for menus */
     public void openMenu(Player player, String menuKey) {
         ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
         if (menus == null) return;
@@ -85,7 +79,6 @@ public class GUIManager {
         playClick(player);
     }
 
-    /* Role Editor GUI (per trusted player) */
     public void openRoleEditor(Player owner, String targetName) {
         Plot plot = plotManager.getPlot(owner.getLocation());
         if (plot == null) {
@@ -110,9 +103,9 @@ public class GUIManager {
             if (meta != null) {
                 meta.setDisplayName(ChatColor.YELLOW + key.toUpperCase());
                 meta.setLore(Arrays.asList(
-                        ChatColor.translateAlternateColorCodes('&', desc),
-                        ChatColor.GRAY + "Current: " + (enabled ? ChatColor.GREEN + "Allowed" : ChatColor.RED + "Denied"),
-                        ChatColor.AQUA + "Click to toggle"
+                    ChatColor.translateAlternateColorCodes('&', desc),
+                    ChatColor.GRAY + "Current: " + (enabled ? ChatColor.GREEN + "Allowed" : ChatColor.RED + "Denied"),
+                    ChatColor.AQUA + "Click to toggle"
                 ));
                 meta.getPersistentDataContainer().set(targetNameTag, PersistentDataType.STRING, targetName);
                 meta.getPersistentDataContainer().set(menuKeyTag, PersistentDataType.STRING, "role-editor");
@@ -121,15 +114,14 @@ public class GUIManager {
             inv.setItem(slot++, item);
         }
 
-        // Role info head
         ItemStack roleItem = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta roleMeta = roleItem.getItemMeta();
         if (roleMeta != null) {
             roleMeta.setDisplayName(ChatColor.GOLD + "Role: " + (role == null ? "None" : role));
             roleMeta.setLore(Arrays.asList(
-                    ChatColor.GRAY + "Trusted player: " + targetName,
-                    ChatColor.YELLOW + "Role defines defaults",
-                    ChatColor.AQUA + "Custom toggles override defaults"
+                ChatColor.GRAY + "Trusted player: " + targetName,
+                ChatColor.YELLOW + "Role defines defaults",
+                ChatColor.AQUA + "Custom toggles override defaults"
             ));
             roleMeta.getPersistentDataContainer().set(targetNameTag, PersistentDataType.STRING, targetName);
             roleMeta.getPersistentDataContainer().set(menuKeyTag, PersistentDataType.STRING, "role-editor");
@@ -137,15 +129,14 @@ public class GUIManager {
         }
         inv.setItem(22, roleItem);
 
-        // Back & Close
-        inv.setItem(25, createNavItem(Material.ARROW, ChatColor.YELLOW + "Back", "Return to Untrust Menu"));
-        inv.setItem(26, createNavItem(Material.BARRIER, ChatColor.RED + "Close", "Click to close this menu"));
+        // Back + Close
+        inv.setItem(25, createNavItem(Material.ARROW, ChatColor.YELLOW + "Back", "Return to Untrust Menu", "role-editor", targetName));
+        inv.setItem(26, createNavItem(Material.BARRIER, ChatColor.RED + "Close", "Close this menu", "role-editor", targetName));
 
         owner.openInventory(inv);
         playClick(owner);
     }
 
-    /* Dynamic Menus */
     private void buildTrustMenu(Player player, Inventory inv) {
         Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) return;
@@ -156,11 +147,17 @@ public class GUIManager {
             if (nearby.getLocation().distance(player.getLocation()) > 10) continue;
 
             ItemStack head = createNavItem(Material.PLAYER_HEAD,
-                    ChatColor.GREEN + nearby.getName(),
-                    "Click to trust this player");
+                ChatColor.GREEN + nearby.getName(),
+                "Click to trust this player",
+                "trust",
+                nearby.getName()
+            );
             inv.setItem(slot++, head);
-            if (slot >= inv.getSize() - 1) break;
+            if (slot >= inv.getSize() - 2) break;
         }
+
+        // Back button (slot 26 if available)
+        inv.setItem(inv.getSize() - 1, createNavItem(Material.BARRIER, ChatColor.RED + "Back", "Return to main menu", "static:trust", null));
     }
 
     private void buildUntrustMenu(Player player, Inventory inv) {
@@ -168,25 +165,22 @@ public class GUIManager {
         if (plot == null) return;
 
         Map<String, String> trusted = roleManager.getTrusted(plot.getId());
-        if (trusted.isEmpty()) return;
-
         int slot = 0;
         for (String name : trusted.keySet()) {
             ItemStack head = createNavItem(Material.PLAYER_HEAD,
-                    ChatColor.RED + name,
-                    "Click to manage this player", "→ Opens Role Editor");
-            ItemMeta meta = head.getItemMeta();
-            if (meta != null) {
-                meta.getPersistentDataContainer().set(targetNameTag, PersistentDataType.STRING, name);
-                meta.getPersistentDataContainer().set(menuKeyTag, PersistentDataType.STRING, "untrust");
-                head.setItemMeta(meta);
-            }
+                ChatColor.RED + name,
+                "Click to manage/untrust",
+                "untrust",
+                name
+            );
             inv.setItem(slot++, head);
-            if (slot >= inv.getSize() - 1) break;
+            if (slot >= inv.getSize() - 2) break;
         }
+
+        // Back button
+        inv.setItem(inv.getSize() - 1, createNavItem(Material.BARRIER, ChatColor.RED + "Back", "Return to main menu", "static:untrust", null));
     }
 
-    /* Static Menus */
     private void buildStaticMenu(Player player, ConfigurationSection menu, Inventory inv, int size) {
         ConfigurationSection items = menu.getConfigurationSection("items");
         if (items == null) return;
@@ -201,7 +195,7 @@ public class GUIManager {
 
                 String perm = itemSec.getString("permission");
                 if (perm != null && !perm.isBlank() &&
-                        !player.hasPermission(perm) && !player.isOp()) {
+                    !player.hasPermission(perm) && !player.isOp()) {
                     continue;
                 }
 
@@ -216,7 +210,6 @@ public class GUIManager {
                 if (meta != null) {
                     meta.setDisplayName(name);
                     meta.setLore(lore);
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
                     meta.getPersistentDataContainer().set(menuKeyTag, PersistentDataType.STRING, "static:" + menu.getName());
                     item.setItemMeta(meta);
                 }
@@ -226,42 +219,52 @@ public class GUIManager {
         }
     }
 
-    /* Utility */
     private List<String> formatLore(List<String> input, Player player, ConfigurationSection itemSec) {
         List<String> out = new ArrayList<>();
         String action = itemSec.getString("action", "");
         String state = "";
 
-        if (action != null && action.toLowerCase().startsWith("command:proshield flag ")) {
+        if (action.toLowerCase().startsWith("command:proshield flag ")) {
             String[] split = action.split(" ");
             if (split.length >= 3) {
                 String flagKey = split[2].toLowerCase();
                 Plot plot = plotManager.getPlot(player.getLocation());
                 boolean flagValue = plot != null
-                        ? plot.getFlag(flagKey, plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false))
-                        : plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false);
+                    ? plot.getFlag(flagKey, plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false))
+                    : plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false);
                 state = flagValue ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled";
             }
         }
 
-        if (input != null) {
-            for (String line : input) {
-                String replaced = state.isEmpty() ? line : line.replace("{state}", state);
-                out.add(ChatColor.translateAlternateColorCodes('&', replaced));
-            }
+        for (String line : input) {
+            out.add(ChatColor.translateAlternateColorCodes('&', line.replace("{state}", state)));
         }
         return out;
     }
 
-    private ItemStack createNavItem(Material mat, String name, String... loreLines) {
+    private ItemStack createNavItem(Material mat, String name, String loreLine, String menuTagValue, String targetName) {
+        return createNavItem(mat, name, loreLine == null ? null : new String[]{loreLine}, menuTagValue, targetName);
+    }
+
+    private ItemStack createNavItem(Material mat, String name, String loreLine1, String loreLine2, String menuTagValue, String targetName) {
+        return createNavItem(mat, name, new String[]{loreLine1, loreLine2}, menuTagValue, targetName);
+    }
+
+    private ItemStack createNavItem(Material mat, String name, String[] loreLines, String menuTagValue, String targetName) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(name);
-            if (loreLines.length > 0) {
+            if (loreLines != null) {
                 List<String> lore = new ArrayList<>();
-                for (String l : loreLines) lore.add(ChatColor.GRAY + l);
+                for (String l : loreLines) if (l != null) lore.add(ChatColor.GRAY + l);
                 meta.setLore(lore);
+            }
+            if (menuTagValue != null) {
+                meta.getPersistentDataContainer().set(menuKeyTag, PersistentDataType.STRING, menuTagValue);
+            }
+            if (targetName != null) {
+                meta.getPersistentDataContainer().set(targetNameTag, PersistentDataType.STRING, targetName);
             }
             item.setItemMeta(meta);
         }

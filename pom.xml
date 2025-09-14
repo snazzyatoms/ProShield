@@ -1,83 +1,40 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
-
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Project coordinates -->
     <groupId>com.snazzyatoms</groupId>
     <artifactId>proshield</artifactId>
     <version>1.2.5</version>
     <packaging>jar</packaging>
 
-    <!-- Metadata -->
     <name>ProShield</name>
-    <description>Lightweight land &amp; plot protection plugin for Paper servers</description>
-    <url>https://github.com/snazzyatoms/ProShield</url>
+    <description>Lightweight land/plot protection plugin for Paper/Spigot</description>
+    <url>https://github.com/YOUR_USERNAME/proshield</url>
 
-    <licenses>
-        <license>
-            <name>GPL-3.0 License</name>
-            <url>https://www.gnu.org/licenses/gpl-3.0.html</url>
-        </license>
-    </licenses>
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
-    <developers>
-        <developer>
-            <id>snazzyatoms</id>
-            <name>snazzyatoms</name>
-            <url>https://github.com/snazzyatoms</url>
-        </developer>
-    </developers>
-
-    <!-- Dependencies -->
-    <dependencies>
-        <!-- Paper API -->
-        <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-            <version>1.20.1-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-
-    <!-- Repositories -->
-    <repositories>
-        <!-- PaperMC repo -->
-        <repository>
-            <id>papermc-repo</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
-    </repositories>
-
-    <!-- Build configuration -->
     <build>
         <plugins>
-            <!-- Java version enforcement -->
+            <!-- Always clean stale files before build -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.3.0</version>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.3.2</version>
                 <executions>
                     <execution>
-                        <id>enforce-java</id>
-                        <goals>
-                            <goal>enforce</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <!-- Allow Java 17 and higher -->
-                                <requireJavaVersion>
-                                    <version>[17,)</version>
-                                </requireJavaVersion>
-                            </rules>
-                        </configuration>
+                        <id>auto-clean</id>
+                        <phase>initialize</phase>
+                        <goals><goal>clean</goal></goals>
                     </execution>
                 </executions>
             </plugin>
 
-            <!-- Java compiler -->
+            <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -85,25 +42,53 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
-                    <!-- Using release flag ensures Java 17 bytecode even on JDK 21 -->
-                    <release>17</release>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin (optional, only if you need shading) -->
+            <!-- Shade for final plugin jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.4.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <minimizeJar>false</minimizeJar>
+                            <relocations>
+                                <!-- example: relocate your packages if needed -->
+                                <!-- <relocation>
+                                    <pattern>com.example.lib</pattern>
+                                    <shadedPattern>com.snazzyatoms.proshield.libs.example</shadedPattern>
+                                </relocation> -->
+                            </relocations>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
+
+    <dependencies>
+        <!-- Spigot / Paper API -->
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.20.1-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+    </repositories>
 </project>

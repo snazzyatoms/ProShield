@@ -39,32 +39,16 @@ public class AdminGUIListener implements Listener {
                         player.sendMessage(ChatColor.YELLOW + "No requests to approve.");
                         return;
                     }
-
                     ExpansionRequest req = pending.get(0);
-                    ExpansionQueue.approveRequest(req);
-
-                    Player target = Bukkit.getPlayer(req.getPlayerId());
-                    if (target != null) {
-                        target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
-                    }
-                    player.sendMessage(ChatColor.GREEN + "Approved expansion request for " +
-                            (target != null ? target.getName() : req.getPlayerId()));
+                    Bukkit.getServer().dispatchCommand(player, "proshield approve " + req.getPlayerId());
                 }
                 case "deny selected" -> {
                     if (pending.isEmpty()) {
                         player.sendMessage(ChatColor.YELLOW + "No requests to deny.");
                         return;
                     }
-
                     ExpansionRequest req = pending.get(0);
-                    ExpansionQueue.denyRequest(req, "Denied by admin");
-
-                    Player target = Bukkit.getPlayer(req.getPlayerId());
-                    if (target != null) {
-                        target.sendMessage(ChatColor.RED + "Your expansion request was denied.");
-                    }
-                    player.sendMessage(ChatColor.RED + "Denied expansion request for " +
-                            (target != null ? target.getName() : req.getPlayerId()));
+                    Bukkit.getServer().dispatchCommand(player, "proshield deny " + req.getPlayerId() + " other");
                 }
                 case "back" -> guiManager.openMenu(player, "main");
             }

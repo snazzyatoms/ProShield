@@ -1,10 +1,14 @@
+// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.expansion.ExpansionQueue;
+import com.snazzyatoms.proshield.expansion.ExpansionRequest;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.*;
@@ -13,6 +17,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
 public class ProShieldCommand implements CommandExecutor {
 
@@ -58,7 +64,6 @@ public class ProShieldCommand implements CommandExecutor {
         boolean next = !current;
         plot.setFlag(flagKey, next);
 
-        // sound feedback (optional)
         String sound = plugin.getConfig().getString("sounds.flag-toggle", "BLOCK_NOTE_BLOCK_PLING");
         try { player.playSound(player.getLocation(), sound, 1f, 1f); } catch (Exception ignored) {}
 
@@ -123,10 +128,7 @@ public class ProShieldCommand implements CommandExecutor {
                 giveCompass(player);
             }
 
-            case "admin" -> {
-                // Just open the main menu; admin options are permission-gated in GUI
-                guiManager.openMenu(player, "main");
-            }
+            case "admin" -> guiManager.openMenu(player, "main");
 
             case "flag" -> {
                 if (args.length < 2) {
@@ -134,6 +136,62 @@ public class ProShieldCommand implements CommandExecutor {
                     return true;
                 }
                 toggleFlag(player, args[1].toLowerCase());
+            }
+
+            case "approve" -> {
+                if (!player.hasPermission("proshield.admin.approve")) {
+                    messages.send(player, "&cNo permission.");
+                    return true;
+                }
+                if (args.length < 2) {
+                    messages.send(player, "&cUsage: /proshield approve <playerUUID>");
+                    return true;
+                }
+                try {
+                    UUID targetId = UUID.fromString(args[1]);
+                    List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+                    ExpansionRequest req = pending.stream().filter(r -> r.getPlayerId().equals(targetId)).findFirst().orElse(null);
+                    if (req == null) {
+                        messages.send(player, "&cNo pending request for that player.");
+                        return true;
+                    }
+                    ExpansionQueue.approveRequest(req);
+                    plugin.getPlotManager().expandClaim(targetId, req.getExtraRadius());
+
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
+                    messages.send(player, "&aExpansion approved for &e" + targetId);
+                } catch (IllegalArgumentException ex) {
+                    messages.send(player, "&cInvalid UUID.");
+                }
+            }
+
+            case "deny" -> {
+                if (!player.hasPermission("proshield.admin.deny")) {
+                    messages.send(player, "&cNo permission.");
+                    return true;
+                }
+                if (args.length < 3) {
+                    messages.send(player, "&cUsage: /proshield deny <playerUUID> <reason>");
+                    return true;
+                }
+                try {
+                    UUID targetId = UUID.fromString(args[1]);
+                    String reason = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+                    List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+                    ExpansionRequest req = pending.stream().filter(r -> r.getPlayerId().equals(targetId)).findFirst().orElse(null);
+                    if (req == null) {
+                        messages.send(player, "&cNo pending request for that player.");
+                        return true;
+                    }
+                    ExpansionQueue.denyRequest(req, reason);
+
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
+                    messages.send(player, "&cExpansion denied for &e" + targetId);
+                } catch (IllegalArgumentException ex) {
+                    messages.send(player, "&cInvalid UUID.");
+                }
             }
 
             default -> messages.send(player, "&cUnknown subcommand.");

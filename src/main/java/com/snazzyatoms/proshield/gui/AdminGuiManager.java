@@ -4,13 +4,14 @@ package com.snazzyatoms.proshield.gui;
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 public class AdminGUIManager {
 
@@ -21,53 +22,57 @@ public class AdminGUIManager {
     }
 
     /**
-     * Opens the Expansion Requests menu for admins.
+     * Opens an admin GUI menu by key (matches config under gui.menus.<key>)
      */
-    public void openExpansionMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27,
-                ChatColor.translateAlternateColorCodes('&', "&cExpansion Requests"));
+    public void openMenu(Player player, String key) {
+        ConfigurationSection menuConfig = plugin.getConfig().getConfigurationSection("gui.menus." + key);
+        if (menuConfig == null) {
+            player.sendMessage(ChatColor.RED + "Menu not found: " + key);
+            return;
+        }
 
-        // Pending Requests
-        ItemStack pending = makeItem(Material.PAPER, "&ePending Requests",
-                "&7View and manage all player requests");
-        inv.setItem(11, pending);
+        String title = ChatColor.translateAlternateColorCodes('&', menuConfig.getString("title", "&cAdmin Menu"));
+        int size = menuConfig.getInt("size", 27);
+        Inventory inv = Bukkit.createInventory(null, size, title);
 
-        // Approve
-        ItemStack approve = makeItem(Material.EMERALD, "&aApprove Selected",
-                "&7Approve and apply instantly (if enabled)",
-                "&7Reason optional");
-        inv.setItem(13, approve);
+        ConfigurationSection items = menuConfig.getConfigurationSection("items");
+        if (items != null) {
+            for (String slotKey : items.getKeys(false)) {
+                int slot;
+                try {
+                    slot = Integer.parseInt(slotKey);
+                } catch (NumberFormatException e) {
+                    continue; // ignore invalid slots
+                }
 
-        // Deny
-        ItemStack deny = makeItem(Material.REDSTONE, "&cDeny Selected",
-                "&7Deny with reason");
-        inv.setItem(15, deny);
+                ConfigurationSection itemCfg = items.getConfigurationSection(slotKey);
+                if (itemCfg == null) continue;
 
-        // Coming Soon
-        ItemStack teaser = makeItem(Material.BOOK, "&dComing in 2.0",
-                "&7Expansion via currency/permissions",
-                "&7Automatic upgrades",
-                "&7VIP claim bonuses");
-        inv.setItem(22, teaser);
+                String materialName = itemCfg.getString("material", "BARRIER");
+                ItemStack item;
+                try {
+                    item = new ItemStack(org.bukkit.Material.valueOf(materialName.toUpperCase(Locale.ROOT)));
+                } catch (IllegalArgumentException ex) {
+                    item = new ItemStack(org.bukkit.Material.BARRIER);
+                }
 
-        // Back
-        ItemStack back = makeItem(Material.BARRIER, "&cBack",
-                "&7Return to Admin Menu");
-        inv.setItem(26, back);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    if (itemCfg.contains("name")) {
+                        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', itemCfg.getString("name")));
+                    }
+                    if (itemCfg.contains("lore")) {
+                        List<String> lore = itemCfg.getStringList("lore");
+                        lore.replaceAll(line -> ChatColor.translateAlternateColorCodes('&', line));
+                        meta.setLore(lore);
+                    }
+                    item.setItemMeta(meta);
+                }
+
+                inv.setItem(slot, item);
+            }
+        }
 
         player.openInventory(inv);
-    }
-
-    private ItemStack makeItem(Material mat, String name, String... lore) {
-        ItemStack stack = new ItemStack(mat);
-        ItemMeta meta = stack.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
-            meta.setLore(Arrays.stream(lore)
-                    .map(line -> ChatColor.translateAlternateColorCodes('&', line))
-                    .toList());
-            stack.setItemMeta(meta);
-        }
-        return stack;
     }
 }

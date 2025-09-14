@@ -7,6 +7,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Plot
+ * ----
+ * Represents a claimed chunk/area.
+ * Supports trusted players, flags, and expansion radius.
+ */
 public class Plot {
     private final UUID id;
     private UUID owner; // ⚡ must not be final if we allow transfer
@@ -17,14 +23,18 @@ public class Plot {
     private final Map<String, Boolean> flags = new HashMap<>();
     private final Set<UUID> trusted = new HashSet<>();
 
-    public Plot(UUID id, UUID owner, String worldName, int chunkX, int chunkZ) {
-        this.id = id;
+    // Expansion radius (default = 0 means just the chunk itself)
+    private int extraRadius = 0;
+
+    public Plot(UUID owner, String worldName, int chunkX, int chunkZ) {
+        this.id = UUID.randomUUID();
         this.owner = owner;
         this.worldName = worldName;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
     }
 
+    // --- Core info ---
     public UUID getId() {
         return id;
     }
@@ -41,6 +51,7 @@ public class Plot {
         return owner != null && owner.equals(playerId);
     }
 
+    // --- Trusted Players ---
     public boolean isTrusted(UUID playerId) {
         return isOwner(playerId) || trusted.contains(playerId);
     }
@@ -53,7 +64,11 @@ public class Plot {
         trusted.remove(playerId);
     }
 
-    // ✅ Added so ClaimPreview compiles
+    public Set<UUID> getTrusted() {
+        return trusted;
+    }
+
+    // --- Location info ---
     public String getWorldName() {
         return worldName;
     }
@@ -66,12 +81,40 @@ public class Plot {
         return chunkZ;
     }
 
-    // Flag management
+    // --- Flags ---
     public boolean getFlag(String flag, boolean def) {
         return flags.getOrDefault(flag, def);
     }
 
     public void setFlag(String flag, boolean value) {
         flags.put(flag, value);
+    }
+
+    public Map<String, Boolean> getFlags() {
+        return flags;
+    }
+
+    // --- Expansion ---
+    public int getExtraRadius() {
+        return extraRadius;
+    }
+
+    public void expand(int extra) {
+        if (extra > 0) {
+            this.extraRadius += extra;
+        }
+    }
+
+    // --- Utility ---
+    @Override
+    public String toString() {
+        return "Plot{" +
+                "owner=" + owner +
+                ", world='" + worldName + '\'' +
+                ", chunk=(" + chunkX + "," + chunkZ + ")" +
+                ", extraRadius=" + extraRadius +
+                ", flags=" + flags +
+                ", trusted=" + trusted +
+                '}';
     }
 }

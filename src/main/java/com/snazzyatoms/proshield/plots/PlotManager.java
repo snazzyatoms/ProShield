@@ -28,17 +28,22 @@ public class PlotManager {
         return plots.get(id);
     }
 
+    /**
+     * Create a claim around the player's current chunk.
+     * Radius is configurable in config.yml ("claims.default-radius").
+     */
     public void createPlot(Player owner, Location loc) {
-        Chunk chunk = loc.getChunk();
-        UUID id = new UUID(chunk.getX(), chunk.getZ());
-        Plot plot = new Plot(
-                id,
-                owner.getUniqueId(),
-                loc.getWorld().getName(),
-                chunk.getX(),
-                chunk.getZ()
-        );
-        plots.put(id, plot);
+        Chunk center = loc.getChunk();
+        int radius = plugin.getConfig().getInt("claims.default-radius", 3); // default = 3 chunks (~48 blocks)
+
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                Chunk chunk = center.getWorld().getChunkAt(center.getX() + dx, center.getZ() + dz);
+                UUID id = new UUID(chunk.getX(), chunk.getZ());
+                Plot plot = new Plot(id, owner.getUniqueId());
+                plots.put(id, plot);
+            }
+        }
         playerNames.put(owner.getName(), owner.getUniqueId());
     }
 
@@ -49,7 +54,7 @@ public class PlotManager {
     }
 
     public void saveAll() {
-        // TODO: persist to disk (future feature)
+        // TODO: persist to disk (future update)
     }
 
     public String getPlayerName(UUID id) {

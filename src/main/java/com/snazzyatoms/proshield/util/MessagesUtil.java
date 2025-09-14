@@ -13,14 +13,19 @@ public class MessagesUtil {
     }
 
     public void send(Player player, String message) {
-        if (message == null || message.isBlank()) return;
-        String prefix = plugin.getConfig().getString("messages.prefix", "&3[ProShield]&r ");
-        player.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + message));
+        if (player == null || message == null) return;
+        player.sendMessage(color(plugin.getConfig().getString("messages.prefix", "&7[ProShield]&r ") + message));
     }
 
-    public void debug(String msg) {
+    public void debug(String message) {
         if (plugin.isDebugEnabled()) {
-            plugin.getLogger().info(ChatColor.stripColor(msg));
+            plugin.getLogger().info(color(plugin.getConfig().getString("messages.debug-prefix", "&8[Debug]&r ") + message));
         }
+    }
+
+    // ✅ Added helper to fix "cannot find symbol: color"
+    public String color(String input) {
+        if (input == null) return "";
+        return ChatColor.translateAlternateColorCodes('&', input);
     }
 }

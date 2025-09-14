@@ -2,13 +2,10 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.expansion.ExpansionQueue;
-import com.snazzyatoms.proshield.expansion.ExpansionRequest;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.*;
@@ -17,8 +14,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
 
 public class ProShieldCommand implements CommandExecutor {
 
@@ -64,6 +59,7 @@ public class ProShieldCommand implements CommandExecutor {
         boolean next = !current;
         plot.setFlag(flagKey, next);
 
+        // optional sound feedback
         String sound = plugin.getConfig().getString("sounds.flag-toggle", "BLOCK_NOTE_BLOCK_PLING");
         try { player.playSound(player.getLocation(), sound, 1f, 1f); } catch (Exception ignored) {}
 
@@ -77,125 +73,105 @@ public class ProShieldCommand implements CommandExecutor {
             return true;
         }
 
-        if (args.length == 0) {
-            guiManager.openMenu(player, "main");
+        String command = label.toLowerCase();
+
+        // --- Shortcut commands ---
+        switch (command) {
+            case "claim" -> {
+                player.performCommand("proshield claim");
+                return true;
+            }
+            case "unclaim" -> {
+                player.performCommand("proshield unclaim");
+                return true;
+            }
+            case "trust" -> {
+                if (args.length < 1) {
+                    messages.send(player, "&cUsage: /trust <player> [role]");
+                    return true;
+                }
+                player.performCommand("proshield trust " + String.join(" ", args));
+                return true;
+            }
+            case "untrust" -> {
+                if (args.length < 1) {
+                    messages.send(player, "&cUsage: /untrust <player>");
+                    return true;
+                }
+                player.performCommand("proshield untrust " + args[0]);
+                return true;
+            }
+            case "roles" -> {
+                guiManager.openMenu(player, "roles");
+                return true;
+            }
+            case "transfer" -> {
+                if (args.length < 1) {
+                    messages.send(player, "&cUsage: /transfer <player>");
+                    return true;
+                }
+                player.performCommand("proshield transfer " + args[0]);
+                return true;
+            }
+        }
+
+        // --- Root /proshield handler ---
+        if (command.equals("proshield") || command.equals("ps") || command.equals("shield")) {
+            if (args.length == 0) {
+                guiManager.openMenu(player, "main");
+                return true;
+            }
+
+            String sub = args[0].toLowerCase();
+            switch (sub) {
+                case "help" -> {
+                    for (String line : plugin.getConfig().getStringList("help.player")) {
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
+                    }
+                }
+                case "reload" -> {
+                    if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
+                        plugin.reloadConfig();
+                        messages.send(player, "&aProShield config reloaded.");
+                    } else {
+                        messages.send(player, "&cNo permission.");
+                    }
+                }
+                case "debug" -> {
+                    if (player.isOp()) {
+                        plugin.toggleDebug();
+                        messages.send(player, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aON" : "&cOFF"));
+                    } else {
+                        messages.send(player, "&cNo permission.");
+                    }
+                }
+                case "bypass" -> {
+                    if (!player.hasPermission("proshield.bypass")) {
+                        messages.send(player, "&cNo permission.");
+                        return true;
+                    }
+                    if (plugin.getBypassing().contains(player.getUniqueId())) {
+                        plugin.getBypassing().remove(player.getUniqueId());
+                        messages.send(player, "&cBypass disabled.");
+                    } else {
+                        plugin.getBypassing().add(player.getUniqueId());
+                        messages.send(player, "&aBypass enabled.");
+                    }
+                }
+                case "compass" -> giveCompass(player);
+                case "admin" -> guiManager.openMenu(player, "main");
+                case "flag" -> {
+                    if (args.length < 2) {
+                        messages.send(player, "&cUsage: /proshield flag <key>");
+                        return true;
+                    }
+                    toggleFlag(player, args[1].toLowerCase());
+                }
+                default -> messages.send(player, "&cUnknown subcommand.");
+            }
             return true;
         }
 
-        String sub = args[0].toLowerCase();
-        switch (sub) {
-            case "help" -> {
-                for (String line : plugin.getConfig().getStringList("help.player")) {
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
-                }
-            }
-
-            case "reload" -> {
-                if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
-                    plugin.reloadConfig();
-                    messages.send(player, "&aProShield config reloaded.");
-                } else {
-                    messages.send(player, "&cNo permission.");
-                }
-            }
-
-            case "debug" -> {
-                if (player.isOp()) {
-                    plugin.toggleDebug();
-                    messages.send(player, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aON" : "&cOFF"));
-                } else messages.send(player, "&cNo permission.");
-            }
-
-            case "bypass" -> {
-                if (!player.hasPermission("proshield.bypass")) {
-                    messages.send(player, "&cNo permission.");
-                    return true;
-                }
-                if (plugin.getBypassing().contains(player.getUniqueId())) {
-                    plugin.getBypassing().remove(player.getUniqueId());
-                    messages.send(player, "&cBypass disabled.");
-                } else {
-                    plugin.getBypassing().add(player.getUniqueId());
-                    messages.send(player, "&aBypass enabled.");
-                }
-            }
-
-            case "compass" -> {
-                if (!player.hasPermission("proshield.compass")) {
-                    messages.send(player, "&cNo permission.");
-                    return true;
-                }
-                giveCompass(player);
-            }
-
-            case "admin" -> guiManager.openMenu(player, "main");
-
-            case "flag" -> {
-                if (args.length < 2) {
-                    messages.send(player, "&cUsage: /proshield flag <key>");
-                    return true;
-                }
-                toggleFlag(player, args[1].toLowerCase());
-            }
-
-            case "approve" -> {
-                if (!player.hasPermission("proshield.admin.approve")) {
-                    messages.send(player, "&cNo permission.");
-                    return true;
-                }
-                if (args.length < 2) {
-                    messages.send(player, "&cUsage: /proshield approve <playerUUID>");
-                    return true;
-                }
-                try {
-                    UUID targetId = UUID.fromString(args[1]);
-                    List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
-                    ExpansionRequest req = pending.stream().filter(r -> r.getPlayerId().equals(targetId)).findFirst().orElse(null);
-                    if (req == null) {
-                        messages.send(player, "&cNo pending request for that player.");
-                        return true;
-                    }
-                    ExpansionQueue.approveRequest(req);
-                    plugin.getPlotManager().expandClaim(targetId, req.getExtraRadius());
-
-                    Player target = Bukkit.getPlayer(targetId);
-                    if (target != null) target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
-                    messages.send(player, "&aExpansion approved for &e" + targetId);
-                } catch (IllegalArgumentException ex) {
-                    messages.send(player, "&cInvalid UUID.");
-                }
-            }
-
-            case "deny" -> {
-                if (!player.hasPermission("proshield.admin.deny")) {
-                    messages.send(player, "&cNo permission.");
-                    return true;
-                }
-                if (args.length < 3) {
-                    messages.send(player, "&cUsage: /proshield deny <playerUUID> <reason>");
-                    return true;
-                }
-                try {
-                    UUID targetId = UUID.fromString(args[1]);
-                    String reason = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
-                    List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
-                    ExpansionRequest req = pending.stream().filter(r -> r.getPlayerId().equals(targetId)).findFirst().orElse(null);
-                    if (req == null) {
-                        messages.send(player, "&cNo pending request for that player.");
-                        return true;
-                    }
-                    ExpansionQueue.denyRequest(req, reason);
-
-                    Player target = Bukkit.getPlayer(targetId);
-                    if (target != null) target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
-                    messages.send(player, "&cExpansion denied for &e" + targetId);
-                } catch (IllegalArgumentException ex) {
-                    messages.send(player, "&cInvalid UUID.");
-                }
-            }
-
-            default -> messages.send(player, "&cUnknown subcommand.");
-        }
-        return true;
+        return false;
     }
 }

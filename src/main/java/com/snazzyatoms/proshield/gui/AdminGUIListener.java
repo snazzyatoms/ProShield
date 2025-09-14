@@ -2,7 +2,7 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.expansion.ExpansionRequest;
-import com.snazzyatoms.proshield.expansion.ExpansionRequestManager;
+import com.snazzyatoms.proshield.expansion.ExpansionQueue;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -10,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
+import java.util.List;
 import java.util.Locale;
 
 public class AdminGUIListener implements Listener {
@@ -31,23 +32,26 @@ public class AdminGUIListener implements Listener {
         if (title.contains("Expansion Requests")) {
             event.setCancelled(true);
 
+            List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+
             switch (name.toLowerCase(Locale.ROOT)) {
                 case "approve selected" -> {
-                    if (!ExpansionRequestManager.hasRequests()) {
+                    if (pending.isEmpty()) {
                         player.sendMessage(ChatColor.YELLOW + "No requests to approve.");
                         return;
                     }
 
-                    ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
+                    ExpansionRequest req = pending.get(0);
+                    // You could also directly approve with ExpansionQueue.approveRequest(req)
                     Bukkit.getServer().dispatchCommand(player, "proshield approve " + req.getPlayerId());
                 }
                 case "deny selected" -> {
-                    if (!ExpansionRequestManager.hasRequests()) {
+                    if (pending.isEmpty()) {
                         player.sendMessage(ChatColor.YELLOW + "No requests to deny.");
                         return;
                     }
 
-                    ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
+                    ExpansionRequest req = pending.get(0);
                     Bukkit.getServer().dispatchCommand(player, "proshield deny " + req.getPlayerId());
                 }
                 case "back" -> guiManager.openMenu(player, "main");

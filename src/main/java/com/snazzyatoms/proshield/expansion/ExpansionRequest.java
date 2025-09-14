@@ -4,16 +4,28 @@ package com.snazzyatoms.proshield.expansion;
 import java.util.UUID;
 
 public class ExpansionRequest {
+
+    public enum Status {
+        PENDING,
+        APPROVED,
+        DENIED
+    }
+
     private final UUID playerId;
     private final int extraRadius;
     private final long requestTime;
 
-    public ExpansionRequest(UUID playerId, int extraRadius, long requestTime) {
+    private Status status;
+    private String denialReason; // Optional reason if denied
+
+    public ExpansionRequest(UUID playerId, int extraRadius) {
         this.playerId = playerId;
         this.extraRadius = extraRadius;
-        this.requestTime = requestTime;
+        this.requestTime = System.currentTimeMillis();
+        this.status = Status.PENDING;
     }
 
+    // --- Getters ---
     public UUID getPlayerId() {
         return playerId;
     }
@@ -24,5 +36,46 @@ public class ExpansionRequest {
 
     public long getRequestTime() {
         return requestTime;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public String getDenialReason() {
+        return denialReason;
+    }
+
+    // --- State transitions ---
+    public void approve() {
+        this.status = Status.APPROVED;
+        this.denialReason = null;
+    }
+
+    public void deny(String reason) {
+        this.status = Status.DENIED;
+        this.denialReason = reason;
+    }
+
+    public boolean isPending() {
+        return this.status == Status.PENDING;
+    }
+
+    public boolean isApproved() {
+        return this.status == Status.APPROVED;
+    }
+
+    public boolean isDenied() {
+        return this.status == Status.DENIED;
+    }
+
+    // --- Utility for GUI display ---
+    public String getSummary() {
+        String base = "Request +" + extraRadius + " blocks";
+        return switch (status) {
+            case PENDING -> base + " (§ePending§r)";
+            case APPROVED -> base + " (§aApproved§r)";
+            case DENIED -> base + " (§cDenied§r: " + (denialReason != null ? denialReason : "No reason") + ")";
+        };
     }
 }

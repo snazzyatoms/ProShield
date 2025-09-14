@@ -9,7 +9,6 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
@@ -17,8 +16,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class ProShieldCommand implements CommandExecutor {
+public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
@@ -33,7 +33,7 @@ public class ProShieldCommand implements CommandExecutor {
     }
 
     private void giveCompass(Player player) {
-        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemStack compass = new ItemStack(org.bukkit.Material.COMPASS);
         ItemMeta meta = compass.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(ChatColor.AQUA + "ProShield Compass");
@@ -63,7 +63,6 @@ public class ProShieldCommand implements CommandExecutor {
         boolean next = !current;
         plot.setFlag(flagKey, next);
 
-        // sound feedback (optional)
         String sound = plugin.getConfig().getString("sounds.flag-toggle", "BLOCK_NOTE_BLOCK_PLING");
         try {
             player.playSound(player.getLocation(), sound, 1f, 1f);
@@ -74,10 +73,8 @@ public class ProShieldCommand implements CommandExecutor {
 
     private UUID resolvePlayerId(String input) {
         try {
-            // Try direct UUID
             return UUID.fromString(input);
         } catch (IllegalArgumentException ex) {
-            // Fallback to player lookup
             OfflinePlayer offline = Bukkit.getOfflinePlayer(input);
             return offline.getUniqueId();
         }
@@ -102,16 +99,12 @@ public class ProShieldCommand implements CommandExecutor {
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
                 }
             }
-
             case "reload" -> {
                 if (player.isOp() || player.hasPermission("proshield.admin.reload")) {
                     plugin.reloadConfig();
                     messages.send(player, "&aProShield config reloaded.");
-                } else {
-                    messages.send(player, "&cNo permission.");
-                }
+                } else messages.send(player, "&cNo permission.");
             }
-
             case "debug" -> {
                 if (player.isOp()) {
                     plugin.toggleDebug();
@@ -119,7 +112,6 @@ public class ProShieldCommand implements CommandExecutor {
                             (plugin.isDebugEnabled() ? "&aON" : "&cOFF"));
                 } else messages.send(player, "&cNo permission.");
             }
-
             case "bypass" -> {
                 if (!player.hasPermission("proshield.bypass")) {
                     messages.send(player, "&cNo permission.");
@@ -133,7 +125,6 @@ public class ProShieldCommand implements CommandExecutor {
                     messages.send(player, "&aBypass enabled.");
                 }
             }
-
             case "compass" -> {
                 if (!player.hasPermission("proshield.compass")) {
                     messages.send(player, "&cNo permission.");
@@ -141,11 +132,7 @@ public class ProShieldCommand implements CommandExecutor {
                 }
                 giveCompass(player);
             }
-
-            case "admin" -> {
-                guiManager.openMenu(player, "main");
-            }
-
+            case "admin" -> guiManager.openMenu(player, "main");
             case "flag" -> {
                 if (args.length < 2) {
                     messages.send(player, "&cUsage: /proshield flag <key>");
@@ -153,8 +140,6 @@ public class ProShieldCommand implements CommandExecutor {
                 }
                 toggleFlag(player, args[1].toLowerCase(Locale.ROOT));
             }
-
-            // === NEW SUBCOMMANDS ===
             case "approve" -> {
                 if (!player.hasPermission("proshield.admin")) {
                     messages.send(player, "&cNo permission.");
@@ -172,14 +157,12 @@ public class ProShieldCommand implements CommandExecutor {
                 }
                 ExpansionRequest req = reqs.get(0);
                 ExpansionQueue.approveRequest(req);
-
                 Player target = Bukkit.getPlayer(targetId);
                 if (target != null) {
                     target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
                 }
                 messages.send(player, "&aApproved expansion request for &e" + args[1]);
             }
-
             case "deny" -> {
                 if (!player.hasPermission("proshield.admin")) {
                     messages.send(player, "&cNo permission.");
@@ -198,7 +181,6 @@ public class ProShieldCommand implements CommandExecutor {
                 }
                 ExpansionRequest req = reqs.get(0);
                 ExpansionQueue.denyRequest(req, reason);
-
                 Player target = Bukkit.getPlayer(targetId);
                 if (target != null) {
                     target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
@@ -206,9 +188,37 @@ public class ProShieldCommand implements CommandExecutor {
                 messages.send(player, "&cDenied expansion request for &e" + args[1] +
                         " &7(reason: " + reason + ")");
             }
-
             default -> messages.send(player, "&cUnknown subcommand.");
         }
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
+        if (!(sender instanceof Player player)) return Collections.emptyList();
+
+        if (args.length == 1) {
+            return Arrays.asList("help", "reload", "debug", "bypass", "compass",
+                    "admin", "flag", "approve", "deny").stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        }
+
+        if ((args[0].equalsIgnoreCase("approve") || args[0].equalsIgnoreCase("deny")) && args.length == 2) {
+            // Suggest pending request player names
+            Set<UUID> pendingPlayers = ExpansionQueue.getPendingRequests().stream()
+                    .map(ExpansionRequest::getPlayerId)
+                    .collect(Collectors.toSet());
+
+            return pendingPlayers.stream()
+                    .map(id -> {
+                        Player online = Bukkit.getPlayer(id);
+                        return (online != null) ? online.getName() : id.toString();
+                    })
+                    .filter(s -> s.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        }
+
+        return Collections.emptyList();
     }
 }

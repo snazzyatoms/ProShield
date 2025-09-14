@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -31,7 +32,16 @@ public class PlotManager {
     public void createPlot(Player owner, Location loc) {
         Chunk chunk = loc.getChunk();
         UUID id = new UUID(chunk.getX(), chunk.getZ());
-        Plot plot = new Plot(id, owner.getUniqueId());
+
+        // ✅ pass world + chunk coords into Plot
+        Plot plot = new Plot(
+                id,
+                owner.getUniqueId(),
+                loc.getWorld().getName(),
+                chunk.getX(),
+                chunk.getZ()
+        );
+
         plots.put(id, plot);
         playerNames.put(owner.getName(), owner.getUniqueId());
 
@@ -57,7 +67,7 @@ public class PlotManager {
         return "Unknown";
     }
 
-    // ✅ Expansion support (player-initiated)
+    // ✅ Expansion support
     public void expandClaim(UUID playerId, int extraRadius) {
         int current = claimRadii.getOrDefault(playerId,
                 plugin.getConfig().getInt("claims.default-radius", 50));
@@ -66,39 +76,8 @@ public class PlotManager {
 
         Player player = plugin.getServer().getPlayer(playerId);
         if (player != null) {
-            player.sendMessage(plugin.getMessagesUtil().color(
-                    "&aYour claim radius has been expanded to &e" + newRadius + " &ablocks."));
-        }
-    }
-
-    // ✅ Expansion support (called by Admin GUI Approve button)
-    public void expandPlot(UUID playerId, int extraRadius, Player admin) {
-        expandClaim(playerId, extraRadius);
-
-        Player target = plugin.getServer().getPlayer(playerId);
-        if (target != null) {
-            target.sendMessage(plugin.getMessagesUtil().color(
-                    plugin.getConfig().getString("messages.expansion-approved", 
-                    "&aYour claim expansion (+{blocks} blocks) was approved!")
-                            .replace("{blocks}", String.valueOf(extraRadius))
-            ));
-        }
-
-        if (admin != null) {
-            admin.sendMessage(plugin.getMessagesUtil().color(
-                    "&aApproved expansion of &e" + extraRadius + " &ablocks for &b" + getPlayerName(playerId)));
-        }
-    }
-
-    // ✅ Deny support (called by Admin GUI Deny Reasons menu)
-    public void denyExpansion(UUID playerId, String reason) {
-        Player target = plugin.getServer().getPlayer(playerId);
-        if (target != null) {
-            target.sendMessage(plugin.getMessagesUtil().color(
-                    plugin.getConfig().getString("messages.expansion-denied",
-                    "&cYour claim expansion request was denied: {reason}")
-                            .replace("{reason}", reason)
-            ));
+            plugin.getMessagesUtil().send(player,
+                    "&aYour claim radius has been expanded to &e" + newRadius + " &ablocks.");
         }
     }
 

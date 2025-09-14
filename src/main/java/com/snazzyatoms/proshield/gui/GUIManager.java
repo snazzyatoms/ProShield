@@ -7,6 +7,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -43,8 +44,6 @@ public class GUIManager {
 
         inv.setItem(13, createItem(Material.PAPER, "&eClaim Info", List.of(
                 ChatColor.GRAY + "Shows your current claim details",
-                ChatColor.GRAY + "Protected: Pets, Containers, Frames, Stands",
-                ChatColor.GRAY + "Explosions/Fire disabled",
                 ChatColor.YELLOW + "Click to view details"
         )));
 
@@ -58,13 +57,12 @@ public class GUIManager {
     private void openFlagsMenu(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.translateAlternateColorCodes('&', "&dClaim Flags"));
 
-        // flags will be populated dynamically (this is placeholder example)
+        // flags will be dynamically populated
         inv.setItem(26, createItem(Material.BARRIER, "&cBack", List.of("&7Return to main menu")));
 
         player.openInventory(inv);
     }
 
-    // ✅ New dynamic Claim Info menu
     private void openClaimInfoMenu(Player player) {
         int defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
         int currentRadius = plotManager.getClaimRadius(player.getUniqueId());
@@ -99,5 +97,21 @@ public class GUIManager {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    // ✅ Handle Back button clicks
+    public void handleClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (event.getCurrentItem() == null) return;
+
+        ItemStack clicked = event.getCurrentItem();
+        if (!clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
+
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+
+        if (name.equalsIgnoreCase("Back")) {
+            event.setCancelled(true);
+            openMainMenu(player);
+        }
     }
 }

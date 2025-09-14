@@ -225,6 +225,13 @@ gui:
             - "&7VIP claim bonuses"
           action: "none"
 
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to Admin Menu"
+          action: "menu:admin"
+
 sounds:
   button-click: "UI_BUTTON_CLICK"
   claim-success: "ENTITY_PLAYER_LEVELUP"

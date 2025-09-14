@@ -1,8 +1,9 @@
+// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.compass.CompassListener;
+import com.snazzyatoms.proshield.compass.CompassListener; // ✅ correct package
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.cache.GUICache;
@@ -13,6 +14,10 @@ import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 public class ProShield extends JavaPlugin {
 
@@ -26,6 +31,9 @@ public class ProShield extends JavaPlugin {
     private GUIManager guiManager;
 
     private boolean debugEnabled = false;
+
+    // ✅ Bypass tracking (brought back, minimal)
+    private final Set<UUID> bypassing = new HashSet<>();
 
     public static ProShield getInstance() {
         return instance;
@@ -68,7 +76,7 @@ public class ProShield extends JavaPlugin {
         // Root /proshield command
         if (getCommand("proshield") != null) {
             getCommand("proshield").setExecutor(
-                new ProShieldCommand(this, plotManager, guiManager)
+                new ProShieldCommand(this, guiManager, plotManager, messages) // ✅ corrected ctor
             );
         }
 
@@ -91,7 +99,7 @@ public class ProShield extends JavaPlugin {
         // Claims / protections
         Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager, roleManager, messages), this);
 
-        // Compass
+        // Compass (in compass package)
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
 
         // Mobs (safezones + repel)
@@ -114,4 +122,7 @@ public class ProShield extends JavaPlugin {
             messages.debug("Debug mode toggled: " + (this.debugEnabled ? "ON" : "OFF"));
         }
     }
+
+    // ✅ Bypass API
+    public Set<UUID> getBypassing() { return bypassing; }
 }

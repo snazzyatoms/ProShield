@@ -1,8 +1,6 @@
 // src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.Location;
-
 import java.util.*;
 
 public class Plot {
@@ -10,18 +8,17 @@ public class Plot {
     private UUID owner;
     private final Set<UUID> trusted = new HashSet<>();
     private final Map<String, Boolean> flags = new HashMap<>();
-    private final Location center; // ✅ center point of claim
+    private final int radius; // ✅ radius per plot
 
-    public Plot(UUID id, UUID owner, Location center) {
+    public Plot(UUID id, UUID owner, int radius) {
         this.id = id;
         this.owner = owner;
-        this.center = center;
+        this.radius = radius;
     }
 
     public UUID getId() { return id; }
     public UUID getOwner() { return owner; }
     public void setOwner(UUID owner) { this.owner = owner; }
-    public Location getCenter() { return center; }
 
     public boolean isOwner(UUID uuid) {
         return owner != null && owner.equals(uuid);
@@ -35,4 +32,6 @@ public class Plot {
     public void setFlag(String key, boolean value) { flags.put(key.toLowerCase(Locale.ROOT), value); }
     public boolean getFlag(String key, boolean def) { return flags.getOrDefault(key.toLowerCase(Locale.ROOT), def); }
     public Map<String, Boolean> getFlags() { return flags; }
+
+    public int getRadius() { return radius; } // ✅ used by Claim Info GUI
 }

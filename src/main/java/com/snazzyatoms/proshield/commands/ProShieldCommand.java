@@ -133,6 +133,43 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 giveCompass(player);
             }
             case "admin" -> guiManager.openMenu(player, "main");
+
+            // --- CLAIM / UNCLAIM integration ---
+            case "claim" -> {
+                Plot existing = plotManager.getPlot(player.getLocation());
+                if (existing != null) {
+                    messages.send(player, "&cThis land is already claimed by &e" + existing.getOwnerName());
+                    return true;
+                }
+                Plot newPlot = plotManager.createPlot(player.getUniqueId(), player.getLocation());
+                if (newPlot != null) {
+                    messages.send(player, "&aYou successfully claimed this land!");
+                    String sound = plugin.getConfig().getString("sounds.claim-success", "ENTITY_PLAYER_LEVELUP");
+                    try { player.playSound(player.getLocation(), sound, 1f, 1f); } catch (Exception ignored) {}
+                } else {
+                    messages.send(player, "&cFailed to create claim.");
+                }
+            }
+            case "unclaim" -> {
+                Plot plot = plotManager.getPlot(player.getLocation());
+                if (plot == null) {
+                    messages.send(player, "&cYou are not standing in a claim.");
+                    return true;
+                }
+                if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
+                    messages.send(player, "&cYou do not own this claim.");
+                    return true;
+                }
+                boolean removed = plotManager.removePlot(plot.getId());
+                if (removed) {
+                    messages.send(player, "&aYour claim has been removed.");
+                    String sound = plugin.getConfig().getString("sounds.unclaim-success", "ENTITY_ITEM_BREAK");
+                    try { player.playSound(player.getLocation(), sound, 1f, 1f); } catch (Exception ignored) {}
+                } else {
+                    messages.send(player, "&cFailed to unclaim land.");
+                }
+            }
+
             case "flag" -> {
                 if (args.length < 2) {
                     messages.send(player, "&cUsage: /proshield flag <key>");
@@ -199,7 +236,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             return Arrays.asList("help", "reload", "debug", "bypass", "compass",
-                    "admin", "flag", "approve", "deny").stream()
+                    "admin", "claim", "unclaim", "flag", "approve", "deny").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT)))
                     .collect(Collectors.toList());
         }

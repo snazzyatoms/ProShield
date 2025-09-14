@@ -232,6 +232,38 @@ gui:
             - "&7Return to Admin Menu"
           action: "menu:admin"
 
+    deny-reasons:
+      title: "&cDeny Reasons"
+      size: 27
+      items:
+        "11":
+          material: BARRIER
+          name: "&cToo Large"
+          lore:
+            - "&7Requested expansion is too big"
+          action: "reason:too-large"
+
+        "13":
+          material: REDSTONE
+          name: "&cAbusive"
+          lore:
+            - "&7Expansion considered abusive"
+          action: "reason:abusive"
+
+        "15":
+          material: PAPER
+          name: "&cOther"
+          lore:
+            - "&7Denied for other reasons"
+          action: "reason:other"
+
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to Expansion Requests"
+          action: "menu:admin-expansions"
+
 sounds:
   button-click: "UI_BUTTON_CLICK"
   claim-success: "ENTITY_PLAYER_LEVELUP"

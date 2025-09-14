@@ -21,16 +21,12 @@ import java.util.*;
 public class GUIManager {
 
     private final ProShield plugin;
-    // Track admins waiting for manual deny reason input
     private static final Map<UUID, ExpansionRequest> awaitingReason = new HashMap<>();
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
-    // ------------------------
-    // Accessors for ChatListener
-    // ------------------------
     public static boolean isAwaitingReason(Player player) {
         return awaitingReason.containsKey(player.getUniqueId());
     }
@@ -39,9 +35,6 @@ public class GUIManager {
         awaitingReason.remove(player.getUniqueId());
     }
 
-    // ------------------------
-    // Open Menus
-    // ------------------------
     public void openMenu(Player player, String menuName) {
         ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus." + menuName);
         if (menuSec == null) {
@@ -87,9 +80,6 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
-    // ------------------------
-    // Handle Clicks
-    // ------------------------
     public void handleClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getCurrentItem() == null || event.getCurrentItem().getItemMeta() == null) return;
@@ -97,7 +87,6 @@ public class GUIManager {
         String title = event.getView().getTitle();
         String name = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
 
-        // MAIN MENU
         if (title.contains("ProShield Menu")) {
             switch (name.toLowerCase(Locale.ROOT)) {
                 case "claim land" -> player.performCommand("claim");
@@ -110,7 +99,6 @@ public class GUIManager {
             return;
         }
 
-        // FLAGS MENU
         if (title.contains("Claim Flags")) {
             Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
             if (plot == null) {
@@ -136,7 +124,6 @@ public class GUIManager {
             return;
         }
 
-        // ADMIN EXPANSIONS MENU
         if (title.contains("Expansion Requests")) {
             switch (name.toLowerCase(Locale.ROOT)) {
                 case "pending requests" -> showPendingRequests(player);
@@ -147,7 +134,6 @@ public class GUIManager {
             return;
         }
 
-        // DENY REASONS MENU
         if (title.contains("Deny Reasons")) {
             if (!ExpansionRequestManager.hasRequests()) {
                 plugin.getMessagesUtil().send(player, "&7No requests to deny.");
@@ -174,7 +160,6 @@ public class GUIManager {
             return;
         }
 
-        // ROLES MENU
         if (title.contains("Trusted Players")) {
             if (name.equalsIgnoreCase("back")) {
                 openMenu(player, "main");
@@ -184,9 +169,6 @@ public class GUIManager {
         }
     }
 
-    // ------------------------
-    // Helpers
-    // ------------------------
     private void toggleFlag(Plot plot, String flag, Player player) {
         boolean current = plot.getFlag(flag, false);
         plot.setFlag(flag, !current);
@@ -206,7 +188,7 @@ public class GUIManager {
         }
 
         for (ExpansionRequest req : ExpansionRequestManager.getRequests()) {
-            String pName = Bukkit.getOfflinePlayer(req.getPlayerId()).getName();
+            String pName = Bukkit.getOfflinePlayer(req.getPlayerId()).getName(); // ✅ FIXED
             plugin.getMessagesUtil().send(player,
                     "&eRequest: " + pName + " +" + req.getExtraRadius() + " blocks (" +
                             (System.currentTimeMillis() - req.getRequestTime()) / 1000 + "s ago)");
@@ -223,8 +205,7 @@ public class GUIManager {
         plugin.getPlotManager().expandClaim(req.getPlayerId(), req.getExtraRadius());
         ExpansionRequestManager.removeRequest(req);
 
-        // ✅ FIXED
-        Player target = Bukkit.getPlayer(req.getPlayerId());
+        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
         if (target != null) {
             target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
         }
@@ -235,8 +216,7 @@ public class GUIManager {
     private void denyWithReason(Player admin, ExpansionRequest req, String reason) {
         ExpansionRequestManager.removeRequest(req);
 
-        // ✅ FIXED
-        Player target = Bukkit.getPlayer(req.getPlayerId());
+        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
         }
@@ -253,8 +233,7 @@ public class GUIManager {
 
         ExpansionRequestManager.removeRequest(req);
 
-        // ✅ FIXED
-        Player target = Bukkit.getPlayer(req.getPlayerId());
+        Player target = Bukkit.getPlayer(req.getPlayerId()); // ✅ FIXED
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
         }

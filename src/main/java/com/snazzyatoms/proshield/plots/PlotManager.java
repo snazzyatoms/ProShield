@@ -2,6 +2,7 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -11,27 +12,18 @@ public class PlotManager {
     private final ProShield plugin;
     private final Map<UUID, Plot> plots = new HashMap<>();
     private final Map<String, UUID> playerNames = new HashMap<>();
-
-    private static final int CLAIM_RADIUS = 50; // ✅ default radius in blocks
+    private final int defaultRadius; // ✅ pulled from config
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+        this.defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
     }
 
     public Plot getPlot(Location loc) {
         if (loc == null) return null;
-
-        for (Plot plot : plots.values()) {
-            Location center = plot.getCenter();
-            if (center != null && center.getWorld().equals(loc.getWorld())) {
-                double dx = loc.getX() - center.getX();
-                double dz = loc.getZ() - center.getZ();
-                if (Math.sqrt(dx * dx + dz * dz) <= CLAIM_RADIUS) {
-                    return plot;
-                }
-            }
-        }
-        return null;
+        Chunk chunk = loc.getChunk();
+        UUID id = new UUID(chunk.getX(), chunk.getZ());
+        return plots.get(id);
     }
 
     public Plot getPlot(UUID id) {
@@ -39,17 +31,17 @@ public class PlotManager {
     }
 
     public void createPlot(Player owner, Location loc) {
-        UUID id = UUID.randomUUID();
-        Plot plot = new Plot(id, owner.getUniqueId(), loc); // ✅ new Plot with center location
+        Chunk chunk = loc.getChunk();
+        UUID id = new UUID(chunk.getX(), chunk.getZ());
+        Plot plot = new Plot(id, owner.getUniqueId(), defaultRadius);
         plots.put(id, plot);
         playerNames.put(owner.getName(), owner.getUniqueId());
     }
 
     public void removePlot(Location loc) {
-        Plot plot = getPlot(loc);
-        if (plot != null) {
-            plots.remove(plot.getId());
-        }
+        Chunk chunk = loc.getChunk();
+        UUID id = new UUID(chunk.getX(), chunk.getZ());
+        plots.remove(id);
     }
 
     public void saveAll() {
@@ -63,7 +55,7 @@ public class PlotManager {
         return "Unknown";
     }
 
-    public static int getClaimRadius() {
-        return CLAIM_RADIUS;
+    public int getDefaultRadius() {
+        return defaultRadius;
     }
 }

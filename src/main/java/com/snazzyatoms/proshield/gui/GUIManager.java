@@ -3,7 +3,7 @@ package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.expansion.ExpansionRequest;
-import com.snazzyatoms.proshield.expansion.ExpansionRequestManager;
+import com.snazzyatoms.proshield.expansion.ExpansionQueue;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
@@ -135,13 +135,14 @@ public class GUIManager {
         }
 
         if (title.contains("Deny Reasons")) {
-            if (!ExpansionRequestManager.hasRequests()) {
+            List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+            if (pending.isEmpty()) {
                 plugin.getMessagesUtil().send(player, "&7No requests to deny.");
                 openMenu(player, "admin-expansions");
                 return;
             }
 
-            ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
+            ExpansionRequest req = pending.get(0);
 
             if (name.equalsIgnoreCase("back")) {
                 openMenu(player, "admin-expansions");
@@ -182,13 +183,14 @@ public class GUIManager {
     }
 
     private void showPendingRequests(Player player) {
-        if (!ExpansionRequestManager.hasRequests()) {
+        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+        if (pending.isEmpty()) {
             plugin.getMessagesUtil().send(player, "&7No pending requests.");
             return;
         }
 
-        for (ExpansionRequest req : ExpansionRequestManager.getRequests()) {
-            UUID playerId = req.getPlayerId(); // ✅ explicit UUID
+        for (ExpansionRequest req : pending) {
+            UUID playerId = req.getPlayerId();
             String pName = Bukkit.getOfflinePlayer(playerId).getName();
             plugin.getMessagesUtil().send(player,
                     "&eRequest: " + pName + " +" + req.getExtraRadius() + " blocks (" +
@@ -197,15 +199,17 @@ public class GUIManager {
     }
 
     private void handleExpansionApproval(Player player) {
-        if (!ExpansionRequestManager.hasRequests()) {
+        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+        if (pending.isEmpty()) {
             plugin.getMessagesUtil().send(player, "&7No requests to approve.");
             return;
         }
 
-        ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
-        UUID playerId = req.getPlayerId(); // ✅ explicit UUID
+        ExpansionRequest req = pending.get(0);
+        UUID playerId = req.getPlayerId();
         plugin.getPlotManager().expandClaim(playerId, req.getExtraRadius());
-        ExpansionRequestManager.removeRequest(req);
+
+        ExpansionQueue.approveRequest(req);
 
         Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
@@ -216,9 +220,9 @@ public class GUIManager {
     }
 
     private void denyWithReason(Player admin, ExpansionRequest req, String reason) {
-        ExpansionRequestManager.removeRequest(req);
+        ExpansionQueue.denyRequest(req, reason);
 
-        UUID playerId = req.getPlayerId(); // ✅ explicit UUID
+        UUID playerId = req.getPlayerId();
         Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
@@ -234,9 +238,9 @@ public class GUIManager {
             return;
         }
 
-        ExpansionRequestManager.removeRequest(req);
+        ExpansionQueue.denyRequest(req, reason);
 
-        UUID playerId = req.getPlayerId(); // ✅ explicit UUID
+        UUID playerId = req.getPlayerId();
         Player target = Bukkit.getPlayer(playerId);
         if (target != null) {
             target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);

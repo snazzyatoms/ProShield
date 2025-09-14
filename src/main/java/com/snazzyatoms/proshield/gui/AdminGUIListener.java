@@ -6,6 +6,7 @@ import com.snazzyatoms.proshield.expansion.ExpansionRequest;
 import com.snazzyatoms.proshield.expansion.ExpansionRequestManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,22 +15,20 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.UUID;
+import java.util.Locale;
 
 public class AdminGUIListener implements Listener {
 
     private final ProShield plugin;
-    private final AdminGUIManager adminGUI;
-    private final PlotManager plotManager;
+    private final AdminGUIManager adminGUIManager;
     private final MessagesUtil messages;
+    private final PlotManager plotManager;
 
-    private ExpansionRequest selectedRequest; // Track currently selected request
-
-    public AdminGUIListener(ProShield plugin, AdminGUIManager adminGUI) {
+    public AdminGUIListener(ProShield plugin, AdminGUIManager adminGUIManager) {
         this.plugin = plugin;
-        this.adminGUI = adminGUI;
-        this.plotManager = plugin.getPlotManager();
+        this.adminGUIManager = adminGUIManager;
         this.messages = plugin.getMessagesUtil();
+        this.plotManager = plugin.getPlotManager();
     }
 
     @EventHandler
@@ -42,72 +41,64 @@ public class AdminGUIListener implements Listener {
         ItemMeta meta = clicked.getItemMeta();
         if (meta == null) return;
 
-        event.setCancelled(true); // Prevent item pickup
-        String name = ChatColor.stripColor(meta.getDisplayName());
+        event.setCancelled(true); // always cancel GUI item taking
+
+        String name = ChatColor.stripColor(meta.getDisplayName()).toLowerCase(Locale.ROOT);
 
         // ------------------------
-        // EXPANSION REQUESTS MENU
+        // Expansion Requests menu
         // ------------------------
         if (title.contains("Expansion Requests")) {
-            switch (name.toLowerCase()) {
-                case "pending requests" -> {
-                    if (!ExpansionRequestManager.hasRequests()) {
-                        messages.send(player, "&7There are no pending requests.");
-                    } else {
-                        selectedRequest = ExpansionRequestManager.getRequests().get(0); // pick first for now
-                        messages.send(player, "&eSelected request: " + selectedRequest.getPlayerId() +
-                                " (+" + selectedRequest.getExtraRadius() + " blocks).");
-                    }
-                }
+            switch (name) {
                 case "approve selected" -> {
-                    if (selectedRequest == null) {
-                        messages.send(player, "&7No request selected.");
-                        return;
+                    if (ExpansionRequestManager.hasRequests()) {
+                        ExpansionRequest req = ExpansionRequestManager.getRequests().get(0); // handle first for now
+                        Player target = Bukkit.getPlayer(req.getPlayerId());
+                        if (target != null) {
+                            plotManager.expandClaim(target, req.getExtraRadius());
+                            messages.send(target, plugin.getConfig().getString("messages.expansion-approved")
+                                    .replace("{blocks}", String.valueOf(req.getExtraRadius())));
+                        }
+                        ExpansionRequestManager.removeRequest(req);
+                        messages.send(player, "&aExpansion approved.");
+                    } else {
+                        messages.send(player, "&7No requests to approve.");
                     }
-                    UUID playerId = selectedRequest.getPlayerId();
-                    plotManager.expandClaim(playerId, selectedRequest.getExtraRadius());
-                    ExpansionRequestManager.removeRequest(selectedRequest);
-                    messages.send(player, "&aApproved expansion for " + playerId +
-                            " (+" + selectedRequest.getExtraRadius() + " blocks).");
-                    selectedRequest = null;
                 }
                 case "deny selected" -> {
-                    if (selectedRequest == null) {
-                        messages.send(player, "&7No request selected.");
-                        return;
+                    if (ExpansionRequestManager.hasRequests()) {
+                        // open deny reasons menu
+                        adminGUIManager.openMenu(player, "deny-reasons");
+                    } else {
+                        messages.send(player, "&7No requests to deny.");
                     }
-                    // Open reason picker GUI
-                    adminGUI.openMenu(player, "deny-reasons");
                 }
-                case "back" -> plugin.getGuiManager().openMenu(player, "main");
+                case "back" -> adminGUIManager.openMenu(player, "admin");
             }
         }
 
         // ------------------------
-        // DENY REASONS MENU
+        // Deny Reasons menu
         // ------------------------
-        if (title.contains("Deny Reasons") && selectedRequest != null) {
-            String reason;
-            switch (name.toLowerCase()) {
-                case "too large" -> reason = "Requested size too large.";
-                case "abusive" -> reason = "Request considered abusive.";
-                case "other" -> reason = "Denied by admin decision.";
-                case "back" -> {
-                    adminGUI.openMenu(player, "admin-expansions");
-                    return;
-                }
-                default -> {
-                    return;
+        if (title.contains("Deny Reasons")) {
+            if (ExpansionRequestManager.hasRequests()) {
+                ExpansionRequest req = ExpansionRequestManager.getRequests().get(0); // same handling, first in queue
+                Player target = Bukkit.getPlayer(req.getPlayerId());
+
+                // Deny with chosen reason
+                if (!name.equals("back")) {
+                    if (target != null) {
+                        messages.send(target, plugin.getConfig().getString("messages.expansion-denied")
+                                .replace("{reason}", meta.getDisplayName()));
+                    }
+                    ExpansionRequestManager.removeRequest(req);
+                    messages.send(player, "&cRequest denied: " + meta.getDisplayName());
                 }
             }
 
-            ExpansionRequestManager.removeRequest(selectedRequest);
-            messages.send(player, "&cDenied expansion for " + selectedRequest.getPlayerId() +
-                    ". Reason: &7" + reason);
-            selectedRequest = null;
-
-            // Return back to Expansion Requests after denial
-            adminGUI.openMenu(player, "admin-expansions");
+            if (name.equals("back")) {
+                adminGUIManager.openMenu(player, "admin-expansions");
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -53,7 +54,7 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new AdminGUIListener(guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this); // ✅ NEW
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this), this); // ✅ fixed constructor
 
         getLogger().info("ProShield enabled!");
     }

@@ -1,13 +1,13 @@
 jdk:
-  - openjdk21
+  - openjdk17
 
 before_install:
-  - echo "Using OpenJDK 21 for build"
+  - mvn clean
 
 install:
   - mvn -B install -DskipTests
 
-# Optional: specify Maven wrapper if you want reproducible builds
-# build:
-#   commands:
-#     - ./mvnw -B clean package
+# Optional: ensure shade creates plugin jar in /target
+build:
+  commands:
+    - mvn -B package -DskipTests

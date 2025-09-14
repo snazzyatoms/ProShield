@@ -285,3 +285,9 @@ claims:
     buckets: false
     pets: true
     safezone: true
+
+expansion:
+  deny-reasons:
+    too-large: "Requested expansion is too big"
+    abusive: "Expansion considered abusive"
+    other: "Denied for other reasons"

@@ -16,13 +16,13 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class GUIManager {
 
     private final ProShield plugin;
+    // Track admins waiting for manual deny reason input
+    private static final Map<UUID, ExpansionRequest> awaitingReason = new HashMap<>();
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -136,14 +136,43 @@ public class GUIManager {
             switch (name.toLowerCase(Locale.ROOT)) {
                 case "pending requests" -> showPendingRequests(player);
                 case "approve selected" -> handleExpansionApproval(player);
-                case "deny selected" -> handleExpansionDenial(player);
+                case "deny selected" -> openMenu(player, "deny-reasons");
                 case "back" -> openMenu(player, "main");
             }
             return;
         }
 
         // ------------------------
-        // ROLES MENU (placeholder for now)
+        // DENY REASONS MENU
+        // ------------------------
+        if (title.contains("Deny Reasons")) {
+            if (!ExpansionRequestManager.hasRequests()) {
+                plugin.getMessagesUtil().send(player, "&7No requests to deny.");
+                openMenu(player, "admin-expansions");
+                return;
+            }
+
+            ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
+
+            if (name.equalsIgnoreCase("back")) {
+                openMenu(player, "admin-expansions");
+                return;
+            }
+
+            if (name.equalsIgnoreCase("other")) {
+                awaitingReason.put(player.getUniqueId(), req);
+                plugin.getMessagesUtil().send(player, "&eType your denial reason in chat...");
+                player.closeInventory();
+                return;
+            }
+
+            denyWithReason(player, req, name);
+            openMenu(player, "admin-expansions");
+            return;
+        }
+
+        // ------------------------
+        // ROLES MENU (placeholder)
         // ------------------------
         if (title.contains("Trusted Players")) {
             if (name.equalsIgnoreCase("back")) {
@@ -180,7 +209,7 @@ public class GUIManager {
             String pName = Bukkit.getOfflinePlayer(req.getPlayerId()).getName();
             plugin.getMessagesUtil().send(player,
                     "&eRequest: " + pName + " +"
-                            + req.getExtraRadius() + " blocks (" 
+                            + req.getExtraRadius() + " blocks ("
                             + (System.currentTimeMillis() - req.getRequestTime()) / 1000 + "s ago)");
         }
     }
@@ -191,7 +220,7 @@ public class GUIManager {
             return;
         }
 
-        ExpansionRequest req = ExpansionRequestManager.getRequests().get(0); // approve first request
+        ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
         plugin.getPlotManager().expandClaim(req.getPlayerId(), req.getExtraRadius());
         ExpansionRequestManager.removeRequest(req);
 
@@ -203,20 +232,32 @@ public class GUIManager {
         plugin.getMessagesUtil().send(player, "&aRequest approved.");
     }
 
-    private void handleExpansionDenial(Player player) {
-        if (!ExpansionRequestManager.hasRequests()) {
-            plugin.getMessagesUtil().send(player, "&7No requests to deny.");
-            return;
-        }
-
-        ExpansionRequest req = ExpansionRequestManager.getRequests().get(0); // deny first request
+    private void denyWithReason(Player admin, ExpansionRequest req, String reason) {
         ExpansionRequestManager.removeRequest(req);
 
         Player target = Bukkit.getPlayer(req.getPlayerId());
         if (target != null) {
-            target.sendMessage(ChatColor.RED + "Your expansion request was denied by an admin.");
+            target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
         }
 
-        plugin.getMessagesUtil().send(player, "&cRequest denied.");
+        plugin.getMessagesUtil().send(admin, "&cRequest denied (" + reason + ").");
+    }
+
+    // Called from ChatListener when admin typed a manual reason
+    public static void provideManualReason(Player admin, String reason, ProShield plugin) {
+        ExpansionRequest req = awaitingReason.remove(admin.getUniqueId());
+        if (req == null) {
+            plugin.getMessagesUtil().send(admin, "&7No pending request to deny.");
+            return;
+        }
+
+        ExpansionRequestManager.removeRequest(req);
+
+        Player target = Bukkit.getPlayer(req.getPlayerId());
+        if (target != null) {
+            target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
+        }
+
+        plugin.getMessagesUtil().send(admin, "&cRequest denied (" + reason + ").");
     }
 }

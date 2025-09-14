@@ -52,8 +52,8 @@ messages:
 help:
   player:
     - "&bProShield Help &7- Player"
-    - "&a/claim &7→ Claim your current chunk"
-    - "&a/unclaim &7→ Unclaim your current chunk"
+    - "&a/claim &7→ Claim your current land (50 block radius)"
+    - "&a/unclaim &7→ Unclaim your land"
     - "&a/proshield compass &7→ Receive your ProShield Compass"
     - "&a/proshield help &7→ Show this help menu"
 
@@ -66,6 +66,35 @@ help:
 
 gui:
   menus:
+    main:
+      title: "&6ProShield Menu"
+      size: 27
+      items:
+        "11":
+          material: GRASS_BLOCK
+          name: "&aClaim Land"
+          lore:
+            - "&7Protect your land"
+            - "&fRadius: 50 blocks by default"
+          action: "command:claim"
+
+        "13":
+          material: PAPER
+          name: "&eClaim Info"
+          lore:
+            - "&7Shows your current claim details"
+            - "&7Protected: Pets, Containers, Frames, Stands"
+            - "&7Explosions/Fire disabled"
+            - "&7Default radius: 50 blocks"
+          action: "command:proshield info"
+
+        "15":
+          material: BARRIER
+          name: "&cUnclaim Land"
+          lore:
+            - "&7Remove your claim"
+          action: "command:unclaim"
+
     flags:
       title: "&dClaim Flags"
       size: 27
@@ -74,7 +103,9 @@ gui:
           material: TNT
           name: "&cExplosions"
           lore:
-            - "&7Toggles TNT and creeper block damage"
+            - "&7Toggle TNT & creeper damage"
+            - "&eDisabled = explosions blocked"
+            - "&eEnabled = explosions allowed"
             - "&fCurrent: {state}"
           action: "flag:explosions"
 
@@ -82,7 +113,9 @@ gui:
           material: WATER_BUCKET
           name: "&bBuckets"
           lore:
-            - "&7Control lava/water bucket use"
+            - "&7Toggle bucket use inside claims"
+            - "&eDisabled = bucket use blocked"
+            - "&eEnabled = bucket use allowed"
             - "&fCurrent: {state}"
           action: "flag:buckets"
 
@@ -90,7 +123,9 @@ gui:
           material: ITEM_FRAME
           name: "&6Item Frames"
           lore:
-            - "&7Protect item frames from grief"
+            - "&7Toggle protection of item frames"
+            - "&eDisabled = frames can be broken"
+            - "&eEnabled = frames protected"
             - "&fCurrent: {state}"
           action: "flag:item-frames"
 
@@ -98,7 +133,9 @@ gui:
           material: ARMOR_STAND
           name: "&eArmor Stands"
           lore:
-            - "&7Prevent breaking/moving armor stands"
+            - "&7Toggle protection of armor stands"
+            - "&eDisabled = stands can be broken"
+            - "&eEnabled = stands protected"
             - "&fCurrent: {state}"
           action: "flag:armor-stands"
 
@@ -106,7 +143,9 @@ gui:
           material: CHEST
           name: "&aContainers"
           lore:
-            - "&7Lock chests, barrels, hoppers, furnaces"
+            - "&7Toggle access to chests, hoppers, furnaces"
+            - "&eDisabled = locked"
+            - "&eEnabled = anyone can open"
             - "&fCurrent: {state}"
           action: "flag:containers"
 
@@ -114,7 +153,9 @@ gui:
           material: BONE
           name: "&dPets"
           lore:
-            - "&7Protect wolves, cats, horses, and pets"
+            - "&7Toggle pet protection"
+            - "&eDisabled = pets unprotected"
+            - "&eEnabled = pets safe"
             - "&fCurrent: {state}"
           action: "flag:pets"
 
@@ -122,7 +163,9 @@ gui:
           material: IRON_SWORD
           name: "&cPvP"
           lore:
-            - "&7Allow/disallow player-vs-player combat"
+            - "&7Toggle combat inside claims"
+            - "&eDisabled = PvP blocked"
+            - "&eEnabled = PvP allowed"
             - "&fCurrent: {state}"
           action: "flag:pvp"
 
@@ -130,7 +173,9 @@ gui:
           material: SHIELD
           name: "&aSafe Zone"
           lore:
-            - "&7Blocks hostile mob spawns & damage"
+            - "&7Toggle mob spawning & hostile damage"
+            - "&eDisabled = mobs can attack"
+            - "&eEnabled = mobs blocked"
             - "&fCurrent: {state}"
           action: "flag:safezone"
 
@@ -150,13 +195,14 @@ sounds:
   repel-sound: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
 
 claims:
+  default-radius: 50   # ✅ new claim size
   default-flags:
     pvp: false
     explosions: false
     fire: false
-    containers: false
-    armor-stands: false
-    item-frames: false
-    buckets: true
-    pets: false
+    containers: true
+    armor-stands: true
+    item-frames: true
+    buckets: false
+    pets: true
     safezone: true

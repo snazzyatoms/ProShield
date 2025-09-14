@@ -1,84 +1,60 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class PlotManager {
 
     private final ProShield plugin;
-    private final Map<String, Plot> plots = new HashMap<>();
+    private final Map<String, Plot> plots = new HashMap<>(); // key = world:x:z
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
+    private String key(String world, int x, int z) {
+        return world + ":" + x + ":" + z;
+    }
+
     private String key(Chunk chunk) {
-        return chunk.getWorld().getName() + ":" + chunk.getX() + ":" + chunk.getZ();
+        return key(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
     }
 
-    /**
-     * Get a plot by player location (chunk-based).
-     */
+    // --- Core API ---
+    public Plot createPlot(Player player, Location loc) {
+        Chunk chunk = loc.getChunk();
+        Plot plot = new Plot(player.getUniqueId(), chunk);
+        plots.put(key(chunk), plot);
+        return plot;
+    }
+
+    public void removePlot(Location loc) {
+        plots.remove(key(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ()));
+    }
+
     public Plot getPlot(Location loc) {
-        return plots.get(key(loc.getChunk()));
+        return plots.get(key(loc.getWorld().getName(), loc.getChunk().getX(), loc.getChunk().getZ()));
     }
 
-    /**
-     * Get a plot directly by chunk.
-     */
-    public Plot getPlot(Chunk chunk) {
-        return plots.get(key(chunk));
-    }
-
-    /**
-     * Claim a chunk for a player.
-     */
-    public void claimPlot(UUID owner, Chunk chunk) {
-        String k = key(chunk);
-        if (!plots.containsKey(k)) {
-            plots.put(k, new Plot(owner, chunk));
-        }
-    }
-
-    /**
-     * Unclaim a chunk.
-     */
-    public void unclaimPlot(Chunk chunk) {
-        plots.remove(key(chunk));
-    }
-
-    /**
-     * Get a plot owned by a specific UUID.
-     * (Added for Expansion Approvals in GUIManager)
-     */
-    public Plot getPlot(UUID ownerId) {
+    public void expandClaim(UUID playerId, int extraRadius) {
         for (Plot plot : plots.values()) {
-            if (plot.getOwner().equals(ownerId)) {
-                return plot;
+            if (plot.getOwner().equals(playerId)) {
+                plot.expand(extraRadius);
             }
         }
-        return null;
     }
 
-    /**
-     * Expand an existing claim by a radius.
-     */
-    public void expandClaim(UUID ownerId, int extraRadius) {
-        Plot plot = getPlot(ownerId);
-        if (plot == null) return;
-
-        plot.expand(extraRadius);
+    // --- Utility ---
+    public String getPlayerName(UUID uuid) {
+        return Optional.ofNullable(Bukkit.getOfflinePlayer(uuid).getName()).orElse(uuid.toString());
     }
 
-    /**
-     * Check if a chunk is already claimed.
-     */
-    public boolean isClaimed(Chunk chunk) {
-        return plots.containsKey(key(chunk));
+    public Collection<Plot> getAllPlots() {
+        return plots.values();
     }
 }

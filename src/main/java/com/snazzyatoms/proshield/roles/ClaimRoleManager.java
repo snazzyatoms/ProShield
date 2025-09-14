@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * ClaimRoleManager
  * - Handles trusted players, roles, per-player permissions.
- * - Persistence via saveAll/loadAll stubs.
+ * - Persistence via saveAll/loadAll stubs (roles.yml).
  */
 public class ClaimRoleManager {
 
@@ -75,7 +75,7 @@ public class ClaimRoleManager {
      * ================== */
     public void saveAll() {
         // TODO: Write trusted map to roles.yml in plugin.getDataFolder()
-        // Keep roles and permissions per plot
+        // Save: plotId -> playerName -> role + permissions
     }
 
     public void loadAll() {

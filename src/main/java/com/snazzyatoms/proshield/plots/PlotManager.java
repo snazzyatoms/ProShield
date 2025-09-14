@@ -4,6 +4,10 @@ import org.bukkit.Location;
 
 import java.util.*;
 
+/**
+ * PlotManager
+ * - Tracks claims/plots and resolves lookups by Location or UUID.
+ */
 public class PlotManager {
 
     private final Map<UUID, Plot> plots = new HashMap<>();

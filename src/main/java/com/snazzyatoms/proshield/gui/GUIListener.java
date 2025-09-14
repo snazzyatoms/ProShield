@@ -23,10 +23,12 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
-        if (event.getCurrentItem() == null) return;
+        if (event.getCurrentItem() == null || event.getCurrentItem().getItemMeta() == null) return;
 
-        // We always cancel and pass it along; GUIManager decides what to do.
+        // Cancel any inventory modification inside ProShield menus
         event.setCancelled(true);
+
+        // Forward to GUIManager for actual handling
         guiManager.handleClick(event);
     }
 }

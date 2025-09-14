@@ -1,6 +1,6 @@
-// src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.Bukkit;
@@ -13,13 +13,11 @@ import java.util.*;
  * - Handles roles & per-player permissions inside claims
  * - Supports trust/untrust, transfer, and permission checks
  *
- * v1.2.5 Enhanced:
- *   • Per-player permission toggles stored per claim
- *   • Each trusted player has a role + individual permissions
- *   • Flexible GUI-ready structure for fine control
+ * Preserves prior behavior; implementation now references PlotManager provided by ProShield.
  */
 public class ClaimRoleManager {
 
+    private final ProShield plugin;
     private final PlotManager plotManager;
 
     /**
@@ -27,8 +25,9 @@ public class ClaimRoleManager {
      */
     private final Map<UUID, Map<String, PlayerRoleData>> roleCache = new HashMap<>();
 
-    public ClaimRoleManager(PlotManager plotManager) {
-        this.plotManager = plotManager;
+    public ClaimRoleManager(ProShield plugin) {
+        this.plugin = plugin;
+        this.plotManager = plugin.getPlotManager();
     }
 
     /* ======================================================
@@ -39,11 +38,11 @@ public class ClaimRoleManager {
         private final Map<String, Boolean> permissions = new HashMap<>();
 
         public PlayerRoleData(String role) {
-            this.role = role.toLowerCase(Locale.ROOT);
+            this.role = (role == null ? "trusted" : role).toLowerCase(Locale.ROOT);
         }
 
         public String getRole() { return role; }
-        public void setRole(String role) { this.role = role.toLowerCase(Locale.ROOT); }
+        public void setRole(String role) { this.role = (role == null ? "trusted" : role).toLowerCase(Locale.ROOT); }
         public boolean getPermission(String key, boolean def) { return permissions.getOrDefault(key.toLowerCase(Locale.ROOT), def); }
         public void setPermission(String key, boolean value) { permissions.put(key.toLowerCase(Locale.ROOT), value); }
         public Map<String, Boolean> getAllPermissions() { return new HashMap<>(permissions); }
@@ -140,7 +139,7 @@ public class ClaimRoleManager {
      * INTERNAL HELPERS
      * ====================================================== */
     private boolean hasPermission(UUID playerId, UUID plotId, String permKey, Set<String> allowedRoles) {
-        Plot plot = plotManager.getPlot(plotId);
+        Plot plot = plotManager.getPlotById(plotId); // helper we’ll add below for completeness
         if (plot == null) return false;
 
         if (plot.isOwner(playerId)) return true; // owner bypass

@@ -4,110 +4,131 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.expansion.ExpansionRequest;
 import com.snazzyatoms.proshield.expansion.ExpansionRequestManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class AdminGUIListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager guiManager;
-    private final ExpansionRequestManager requestManager;
+    private final AdminGUIManager guiManager;
     private final PlotManager plotManager;
-    private final MessagesUtil messages;
 
-    public AdminGUIListener(ProShield plugin, GUIManager guiManager,
-                            ExpansionRequestManager requestManager,
-                            PlotManager plotManager, MessagesUtil messages) {
+    // Tracks which request an admin is currently reviewing
+    private final Map<UUID, ExpansionRequest> selectedRequests = new HashMap<>();
+
+    public AdminGUIListener(ProShield plugin, AdminGUIManager guiManager, PlotManager plotManager) {
         this.plugin = plugin;
         this.guiManager = guiManager;
-        this.requestManager = requestManager;
         this.plotManager = plotManager;
-        this.messages = messages;
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getClickedInventory() == null) return;
+        if (!(event.getWhoClicked() instanceof Player admin)) return;
 
-        String title = event.getView().getTitle();
-        ItemStack item = event.getCurrentItem();
-        if (item == null || !item.hasItemMeta()) return;
+        Inventory inv = event.getInventory();
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        // ✅ Only handle inside Admin Expansion Requests GUI
-        if (!title.contains("Expansion Requests")) return;
+        String title = ChatColor.stripColor(inv.getTitle());
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
 
-        event.setCancelled(true);
+        // --- Admin Menu ---
+        if (title.equalsIgnoreCase("Admin Menu")) {
+            event.setCancelled(true);
 
-        String action = guiManager.getAction(item);
-        if (action == null) return;
+            if (name.equalsIgnoreCase("Expansion Requests")) {
+                guiManager.openExpansionRequestsMenu(admin);
+            } else if (name.equalsIgnoreCase("Back")) {
+                // Back to player main menu
+                plugin.getGuiManager().openMenu(admin, "main");
+            }
+        }
 
-        switch (action) {
-            case "expansion:approve" -> {
-                ExpansionRequest req = requestManager.getSelectedRequest(player.getUniqueId());
-                if (req == null) {
-                    messages.send(player, "&cNo request selected.");
-                    return;
+        // --- Expansion Requests Menu ---
+        else if (title.equalsIgnoreCase("Expansion Requests")) {
+            event.setCancelled(true);
+
+            if (clicked.getType() == Material.PAPER && name.startsWith("Request from")) {
+                // Select this request
+                ExpansionRequest req = ExpansionRequestManager.getRequests().stream()
+                        .filter(r -> {
+                            String playerName = Bukkit.getOfflinePlayer(r.getPlayerId()).getName();
+                            return name.contains(playerName);
+                        })
+                        .findFirst().orElse(null);
+
+                if (req != null) {
+                    selectedRequests.put(admin.getUniqueId(), req);
+                    admin.sendMessage(ChatColor.GREEN + "Selected request from " +
+                            Bukkit.getOfflinePlayer(req.getPlayerId()).getName() +
+                            " (+" + req.getExtraRadius() + " blocks).");
                 }
-
-                // Call PlotManager to apply radius expansion
-                UUID targetId = req.getPlayerId();
-                int extra = req.getExtraRadius();
-                plotManager.expandClaim(targetId, extra);
-
-                // Notify player if online
-                Player target = Bukkit.getPlayer(targetId);
-                if (target != null) {
-                    String msg = plugin.getConfig()
-                        .getString("messages.expansion-approved", "&aYour claim expansion was approved!")
-                        .replace("{blocks}", String.valueOf(extra));
-                    messages.send(target, msg);
-                }
-
-                // Clean up
-                requestManager.removeRequest(targetId);
-                messages.send(player, "&aApproved expansion of +" + extra + " blocks for " + targetId);
-                guiManager.openMenu(player, "admin-expansions");
             }
 
-            case "expansion:deny" -> {
-                ExpansionRequest req = requestManager.getSelectedRequest(player.getUniqueId());
-                if (req == null) {
-                    messages.send(player, "&cNo request selected.");
-                    return;
-                }
+            else if (name.equalsIgnoreCase("Approve Selected")) {
+                ExpansionRequest req = selectedRequests.get(admin.getUniqueId());
+                if (req != null) {
+                    FileConfiguration cfg = plugin.getConfig();
+                    boolean instant = cfg.getBoolean("claims.instant-apply", true);
 
-                UUID targetId = req.getPlayerId();
-                Player target = Bukkit.getPlayer(targetId);
-
-                // Prompt admin in chat for reason (simple for now)
-                messages.send(player, "&eType the reason for denial in chat...");
-
-                // Simple one-off listener
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    // For now, fallback: auto-deny with generic reason
-                    String reason = "Too large / not permitted";
-                    if (target != null) {
-                        String msg = plugin.getConfig()
-                            .getString("messages.expansion-denied", "&cYour expansion was denied.")
-                            .replace("{reason}", reason);
-                        messages.send(target, msg);
+                    if (instant) {
+                        // Apply immediately
+                        plotManager.expandClaim(req.getPlayerId(), req.getExtraRadius());
+                        Player target = Bukkit.getPlayer(req.getPlayerId());
+                        if (target != null) {
+                            target.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                                    plugin.getConfig().getString("messages.expansion-approved")
+                                            .replace("{blocks}", String.valueOf(req.getExtraRadius()))));
+                        }
+                        admin.sendMessage(ChatColor.GREEN + "Approved expansion (+"
+                                + req.getExtraRadius() + " blocks) for "
+                                + Bukkit.getOfflinePlayer(req.getPlayerId()).getName());
+                    } else {
+                        admin.sendMessage(ChatColor.YELLOW + "Expansion queued until restart.");
                     }
-                    requestManager.removeRequest(targetId);
-                    messages.send(player, "&cDenied expansion for " + targetId + " with reason: " + reason);
-                    guiManager.openMenu(player, "admin-expansions");
-                }, 20L * 5); // waits 5s for simplicity
+
+                    ExpansionRequestManager.removeRequest(req);
+                    selectedRequests.remove(admin.getUniqueId());
+                    guiManager.openExpansionRequestsMenu(admin);
+                } else {
+                    admin.sendMessage(ChatColor.RED + "No request selected.");
+                }
             }
 
-            case "menu:main" -> {
-                guiManager.openMenu(player, "main");
+            else if (name.equalsIgnoreCase("Deny Selected")) {
+                ExpansionRequest req = selectedRequests.get(admin.getUniqueId());
+                if (req != null) {
+                    Player target = Bukkit.getPlayer(req.getPlayerId());
+                    if (target != null) {
+                        target.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                                plugin.getConfig().getString("messages.expansion-denied")
+                                        .replace("{reason}", "Too large / abusive expansion")));
+                    }
+                    admin.sendMessage(ChatColor.RED + "Denied request from "
+                            + Bukkit.getOfflinePlayer(req.getPlayerId()).getName());
+                    ExpansionRequestManager.removeRequest(req);
+                    selectedRequests.remove(admin.getUniqueId());
+                    guiManager.openExpansionRequestsMenu(admin);
+                } else {
+                    admin.sendMessage(ChatColor.RED + "No request selected.");
+                }
+            }
+
+            else if (name.equalsIgnoreCase("Back")) {
+                guiManager.openAdminMenu(admin);
             }
         }
     }

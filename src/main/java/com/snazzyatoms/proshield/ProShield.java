@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
@@ -35,7 +36,7 @@ public class ProShield extends JavaPlugin {
         saveDefaultConfig();
 
         messages = new MessagesUtil(this);
-        plotManager = new PlotManager(this);
+        plotManager = new PlotManager(this);  // ✅ Fixed: pass ProShield to constructor
         roleManager = new ClaimRoleManager(this);
         guiManager = new GUIManager(this);
 

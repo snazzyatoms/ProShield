@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 (Finalized for release build)
+# Version: 1.2.5 (Finalized for release build + Expansion Requests)
 # ==========================================================
 
 settings:
@@ -48,6 +48,9 @@ messages:
   leave-own: "&cYou left your claim."
   leave-other: "&cYou left {owner}'s claim."
   wilderness: "&7You entered the wilderness."
+  expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
+  expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
+  expansion-denied: "&cYour claim expansion request was denied: {reason}"
 
 help:
   player:
@@ -63,6 +66,7 @@ help:
     - "&c/proshield debug &7→ Toggle debug mode"
     - "&c/proshield bypass &7→ Toggle bypass mode"
     - "&c/proshield admin &7→ Open the admin menu"
+    - "&cCheck GUI → Expansion Requests"
 
 gui:
   menus:
@@ -83,9 +87,9 @@ gui:
           name: "&eClaim Info"
           lore:
             - "&7Shows your current claim details"
+            - "&7Default vs. Current Radius"
             - "&7Protected: Pets, Containers, Frames, Stands"
             - "&7Explosions/Fire disabled"
-            - "&7Default radius: 50 blocks"
           action: "command:proshield info"
 
         "15":
@@ -186,6 +190,41 @@ gui:
             - "&7Return to main menu"
           action: "menu:main"
 
+    admin-expansions:
+      title: "&cExpansion Requests"
+      size: 27
+      items:
+        "11":
+          material: PAPER
+          name: "&ePending Requests"
+          lore:
+            - "&7View and manage all player requests"
+          action: "menu:expansion-requests"
+
+        "13":
+          material: EMERALD
+          name: "&aApprove Selected"
+          lore:
+            - "&7Approve and apply instantly (if enabled)"
+            - "&7Reason optional"
+          action: "expansion:approve"
+
+        "15":
+          material: REDSTONE
+          name: "&cDeny Selected"
+          lore:
+            - "&7Deny with reason"
+          action: "expansion:deny"
+
+        "22":
+          material: BOOK
+          name: "&dComing in 2.0"
+          lore:
+            - "&7Expansion via currency/permissions"
+            - "&7Automatic upgrades"
+            - "&7VIP claim bonuses"
+          action: "none"
+
 sounds:
   button-click: "UI_BUTTON_CLICK"
   claim-success: "ENTITY_PLAYER_LEVELUP"
@@ -196,6 +235,7 @@ sounds:
 
 claims:
   default-radius: 50   # ✅ expanded default size
+  instant-apply: true  # ✅ toggle: expansions apply instantly or after restart
   default-flags:
     pvp: false
     explosions: false

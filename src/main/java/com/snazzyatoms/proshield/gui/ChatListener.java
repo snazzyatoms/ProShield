@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/ChatListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -7,11 +8,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
-/**
- * ChatListener
- *
- * ✅ Listens for admins typing manual denial reasons after selecting "Other".
- */
 public class ChatListener implements Listener {
 
     private final ProShield plugin;
@@ -24,21 +20,19 @@ public class ChatListener implements Listener {
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
 
-        // Only care if this admin is in the "awaitingReason" map
-        if (!GUIManager.awaitingReason.containsKey(player.getUniqueId())) {
+        if (!GUIManager.isAwaitingReason(player)) {
             return;
         }
 
-        event.setCancelled(true); // prevent broadcast of denial reason
+        event.setCancelled(true);
 
         String msg = event.getMessage().trim();
         if (msg.equalsIgnoreCase("cancel")) {
-            GUIManager.awaitingReason.remove(player.getUniqueId());
+            GUIManager.cancelAwaiting(player);
             player.sendMessage(ChatColor.RED + "❌ Manual denial cancelled.");
             return;
         }
 
-        // Forward reason to GUIManager static handler
         GUIManager.provideManualReason(player, msg, plugin);
     }
 }

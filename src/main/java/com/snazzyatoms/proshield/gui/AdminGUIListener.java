@@ -23,6 +23,8 @@ public class AdminGUIListener implements Listener {
     private final PlotManager plotManager;
     private final MessagesUtil messages;
 
+    private ExpansionRequest selectedRequest; // Track currently selected request
+
     public AdminGUIListener(ProShield plugin, AdminGUIManager adminGUI) {
         this.plugin = plugin;
         this.adminGUI = adminGUI;
@@ -41,7 +43,6 @@ public class AdminGUIListener implements Listener {
         if (meta == null) return;
 
         event.setCancelled(true); // Prevent item pickup
-
         String name = ChatColor.stripColor(meta.getDisplayName());
 
         // ------------------------
@@ -53,43 +54,60 @@ public class AdminGUIListener implements Listener {
                     if (!ExpansionRequestManager.hasRequests()) {
                         messages.send(player, "&7There are no pending requests.");
                     } else {
-                        messages.send(player, "&ePending requests:");
-                        for (ExpansionRequest req : ExpansionRequestManager.getRequests()) {
-                            messages.send(player, "&7- " + req.getPlayerId() +
-                                    " wants +" + req.getExtraRadius() + " blocks.");
-                        }
+                        selectedRequest = ExpansionRequestManager.getRequests().get(0); // pick first for now
+                        messages.send(player, "&eSelected request: " + selectedRequest.getPlayerId() +
+                                " (+" + selectedRequest.getExtraRadius() + " blocks).");
                     }
                 }
                 case "approve selected" -> {
-                    if (!ExpansionRequestManager.hasRequests()) {
-                        messages.send(player, "&7No requests to approve.");
+                    if (selectedRequest == null) {
+                        messages.send(player, "&7No request selected.");
                         return;
                     }
-
-                    ExpansionRequest req = ExpansionRequestManager.getRequests().get(0); // ✅ Simplified: first request
-                    UUID playerId = req.getPlayerId();
-                    plotManager.expandClaim(playerId, req.getExtraRadius());
-
-                    ExpansionRequestManager.removeRequest(req);
+                    UUID playerId = selectedRequest.getPlayerId();
+                    plotManager.expandClaim(playerId, selectedRequest.getExtraRadius());
+                    ExpansionRequestManager.removeRequest(selectedRequest);
                     messages.send(player, "&aApproved expansion for " + playerId +
-                            " (+" + req.getExtraRadius() + " blocks).");
+                            " (+" + selectedRequest.getExtraRadius() + " blocks).");
+                    selectedRequest = null;
                 }
                 case "deny selected" -> {
-                    if (!ExpansionRequestManager.hasRequests()) {
-                        messages.send(player, "&7No requests to deny.");
+                    if (selectedRequest == null) {
+                        messages.send(player, "&7No request selected.");
                         return;
                     }
-
-                    ExpansionRequest req = ExpansionRequestManager.getRequests().get(0);
-                    ExpansionRequestManager.removeRequest(req);
-                    messages.send(player, "&cDenied expansion for " + req.getPlayerId() +
-                            ". Reason: &7Too large / not allowed.");
+                    // Open reason picker GUI
+                    adminGUI.openMenu(player, "deny-reasons");
                 }
+                case "back" -> plugin.getGuiManager().openMenu(player, "main");
+            }
+        }
+
+        // ------------------------
+        // DENY REASONS MENU
+        // ------------------------
+        if (title.contains("Deny Reasons") && selectedRequest != null) {
+            String reason;
+            switch (name.toLowerCase()) {
+                case "too large" -> reason = "Requested size too large.";
+                case "abusive" -> reason = "Request considered abusive.";
+                case "other" -> reason = "Denied by admin decision.";
                 case "back" -> {
-                    // Go back to Admin Menu (main GUI for admins)
-                    plugin.getGuiManager().openMenu(player, "main");
+                    adminGUI.openMenu(player, "admin-expansions");
+                    return;
+                }
+                default -> {
+                    return;
                 }
             }
+
+            ExpansionRequestManager.removeRequest(selectedRequest);
+            messages.send(player, "&cDenied expansion for " + selectedRequest.getPlayerId() +
+                    ". Reason: &7" + reason);
+            selectedRequest = null;
+
+            // Return back to Expansion Requests after denial
+            adminGUI.openMenu(player, "admin-expansions");
         }
     }
 }

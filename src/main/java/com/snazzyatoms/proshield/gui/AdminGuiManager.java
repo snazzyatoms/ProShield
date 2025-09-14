@@ -3,17 +3,13 @@ package com.snazzyatoms.proshield.gui;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.expansion.ExpansionRequest;
 import com.snazzyatoms.proshield.expansion.ExpansionRequestManager;
-import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,136 +17,69 @@ public class AdminGUIManager {
 
     private final ProShield plugin;
     private final ExpansionRequestManager requestManager;
-    private final PlotManager plotManager;
-    private final MessagesUtil messages;
 
-    public AdminGUIManager(ProShield plugin, ExpansionRequestManager requestManager, PlotManager plotManager, MessagesUtil messages) {
+    public AdminGUIManager(ProShield plugin, ExpansionRequestManager requestManager) {
         this.plugin = plugin;
         this.requestManager = requestManager;
-        this.plotManager = plotManager;
-        this.messages = messages;
     }
 
     /**
-     * Opens the Admin main GUI.
+     * Open the main Expansion Requests menu
      */
-    public void openAdminMenu(Player player) {
-        ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus.admin-expansions");
-        if (menuSec == null) {
-            messages.send(player, "&cAdmin expansions menu not found in config.");
-            return;
-        }
+    public void openExpansionMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, "§cExpansion Requests");
 
-        Inventory inv = Bukkit.createInventory(null, menuSec.getInt("size", 27),
-                menuSec.getString("title", "Admin Menu"));
+        inv.setItem(11, createItem(Material.PAPER, "§ePending Requests",
+                List.of("§7View and manage all player requests")));
 
-        for (String key : menuSec.getKeys(false)) {
-            if (!menuSec.isConfigurationSection(key)) continue;
-            ConfigurationSection itemSec = menuSec.getConfigurationSection(key);
+        inv.setItem(13, createItem(Material.EMERALD, "§aApprove Selected",
+                List.of("§7Approve and apply instantly (if enabled)", "§7Reason optional")));
 
-            int slot;
-            try {
-                slot = Integer.parseInt(key);
-            } catch (NumberFormatException e) {
-                continue;
-            }
+        inv.setItem(15, createItem(Material.REDSTONE, "§cDeny Selected",
+                List.of("§7Deny with reason")));
 
-            Material mat = Material.matchMaterial(itemSec.getString("material", "BARRIER"));
-            if (mat == null) mat = Material.BARRIER;
+        inv.setItem(22, createItem(Material.BOOK, "§dComing in 2.0",
+                List.of("§7Expansion via currency/permissions", "§7Automatic upgrades", "§7VIP claim bonuses")));
 
-            ItemStack stack = new ItemStack(mat);
-            ItemMeta meta = stack.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(MessagesUtil.color(itemSec.getString("name", "&cUnnamed")));
-                List<String> lore = new ArrayList<>();
-                for (String line : itemSec.getStringList("lore")) {
-                    lore.add(MessagesUtil.color(line));
-                }
-                meta.setLore(lore);
-                stack.setItemMeta(meta);
-            }
-            inv.setItem(slot, stack);
-        }
+        // Back button to Admin Menu
+        inv.setItem(26, createItem(Material.BARRIER, "§cBack",
+                List.of("§7Return to Admin Menu")));
 
         player.openInventory(inv);
     }
 
     /**
-     * Opens the list of expansion requests.
+     * Open the pending requests list
      */
-    public void openExpansionRequestsMenu(Player player) {
-        List<ExpansionRequest> requests = requestManager.getAllRequests();
-        int size = Math.max(27, ((requests.size() / 9) + 1) * 9);
-        Inventory inv = Bukkit.createInventory(null, size, MessagesUtil.color("&cExpansion Requests"));
+    public void openRequestsList(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, "§ePending Expansion Requests");
 
         int slot = 0;
-        for (ExpansionRequest req : requests) {
-            ItemStack paper = new ItemStack(Material.PAPER);
-            ItemMeta meta = paper.getItemMeta();
-            if (meta != null) {
-                String name = plugin.getPlotManager().getPlayerName(req.getPlayerId());
-                meta.setDisplayName(MessagesUtil.color("&eRequest: &f" + name));
-                List<String> lore = new ArrayList<>();
-                lore.add(MessagesUtil.color("&7Extra radius: &b+" + req.getExtraRadius()));
-                lore.add(MessagesUtil.color("&7Requested: &f" + (System.currentTimeMillis() - req.getRequestTime()) / 1000 + "s ago"));
-                lore.add(MessagesUtil.color("&aLeft-click to Approve"));
-                lore.add(MessagesUtil.color("&cRight-click to Deny"));
-                meta.setLore(lore);
-                paper.setItemMeta(meta);
-            }
-            inv.setItem(slot++, paper);
+        for (ExpansionRequest req : requestManager.getPendingRequests()) {
+            if (slot >= inv.getSize()) break;
+
+            UUID pid = req.getPlayerId();
+            String name = Bukkit.getOfflinePlayer(pid).getName();
+            inv.setItem(slot++, createItem(Material.PAPER, "§b" + name,
+                    List.of("§7Requested +" + req.getExtraRadius() + " blocks",
+                            "§7At: " + req.getRequestTime())));
         }
 
-        if (requests.isEmpty()) {
-            ItemStack empty = new ItemStack(Material.BARRIER);
-            ItemMeta meta = empty.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(MessagesUtil.color("&cNo Requests"));
-                meta.setLore(List.of(MessagesUtil.color("&7There are currently no pending requests.")));
-                empty.setItemMeta(meta);
-            }
-            inv.setItem(13, empty);
-        }
+        // Back button
+        inv.setItem(53, createItem(Material.BARRIER, "§cBack",
+                List.of("§7Return to Expansion Menu")));
 
         player.openInventory(inv);
     }
 
-    /**
-     * Approves a request instantly (if enabled in config).
-     */
-    public void approveRequest(Player admin, ExpansionRequest req) {
-        UUID playerId = req.getPlayerId();
-        Player target = Bukkit.getPlayer(playerId);
-
-        int newRadius = plotManager.expandClaimRadius(playerId, req.getExtraRadius());
-        requestManager.removeRequest(req);
-
-        if (target != null && target.isOnline()) {
-            messages.send(target, plugin.getConfig().getString("messages.expansion-approved")
-                    .replace("{blocks}", String.valueOf(req.getExtraRadius())));
+    private ItemStack createItem(Material mat, String name, List<String> lore) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            if (lore != null) meta.setLore(lore);
+            item.setItemMeta(meta);
         }
-
-        messages.send(admin, "&aApproved expansion for &f" +
-                plugin.getPlotManager().getPlayerName(playerId) +
-                " &7→ &b" + newRadius + " blocks radius.");
-    }
-
-    /**
-     * Denies a request with a reason.
-     */
-    public void denyRequest(Player admin, ExpansionRequest req, String reason) {
-        UUID playerId = req.getPlayerId();
-        Player target = Bukkit.getPlayer(playerId);
-
-        requestManager.removeRequest(req);
-
-        if (target != null && target.isOnline()) {
-            messages.send(target, plugin.getConfig().getString("messages.expansion-denied")
-                    .replace("{reason}", reason));
-        }
-
-        messages.send(admin, "&cDenied expansion for &f" +
-                plugin.getPlotManager().getPlayerName(playerId) +
-                " &7→ &eReason: " + reason);
+        return item;
     }
 }

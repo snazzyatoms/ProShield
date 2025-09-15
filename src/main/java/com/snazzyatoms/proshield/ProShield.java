@@ -5,6 +5,7 @@ import com.snazzyatoms.proshield.compass.CompassListener;
 import com.snazzyatoms.proshield.gui.ChatListener;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.listeners.ProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -56,6 +57,9 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
+
+        // ✅ New protection listener
+        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
 
         getLogger().info("ProShield enabled successfully.");
     }

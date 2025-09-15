@@ -17,22 +17,23 @@ public class ChatListener implements Listener {
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
+        GUIManager gui = plugin.getGuiManager();
 
         // --- EXPANSION DENY REASONS ---
-        if (GUIManager.isAwaitingReason(player)) {
+        if (gui.isAwaitingReason(player)) {
             event.setCancelled(true);
             String reason = event.getMessage();
             plugin.getServer().getScheduler().runTask(plugin,
-                    () -> GUIManager.provideManualReason(player, reason, plugin));
+                    () -> gui.provideManualReason(player, reason));
             return;
         }
 
         // --- ROLES (trusted players add/remove via chat) ---
-        if (GUIManager.isAwaitingRoleAction(player)) {
+        if (gui.isAwaitingRoleAction(player)) {
             event.setCancelled(true);
             String message = event.getMessage();
             plugin.getServer().getScheduler().runTask(plugin,
-                    () -> GUIManager.handleRoleChatInput(player, message, plugin));
+                    () -> gui.handleRoleChatInput(player, message));
         }
     }
 }

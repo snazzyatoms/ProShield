@@ -5,18 +5,25 @@ import org.bukkit.Bukkit;
 import java.util.*;
 
 /**
- * Represents a claimed plot of land in ProShield.
+ * Represents a claimed chunk in ProShield.
  */
 public class Plot {
 
     private final UUID id;
-    private final UUID ownerId;
+    private UUID owner;
+    private final String worldName;
+    private final int x;
+    private final int z;
+
     private final Set<UUID> trusted;
     private final Map<String, Boolean> flags;
 
-    public Plot(UUID id, UUID ownerId) {
-        this.id = id;
-        this.ownerId = ownerId;
+    public Plot(UUID owner, String worldName, int x, int z) {
+        this.id = UUID.randomUUID();
+        this.owner = owner;
+        this.worldName = worldName;
+        this.x = x;
+        this.z = z;
         this.trusted = new HashSet<>();
         this.flags = new HashMap<>();
     }
@@ -25,17 +32,32 @@ public class Plot {
         return id;
     }
 
-    public UUID getOwnerId() {
-        return ownerId;
+    public UUID getOwner() {
+        return owner;
     }
 
-    /** NEW: Returns the owner’s name (for messages and GUIs). */
+    public void setOwner(UUID newOwner) {
+        this.owner = newOwner;
+    }
+
     public String getOwnerName() {
-        return Bukkit.getOfflinePlayer(ownerId).getName();
+        return Bukkit.getOfflinePlayer(owner).getName();
+    }
+
+    public String getWorldName() {
+        return worldName;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getZ() {
+        return z;
     }
 
     public boolean isOwner(UUID playerId) {
-        return ownerId.equals(playerId);
+        return owner.equals(playerId);
     }
 
     public Set<UUID> getTrusted() {
@@ -64,5 +86,11 @@ public class Plot {
 
     public void setFlag(String key, boolean value) {
         flags.put(key, value);
+    }
+
+    /** Optional: simple expansion (dummy stub for now). */
+    public void expand(int extraRadius) {
+        // Implementation could claim adjacent chunks later.
+        // Stubbed to preserve API compatibility.
     }
 }

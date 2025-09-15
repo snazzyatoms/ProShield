@@ -20,6 +20,30 @@ claims:
   allow-admin-edit-claims: true       # Admins can modify other players' claims
   allow-owner-claim-flags: true       # Claim owners can always edit their flags
 
+expansions:
+  defaults:
+    base-size: 50                     # Default claim radius in blocks
+    max-size: 200                     # Absolute max claim size
+    allowed-increments:               # Expansion sizes players can request
+      - 10
+      - 15
+      - 20
+      - 25
+      - 30
+
+  messages:
+    request-submitted: "&eYour expansion request for +{blocks} blocks has been sent to admins."
+    approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
+    denied: "&cYour claim expansion request was denied: {reason}"
+    notify-admin: "&c[ProShield] {player} requested an expansion (+{blocks}). Check Admin Tools."
+
+  deny-reasons:
+    - "&cToo Large → Requested expansion too big"
+    - "&cAbusive → Expansion attempt is abusive"
+    - "&cNot Enough Playtime → Player must play longer before expanding"
+    - "&cWorld Limit → Expansion not allowed in this world"
+    - "&cOther → Generic denial reason"
+
 protection:
   fire:
     enabled: true
@@ -32,10 +56,10 @@ protection:
 
   explosions:
     enabled: true                     # Global toggle
-    creeper: false                     # Creeper damage inside claims
-    tnt: false                         # TNT damage inside claims
-    ghast: false                       # Ghast fireballs
-    other: false                       # Any other explosion type
+    creeper: false                    # Creeper damage inside claims
+    tnt: false                        # TNT damage inside claims
+    ghast: false                      # Ghast fireballs
+    other: false                      # Any other explosion type
 
   buckets:
     enabled: true
@@ -93,10 +117,6 @@ messages:
   leave-other: "&cYou left {owner}'s claim."
   wilderness: "&7You entered the wilderness."
 
-  expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
-  expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
-  expansion-denied: "&cYour claim expansion request was denied: {reason}"
-
 help:
   player:
     - "&bProShield Help &7- Player"
@@ -149,6 +169,15 @@ gui:
           action: "command:proshield unclaim"
           permission: "proshield.player.access"
 
+        "17":
+          material: EMERALD_BLOCK
+          name: "&aExpand Claim"
+          lore:
+            - "&7Request to expand your claim"
+            - "&7Choose a size in the next menu"
+          action: "menu:expansion"
+          permission: "proshield.player.access"
+
         "21":
           material: PLAYER_HEAD
           name: "&bTrusted Players"
@@ -167,9 +196,7 @@ gui:
 
         "25":
           material: BARRIER
-          name: "&cExit Menu"
-          lore:
-            - "&7Click to close this menu"
+          name: "&cBack"
           action: "close"
 
         "26":
@@ -179,6 +206,39 @@ gui:
             - "&7Access tools & expansion requests"
           action: "menu:admin-tools"
           permission: "proshield.admin"
+
+    expansion:
+      title: "&aClaim Expansion"
+      size: 27
+      items:
+        "10":
+          material: IRON_BLOCK
+          name: "&a+10 Blocks"
+          action: "expansion:request:10"
+        "11":
+          material: GOLD_BLOCK
+          name: "&a+15 Blocks"
+          action: "expansion:request:15"
+        "12":
+          material: DIAMOND_BLOCK
+          name: "&a+20 Blocks"
+          action: "expansion:request:20"
+        "13":
+          material: EMERALD_BLOCK
+          name: "&a+25 Blocks"
+          action: "expansion:request:25"
+        "14":
+          material: NETHERITE_BLOCK
+          name: "&a+30 Blocks"
+          action: "expansion:request:30"
+        "22":
+          material: BARRIER
+          name: "&cBack"
+          action: "menu:main"
+        "26":
+          material: BARRIER
+          name: "&cExit"
+          action: "close"
 
     admin-tools:
       title: "&cAdmin Tools & Expansion Requests"
@@ -238,15 +298,31 @@ gui:
           name: "&cDeny Selected"
           lore:
             - "&7Deny with reason"
-          action: "expansion:deny"
+          action: "menu:deny-reasons"
           permission: "proshield.admin.expansions"
 
+        "37":
+          material: BARRIER
+          name: "&cBack"
+          action: "menu:main"
+        "43":
+          material: BARRIER
+          name: "&cExit"
+          action: "close"
+
+    deny-reasons:
+      title: "&cDeny Expansion Request"
+      size: 45
+      items:
+        # Items dynamically populated from expansions.deny-reasons
         "40":
           material: BARRIER
           name: "&cBack"
-          lore:
-            - "&7Return to Main Menu"
-          action: "menu:main"
+          action: "menu:admin-tools"
+        "43":
+          material: BARRIER
+          name: "&cExit"
+          action: "close"
 
     roles:
       title: "&bTrusted Players"

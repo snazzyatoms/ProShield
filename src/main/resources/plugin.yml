@@ -19,7 +19,8 @@ commands:
 permissions:
   # --- Player Core ---
   proshield.player.access:
-    description: Full access to all standard player features (GUI, claim, unclaim, flags, roles, transfer)
+    description: Full access to all standard player features 
+      (GUI, claim, unclaim, info, flags, roles, trust/untrust, transfer, compass)
     default: true
 
   proshield.unlimited:
@@ -28,7 +29,7 @@ permissions:
 
   # --- Admin Core ---
   proshield.admin:
-    description: Access Admin Tools menu (reload, debug, bypass)
+    description: Access Admin Tools menu (reload, debug, bypass, general admin functions)
     default: op
     children:
       proshield.admin.reload: true
@@ -49,9 +50,9 @@ permissions:
 
   # --- Senior Admin (High Control) ---
   proshield.admin.expansions:
-    description: Approve/Deny expansion requests in GUI
+    description: Approve/Deny expansion requests in Admin Tools GUI
     default: op
 
   proshield.admin.worldcontrols:
-    description: Change per-world controls in GUI
+    description: Manage per-world controls in Admin Tools GUI
     default: op

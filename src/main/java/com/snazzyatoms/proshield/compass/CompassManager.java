@@ -22,7 +22,7 @@ public class CompassManager implements Listener {
     public CompassManager(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
         this.guiManager = guiManager;
-        // Register this as a listener
+        // Register join event
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -67,11 +67,16 @@ public class CompassManager implements Listener {
     }
 
     /**
-     * Gives the compass to all online players (e.g., on reload).
+     * Gives the compass to all online players if settings allow it.
      */
     public void giveCompassToAll() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            giveCompass(player);
+        boolean giveOnJoin = plugin.getConfig().getBoolean("settings.give-compass-on-join", true);
+        boolean autoReplace = plugin.getConfig().getBoolean("settings.compass-auto-replace", false);
+
+        if (giveOnJoin || autoReplace) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                giveCompass(player);
+            }
         }
     }
 
@@ -80,15 +85,11 @@ public class CompassManager implements Listener {
      */
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-
         boolean giveOnJoin = plugin.getConfig().getBoolean("settings.give-compass-on-join", true);
         boolean autoReplace = plugin.getConfig().getBoolean("settings.compass-auto-replace", false);
 
-        // If either "give on join" or "auto-replace" is enabled,
-        // ensure the player has a compass (without duplicates).
         if (giveOnJoin || autoReplace) {
-            giveCompass(player);
+            giveCompass(event.getPlayer());
         }
     }
 }

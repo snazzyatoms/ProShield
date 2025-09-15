@@ -58,7 +58,7 @@ public class GUIManager {
         int size = menuSec.getInt("size", 27);
         Inventory inv = Bukkit.createInventory(null, size, title);
 
-        fillStaticItems(inv, menuSec);
+        fillMenuItems(inv, menuSec, player);
         player.openInventory(inv);
     }
 
@@ -84,13 +84,12 @@ public class GUIManager {
             for (String slotStr : itemsSec.getKeys(false)) {
                 int slot = parseIntSafe(slotStr, -1);
                 if (slot < 0) continue;
+
                 ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
                 if (itemSec == null) continue;
 
-                String flagKey = itemSec.getString("flag-key", "")
-                        .toLowerCase(Locale.ROOT).replace(" ", "-");
-                boolean state = plot.getFlag(flagKey,
-                        plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false));
+                String action = itemSec.getString("action", "");
+                String flagKey = action.startsWith("flag:") ? action.substring("flag:".length()) : null;
 
                 Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
                 if (mat == null) mat = Material.STONE;
@@ -104,9 +103,15 @@ public class GUIManager {
 
                 List<String> lore = new ArrayList<>();
                 for (String line : itemSec.getStringList("lore")) {
-                    String stateText = state ? "&aON" : "&cOFF";
-                    lore.add(ChatColor.translateAlternateColorCodes('&',
-                            line.replace("{state}", stateText)));
+                    if (flagKey != null) {
+                        boolean state = plot.getFlag(flagKey,
+                                plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false));
+                        String stateText = state ? "&aON" : "&cOFF";
+                        lore.add(ChatColor.translateAlternateColorCodes('&',
+                                line.replace("{state}", stateText)));
+                    } else {
+                        lore.add(ChatColor.translateAlternateColorCodes('&', line));
+                    }
                 }
                 meta.setLore(lore);
 
@@ -191,41 +196,72 @@ public class GUIManager {
         if (event.getCurrentItem() == null || event.getCurrentItem().getItemMeta() == null) return;
 
         String title = event.getView().getTitle();
-        String name = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
+        String itemName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
 
-        // MAIN MENU
-        if (title.contains("ProShield Menu")) {
-            switch (name.toLowerCase(Locale.ROOT)) {
-                case "claim land" -> player.performCommand("proshield claim");
-                case "claim info" -> player.performCommand("proshield info");
-                case "unclaim land" -> player.performCommand("proshield unclaim");
-                case "trusted players" -> openMenu(player, "roles");
-                case "claim flags" -> openFlagsMenu(player);
-                case "admin tools" -> openMenu(player, "admin-expansions");
+        // Look up the menu items in config based on the title
+        ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
+        if (menus == null) return;
+
+        ConfigurationSection matchedMenu = null;
+        for (String key : menus.getKeys(false)) {
+            ConfigurationSection menuSec = menus.getConfigurationSection(key);
+            if (menuSec != null && ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&',
+                    menuSec.getString("title", ""))).equalsIgnoreCase(ChatColor.stripColor(title))) {
+                matchedMenu = menuSec;
+                break;
             }
-            return;
         }
+        if (matchedMenu == null) return;
 
-        // FLAGS MENU
-        if (title.contains("Claim Flags")) {
+        // Find which item matches
+        ConfigurationSection itemsSec = matchedMenu.getConfigurationSection("items");
+        if (itemsSec == null) return;
+
+        String action = null;
+        for (String slotStr : itemsSec.getKeys(false)) {
+            ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
+            if (itemSec == null) continue;
+            String displayName = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&',
+                    itemSec.getString("name", "")));
+            if (displayName.equalsIgnoreCase(itemName)) {
+                action = itemSec.getString("action", "");
+                break;
+            }
+        }
+        if (action == null) return;
+
+        // Handle the action
+        if (action.startsWith("flag:")) {
+            String flagKey = action.substring("flag:".length());
             Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
-            if (plot == null) {
-                plugin.getMessagesUtil().send(player, "&cYou must stand inside a claim.");
-                return;
+            if (plot != null) {
+                toggleFlag(plot, flagKey, player);
+                openFlagsMenu(player);
             }
-            switch (name.toLowerCase(Locale.ROOT)) {
-                case "explosions" -> toggleFlag(plot, "explosions", player);
-                case "buckets" -> toggleFlag(plot, "buckets", player);
-                case "item frames" -> toggleFlag(plot, "item-frames", player);
-                case "armor stands" -> toggleFlag(plot, "armor-stands", player);
-                case "containers" -> toggleFlag(plot, "containers", player);
-                case "pets" -> toggleFlag(plot, "pets", player);
-                case "pvp" -> toggleFlag(plot, "pvp", player);
-                case "safe zone" -> toggleFlag(plot, "safezone", player);
-                case "back" -> { openMenu(player, "main"); return; }
+        }
+        else if (action.startsWith("menu:")) {
+            String menuName = action.substring("menu:".length());
+            openMenu(player, menuName);
+        }
+        else if (action.startsWith("command:")) {
+            String cmdToRun = action.substring("command:".length());
+            player.performCommand(cmdToRun);
+        }
+        else if (action.startsWith("reason:")) {
+            String reasonKey = action.substring("reason:".length());
+            List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
+            if (!pending.isEmpty()) {
+                ExpansionRequest req = pending.get(0);
+                if (reasonKey.equalsIgnoreCase("other")) {
+                    awaitingReason.put(player.getUniqueId(), req);
+                    plugin.getMessagesUtil().send(player, "&eType your denial reason in chat...");
+                    player.closeInventory();
+                } else {
+                    ExpansionQueue.denyRequest(req, reasonKey);
+                    plugin.getMessagesUtil().send(player, "&cRequest denied (" + reasonKey + ").");
+                    openMenu(player, "admin-expansions");
+                }
             }
-            openFlagsMenu(player); // refresh with updated ON/OFF
-            return;
         }
     }
 
@@ -240,7 +276,7 @@ public class GUIManager {
                 !current ? "&a" + flag + " enabled." : "&c" + flag + " disabled.");
     }
 
-    private void fillStaticItems(Inventory inv, ConfigurationSection menuSec) {
+    private void fillMenuItems(Inventory inv, ConfigurationSection menuSec, Player player) {
         ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
         if (itemsSec == null) return;
 

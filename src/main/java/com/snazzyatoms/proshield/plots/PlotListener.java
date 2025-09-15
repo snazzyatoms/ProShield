@@ -29,7 +29,7 @@ public class PlotListener implements Listener {
         if (p == null) return;
 
         Player player = event.getPlayer();
-        boolean allowed = p.getFlag("block-break", false);
+        boolean allowed = p.getFlag("block-break", plugin.getConfig()); // ✅ pass cfg
         if (!allowed && !p.isTrusted(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
             event.setCancelled(true);
             messages.send(player, "&cYou cannot break blocks here.");
@@ -42,7 +42,7 @@ public class PlotListener implements Listener {
         if (p == null) return;
 
         Player player = event.getPlayer();
-        boolean allowed = p.getFlag("block-place", false);
+        boolean allowed = p.getFlag("block-place", plugin.getConfig()); // ✅ pass cfg
         if (!allowed && !p.isTrusted(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
             event.setCancelled(true);
             messages.send(player, "&cYou cannot place blocks here.");

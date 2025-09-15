@@ -1,40 +1,35 @@
-package com.snazzyatoms.proshield.expansion;
+package com.snazzyatoms.proshield.expansions;
 
 import java.util.UUID;
 
 public class ExpansionRequest {
 
-    public enum Status { PENDING, APPROVED, DENIED }
+    public enum Status {
+        PENDING,
+        APPROVED,
+        DENIED
+    }
 
-    private final UUID playerId;
-    private final int extraRadius;
-    private final long requestTime;
-
+    private final UUID requester;
+    private final int blocks;
+    private final long timestamp;
     private Status status;
-    private String denialReason;
+    private String denyReason;
 
-    public ExpansionRequest(UUID playerId, int extraRadius) {
-        this.playerId = playerId;
-        this.extraRadius = extraRadius;
-        this.requestTime = System.currentTimeMillis();
+    public ExpansionRequest(UUID requester, int blocks) {
+        this.requester = requester;
+        this.blocks = blocks;
+        this.timestamp = System.currentTimeMillis();
         this.status = Status.PENDING;
     }
 
-    public UUID getPlayerId() { return playerId; }
-    public int getExtraRadius() { return extraRadius; }
-    public long getRequestTime() { return requestTime; }
+    public UUID getRequester() { return requester; }
+    public int getBlocks() { return blocks; }
+    public long getTimestamp() { return timestamp; }
+
     public Status getStatus() { return status; }
-    public String getDenialReason() { return denialReason; }
+    public void setStatus(Status status) { this.status = status; }
 
-    public void approve() {
-        this.status = Status.APPROVED;
-        this.denialReason = null;
-    }
-
-    public void deny(String reason) {
-        this.status = Status.DENIED;
-        this.denialReason = reason;
-    }
-
-    public boolean isPending() { return status == Status.PENDING; }
+    public String getDenyReason() { return denyReason; }
+    public void setDenyReason(String denyReason) { this.denyReason = denyReason; }
 }

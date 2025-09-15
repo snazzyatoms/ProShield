@@ -1,4 +1,4 @@
-package com.snazzyatoms.proshield.expansion;
+package com.snazzyatoms.proshield.expansions;
 
 import java.util.*;
 

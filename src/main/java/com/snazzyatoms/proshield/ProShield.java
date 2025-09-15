@@ -78,7 +78,7 @@ public class ProShield extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
         Bukkit.getPluginManager().registerEvents(this, this); // join-event
 
-        // Generate README.md
+        // Generate README.md (and sync messages.yml version)
         generateReadme();
 
         getLogger().info("ProShield enabled successfully.");
@@ -212,8 +212,46 @@ public class ProShield extends JavaPlugin implements Listener {
 
             org.apache.commons.io.FileUtils.writeStringToFile(readme, sb.toString(), StandardCharsets.UTF_8);
             getLogger().info("Generated README.md");
+
+            // ✅ Sync version in messages.yml
+            syncMessagesVersion();
         } catch (Exception e) {
             getLogger().severe("Failed to generate README.md: " + e.getMessage());
+        }
+    }
+
+    // --------------------
+    // Sync messages.yml version
+    // --------------------
+    private void syncMessagesVersion() {
+        try {
+            File file = new File(getDataFolder(), "messages.yml");
+            if (!file.exists()) return;
+
+            List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            String versionLine = "# Version: " + getDescription().getVersion();
+
+            boolean updated = false;
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines.get(i).startsWith("# Version:")) {
+                    lines.set(i, versionLine);
+                    updated = true;
+                    break;
+                }
+            }
+
+            if (!updated) {
+                // If no version line exists, inject it after the first line
+                lines.add(1, versionLine);
+                updated = true;
+            }
+
+            if (updated) {
+                java.nio.file.Files.write(file.toPath(), lines, StandardCharsets.UTF_8);
+                getLogger().info("[Messages] messages.yml version synced to " + getDescription().getVersion());
+            }
+        } catch (Exception e) {
+            getLogger().warning("Failed to sync messages.yml version: " + e.getMessage());
         }
     }
 

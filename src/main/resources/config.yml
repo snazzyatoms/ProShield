@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 
+# Version: 1.2.5 (Simplified Permissions)
 # ==========================================================
 
 settings:
@@ -167,7 +167,7 @@ gui:
           lore:
             - "&7Reloads ProShield configuration"
           action: "command:proshield reload"
-          permission: "proshield.admin.reload"
+          permission: "proshield.admin"
 
         "14":
           material: REPEATER

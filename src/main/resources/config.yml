@@ -20,30 +20,6 @@ claims:
   allow-admin-edit-claims: true       # Admins can modify other players' claims
   allow-owner-claim-flags: true       # Claim owners can always edit their flags
 
-expansions:
-  defaults:
-    base-size: 50                     # Default claim radius in blocks
-    max-size: 200                     # Absolute max claim size
-    allowed-increments:               # Expansion sizes players can request
-      - 10
-      - 15
-      - 20
-      - 25
-      - 30
-
-  messages:
-    request-submitted: "&eYour expansion request for +{blocks} blocks has been sent to admins."
-    approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
-    denied: "&cYour claim expansion request was denied: {reason}"
-    notify-admin: "&c[ProShield] {player} requested an expansion (+{blocks}). Check Admin Tools."
-
-  deny-reasons:
-    - "&cToo Large → Requested expansion too big"
-    - "&cAbusive → Expansion attempt is abusive"
-    - "&cNot Enough Playtime → Player must play longer before expanding"
-    - "&cWorld Limit → Expansion not allowed in this world"
-    - "&cOther → Generic denial reason"
-
 protection:
   fire:
     enabled: true
@@ -55,16 +31,16 @@ protection:
       lightning: false
 
   explosions:
-    enabled: true                     # Global toggle
-    creeper: false                    # Creeper damage inside claims
-    tnt: false                        # TNT damage inside claims
-    ghast: false                      # Ghast fireballs
-    other: false                      # Any other explosion type
+    enabled: true
+    creeper: false
+    tnt: false
+    ghast: false
+    other: false
 
   buckets:
     enabled: true
-    lava: false                        # Prevent lava griefing
-    water: false                       # Prevent water griefing
+    lava: false
+    water: false
 
   mobs:
     border-repel:
@@ -76,10 +52,10 @@ protection:
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
     despawn-inside: true
     despawn-interval-seconds: 30
-    prevent-damage: true               # No mob damage in claims
-    prevent-targeting: true            # Hostiles cannot target players in claims
-    protect-pets: true                 # Pets (wolves, cats, horses, etc.) cannot be harmed
-    protect-passive: true              # Passive mobs (cows, sheep, etc.) cannot be harmed
+    prevent-damage: true
+    prevent-targeting: true
+    protect-pets: true
+    protect-passive: true
 
   entities:
     wilderness:
@@ -116,6 +92,16 @@ messages:
   leave-own: "&cYou left your claim."
   leave-other: "&cYou left {owner}'s claim."
   wilderness: "&7You entered the wilderness."
+
+  expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
+  expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
+  expansion-denied: "&cYour claim expansion request was denied: {reason}"
+
+  # Configurable deny reasons
+  expansion-deny-reasons:
+    too-large: "&cRequested expansion too large."
+    abusive: "&cExpansion request denied due to abuse."
+    other: "&cExpansion request denied."
 
 help:
   player:
@@ -155,9 +141,8 @@ gui:
           material: PAPER
           name: "&eClaim Info"
           lore:
-            - "&7Shows your current claim details"
-            - "&7Protected: Pets, Containers, Frames, Stands"
-            - "&7Explosions/Fire disabled"
+            - "&7Shows claim details"
+            - "&7Flags, Owner, Trusted players"
           action: "command:proshield info"
           permission: "proshield.player.access"
 
@@ -165,17 +150,8 @@ gui:
           material: BARRIER
           name: "&cUnclaim Land"
           lore:
-            - "&7Remove your claim"
+            - "&7Remove your claim from this land"
           action: "command:proshield unclaim"
-          permission: "proshield.player.access"
-
-        "17":
-          material: EMERALD_BLOCK
-          name: "&aExpand Claim"
-          lore:
-            - "&7Request to expand your claim"
-            - "&7Choose a size in the next menu"
-          action: "menu:expansion"
           permission: "proshield.player.access"
 
         "21":
@@ -183,6 +159,7 @@ gui:
           name: "&bTrusted Players"
           lore:
             - "&7Manage who can build in your claim"
+            - "&fAdd / Remove / Edit roles"
           action: "menu:roles"
           permission: "proshield.player.access"
 
@@ -190,135 +167,32 @@ gui:
           material: CHEST
           name: "&eClaim Flags"
           lore:
-            - "&7Toggle special protections"
+            - "&7Toggle protections for this claim"
+            - "&fExample: PVP, Explosions"
           action: "menu:flags"
           permission: "proshield.player.access"
 
         "25":
-          material: BARRIER
-          name: "&cBack"
-          action: "close"
+          material: EMERALD
+          name: "&aExpand Claim"
+          lore:
+            - "&7Request a claim expansion"
+            - "&fOptions: +10, +20, +30 blocks"
+          action: "menu:expansion"
+          permission: "proshield.player.access"
 
         "26":
           material: REDSTONE
           name: "&cAdmin Tools"
           lore:
-            - "&7Access tools & expansion requests"
+            - "&7Admin-only tools and controls"
           action: "menu:admin-tools"
           permission: "proshield.admin"
-
-    expansion:
-      title: "&aClaim Expansion"
-      size: 27
-      items:
-        "10":
-          material: IRON_BLOCK
-          name: "&a+10 Blocks"
-          action: "expansion:request:10"
-        "11":
-          material: GOLD_BLOCK
-          name: "&a+15 Blocks"
-          action: "expansion:request:15"
-        "12":
-          material: DIAMOND_BLOCK
-          name: "&a+20 Blocks"
-          action: "expansion:request:20"
-        "13":
-          material: EMERALD_BLOCK
-          name: "&a+25 Blocks"
-          action: "expansion:request:25"
-        "14":
-          material: NETHERITE_BLOCK
-          name: "&a+30 Blocks"
-          action: "expansion:request:30"
-        "22":
-          material: BARRIER
-          name: "&cBack"
-          action: "menu:main"
-        "26":
-          material: BARRIER
-          name: "&cExit"
-          action: "close"
-
-    admin-tools:
-      title: "&cAdmin Tools & Expansion Requests"
-      size: 45
-      items:
-        "10":
-          material: PAPER
-          name: "&ePending Requests"
-          lore:
-            - "&7View and manage all player requests"
-          action: "menu:expansion-requests"
-          permission: "proshield.admin.expansions"
-
-        "12":
-          material: BOOK
-          name: "&bReload Config"
-          lore:
-            - "&7Reloads ProShield configuration"
-          action: "command:proshield reload"
-          permission: "proshield.admin"
-
-        "14":
-          material: REPEATER
-          name: "&dWorld Controls"
-          lore:
-            - "&7Manage protections for this world"
-            - "&8(affects: {world})"
-          action: "menu:world-controls"
-          permission: "proshield.admin.worldcontrols"
-
-        "16":
-          material: LEVER
-          name: "&eToggle Debug"
-          lore:
-            - "&7Turn debug mode on/off"
-          action: "command:proshield debug"
-          permission: "proshield.admin"
-
-        "19":
-          material: TRIPWIRE_HOOK
-          name: "&6Toggle Bypass (You)"
-          lore:
-            - "&7Bypass all checks while enabled"
-          action: "command:proshield bypass"
-          permission: "proshield.admin"
-
-        "22":
-          material: EMERALD
-          name: "&aApprove Selected"
-          lore:
-            - "&7Approve selected expansion request"
-          action: "expansion:approve"
-          permission: "proshield.admin.expansions"
-
-        "24":
-          material: REDSTONE
-          name: "&cDeny Selected"
-          lore:
-            - "&7Deny with reason"
-          action: "menu:deny-reasons"
-          permission: "proshield.admin.expansions"
 
         "37":
           material: BARRIER
           name: "&cBack"
-          action: "menu:main"
-        "43":
-          material: BARRIER
-          name: "&cExit"
           action: "close"
-
-    deny-reasons:
-      title: "&cDeny Expansion Request"
-      size: 45
-      items:
-        # Items dynamically populated from expansions.deny-reasons
-        "40":
-          material: BARRIER
-          name: "&cBack"
-          action: "menu:admin-tools"
         "43":
           material: BARRIER
           name: "&cExit"
@@ -341,6 +215,34 @@ gui:
       title: "&eClaim Flags"
       size: 45
       items:
+        "10":
+          material: TNT
+          name: "&cExplosions"
+          lore:
+            - "&7Toggle explosions in this claim"
+            - "&fCurrent: {state}"
+          action: "toggle:claim.explosions"
+        "12":
+          material: FLINT_AND_STEEL
+          name: "&cFire Spread"
+          lore:
+            - "&7Toggle fire spread"
+            - "&fCurrent: {state}"
+          action: "toggle:claim.fire-spread"
+        "14":
+          material: ZOMBIE_HEAD
+          name: "&cMob Damage"
+          lore:
+            - "&7Toggle mob damage inside claim"
+            - "&fCurrent: {state}"
+          action: "toggle:claim.mob-damage"
+        "16":
+          material: DIAMOND_SWORD
+          name: "&cPVP"
+          lore:
+            - "&7Toggle PVP inside claim"
+            - "&fCurrent: {state}"
+          action: "toggle:claim.pvp"
         "37":
           material: BARRIER
           name: "&cBack"
@@ -350,22 +252,72 @@ gui:
           name: "&cExit"
           action: "close"
 
-    world-controls:
-      title: "&dWorld Controls &8({world})"
+    expansion:
+      title: "&aExpansion Request"
+      size: 27
+      items:
+        "11":
+          material: EMERALD
+          name: "&a+10 Blocks"
+          lore:
+            - "&7Request to expand by 10 blocks"
+          action: "expansion:10"
+        "13":
+          material: EMERALD
+          name: "&a+20 Blocks"
+          lore:
+            - "&7Request to expand by 20 blocks"
+          action: "expansion:20"
+        "15":
+          material: EMERALD
+          name: "&a+30 Blocks"
+          lore:
+            - "&7Request to expand by 30 blocks"
+          action: "expansion:30"
+        "25":
+          material: BARRIER
+          name: "&cBack"
+          action: "menu:main"
+        "26":
+          material: BARRIER
+          name: "&cExit"
+          action: "close"
+
+    admin-tools:
+      title: "&cAdmin Tools & Expansion Requests"
       size: 45
       items:
-        "31":
-          material: REDSTONE_BLOCK
-          name: "&cReset to Defaults"
+        "10":
+          material: PAPER
+          name: "&ePending Requests"
           lore:
-            - "&7Clear overrides for this world"
-            - "&fFalls back to default settings"
-          action: "menu:world-reset-confirm"
+            - "&7View all player expansion requests"
+          action: "menu:expansion-requests"
+          permission: "proshield.admin.expansions"
+        "12":
+          material: BOOK
+          name: "&bReload Config"
+          action: "command:proshield reload"
+          permission: "proshield.admin"
+        "14":
+          material: REPEATER
+          name: "&dWorld Controls"
+          action: "menu:world-controls"
           permission: "proshield.admin.worldcontrols"
+        "16":
+          material: LEVER
+          name: "&eToggle Debug"
+          action: "command:proshield debug"
+          permission: "proshield.admin"
+        "19":
+          material: TRIPWIRE_HOOK
+          name: "&6Toggle Bypass"
+          action: "command:proshield bypass"
+          permission: "proshield.admin"
         "37":
           material: BARRIER
           name: "&cBack"
-          action: "menu:admin-tools"
+          action: "menu:main"
         "43":
           material: BARRIER
           name: "&cExit"

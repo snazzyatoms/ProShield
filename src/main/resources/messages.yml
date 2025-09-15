@@ -43,7 +43,6 @@ error:
 
 messages:
   reloaded: "&aProShield configs reloaded."
-  compass-given: "&aAdmin compass added to your inventory."
 
 # -----------------------------
 # Claim Messages
@@ -67,7 +66,6 @@ trust:
   already-trusted: "&e{player} is already trusted here."
   self: "&cYou cannot trust yourself."
   invalid-role: "&cInvalid role: {role}"
-  cannot-self: "&cYou cannot trust yourself."
   you-were-trusted: "&aYou were trusted in {claim} with role {role}."
   failed: "&cCould not trust &e{player}&c."
 
@@ -107,10 +105,6 @@ admin:
   bypass-off: "&eBypass &cDISABLED"
   debug-on: "&eDebug mode &aENABLED"
   debug-off: "&eDebug mode &cDISABLED"
-  reload: "&aConfiguration reloaded."
-  keep-items-toggled: "&aKeep items in claims: {state}"
-  wilderness-toggle-on: "&aWilderness entry messages ENABLED."
-  wilderness-toggle-off: "&cWilderness entry messages DISABLED."
 
 # -----------------------------
 # Flags
@@ -118,14 +112,6 @@ admin:
 flags:
   toggle: "&eFlag &b{flag}&e is now {state} for {claim}."
   no-claim: "&cNo claim found here to toggle flags."
-
-# -----------------------------
-# Keep Items / Drops
-# -----------------------------
-keep-items:
-  enabled: "&aItems will now persist inside claims."
-  disabled: "&cItems will now despawn as normal."
-  despawned: "&7Some old dropped items have despawned."
 
 # -----------------------------
 # Claim Expiry / Purge
@@ -151,3 +137,11 @@ compass:
 # -----------------------------
 debug:
   generic: "&8[DEBUG] &7{message}"
+
+# -----------------------------
+# (Optional legacy — commented)
+# -----------------------------
+# keep-items:
+#   enabled: "&aItems will now persist inside claims."
+#   disabled: "&cItems will now despawn as normal."
+#   despawned: "&7Some old dropped items have despawned."

@@ -81,7 +81,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             case "reload" -> {
-                if (!sender.hasPermission("proshield.admin.reload")) {
+                if (!sender.hasPermission("proshield.admin")) {
                     sender.sendMessage(ChatColor.RED + "No permission.");
                     return true;
                 }
@@ -103,7 +103,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             case "debug" -> {
-                if (!sender.hasPermission("proshield.admin.debug")) {
+                if (!sender.hasPermission("proshield.admin")) {
                     sender.sendMessage(ChatColor.RED + "No permission.");
                     return true;
                 }
@@ -114,6 +114,10 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             case "bypass" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+                    return true;
+                }
+                if (!sender.hasPermission("proshield.admin")) {
+                    sender.sendMessage(ChatColor.RED + "No permission.");
                     return true;
                 }
                 if (plugin.isBypassing(player.getUniqueId())) {

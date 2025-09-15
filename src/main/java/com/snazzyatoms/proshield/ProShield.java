@@ -33,6 +33,7 @@ public class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        // Load default config (includes despawn-inside + interval toggles)
         saveDefaultConfig();
         messages = new MessagesUtil(this);
 
@@ -41,7 +42,7 @@ public class ProShield extends JavaPlugin {
         roleManager = new ClaimRoleManager(this);
         guiManager = new GUIManager(this);
 
-        // Load persisted data (stubs retained)
+        // Load persisted data
         roleManager.loadAll();
         plotManager.loadAll();
 
@@ -57,7 +58,9 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this); // NEW: full protection wiring
+
+        // ✅ Register full protection listener (handles fire, explosions, safezone, pets, despawn sweeps, etc.)
+        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
 
         getLogger().info("ProShield enabled successfully.");
     }

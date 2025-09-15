@@ -7,6 +7,7 @@ import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -38,8 +39,9 @@ public class ProtectionListener implements Listener {
         this.plotManager = plugin.getPlotManager();
         this.roleManager = plugin.getRoleManager();
 
-        // Start periodic safezone mob cleanup
-        long interval = 20L * 30; // every 30 seconds
+        // Configurable safezone sweep interval
+        int seconds = plugin.getConfig().getInt("protection.mobs.despawn-interval-seconds", 30);
+        long interval = 20L * Math.max(5, seconds); // minimum 5s
         Bukkit.getScheduler().runTaskTimer(plugin, this::sweepSafezoneMobs, interval, interval);
     }
 

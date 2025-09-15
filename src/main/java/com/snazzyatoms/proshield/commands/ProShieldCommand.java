@@ -72,12 +72,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ChatColor.RED + "Only players can use this command.");
                     return true;
                 }
-                if (plugin.getCompassManager().hasCompass(player)) {
-                    player.sendMessage(ChatColor.YELLOW + "You already have a ProShield Compass.");
-                } else {
-                    plugin.getCompassManager().giveCompass(player);
-                    player.sendMessage(ChatColor.GREEN + "A ProShield Compass has been given to you.");
-                }
+                plugin.getCompassManager().giveCompass(player); // handles duplicates internally
+                player.sendMessage(ChatColor.GREEN + "A ProShield Compass has been given to you.");
                 return true;
             }
             case "reload" -> {

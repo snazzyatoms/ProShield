@@ -145,9 +145,15 @@ public class GUIManager {
                     meta.setLore(lore);
                 }
 
-                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                stack.setItemMeta(meta);
+                // Hide all attributes & extra text
+                meta.addItemFlags(
+                        ItemFlag.HIDE_ATTRIBUTES,
+                        ItemFlag.HIDE_ENCHANTS,
+                        ItemFlag.HIDE_UNBREAKABLE,
+                        ItemFlag.HIDE_POTION_EFFECTS
+                );
 
+                stack.setItemMeta(meta);
                 inv.setItem(slot, stack);
             }
         }
@@ -180,9 +186,20 @@ public class GUIManager {
         int[] slots = headFillPattern(size);
         int idx = 0;
 
-        for (Map.Entry<String, String> e : trusted.entrySet()) {
-            if (idx >= slots.length) break;
-            inv.setItem(slots[idx++], createPlayerHead(e.getKey(), e.getValue(), plot.getId()));
+        if (trusted.isEmpty()) {
+            ItemStack placeholder = new ItemStack(Material.BARRIER);
+            ItemMeta meta = placeholder.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.RED + "No trusted players yet");
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                placeholder.setItemMeta(meta);
+            }
+            inv.setItem(size / 2, placeholder);
+        } else {
+            for (Map.Entry<String, String> e : trusted.entrySet()) {
+                if (idx >= slots.length) break;
+                inv.setItem(slots[idx++], createPlayerHead(e.getKey(), e.getValue(), plot.getId()));
+            }
         }
 
         awaitingRolePlot.put(player.getUniqueId(), plot.getId());
@@ -215,7 +232,12 @@ public class GUIManager {
             lore.add(ChatColor.RED + "Shift-Click: Untrust");
 
             meta.setLore(lore);
-            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            meta.addItemFlags(
+                    ItemFlag.HIDE_ATTRIBUTES,
+                    ItemFlag.HIDE_ENCHANTS,
+                    ItemFlag.HIDE_UNBREAKABLE,
+                    ItemFlag.HIDE_POTION_EFFECTS
+            );
             skull.setItemMeta(meta);
         }
         return skull;
@@ -268,7 +290,8 @@ public class GUIManager {
                 case "safe zone" -> toggleFlag(plot, "safezone", player);
                 case "back" -> { openMenu(player, "main"); return; }
             }
-            openMenu(player, "flags");
+            // reopen flags menu only if not "back"
+            if (!name.equalsIgnoreCase("back")) openMenu(player, "flags");
             return;
         }
 

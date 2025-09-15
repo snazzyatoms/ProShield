@@ -1,22 +1,25 @@
-// src/main/java/com/snazzyatoms/proshield/compass/CompassListener.java
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 /**
- * Handles ProShield Compass interactions.
- * Opens the main ProShield GUI when a player right-clicks
- * with the ProShield compass in hand.
+ * CompassListener
+ * ---------------
+ * - Opens GUI when compass is right-clicked
+ * - Schedules auto-despawn when ProShield Compass is dropped
  */
 public class CompassListener implements Listener {
 
@@ -33,24 +36,46 @@ public class CompassListener implements Listener {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        // Must be a compass with custom name
         if (item == null || item.getType() != Material.COMPASS) return;
 
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
         String displayName = ChatColor.stripColor(meta.getDisplayName());
-        if (displayName == null) return;
+        if (displayName == null || !displayName.equalsIgnoreCase("ProShield Compass")) return;
 
-        // Match case-insensitive name
-        if (!displayName.equalsIgnoreCase("ProShield Compass")) return;
-
-        // Only trigger on right-click
         Action action = event.getAction();
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
 
-        // Open GUI
         guiManager.openMenu(player, "main");
         event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onCompassDrop(PlayerDropItemEvent event) {
+        Item dropped = event.getItemDrop();
+        ItemStack stack = dropped.getItemStack();
+
+        if (stack.getType() != Material.COMPASS) return;
+        ItemMeta meta = stack.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
+
+        String displayName = ChatColor.stripColor(meta.getDisplayName());
+        if (displayName == null || !displayName.equalsIgnoreCase("ProShield Compass")) return;
+
+        // Read delay from config (default 600 ticks = 30s)
+        int delayTicks = plugin.getConfig().getInt("settings.compass-despawn-delay", 600);
+
+        if (delayTicks > 0) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!dropped.isDead() && dropped.isValid()) {
+                    dropped.remove();
+                    Player player = event.getPlayer();
+                    if (player != null && player.isOnline()) {
+                        player.sendMessage(ChatColor.RED + "Your dropped ProShield Compass has despawned.");
+                    }
+                }
+            }, delayTicks);
+        }
     }
 }

@@ -86,7 +86,7 @@ gui:
           lore:
             - "&7Protect your land"
             - "&fRadius: 50 blocks by default"
-          action: "command:claim"
+          action: "command:proshield claim"
 
         "13":
           material: PAPER
@@ -103,8 +103,8 @@ gui:
           name: "&cUnclaim Land"
           lore:
             - "&7Remove your claim"
-          action: "command:unclaim"
-
+          action: "command:proshield unclaim"
+          
         "21":
           material: PLAYER_HEAD
           name: "&bTrusted Players"

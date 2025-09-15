@@ -18,24 +18,13 @@ import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
 
-/**
- * GUIManager
- * - Opens menus from config
- * - Handles dynamic state rendering (flags, world-controls)
- * - Wires Admin Tools (approve/deny requests, world controls)
- * - Restores chat-driven flows for:
- *     • Expansion deny (manual reason)
- *     • Roles add/remove via chat input
- * - Adds reset confirmation submenu with dynamic world title
- * - Permission-aware rendering (players vs admins vs senior admins)
- */
 public class GUIManager {
 
     private final ProShield plugin;
 
     private static final List<String> PERM_KEYS = List.of("build", "interact", "containers", "unclaim");
 
-    // ===== Chat-driven state =====
+    // Chat-driven state
     private final Set<UUID> awaitingDenyReason = new HashSet<>();
 
     private static final class RoleActionCtx {
@@ -53,9 +42,65 @@ public class GUIManager {
         this.plugin = plugin;
     }
 
-    /* ===================
-     * Open Menu (general)
-     * =================== */
+    // ===== Public helpers used by ChatListener =====
+    public boolean isAwaitingReason(Player player) {
+        return awaitingDenyReason.contains(player.getUniqueId());
+    }
+
+    public void provideManualReason(Player player, String input) {
+        if (!isAwaitingReason(player)) return;
+
+        awaitingDenyReason.remove(player.getUniqueId());
+        String reason = ChatColor.stripColor(input == null ? "" : input.trim());
+        if (reason.isEmpty()) {
+            plugin.getMessagesUtil().send(player, "&cCancelled: empty reason.");
+            return;
+        }
+
+        Object mgr = safeExpansionManager();
+        if (mgr != null) {
+            try {
+                // mgr.denySelected(Player, String)
+                mgr.getClass().getMethod("denySelected", Player.class, String.class).invoke(mgr, player, reason);
+                plugin.getMessagesUtil().send(player, "&cDenied request: &7" + reason);
+            } catch (Throwable t) {
+                plugin.getMessagesUtil().send(player, "&cDeny failed: " + t.getMessage());
+            }
+        } else {
+            plugin.getMessagesUtil().send(player, "&7(Deny manual) &cNo expansion manager is present.");
+        }
+    }
+
+    public boolean isAwaitingRoleAction(Player player) {
+        return awaitingRoleAction.containsKey(player.getUniqueId());
+    }
+
+    public void handleRoleChatInput(Player player, String input) {
+        RoleActionCtx ctx = awaitingRoleAction.remove(player.getUniqueId());
+        if (ctx == null) return;
+
+        String target = ChatColor.stripColor(input == null ? "" : input.trim());
+        if (target.isEmpty()) {
+            plugin.getMessagesUtil().send(player, "&cCancelled: empty player name.");
+            return;
+        }
+
+        ClaimRoleManager rm = plugin.getRoleManager();
+        boolean ok;
+        if (ctx.type == RoleActionCtx.Type.ADD) {
+            ok = rm.addTrusted(ctx.plotId, target);
+            if (ok) plugin.getMessagesUtil().send(player, "&aTrusted &f" + target + " &ain this claim.");
+        } else {
+            ok = rm.removeTrusted(ctx.plotId, target);
+            if (ok) plugin.getMessagesUtil().send(player, "&cUntrusted &f" + target + " &cfrom this claim.");
+        }
+
+        if (!ok) {
+            plugin.getMessagesUtil().send(player, "&cNo change made (maybe already set?).");
+        }
+    }
+    // ===== End public helpers =====
+
     public void openMenu(Player player, String menuName) {
         if (menuName.equalsIgnoreCase("roles")) {
             openRolesMenu(player);
@@ -66,17 +111,11 @@ public class GUIManager {
             return;
         }
         if (menuName.equalsIgnoreCase("world-controls")) {
-            if (hasSeniorWorldControls(player)) {
-                openWorldControlsMenu(player);
-            } else {
-                plugin.getMessagesUtil().send(player, "&cYou lack permission: proshield.admin.worldcontrols");
-            }
+            openWorldControlsMenu(player);
             return;
         }
         if (menuName.equalsIgnoreCase("world-reset-confirm")) {
-            if (hasSeniorWorldControls(player)) {
-                openWorldResetConfirmMenu(player);
-            }
+            openWorldResetConfirmMenu(player);
             return;
         }
 
@@ -96,9 +135,6 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
-    /* ======================
-     * Flags menu
-     * ====================== */
     private void openFlagsMenu(Player player) {
         Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
         if (plot == null) {
@@ -114,13 +150,50 @@ public class GUIManager {
         int size = menuSec.getInt("size", 27);
         Inventory inv = Bukkit.createInventory(null, size, title);
 
-        fillMenuItems(inv, menuSec, player);
+        ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
+        if (itemsSec != null) {
+            for (String slotStr : itemsSec.getKeys(false)) {
+                int slot = parseIntSafe(slotStr, -1);
+                if (slot < 0) continue;
+
+                ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
+                if (itemSec == null) continue;
+
+                String action = itemSec.getString("action", "");
+                String flagKey = action.startsWith("flag:") ? action.substring("flag:".length()) : null;
+
+                Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
+                if (mat == null) mat = Material.STONE;
+
+                ItemStack stack = new ItemStack(mat);
+                ItemMeta meta = stack.getItemMeta();
+                if (meta == null) continue;
+
+                String name = itemSec.getString("name", "");
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+
+                List<String> lore = new ArrayList<>();
+                for (String line : itemSec.getStringList("lore")) {
+                    if (flagKey != null) {
+                        boolean state = plot.getFlag(flagKey,
+                                plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false));
+                        String stateText = state ? "&aON" : "&cOFF";
+                        lore.add(ChatColor.translateAlternateColorCodes('&',
+                                line.replace("{state}", stateText)));
+                    } else {
+                        lore.add(ChatColor.translateAlternateColorCodes('&', line));
+                    }
+                }
+                meta.setLore(lore);
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                stack.setItemMeta(meta);
+                inv.setItem(slot, stack);
+            }
+        }
+
         player.openInventory(inv);
     }
 
-    /* ======================
-     * World Controls
-     * ====================== */
     private void openWorldControlsMenu(Player player) {
         ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus.world-controls");
         if (menuSec == null) return;
@@ -135,9 +208,6 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
-    /* ======================
-     * World Reset Confirm
-     * ====================== */
     private void openWorldResetConfirmMenu(Player player) {
         ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus.world-reset-confirm");
         if (menuSec == null) {
@@ -154,9 +224,6 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
-    /* ======================
-     * Roles menu
-     * ====================== */
     private void openRolesMenu(Player player) {
         Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
         if (plot == null) {
@@ -216,20 +283,160 @@ public class GUIManager {
         return skull;
     }
 
-    /* ===============
-     * Handle Clicks
-     * =============== */
     public void handleClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getCurrentItem() == null || event.getCurrentItem().getItemMeta() == null) return;
 
-        // Actions handled as before (flags, roles, deny reasons, etc.)
-        // All permission gating handled via fillMenuItems now
+        String title = event.getView().getTitle();
+        String itemName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
+
+        ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
+        if (menus == null) return;
+
+        ConfigurationSection matchedMenu = null;
+        for (String key : menus.getKeys(false)) {
+            ConfigurationSection menuSec = menus.getConfigurationSection(key);
+            if (menuSec == null) continue;
+            String cfgTitle = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&',
+                    menuSec.getString("title", ""))).replace("{world}", player.getWorld().getName());
+            if (cfgTitle.equalsIgnoreCase(ChatColor.stripColor(title))) {
+                matchedMenu = menuSec;
+                break;
+            }
+        }
+        if (matchedMenu == null) return;
+
+        ConfigurationSection itemsSec = matchedMenu.getConfigurationSection("items");
+        if (itemsSec == null) return;
+
+        String action = null;
+        for (String slotStr : itemsSec.getKeys(false)) {
+            ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
+            if (itemSec == null) continue;
+            String displayName = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&',
+                    itemSec.getString("name", "")));
+            if (displayName.equalsIgnoreCase(itemName)) {
+                action = itemSec.getString("action", "");
+                break;
+            }
+        }
+        if (action == null) return;
+
+        if (action.equalsIgnoreCase("close")) {
+            player.closeInventory();
+            return;
+        }
+
+        if (action.startsWith("flag:")) {
+            String flagKey = action.substring("flag:".length());
+            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+            if (plot != null) {
+                toggleFlag(plot, flagKey, player);
+                openFlagsMenu(player);
+            } else {
+                plugin.getMessagesUtil().send(player, "&cYou must be inside a claim.");
+            }
+            return;
+        }
+
+        if (action.startsWith("menu:")) {
+            String menuName = action.substring("menu:".length());
+            openMenu(player, menuName);
+            return;
+        }
+
+        if (action.startsWith("command:")) {
+            String cmdToRun = action.substring("command:".length());
+            player.performCommand(cmdToRun);
+            return;
+        }
+
+        if (action.equalsIgnoreCase("expansion:approve")) {
+            Object mgr = safeExpansionManager();
+            if (mgr != null) {
+                try {
+                    mgr.getClass().getMethod("approveSelected", Player.class).invoke(mgr, player);
+                } catch (Throwable t) {
+                    plugin.getMessagesUtil().send(player, "&cApprove failed: " + t.getMessage());
+                }
+            } else {
+                plugin.getMessagesUtil().send(player, "&7(Approve selected) &cNo expansion manager is present.");
+            }
+            return;
+        }
+
+        if (action.equalsIgnoreCase("expansion:deny")) {
+            openMenu(player, "deny-reasons");
+            return;
+        }
+
+        if (action.startsWith("reason:")) {
+            String key = action.substring("reason:".length());
+            if (key.equalsIgnoreCase("other")) {
+                awaitingDenyReason.add(player.getUniqueId());
+                player.closeInventory();
+                plugin.getMessagesUtil().send(player,
+                        "&ePlease type the &fdeny reason &ein chat. &7(Your next message will be used.)");
+                return;
+            } else {
+                String reason = plugin.getConfig().getString("expansion.deny-reasons." + key, key);
+                Object mgr = safeExpansionManager();
+                if (mgr != null) {
+                    try {
+                        mgr.getClass().getMethod("denySelected", Player.class, String.class).invoke(mgr, player, reason);
+                        plugin.getMessagesUtil().send(player, "&cDenied request: &7" + reason);
+                    } catch (Throwable t) {
+                        plugin.getMessagesUtil().send(player, "&cDeny failed: " + t.getMessage());
+                    }
+                } else {
+                    plugin.getMessagesUtil().send(player, "&7(Deny " + key + ") &cNo expansion manager is present.");
+                }
+                return;
+            }
+        }
+
+        if (action.equalsIgnoreCase("role:add") || action.equalsIgnoreCase("role:remove")) {
+            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+            if (plot == null) {
+                plugin.getMessagesUtil().send(player, "&cYou must stand inside a claim to manage roles.");
+                return;
+            }
+            if (!plot.isOwner(player.getUniqueId())) {
+                plugin.getMessagesUtil().send(player, "&cOnly the claim owner can modify roles.");
+                return;
+            }
+            RoleActionCtx.Type type = action.endsWith("add") ? RoleActionCtx.Type.ADD : RoleActionCtx.Type.REMOVE;
+            awaitingRoleAction.put(player.getUniqueId(), new RoleActionCtx(type, plot.getId()));
+            player.closeInventory();
+            if (type == RoleActionCtx.Type.ADD) {
+                plugin.getMessagesUtil().send(player, "&eType a player name to &aTRUST&7 in chat.");
+            } else {
+                plugin.getMessagesUtil().send(player, "&eType a player name to &cUNTRUST&7 in chat.");
+            }
+            return;
+        }
+
+        if (action.startsWith("toggle:world.")) {
+            String key = action.substring("toggle:world.".length());
+            toggleWorldControl(player, key);
+            openWorldControlsMenu(player);
+            return;
+        }
+
+        if (action.equalsIgnoreCase("reset:world")) {
+            openWorldResetConfirmMenu(player);
+            return;
+        }
+
+        if (action.equalsIgnoreCase("reset:world.confirm")) {
+            resetWorldControls(player);
+            openWorldControlsMenu(player);
+            return;
+        }
     }
 
-    /* ===============
-     * Helpers
-     * =============== */
+    // ===== helpers =====
+
     private void fillMenuItems(Inventory inv, ConfigurationSection menuSec, Player player) {
         ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
         if (itemsSec == null) return;
@@ -241,7 +448,7 @@ public class GUIManager {
             ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
             if (itemSec == null) continue;
 
-            // Permission gating: Ops see all
+            // Permission gating (operators always see)
             String requiredPerm = itemSec.getString("permission", "");
             if (!requiredPerm.isEmpty()) {
                 if (!player.isOp() && !player.hasPermission(requiredPerm)) {
@@ -272,6 +479,45 @@ public class GUIManager {
         }
     }
 
+    private void toggleFlag(Plot plot, String key, Player actor) {
+        boolean current = plot.getFlag(key, plugin.getConfig().getBoolean("claims.default-flags." + key, false));
+        plot.setFlag(key, !current);
+        String stateText = !current ? "&aON" : "&cOFF";
+        plugin.getMessagesUtil().send(actor, "&eFlag &b" + key + "&e is now " + stateText + "&e for this claim.");
+    }
+
+    private void toggleWorldControl(Player player, String key) {
+        String world = player.getWorld().getName();
+        String base = "protection.world-controls";
+        boolean current = getWorldControl(world, key);
+        plugin.getConfig().set(base + ".worlds." + world + "." + key, !current);
+        saveConfigQuiet();
+        String stateText = !current ? "&aON" : "&cOFF";
+        plugin.getMessagesUtil().send(player, "&eWorld control &b" + key + "&e is now " + stateText + "&e in &f" + world + "&e.");
+    }
+
+    private void resetWorldControls(Player player) {
+        String world = player.getWorld().getName();
+        String path = "protection.world-controls.worlds." + world;
+        plugin.getConfig().set(path, null); // remove overrides -> fallback to defaults
+        saveConfigQuiet();
+        plugin.getMessagesUtil().send(player, "&aWorld controls reset to defaults for &f" + world + "&a.");
+    }
+
+    private boolean getWorldControl(String world, String key) {
+        String base = "protection.world-controls";
+        if (plugin.getConfig().contains(base + ".worlds." + world + "." + key)) {
+            return plugin.getConfig().getBoolean(base + ".worlds." + world + "." + key);
+        }
+        return plugin.getConfig().getBoolean(base + ".defaults." + key, true);
+    }
+
+    private void saveConfigQuiet() {
+        try {
+            plugin.getConfig().save(new File(plugin.getDataFolder(), "config.yml"));
+        } catch (Exception ignored) {}
+    }
+
     private int[] headFillPattern(int size) {
         if (size <= 27) return new int[]{10,11,12,13,14,15,16,19,20,21,22,23,24,25};
         if (size <= 36) return new int[]{10,11,12,13,14,15,16,19,20,21,22,23,24,25,28,29,30,31,32,33,34};
@@ -284,15 +530,9 @@ public class GUIManager {
 
     private Object safeExpansionManager() {
         try {
-            var m = ProShield.class.getMethod("getExpansionManager");
-            return m.invoke(plugin);
+            return ProShield.class.getMethod("getExpansionManager").invoke(plugin);
         } catch (Throwable ignored) {
             return null;
         }
-    }
-
-    // --- Permission helpers ---
-    private boolean hasSeniorWorldControls(Player p) {
-        return p.isOp() || p.hasPermission("proshield.admin.worldcontrols");
     }
 }

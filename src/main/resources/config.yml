@@ -1,10 +1,12 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 (Finalized for release build + Expansion Requests + Roles GUI)
+# Version: 1.2.5 (Finalized for release build + Expansion Requests + Roles GUI + Compass Enhancements)
 # ==========================================================
 
 settings:
   give-compass-on-join: true
+  compass-despawn-delay: 600      # ticks (20 = 1 second). Default: 600 (30s)
+  compass-auto-replace: false     # if true, replaces compass automatically in hotbar after despawn
 
 protection:
   fire:

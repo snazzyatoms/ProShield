@@ -11,41 +11,9 @@ description: >
 
 commands:
   proshield:
-    description: Root ProShield command (help menu + admin tools dispatcher)
-    usage: /<command> [help|reload|debug|bypass|admin|compass|info]
+    description: Root ProShield command (help, claims, admin tools)
+    usage: /<command> [help|claim|unclaim|info|compass|reload|debug|bypass|admin]
     aliases: [ps, shield]
-    permission: proshield.use
-
-  claim:
-    description: Claim your current chunk or land
-    usage: /<command>
-    permission: proshield.use
-
-  unclaim:
-    description: Unclaim your current chunk or land
-    usage: /<command>
-    permission: proshield.use
-
-  trust:
-    description: Trust a player with optional role
-    usage: /<command> <player> [role]
-    permission: proshield.use
-    aliases: [addtrust]
-
-  untrust:
-    description: Remove trust from a player
-    usage: /<command> <player>
-    permission: proshield.use
-    aliases: [removetrust]
-
-  roles:
-    description: Open the trusted players / roles GUI
-    usage: /<command>
-    permission: proshield.use
-
-  transfer:
-    description: Transfer claim ownership to another player
-    usage: /<command> <player>
     permission: proshield.use
 
 permissions:

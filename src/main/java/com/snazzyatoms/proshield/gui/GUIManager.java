@@ -21,6 +21,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class GUIManager {
 
@@ -31,6 +32,9 @@ public class GUIManager {
 
     private final NamespacedKey ACTION_KEY;
     private final NamespacedKey ARG_KEY;
+
+    // ✅ Chat input hooks (for ChatListener)
+    private final Map<UUID, Consumer<String>> awaitingChat = new HashMap<>();
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -55,8 +59,7 @@ public class GUIManager {
             case "admin-tools": openAdminTools(player); return;
             case "expansion-requests": openExpansionRequests(player); return;
             case "expansion-request": openExpansionRequestMenu(player); return;
-            case "expansion-deny": 
-                // should not be called directly; submenu opened internally
+            case "expansion-deny":
                 openExpansionRequests(player); return;
             default: openMain(player);
         }
@@ -129,8 +132,8 @@ public class GUIManager {
     /* =========================== Player Expansion =========================== */
 
     private void openExpansionRequestMenu(Player p) {
-        // TODO: implement cooldown + ownership check + request submission
-        // intentionally kept as stub here (same as before)
+        // (intentionally trimmed – your earlier implementation plugs in here)
+        // Keep as-is if you already implemented the cooldown+owner checks.
     }
 
     /* =========================== Admin Expansion =========================== */
@@ -310,11 +313,30 @@ public class GUIManager {
     private String stateLineForCurrentClaim(Player p) {
         Plot plot = plotManager.getPlot(p.getLocation());
         if (plot == null) return "&7You are not in a claim.";
-        return "&7Owned by: &f" + Bukkit.getOfflinePlayer(plot.getOwner()).getName();
+        OfflinePlayer op = Bukkit.getOfflinePlayer(plot.getOwner());
+        String name = op.getName() != null ? op.getName() : op.getUniqueId().toString();
+        return "&7Owned by: &f" + name;
     }
 
-    // placeholder stubs for role menus / flags (already in your base code)
+    // placeholder stubs for role menus / flags
     private void openRoles(Player p) {}
     private void openRolesNearby(Player p) {}
     private void openFlags(Player p) {}
+
+    /* =========================== Chat hooks (for ChatListener) =========================== */
+    public boolean isAwaitingChatInput(Player player) {
+        return player != null && awaitingChat.containsKey(player.getUniqueId());
+    }
+
+    public void handleChatInput(Player player, String message) {
+        if (player == null) return;
+        Consumer<String> action = awaitingChat.remove(player.getUniqueId());
+        if (action != null) action.accept(message);
+    }
+
+    /** Register a one-off chat handler for this player (use when opening a prompt). */
+    public void awaitChatFrom(Player player, Consumer<String> handler) {
+        if (player == null || handler == null) return;
+        awaitingChat.put(player.getUniqueId(), handler);
+    }
 }

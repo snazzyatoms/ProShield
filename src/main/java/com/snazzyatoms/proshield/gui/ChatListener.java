@@ -6,34 +6,43 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
+/**
+ * ChatListener
+ * - Captures chat input for expansion deny manual reasons
+ * - Captures chat input for role add/remove flows
+ * - Fully synchronized with GUIManager (no redundant arguments)
+ */
 public class ChatListener implements Listener {
 
     private final ProShield plugin;
+    private final GUIManager guiManager;
 
-    public ChatListener(ProShield plugin) {
+    public ChatListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
+        this.guiManager = guiManager;
     }
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        GUIManager gui = plugin.getGuiManager(); // <-- use instance, not static
 
         // --- EXPANSION DENY REASONS ---
-        if (gui.isAwaitingReason(player)) {
+        if (guiManager.isAwaitingReason(player)) {
             event.setCancelled(true);
             String reason = event.getMessage();
+            // Run on main thread
             plugin.getServer().getScheduler().runTask(plugin,
-                    () -> gui.provideManualReason(player, reason, plugin));
+                    () -> guiManager.provideManualReason(player, reason));
             return;
         }
 
         // --- ROLES (trusted players add/remove via chat) ---
-        if (gui.isAwaitingRoleAction(player)) {
+        if (guiManager.isAwaitingRoleAction(player)) {
             event.setCancelled(true);
             String message = event.getMessage();
+            // Run on main thread
             plugin.getServer().getScheduler().runTask(plugin,
-                    () -> gui.handleRoleChatInput(player, message, plugin));
+                    () -> guiManager.handleRoleChatInput(player, message));
         }
     }
 }

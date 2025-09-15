@@ -29,23 +29,7 @@ permissions:
 
   # --- Admin Core ---
   proshield.admin:
-    description: Access Admin Tools menu (reload, debug, bypass, general admin functions)
-    default: op
-    children:
-      proshield.admin.reload: true
-      proshield.admin.debug: true
-      proshield.admin.bypass: true
-
-  proshield.admin.reload:
-    description: Reload ProShield config
-    default: op
-
-  proshield.admin.debug:
-    description: Toggle debug mode
-    default: op
-
-  proshield.admin.bypass:
-    description: Toggle bypass mode
+    description: Access all Admin Tools (reload, debug, bypass, admin GUI)
     default: op
 
   # --- Senior Admin (High Control) ---

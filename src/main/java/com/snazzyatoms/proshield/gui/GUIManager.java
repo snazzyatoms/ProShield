@@ -7,7 +7,6 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import com.snazzyatoms.proshield.expansions.ExpansionRequest;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
@@ -17,7 +16,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -26,15 +24,6 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * GUI-only manager:
- * - Main menu (claim, unclaim, info, roles, flags, admin tools)
- * - Roles flow: Nearby -> Assign Role, Manage Trusted -> edit/remove
- * - Flags: toggle per-claim flags from config.flags.available
- * - Admin tools: reload/debug/bypass/world controls, expansion requests
- *
- * All buttons use PDC (localizedName fallback) to carry action payloads.
- */
 public class GUIManager {
 
     private final ProShield plugin;
@@ -67,12 +56,88 @@ public class GUIManager {
             case "flags": openFlags(player); return;
             case "admin-tools": openAdminTools(player); return;
             case "expansion-requests": openExpansionRequests(player); return;
+            case "expansion-request": openExpansionRequestMenu(player); return; // NEW
             default: openMain(player); return;
         }
     }
 
-    // ... [unchanged methods: openMain, openRoles, openRolesNearby, openAssignRoleMenu, openManageTrusted, openFlags, openAdminTools]
+    private void openMain(Player p) {
+        Inventory inv = makeInv("gui.menus.main.title", "&6ProShield Menu", 45);
+        inv.setItem(11, button(Material.GRASS_BLOCK, "&aClaim Land",
+                Arrays.asList("&7Protect your land", "&7Radius: &f" + plugin.getConfig().getInt("claims.default-radius", 50) + " &7blocks"),
+                "cmd", "proshield claim"));
+        inv.setItem(13, button(Material.PAPER, "&eClaim Info",
+                Arrays.asList("&7Shows your current claim details", stateLineForCurrentClaim(p)),
+                "cmd", "proshield info"));
+        inv.setItem(15, button(Material.BARRIER, "&cUnclaim Land",
+                Collections.singletonList("&7Remove your claim"), "cmd", "proshield unclaim"));
+        inv.setItem(21, button(Material.PLAYER_HEAD, "&bTrusted Players",
+                Arrays.asList("&7Manage who can build in your claim", "&7Add/Remove roles"),
+                "menu", "roles"));
+        inv.setItem(23, button(Material.CHEST, "&eClaim Flags",
+                Arrays.asList("&7Toggle special protections", stateLineForCurrentClaim(p)),
+                "menu", "flags"));
 
+        // NEW: Request Expansion
+        if (plugin.getConfig().getBoolean("claims.expansion.enabled", true)) {
+            inv.setItem(31, button(Material.EMERALD, "&aRequest Expansion",
+                    Arrays.asList("&7Expand your claim size",
+                            "&7Only claim owners may request"),
+                    "menu", "expansion-request"));
+        }
+
+        if (p.isOp() || p.hasPermission("proshield.admin")) {
+            inv.setItem(26, button(Material.REDSTONE, "&cAdmin Tools",
+                    Arrays.asList("&7Reload, Debug, Bypass, World Controls", "&7Manage expansion requests"),
+                    "menu", "admin-tools"));
+        }
+
+        inv.setItem(40, button(Material.BARRIER, "&cExit", Collections.singletonList("&7Close this menu"), "close", ""));
+        p.openInventory(inv);
+    }
+
+    // ======================================================================
+    // Player Expansion Request Menu (NEW)
+    // ======================================================================
+    private void openExpansionRequestMenu(Player p) {
+        Inventory inv = makeInv("gui.menus.expansion-request.title", "&aRequest Expansion", 45);
+
+        Plot plot = plotManager.getPlot(p.getLocation());
+        if (plot == null || !p.getUniqueId().equals(plot.getOwner())) {
+            inv.setItem(22, info(Material.BARRIER, "&cNot Your Claim",
+                    Arrays.asList("&7You must be inside",
+                                  "&7your own claim to request expansion.")));
+            backExit(inv, "main");
+            p.openInventory(inv);
+            return;
+        }
+
+        List<Integer> steps = plugin.getConfig().getIntegerList("claims.expansion.step-options");
+        if (steps.isEmpty()) {
+            inv.setItem(22, info(Material.BARRIER, "&cNo options configured",
+                    Collections.singletonList("&7Set claims.expansion.step-options in config.yml")));
+            backExit(inv, "main");
+            p.openInventory(inv);
+            return;
+        }
+
+        int[] slots = gridSlots();
+        int i = 0;
+        for (int step : steps) {
+            ItemStack item = button(Material.EMERALD_BLOCK, "&a+" + step + " blocks",
+                    Arrays.asList("&7Request to expand your claim",
+                            "&7by &f" + step + " &7blocks"),
+                    "expansion-request-submit", String.valueOf(step));
+            if (i < slots.length) inv.setItem(slots[i++], item);
+        }
+
+        backExit(inv, "main");
+        p.openInventory(inv);
+    }
+
+    // ======================================================================
+    // Admin Expansion Requests (existing)
+    // ======================================================================
     private void openExpansionRequests(Player p) {
         Inventory inv = makeInv("gui.menus.expansion-requests.title", "&ePending Requests", 45);
         List<ExpansionRequest> requests = requestManager.getPendingRequests();
@@ -138,7 +203,6 @@ public class GUIManager {
     /* ====================================================================== */
     /* Click Handling                                                          */
     /* ====================================================================== */
-
     public void handleClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player p)) return;
         if (event.getCurrentItem() == null) return;
@@ -153,6 +217,26 @@ public class GUIManager {
             case "close": p.closeInventory(); break;
             case "menu": openMenu(p, arg); break;
             case "cmd": p.closeInventory(); p.performCommand(arg); break;
+
+            case "expansion-request-submit": {
+                try {
+                    int blocks = Integer.parseInt(arg);
+                    Plot plot = plotManager.getPlot(p.getLocation());
+                    if (plot == null || !p.getUniqueId().equals(plot.getOwner())) {
+                        messages.send(p, "&cYou must be inside your own claim to request an expansion.");
+                        break;
+                    }
+                    ExpansionRequest req = new ExpansionRequest(p.getUniqueId(), blocks);
+                    requestManager.addRequest(req);
+                    messages.send(p, plugin.getConfig().getString("messages.expansion-request")
+                            .replace("{blocks}", String.valueOf(blocks)));
+                    sound(p, Sound.UI_BUTTON_CLICK);
+                    p.closeInventory();
+                } catch (Exception ex) {
+                    messages.send(p, "&cFailed to create expansion request.");
+                }
+                break;
+            }
 
             case "expansion-manage": {
                 String[] parts = arg.split("\\|");
@@ -181,12 +265,12 @@ public class GUIManager {
                 break;
             }
 
-            // [keep all your other existing cases: assign-role, role-assign, trusted-edit, flag-toggle, etc.]
+            // keep your other cases: assign-role, role-assign, trusted-edit, flag-toggle, etc.
         }
     }
 
     /* ====================================================================== */
     /* Helpers (color, markAction, toggleButton, gridSlots, backExit, etc.)   */
     /* ====================================================================== */
-    // ... [your existing helper methods stay as-is]
+    // ... keep all your existing helper methods here
 }

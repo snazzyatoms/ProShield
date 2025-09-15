@@ -60,7 +60,8 @@ help:
     - "&bProShield Help &7- Player"
     - "&a/claim &7→ Claim your current land (50 block radius)"
     - "&a/unclaim &7→ Unclaim your land"
-    - "&a/proshield compass &7→ Receive your ProShield Compass"
+    - "&a/proshield compass &7→ Receive your ProShield Compass (replaces if lost)"
+    - "&7Dropped compasses despawn automatically after &f{compass-despawn-delay/20}s"
     - "&a/proshield help &7→ Show this help menu"
 
   admin:
@@ -69,6 +70,8 @@ help:
     - "&c/proshield debug &7→ Toggle debug mode"
     - "&c/proshield bypass &7→ Toggle bypass mode"
     - "&c/proshield admin &7→ Open the admin menu"
+    - "&c/proshield compass &7→ Give yourself a new ProShield Compass"
+    - "&7Config: &fcompass-auto-replace &7= Automatically re-add compass on despawn if enabled"
     - "&cCheck GUI → Expansion Requests"
 
 gui:

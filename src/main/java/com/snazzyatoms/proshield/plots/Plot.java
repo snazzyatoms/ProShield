@@ -1,96 +1,41 @@
 package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 
-import java.util.*;
+import java.util.UUID;
 
-/**
- * Represents a claimed chunk in ProShield.
- */
 public class Plot {
-
     private final UUID id;
-    private UUID owner;
+    private UUID ownerId;
     private final String worldName;
-    private final int x;
-    private final int z;
+    private final int chunkX;
+    private final int chunkZ;
 
-    private final Set<UUID> trusted;
-    private final Map<String, Boolean> flags;
-
-    public Plot(UUID owner, String worldName, int x, int z) {
-        this.id = UUID.randomUUID();
-        this.owner = owner;
+    public Plot(UUID id, UUID ownerId, String worldName, int chunkX, int chunkZ) {
+        this.id = id;
+        this.ownerId = ownerId;
         this.worldName = worldName;
-        this.x = x;
-        this.z = z;
-        this.trusted = new HashSet<>();
-        this.flags = new HashMap<>();
+        this.chunkX = chunkX;
+        this.chunkZ = chunkZ;
     }
 
-    public UUID getId() {
-        return id;
-    }
+    public UUID getId() { return id; }
+    public UUID getOwnerId() { return ownerId; }
+    public void setOwnerId(UUID ownerId) { this.ownerId = ownerId; }
 
-    public UUID getOwner() {
-        return owner;
-    }
+    public String getWorldName() { return worldName; }
+    public int getChunkX() { return chunkX; }
+    public int getChunkZ() { return chunkZ; }
 
-    public void setOwner(UUID newOwner) {
-        this.owner = newOwner;
+    public boolean isOwner(UUID uuid) {
+        return uuid != null && uuid.equals(ownerId);
     }
 
     public String getOwnerName() {
-        return Bukkit.getOfflinePlayer(owner).getName();
-    }
-
-    public String getWorldName() {
-        return worldName;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    public boolean isOwner(UUID playerId) {
-        return owner.equals(playerId);
-    }
-
-    public Set<UUID> getTrusted() {
-        return trusted;
-    }
-
-    public void addTrusted(UUID uuid) {
-        trusted.add(uuid);
-    }
-
-    public void removeTrusted(UUID uuid) {
-        trusted.remove(uuid);
-    }
-
-    public boolean isTrusted(UUID uuid) {
-        return trusted.contains(uuid);
-    }
-
-    public Map<String, Boolean> getFlags() {
-        return flags;
-    }
-
-    public boolean getFlag(String key, boolean def) {
-        return flags.getOrDefault(key, def);
-    }
-
-    public void setFlag(String key, boolean value) {
-        flags.put(key, value);
-    }
-
-    /** Optional: simple expansion (dummy stub for now). */
-    public void expand(int extraRadius) {
-        // Implementation could claim adjacent chunks later.
-        // Stubbed to preserve API compatibility.
+        if (ownerId == null) return "Unknown";
+        OfflinePlayer op = Bukkit.getOfflinePlayer(ownerId);
+        String name = op != null ? op.getName() : null;
+        return name != null ? name : ownerId.toString();
     }
 }

@@ -7,6 +7,8 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
+import java.util.stream.Collectors;
+
 /**
  * Optional helper used by some codepaths:
  * provides convenience wrappers around player-facing actions.
@@ -50,15 +52,14 @@ public class PlayerCommandDispatcher {
         String ownerName = (owner.getName() != null ? owner.getName() : owner.getUniqueId().toString());
 
         messages.send(player, "&eOwner: &f" + ownerName);
-
-        // Trusted count
         messages.send(player, "&eTrusted Players: &f" + plot.getTrusted().size());
 
-        // Flags
         if (plot.getFlags().isEmpty()) {
             messages.send(player, "&eFlags: &7None set.");
         } else {
-            messages.send(player, "&eFlags: &f" + String.join(", ", plot.getFlags()));
+            // ✅ fix join on Map
+            String flags = plot.getFlags().keySet().stream().collect(Collectors.joining(", "));
+            messages.send(player, "&eFlags: &f" + flags);
         }
     }
 }

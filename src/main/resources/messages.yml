@@ -13,20 +13,27 @@ prefix: "&3[ProShield]&r "
 # -----------------------------
 help:
   player:
-    - "&3&lProShield &7— Player Commands"
+    - "&3&lProShield &7— Player Commands (requires &fproshield.player.access&7)"
     - "&b/claim &7– Claim current chunk"
     - "&b/unclaim &7– Unclaim current chunk"
     - "&b/trust <player> [role] &7– Trust a player"
     - "&b/untrust <player> &7– Remove trust"
     - "&b/roles &7– Open roles GUI"
     - "&b/transfer <player> &7– Transfer ownership"
+    - "&b/proshield compass &7– Get your compass"
+
   admin:
-    - "&c&lAdmin Tools"
-    - "&c/proshield reload &7– Reload configs"
-    - "&c/proshield debug &7– Toggle debug mode"
-    - "&c/proshield bypass &7– Toggle admin bypass"
+    - "&c&lAdmin Tools (requires &fproshield.admin&c)"
+    - "&c/proshield reload &7– Reload configs (requires &fproshield.admin.reload&7)"
+    - "&c/proshield debug &7– Toggle debug mode (requires &fproshield.admin.debug&7)"
+    - "&c/proshield bypass &7– Toggle admin bypass (requires &fproshield.admin.bypass&7)"
     - "&c/proshield compass &7– Give admin compass"
-    - "&c/proshield admin &7– Open admin GUI"
+    - "&c/proshield admin &7– Open Admin GUI"
+
+  senior:
+    - "&4&lSenior Admin Tools"
+    - "&4Expansion Requests &7– Requires &fproshield.admin.expansions"
+    - "&4World Controls &7– Requires &fproshield.admin.worldcontrols"
 
 # -----------------------------
 # General & Errors
@@ -137,11 +144,3 @@ compass:
 # -----------------------------
 debug:
   generic: "&8[DEBUG] &7{message}"
-
-# -----------------------------
-# (Optional legacy — commented)
-# -----------------------------
-# keep-items:
-#   enabled: "&aItems will now persist inside claims."
-#   disabled: "&cItems will now despawn as normal."
-#   despawned: "&7Some old dropped items have despawned."

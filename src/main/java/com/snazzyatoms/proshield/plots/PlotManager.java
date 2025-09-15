@@ -2,152 +2,151 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 
 /**
- * Manages all land claims (plots).
+ * PlotManager
+ * - In-memory map<world, map<chunkX, map<chunkZ, Plot>>>
+ * - Handles claim, unclaim, lookup, info.
+ * - Persistence stubs left for your existing save/load (yml/json/db).
  */
 public class PlotManager {
 
     private final ProShield plugin;
     private final MessagesUtil messages;
 
-    // Map chunkKey -> Plot
-    private final Map<String, Plot> plots = new HashMap<>();
+    // world -> x -> z -> Plot
+    private final Map<String, Map<Integer, Map<Integer, Plot>>> plots = new HashMap<>();
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
         this.messages = plugin.getMessagesUtil();
     }
 
-    // ---------------------------
-    // Helpers
-    // ---------------------------
-    private String chunkKey(Location loc) {
-        return loc.getWorld().getName() + ":" + loc.getChunk().getX() + ":" + loc.getChunk().getZ();
+    /* ========================
+     * Index helpers
+     * ======================== */
+    private Map<Integer, Map<Integer, Plot>> worldIndex(String world) {
+        return plots.computeIfAbsent(world.toLowerCase(Locale.ROOT), w -> new HashMap<>());
     }
 
+    private Map<Integer, Plot> xIndex(String world, int x) {
+        return worldIndex(world).computeIfAbsent(x, ix -> new HashMap<>());
+    }
+
+    private Plot get(String world, int x, int z) {
+        Map<Integer, Map<Integer, Plot>> w = plots.get(world.toLowerCase(Locale.ROOT));
+        if (w == null) return null;
+        Map<Integer, Plot> row = w.get(x);
+        if (row == null) return null;
+        return row.get(z);
+    }
+
+    private void put(Plot plot) {
+        xIndex(plot.getWorld(), plot.getX()).put(plot.getZ(), plot);
+    }
+
+    private void remove(String world, int x, int z) {
+        Map<Integer, Map<Integer, Plot>> w = plots.get(world.toLowerCase(Locale.ROOT));
+        if (w == null) return;
+        Map<Integer, Plot> row = w.get(x);
+        if (row == null) return;
+        row.remove(z);
+        if (row.isEmpty()) w.remove(x);
+        if (w.isEmpty()) plots.remove(world.toLowerCase(Locale.ROOT));
+    }
+
+    /* ========================
+     * Persistence stubs
+     * ======================== */
+    public void loadAll() {
+        // TODO: Load plots from disk
+        // When loaded, call put(plot);
+    }
+
+    public void saveAll() {
+        // TODO: Save plots to disk
+    }
+
+    /* ========================
+     * Lookups
+     * ======================== */
     public Plot getPlot(Location loc) {
-        return plots.get(chunkKey(loc));
+        if (loc == null || loc.getWorld() == null) return null;
+        Chunk c = loc.getChunk();
+        return get(loc.getWorld().getName(), c.getX(), c.getZ());
     }
 
-    public boolean isClaimed(Location loc) {
-        return plots.containsKey(chunkKey(loc));
+    public UUID getClaimIdAt(Location loc) {
+        Plot p = getPlot(loc);
+        return p != null ? p.getId() : null;
     }
 
-    // ---------------------------
-    // Claim Actions
-    // ---------------------------
+    public Plot getPlotByChunk(String world, int x, int z) {
+        return get(world, x, z);
+    }
+
+    /* ========================
+     * Claim ops
+     * ======================== */
+    public boolean createPlot(UUID owner, Location at) {
+        if (at == null || at.getWorld() == null) return false;
+        Chunk c = at.getChunk();
+        String w = at.getWorld().getName();
+        if (get(w, c.getX(), c.getZ()) != null) return false;
+
+        Plot plot = new Plot(UUID.randomUUID(), w, c.getX(), c.getZ(), owner);
+        put(plot);
+        return true;
+    }
+
+    public boolean removePlot(Location at) {
+        if (at == null || at.getWorld() == null) return false;
+        Chunk c = at.getChunk();
+        Plot existing = get(at.getWorld().getName(), c.getX(), c.getZ());
+        if (existing == null) return false;
+        remove(at.getWorld().getName(), c.getX(), c.getZ());
+        return true;
+    }
+
     public void claimPlot(Player player) {
-        Location loc = player.getLocation();
-        String key = chunkKey(loc);
-
-        if (plots.containsKey(key)) {
-            messages.send(player, "&cThis chunk is already claimed!");
+        if (player == null || player.getLocation() == null) return;
+        Location at = player.getLocation();
+        Plot existing = getPlot(at);
+        if (existing != null) {
+            String ownerName = plugin.getServer().getOfflinePlayer(existing.getOwner()).getName();
+            messages.send(player, plugin.getMessagesConfig().getString("claim.already-owned", "&cThis chunk is already claimed by {owner}.")
+                    .replace("{owner}", ownerName == null ? "Unknown" : ownerName));
             return;
         }
-
-        Plot plot = new Plot(player.getUniqueId(), loc.getChunk());
-        plots.put(key, plot);
-
-        messages.send(player, "&aYou have successfully claimed this land.");
+        if (createPlot(player.getUniqueId(), at)) {
+            messages.send(player, plugin.getMessagesConfig().getString("claim.success", "&aYou successfully claimed this chunk."));
+        } else {
+            messages.send(player, "&cFailed to claim here.");
+        }
     }
 
     public void unclaimPlot(Player player) {
-        Location loc = player.getLocation();
-        String key = chunkKey(loc);
-
-        Plot plot = plots.get(key);
-        if (plot == null) {
-            messages.send(player, "&cThis chunk is not claimed.");
+        if (player == null) return;
+        Location at = player.getLocation();
+        Plot p = getPlot(at);
+        if (p == null) {
+            messages.send(player, plugin.getMessagesConfig().getString("error.no-claim", "&cYou are not standing in a claim."));
             return;
         }
-
-        if (!plot.getOwner().equals(player.getUniqueId())) {
-            messages.send(player, "&cYou don’t own this land.");
+        if (!p.getOwner().equals(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
+            messages.send(player, plugin.getMessagesConfig().getString("claim.not-owner", "&cYou are not the owner of this claim."));
             return;
         }
-
-        plots.remove(key);
-        messages.send(player, "&cYou unclaimed this land.");
-    }
-
-    public void sendClaimInfo(Player player) {
-        Location loc = player.getLocation();
-        Plot plot = getPlot(loc);
-
-        if (plot == null) {
-            messages.send(player, "&eThis chunk is unclaimed.");
-            return;
+        if (removePlot(at)) {
+            messages.send(player, plugin.getMessagesConfig().getString("claim.unclaimed", "&aYou unclaimed this chunk."));
+        } else {
+            messages.send(player, "&cFailed to unclaim here.");
         }
-
-        String ownerName = Bukkit.getOfflinePlayer(plot.getOwner()).getName();
-        messages.send(player, "&6--- Claim Info ---");
-        messages.send(player, "&eOwner: &f" + ownerName);
-        messages.send(player, "&eTrusted: &f" + plot.getTrusted().size() + " players");
-        messages.send(player, "&eFlags: &f" + (plot.getFlags().isEmpty() ? "None" : plot.getFlags().keySet()));
     }
 
-    // ---------------------------
-    // Flags GUI
-    // ---------------------------
-    public void openFlagsMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.GOLD + "ProShield Flags");
-
-        // Example flags
-        addFlagItem(inv, 11, "Mob Spawning", "mob-spawning", Material.ZOMBIE_HEAD, player);
-        addFlagItem(inv, 13, "Explosions", "explosions", Material.TNT, player);
-        addFlagItem(inv, 15, "Fire Spread", "fire-spread", Material.FLINT_AND_STEEL, player);
-
-        player.openInventory(inv);
-    }
-
-    private void addFlagItem(Inventory inv, int slot, String name, String key, Material mat, Player player) {
-        Location loc = player.getLocation();
-        Plot plot = getPlot(loc);
-
-        boolean enabled = plot != null && plot.getFlag(key, false);
-
-        ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName((enabled ? ChatColor.GREEN : ChatColor.RED) + name);
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.GRAY + "Current: " + (enabled ? "Enabled" : "Disabled"));
-            lore.add(ChatColor.YELLOW + "Click to toggle");
-            meta.setLore(lore);
-            item.setItemMeta(meta);
-        }
-
-        inv.setItem(slot, item);
-    }
-
-    public void toggleFlag(Player player, String key) {
-        Plot plot = getPlot(player.getLocation());
-        if (plot == null) {
-            messages.send(player, "&cThis land is not claimed.");
-            return;
-        }
-
-        boolean current = plot.getFlag(key, false);
-        plot.setFlag(key, !current);
-
-        messages.send(player, "&aFlag '" + key + "' set to " + !current);
-    }
-
-    // ---------------------------
-    // Internal Save/Load (TODO)
-    // ---------------------------
-    public Map<String, Plot> getPlots() {
-        return plots;
-    }
-}
+    public void send

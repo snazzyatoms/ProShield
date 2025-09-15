@@ -13,7 +13,14 @@ import java.util.*;
  * PlotManager
  * - In-memory map<world, map<chunkX, map<chunkZ, Plot>>>
  * - Handles claim, unclaim, lookup, info.
- * - Persistence stubs left for your existing save/load (yml/json/db).
+ * - Now supports radius-based expansion (square growth in chunks).
+ *
+ * NOTE on expansions:
+ * - We treat the approved "amount" as an EXTRA RADIUS (in chunks), not blocks.
+ * - Expansion grows a bounding rectangle of the owner's claimed area per world
+ *   outward by extraRadius on all sides and claims any unclaimed chunks within.
+ * - Chunks owned by other players are skipped (no overlaps).
+ * - saveAll() is called after successful expansion so persistence can write to disk.
  */
 public class PlotManager {
 
@@ -61,6 +68,10 @@ public class PlotManager {
         if (w.isEmpty()) plots.remove(world.toLowerCase(Locale.ROOT));
     }
 
+    private boolean isClaimed(String world, int x, int z) {
+        return get(world, x, z) != null;
+    }
+
     /* ========================
      * Persistence stubs
      * ======================== */
@@ -89,6 +100,36 @@ public class PlotManager {
 
     public Plot getPlotByChunk(String world, int x, int z) {
         return get(world, x, z);
+    }
+
+    /**
+     * Get all plots owned by a player across all worlds.
+     */
+    public Set<Plot> getPlotsByOwner(UUID owner) {
+        Set<Plot> out = new HashSet<>();
+        for (Map<Integer, Map<Integer, Plot>> w : plots.values()) {
+            for (Map<Integer, Plot> row : w.values()) {
+                for (Plot p : row.values()) {
+                    if (p.getOwner().equals(owner)) out.add(p);
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Get all plots owned by a player in a specific world.
+     */
+    public Set<Plot> getPlotsByOwnerInWorld(UUID owner, String world) {
+        Set<Plot> out = new HashSet<>();
+        Map<Integer, Map<Integer, Plot>> w = plots.get(world.toLowerCase(Locale.ROOT));
+        if (w == null) return out;
+        for (Map<Integer, Plot> row : w.values()) {
+            for (Plot p : row.values()) {
+                if (p.getOwner().equals(owner)) out.add(p);
+            }
+        }
+        return out;
     }
 
     /* ========================
@@ -126,6 +167,7 @@ public class PlotManager {
         }
         if (createPlot(player.getUniqueId(), at)) {
             messages.send(player, plugin.getMessagesConfig().getString("claim.success", "&aYou successfully claimed this chunk."));
+            saveAll();
         } else {
             messages.send(player, "&cFailed to claim here.");
         }
@@ -145,6 +187,7 @@ public class PlotManager {
         }
         if (removePlot(at)) {
             messages.send(player, plugin.getMessagesConfig().getString("claim.unclaimed", "&aYou unclaimed this chunk."));
+            saveAll();
         } else {
             messages.send(player, "&cFailed to unclaim here.");
         }
@@ -175,5 +218,87 @@ public class PlotManager {
         } else {
             messages.send(player, "&eFlags: &f" + String.join(", ", plot.getFlags()));
         }
+    }
+
+    /* ========================
+     * Radius-based Expansion
+     * ======================== */
+
+    /**
+     * Expands a player's claims by growing the bounding rectangle of their claimed
+     * chunks in each world outward by extraRadius (in chunks) on all sides.
+     *
+     * - Skips chunks already owned by the player (no duplicate).
+     * - Skips chunks owned by others (no overlapping).
+     * - Returns true if any new chunk was successfully claimed.
+     *
+     * IMPORTANT: The "extraRadius" unit is in CHUNKS (not blocks).
+     * This should be called after an admin approves an ExpansionRequest.
+     */
+    public boolean expandClaim(UUID owner, int extraRadius) {
+        if (extraRadius <= 0) return false;
+
+        boolean anyAdded = false;
+
+        // Per-world expansion to keep worlds independent and predictable
+        Set<String> worldsWithOwnership = getWorldsWithOwner(owner);
+        for (String world : worldsWithOwnership) {
+            Set<Plot> ownedInWorld = getPlotsByOwnerInWorld(owner, world);
+            if (ownedInWorld.isEmpty()) continue;
+
+            // Compute bounding box of currently owned chunks
+            int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+            int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+            for (Plot p : ownedInWorld) {
+                minX = Math.min(minX, p.getX());
+                maxX = Math.max(maxX, p.getX());
+                minZ = Math.min(minZ, p.getZ());
+                maxZ = Math.max(maxZ, p.getZ());
+            }
+
+            // Expand the bounds
+            int targetMinX = minX - extraRadius;
+            int targetMaxX = maxX + extraRadius;
+            int targetMinZ = minZ - extraRadius;
+            int targetMaxZ = maxZ + extraRadius;
+
+            // Claim every unowned chunk within the expanded rectangle,
+            // but do NOT take chunks belonging to someone else.
+            for (int x = targetMinX; x <= targetMaxX; x++) {
+                Map<Integer, Plot> row = xIndex(world, x); // ensure map exists for quick lookups
+                for (int z = targetMinZ; z <= targetMaxZ; z++) {
+                    Plot existing = get(world, x, z);
+                    if (existing != null) {
+                        // already claimed; skip if it's ours, otherwise leave it alone
+                        continue;
+                    }
+                    // claim it for owner
+                    Plot newPlot = new Plot(UUID.randomUUID(), world, x, z, owner);
+                    row.put(z, newPlot);
+                    anyAdded = true;
+                }
+            }
+        }
+
+        if (anyAdded) {
+            saveAll(); // persist after change
+        }
+        return anyAdded;
+    }
+
+    private Set<String> getWorldsWithOwner(UUID owner) {
+        Set<String> worlds = new HashSet<>();
+        for (Map.Entry<String, Map<Integer, Map<Integer, Plot>>> e : plots.entrySet()) {
+            String world = e.getKey();
+            for (Map<Integer, Plot> row : e.getValue().values()) {
+                for (Plot p : row.values()) {
+                    if (p.getOwner().equals(owner)) {
+                        worlds.add(world);
+                        break;
+                    }
+                }
+            }
+        }
+        return worlds;
     }
 }

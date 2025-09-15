@@ -11,6 +11,7 @@ import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -40,6 +41,7 @@ public class ProShield extends JavaPlugin implements Listener {
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
     private CompassManager compassManager;
+    private ExpansionRequestManager expansionRequestManager;
 
     // Admin bypass/debug
     private final Set<UUID> bypassing = new HashSet<>();
@@ -60,6 +62,7 @@ public class ProShield extends JavaPlugin implements Listener {
         // Managers
         plotManager   = new PlotManager(this);
         roleManager   = new ClaimRoleManager(this);
+        expansionRequestManager = new ExpansionRequestManager(this); // 🔹 NEW
         guiManager    = new GUIManager(this);
         compassManager= new CompassManager(this, guiManager);
 
@@ -94,6 +97,7 @@ public class ProShield extends JavaPlugin implements Listener {
         // Save persisted data
         roleManager.saveAll();
         plotManager.saveAll();
+        // expansionRequestManager saves automatically on each change, so nothing required here
 
         getLogger().info("ProShield disabled and data saved.");
     }
@@ -104,7 +108,6 @@ public class ProShield extends JavaPlugin implements Listener {
     public void loadMessagesConfig() {
         try {
             if (!getDataFolder().exists()) {
-                // noinspection ResultOfMethodCallIgnored
                 getDataFolder().mkdirs();
             }
             File file = new File(getDataFolder(), "messages.yml");
@@ -137,13 +140,10 @@ public class ProShield extends JavaPlugin implements Listener {
             messagesConfig = current;
         } catch (IOException | InvalidConfigurationException e) {
             getLogger().severe("Failed to load/merge messages.yml: " + e.getMessage());
-            messagesConfig = getConfig(); // worst-case fallback to avoid NPEs
+            messagesConfig = getConfig(); // worst-case fallback
         }
     }
 
-    // --------------------
-    // Auto-Merge Config
-    // --------------------
     private void mergeConfig(String fileName) {
         File file = new File(getDataFolder(), fileName);
         if (!file.exists()) {
@@ -229,7 +229,6 @@ public class ProShield extends JavaPlugin implements Listener {
             }
             sb.append("\n");
 
-            // Write using Java NIO (no external deps)
             Files.writeString(readme.toPath(), sb.toString(), StandardCharsets.UTF_8);
             getLogger().info("Generated README.md");
         } catch (Exception e) {
@@ -237,9 +236,6 @@ public class ProShield extends JavaPlugin implements Listener {
         }
     }
 
-    // --------------------
-    // Join listener
-    // --------------------
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (getConfig().getBoolean("settings.give-compass-on-join", true)) {
@@ -248,7 +244,7 @@ public class ProShield extends JavaPlugin implements Listener {
     }
 
     // --------------------
-    // Getters (used across plugin)
+    // Getters
     // --------------------
     public static ProShield getInstance() { return instance; }
 
@@ -258,8 +254,8 @@ public class ProShield extends JavaPlugin implements Listener {
     public GUIManager getGuiManager() { return guiManager; }
     public ClaimRoleManager getRoleManager() { return roleManager; }
     public PlotManager getPlotManager() { return plotManager; }
-
     public CompassManager getCompassManager() { return compassManager; }
+    public ExpansionRequestManager getExpansionRequestManager() { return expansionRequestManager; }
 
     public Set<UUID> getBypassing() { return bypassing; }
     public boolean isBypassing(UUID uuid) { return bypassing.contains(uuid); }

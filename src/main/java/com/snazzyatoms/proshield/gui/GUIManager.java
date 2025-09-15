@@ -11,6 +11,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -125,8 +126,36 @@ public class GUIManager {
     /* =========================== Player Expansion =========================== */
 
     private void openExpansionRequestMenu(Player p) {
-        // full version includes cooldown + owner checks + step options
-        // same implementation I showed earlier
+        FileConfiguration cfg = plugin.getConfig();
+
+        Plot current = plotManager.getPlot(p.getLocation());
+        if (current == null || !current.getOwner().equals(p.getUniqueId())) {
+            messages.send(p, "&cOnly claim owners can request expansions.");
+            return;
+        }
+
+        // Cooldown check
+        int cooldownHours = cfg.getInt("claims.expansion.cooldown-hours", 6);
+        ExpansionRequest last = requestManager.getLastRequest(p.getUniqueId());
+        if (last != null && last.getStatus() == ExpansionRequest.Status.PENDING) {
+            messages.send(p, cfg.getString("messages.expansion-cooldown-active",
+                    "&7You must wait before making another request."));
+            return;
+        }
+
+        Inventory inv = makeInv("gui.menus.expansion-request.title", "&aRequest Expansion", 27);
+
+        List<Integer> options = cfg.getIntegerList("claims.expansion.step-options");
+        int[] slots = {10, 12, 14, 16};
+        for (int i = 0; i < options.size() && i < slots.length; i++) {
+            int blocks = options.get(i);
+            inv.setItem(slots[i], button(Material.EMERALD_BLOCK, "&a+" + blocks + " Radius",
+                    Arrays.asList("&7Request to expand claim by &f" + blocks + " &7chunks radius"),
+                    "expansion-request-submit", String.valueOf(blocks)));
+        }
+
+        backExit(inv, "main");
+        p.openInventory(inv);
     }
 
     /* =========================== Admin Expansion =========================== */
@@ -154,7 +183,7 @@ public class GUIManager {
                 sm.setOwningPlayer(op);
                 sm.setDisplayName(color("&b" + (op.getName() == null ? req.getRequester().toString() : op.getName())));
                 List<String> lore = new ArrayList<>();
-                lore.add(color("&7Expansion: &f+" + req.getBlocks() + " blocks"));
+                lore.add(color("&7Expansion: &f+" + req.getBlocks() + " radius chunks"));
                 long age = (System.currentTimeMillis() - req.getTimestamp()) / 1000;
                 lore.add(color("&7Requested &f" + age + "s &7ago"));
                 lore.add(color("&aLeft-click: Approve and expand claim radius"));
@@ -173,13 +202,67 @@ public class GUIManager {
         p.openInventory(inv);
     }
 
-    /* =========================== Click Handling (approve/deny/request) =========================== */
+    /* =========================== Click Handling =========================== */
 
     public void handleClick(InventoryClickEvent event) {
-        // full implementation as shown earlier (expansion-request-submit, expansion-manage, expansion-deny, etc.)
+        if (!(event.getWhoClicked() instanceof Player p)) return;
+        if (event.getCurrentItem() == null) return;
+
+        ItemMeta meta = event.getCurrentItem().getItemMeta();
+        if (meta == null) return;
+
+        event.setCancelled(true);
+
+        String action = meta.getPersistentDataContainer().getOrDefault(ACTION_KEY, PersistentDataType.STRING, "");
+        String arg = meta.getPersistentDataContainer().getOrDefault(ARG_KEY, PersistentDataType.STRING, "");
+
+        switch (action) {
+            case "close":
+                p.closeInventory();
+                break;
+
+            case "menu":
+                openMenu(p, arg);
+                break;
+
+            case "cmd":
+                p.closeInventory();
+                p.performCommand(arg);
+                break;
+
+            case "expansion-request-submit":
+                try {
+                    int blocks = Integer.parseInt(arg);
+                    ExpansionRequest req = new ExpansionRequest(p.getUniqueId(), blocks);
+                    requestManager.addRequest(req);
+
+                    messages.send(p, plugin.getConfig().getString("messages.expansion-request",
+                            "&eYour expansion request for +{blocks} chunks was sent to admins.")
+                            .replace("{blocks}", String.valueOf(blocks)));
+                    sound(p, Sound.UI_BUTTON_CLICK);
+                    p.closeInventory();
+                } catch (Exception ex) {
+                    messages.send(p, "&cFailed to create expansion request.");
+                }
+                break;
+
+            case "expansion-manage":
+                String[] parts = arg.split("\\|");
+                if (parts.length != 2) return;
+                UUID targetId = UUID.fromString(parts[0]);
+                if (event.isLeftClick()) {
+                    requestManager.approveRequest(targetId);
+                    openExpansionRequests(p);
+                } else if (event.isRightClick()) {
+                    // simple deny with default reason (can extend to GUI reasons later)
+                    requestManager.denyRequest(targetId, "custom-1");
+                    openExpansionRequests(p);
+                }
+                break;
+        }
     }
 
     /* =========================== Helpers =========================== */
-    // keep makeInv, button, info, toggleButton, gridSlots, backExit, markAction, sound, color,
-    // safeUUID, stateLineForCurrentClaim, hideAll, roleDisplay — unchanged
+    // makeInv, button, info, toggleButton, gridSlots, backExit, markAction, sound, color,
+    // safeUUID, stateLineForCurrentClaim, hideAll, roleDisplay — remain unchanged from your existing code
 }

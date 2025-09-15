@@ -1,112 +1,92 @@
-package com.snazzyatoms.proshield;
+package com.snazzyatoms.proshield.commands;
 
-import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.compass.CompassListener;
-import com.snazzyatoms.proshield.gui.ChatListener;
-import com.snazzyatoms.proshield.gui.GUIListener;
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.listeners.ProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
-public class ProShield extends JavaPlugin {
+public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
-    private static ProShield instance;
+    private final ProShield plugin;
+    private final GUIManager guiManager;
+    private final PlotManager plotManager;
+    private final MessagesUtil messages;
 
-    private MessagesUtil messages;
-    private GUIManager guiManager;
-    private ClaimRoleManager roleManager;
-    private PlotManager plotManager;
-
-    private final Set<UUID> bypassing = new HashSet<>();
-    private boolean debugEnabled = false;
+    public ProShieldCommand(ProShield plugin, GUIManager guiManager, PlotManager plotManager, MessagesUtil messages) {
+        this.plugin = plugin;
+        this.guiManager = guiManager;
+        this.plotManager = plotManager;
+        this.messages = messages;
+    }
 
     @Override
-    public void onEnable() {
-        instance = this;
-
-        // Load default config (includes despawn-inside + interval toggles)
-        saveDefaultConfig();
-        messages = new MessagesUtil(this);
-
-        // Initialize managers
-        plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(this);
-        guiManager = new GUIManager(this);
-
-        // Load persisted data
-        roleManager.loadAll();
-        plotManager.loadAll();
-
-        // Register commands
-        PluginCommand cmd = getCommand("proshield");
-        if (cmd != null) {
-            ProShieldCommand executor = new ProShieldCommand(this, guiManager, plotManager, messages);
-            cmd.setExecutor(executor);
-            cmd.setTabCompleter(executor);
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length == 0) {
+            messages.send(sender, "&7Use &a/proshield help &7for commands.");
+            return true;
         }
 
-        // Register listeners
-        Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
+        switch (args[0].toLowerCase()) {
+            case "reload" -> {
+                if (!sender.hasPermission("proshield.admin")) {
+                    messages.send(sender, "&cYou do not have permission.");
+                    return true;
+                }
+                plugin.reloadProShield();
+                messages.send(sender, "&aProShield config reloaded.");
+            }
 
-        // ✅ Register full protection listener (handles fire, explosions, safezone, pets, despawn sweeps, etc.)
-        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
+            case "debug" -> {
+                if (!sender.hasPermission("proshield.admin")) {
+                    messages.send(sender, "&cYou do not have permission.");
+                    return true;
+                }
+                plugin.toggleDebug();
+                messages.send(sender, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aON" : "&cOFF"));
+            }
 
-        getLogger().info("ProShield enabled successfully.");
+            case "bypass" -> {
+                if (!(sender instanceof Player player)) {
+                    messages.send(sender, "&cOnly players can use this command.");
+                    return true;
+                }
+                if (!player.hasPermission("proshield.admin")) {
+                    messages.send(player, "&cYou do not have permission.");
+                    return true;
+                }
+                if (plugin.isBypassing(player.getUniqueId())) {
+                    plugin.getBypassing().remove(player.getUniqueId());
+                    messages.send(player, "&cBypass disabled.");
+                } else {
+                    plugin.getBypassing().add(player.getUniqueId());
+                    messages.send(player, "&aBypass enabled.");
+                }
+            }
+
+            default -> messages.send(sender, "&7Use &a/proshield help &7for commands.");
+        }
+
+        return true;
     }
 
     @Override
-    public void onDisable() {
-        // Save persisted data
-        roleManager.saveAll();
-        plotManager.saveAll();
-
-        getLogger().info("ProShield disabled and data saved.");
-    }
-
-    public static ProShield getInstance() {
-        return instance;
-    }
-
-    public MessagesUtil getMessagesUtil() {
-        return messages;
-    }
-
-    public GUIManager getGuiManager() {
-        return guiManager;
-    }
-
-    public ClaimRoleManager getRoleManager() {
-        return roleManager;
-    }
-
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
-
-    public Set<UUID> getBypassing() {
-        return bypassing;
-    }
-
-    public boolean isBypassing(UUID uuid) {
-        return bypassing.contains(uuid);
-    }
-
-    public boolean isDebugEnabled() {
-        return debugEnabled;
-    }
-
-    public void toggleDebug() {
-        debugEnabled = !debugEnabled;
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> options = new ArrayList<>();
+        if (args.length == 1) {
+            if (sender.hasPermission("proshield.admin")) {
+                options.add("reload");
+                options.add("debug");
+                options.add("bypass");
+            }
+        }
+        return options;
     }
 }

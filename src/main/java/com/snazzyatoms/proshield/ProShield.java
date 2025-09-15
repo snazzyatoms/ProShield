@@ -7,6 +7,7 @@ import com.snazzyatoms.proshield.gui.ChatListener;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.listeners.ProtectionListener;
+import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -32,14 +33,15 @@ public class ProShield extends JavaPlugin implements Listener {
 
     private static ProShield instance;
 
-    private MessagesUtil messages;
+    private MessagesUtil messagesUtil;
+    private FileConfiguration messagesConfig; // messages.yml (merged with defaults)
+
     private GUIManager guiManager;
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
     private CompassManager compassManager;
 
-    private FileConfiguration messagesConfig;
-
+    // Admin bypass/debug
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
 
@@ -47,19 +49,19 @@ public class ProShield extends JavaPlugin implements Listener {
     public void onEnable() {
         instance = this;
 
-        // Ensure data folder
-        if (!getDataFolder().exists()) getDataFolder().mkdirs();
-
-        // Save defaults and merge
+        // Ensure data folder & write defaults
         saveDefaultConfig();
         mergeConfig("config.yml");
-        loadMessagesConfig();
+        loadMessagesConfig(); // creates/merges messages.yml
+
+        // Core utilities
+        messagesUtil = new MessagesUtil(this, messagesConfig);
 
         // Managers
-        plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(this);
-        guiManager  = new GUIManager(this);
-        compassManager = new CompassManager(this, guiManager);
+        plotManager   = new PlotManager(this);
+        roleManager   = new ClaimRoleManager(this);
+        guiManager    = new GUIManager(this);
+        compassManager= new CompassManager(this, guiManager);
 
         // Load persisted data
         roleManager.loadAll();
@@ -68,7 +70,7 @@ public class ProShield extends JavaPlugin implements Listener {
         // Commands
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
-            ProShieldCommand executor = new ProShieldCommand(this, guiManager, plotManager, messages);
+            ProShieldCommand executor = new ProShieldCommand(this, guiManager, plotManager, messagesUtil);
             cmd.setExecutor(executor);
             cmd.setTabCompleter(executor);
         }
@@ -76,11 +78,12 @@ public class ProShield extends JavaPlugin implements Listener {
         // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
-        Bukkit.getPluginManager().registerEvents(this, this);
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this), this); // right-click compass → open GUI
+        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this); // explosions, fire, ignite
+        Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager), this); // block place/break
+        Bukkit.getPluginManager().registerEvents(this, this); // join-event below
 
-        // README
+        // Generate README from config → items and permissions always in sync
         generateReadme();
 
         getLogger().info("ProShield enabled successfully.");
@@ -88,23 +91,31 @@ public class ProShield extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        // Save persisted data
         roleManager.saveAll();
         plotManager.saveAll();
+
         getLogger().info("ProShield disabled and data saved.");
     }
 
-    // --------------------
-    // messages.yml loader
-    // --------------------
+    // ---------------------------------------------------------------------
+    // messages.yml loader/merger (PUBLIC so commands can force reload cleanly)
+    // ---------------------------------------------------------------------
     public void loadMessagesConfig() {
-        File file = new File(getDataFolder(), "messages.yml");
-        if (!file.exists()) {
-            saveResource("messages.yml", false);
-        }
-        messagesConfig = new YamlConfiguration();
         try {
-            messagesConfig.load(file);
+            if (!getDataFolder().exists()) {
+                // noinspection ResultOfMethodCallIgnored
+                getDataFolder().mkdirs();
+            }
+            File file = new File(getDataFolder(), "messages.yml");
+            if (!file.exists()) {
+                saveResource("messages.yml", false);
+            }
 
+            YamlConfiguration current = new YamlConfiguration();
+            current.load(file);
+
+            // Merge defaults from the jar
             YamlConfiguration defaults = new YamlConfiguration();
             try (InputStreamReader reader =
                          new InputStreamReader(Objects.requireNonNull(getResource("messages.yml")), StandardCharsets.UTF_8)) {
@@ -113,30 +124,25 @@ public class ProShield extends JavaPlugin implements Listener {
 
             boolean changed = false;
             for (String key : defaults.getKeys(true)) {
-                if (!messagesConfig.contains(key)) {
-                    messagesConfig.set(key, defaults.get(key));
+                if (!current.contains(key)) {
+                    current.set(key, defaults.get(key));
                     getLogger().info("[Messages] Added missing key: " + key);
                     changed = true;
                 }
             }
             if (changed) {
-                messagesConfig.save(file);
+                current.save(file);
                 getLogger().info("[Messages] messages.yml updated with new defaults.");
             }
+            messagesConfig = current;
         } catch (IOException | InvalidConfigurationException e) {
-            getLogger().severe("Failed to load messages.yml: " + e.getMessage());
+            getLogger().severe("Failed to load/merge messages.yml: " + e.getMessage());
+            messagesConfig = getConfig(); // worst-case fallback to avoid NPEs
         }
-
-        // Init/refresh MessagesUtil after messagesConfig is ready
-        messages = new MessagesUtil(this, messagesConfig);
-    }
-
-    public void reloadMessages() {
-        loadMessagesConfig();
     }
 
     // --------------------
-    // Auto-Merge config
+    // Auto-Merge Config
     // --------------------
     private void mergeConfig(String fileName) {
         File file = new File(getDataFolder(), fileName);
@@ -144,6 +150,7 @@ public class ProShield extends JavaPlugin implements Listener {
             saveResource(fileName, false);
             return;
         }
+
         try {
             FileConfiguration current = new YamlConfiguration();
             current.load(file);
@@ -162,6 +169,7 @@ public class ProShield extends JavaPlugin implements Listener {
                     changed = true;
                 }
             }
+
             if (changed) {
                 current.save(file);
                 getLogger().info("[Config] " + fileName + " updated with new defaults.");
@@ -172,7 +180,7 @@ public class ProShield extends JavaPlugin implements Listener {
     }
 
     // --------------------
-    // README generator
+    // README.md Generator
     // --------------------
     private void generateReadme() {
         try {
@@ -188,32 +196,40 @@ public class ProShield extends JavaPlugin implements Listener {
 
             sb.append("## 🚀 Quick Start\n");
             sb.append("1. Use `/proshield claim` to protect your current chunk.\n");
-            sb.append("2. Manage trusted players with `/trust <player>` or the Roles GUI.\n");
-            sb.append("3. Admins use `/proshield admin` for tools (reload/debug/bypass/world controls).\n\n");
+            sb.append("2. Manage trusted players with `/trust <player> [role]` or via the GUI.\n");
+            sb.append("3. Admins: `/proshield admin` for Admin Tools.\n\n");
 
             sb.append("## 📖 Permissions Overview\n\n");
-            sb.append("- `proshield.player.access` → Player features (claim, unclaim, info, roles, compass).\n");
-            sb.append("- `proshield.admin` → Admin tools: reload, debug, bypass, admin GUI.\n");
-            sb.append("- `proshield.admin.expansions` → Approve/Deny expansion requests.\n");
-            sb.append("- `proshield.admin.worldcontrols` → Manage per-world controls.\n\n");
+            sb.append("- `proshield.player.access` → Basic player tools (claims, roles, compass).\n");
+            sb.append("- `proshield.admin` → Admin tools (reload, debug, bypass, admin GUI).\n");
+            sb.append("- `proshield.admin.expansions` → Expansion requests (approve/deny).\n");
+            sb.append("- `proshield.admin.worldcontrols` → Global/world protection controls.\n\n");
 
-            sb.append("## 🧭 GUI Menus\n");
+            sb.append("## 🧭 GUI Menus & Required Permissions\n");
             if (cfg.isConfigurationSection("gui.menus")) {
-                for (String menu : cfg.getConfigurationSection("gui.menus").getKeys(false)) {
-                    sb.append("### ").append(menu).append("\n");
-                    String title = cfg.getString("gui.menus." + menu + ".title", "Untitled");
+                for (String menu : Objects.requireNonNull(cfg.getConfigurationSection("gui.menus")).getKeys(false)) {
+                    String base = "gui.menus." + menu;
+                    String title = cfg.getString(base + ".title", "Untitled");
+                    sb.append("\n### ").append(menu).append("\n");
                     sb.append("- **Title:** ").append(title).append("\n");
-                    if (cfg.isConfigurationSection("gui.menus." + menu + ".items")) {
-                        for (String slot : cfg.getConfigurationSection("gui.menus." + menu + ".items").getKeys(false)) {
-                            String name = cfg.getString("gui.menus." + menu + ".items." + slot + ".name", "Unnamed");
-                            String perm = cfg.getString("gui.menus." + menu + ".items." + slot + ".permission", "None");
+                    if (cfg.isConfigurationSection(base + ".items")) {
+                        sb.append("- **Items:**\n");
+                        for (String slot : Objects.requireNonNull(cfg.getConfigurationSection(base + ".items")).getKeys(false)) {
+                            String iBase = base + ".items." + slot;
+                            String name = cfg.getString(iBase + ".name", "Unnamed");
+                            String perm = cfg.getString(iBase + ".permission", "none");
                             sb.append("  - ").append(name).append(" → Requires `").append(perm).append("`\n");
                         }
+                    } else {
+                        sb.append("- *(No items configured)*\n");
                     }
-                    sb.append("\n");
                 }
+            } else {
+                sb.append("\n*(No menus configured in config.yml)*\n");
             }
+            sb.append("\n");
 
+            // Write using Java NIO (no external deps)
             Files.writeString(readme.toPath(), sb.toString(), StandardCharsets.UTF_8);
             getLogger().info("Generated README.md");
         } catch (Exception e) {
@@ -222,7 +238,7 @@ public class ProShield extends JavaPlugin implements Listener {
     }
 
     // --------------------
-    // Join: give compass
+    // Join listener
     // --------------------
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -232,17 +248,22 @@ public class ProShield extends JavaPlugin implements Listener {
     }
 
     // --------------------
-    // Getters & toggles
+    // Getters (used across plugin)
     // --------------------
     public static ProShield getInstance() { return instance; }
-    public MessagesUtil getMessagesUtil() { return messages; }
+
+    public MessagesUtil getMessagesUtil() { return messagesUtil; }
+    public FileConfiguration getMessagesConfig() { return messagesConfig; }
+
     public GUIManager getGuiManager() { return guiManager; }
     public ClaimRoleManager getRoleManager() { return roleManager; }
     public PlotManager getPlotManager() { return plotManager; }
+
     public CompassManager getCompassManager() { return compassManager; }
-    public FileConfiguration getMessagesConfig() { return messagesConfig; }
+
     public Set<UUID> getBypassing() { return bypassing; }
     public boolean isBypassing(UUID uuid) { return bypassing.contains(uuid); }
+
     public boolean isDebugEnabled() { return debugEnabled; }
     public void toggleDebug() { debugEnabled = !debugEnabled; }
 }

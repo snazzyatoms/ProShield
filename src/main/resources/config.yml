@@ -5,8 +5,8 @@
 
 settings:
   give-compass-on-join: true
-  compass-despawn-delay: 600      # ticks (20 = 1 second). Default: 600 (30s)
-  compass-auto-replace: false     # if true, replaces compass automatically in hotbar after despawn
+  compass-despawn-delay: 600
+  compass-auto-replace: false
 
 protection:
   fire:
@@ -17,13 +17,10 @@ protection:
       flint_and_steel: false
       lava: false
       lightning: false
-
   explosions:
     enabled: false
-
   buckets:
     enabled: true
-
   mobs:
     border-repel:
       enabled: true
@@ -34,12 +31,10 @@ protection:
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
     despawn-inside: true
     despawn-interval-seconds: 30
-
   entities:
     wilderness:
       item-frames: false
       vehicles: false
-
   world-controls:
     enabled: true
     defaults:
@@ -196,13 +191,13 @@ gui:
           material: PAPER
           name: "&ePending Requests"
           lore:
-            - "&7View player requests"
+            - "&7View and manage all player requests"
           action: "menu:expansion-requests"
         "12":
           material: BOOK
           name: "&bReload Config"
           lore:
-            - "&7Reload ProShield configuration"
+            - "&7Reloads ProShield configuration"
           action: "command:proshield reload"
         "14":
           material: REPEATER
@@ -223,6 +218,18 @@ gui:
           lore:
             - "&7Bypass all checks while enabled"
           action: "command:proshield bypass"
+        "22":
+          material: EMERALD
+          name: "&aApprove Selected"
+          lore:
+            - "&7Approve selected expansion request"
+          action: "expansion:approve"
+        "24":
+          material: REDSTONE
+          name: "&cDeny Selected"
+          lore:
+            - "&7Deny with reason"
+          action: "expansion:deny"
         "40":
           material: BARRIER
           name: "&cBack"
@@ -262,7 +269,6 @@ gui:
             - "&7Return to Admin Tools"
           action: "menu:admin-tools"
 
-    # ✅ New confirmation GUI
     world-reset-confirm:
       title: "&cConfirm Reset for {world}"
       size: 27

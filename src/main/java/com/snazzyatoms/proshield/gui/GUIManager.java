@@ -30,75 +30,9 @@ public class GUIManager {
     private static final Map<UUID, UUID> awaitingRolePlot = new HashMap<>();
 
     private static final List<String> PERM_KEYS = List.of("build", "interact", "containers", "unclaim");
-    private static final List<String> ROLE_ORDER = List.of("trusted", "builder", "co-owner");
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
-    }
-
-    /* ========================
-     * Awaiting helper methods
-     * ======================== */
-    public static boolean isAwaitingReason(Player player) {
-        return awaitingReason.containsKey(player.getUniqueId());
-    }
-
-    public static void cancelAwaiting(Player player) {
-        awaitingReason.remove(player.getUniqueId());
-        awaitingRoleAction.remove(player.getUniqueId());
-        awaitingRolePlot.remove(player.getUniqueId());
-    }
-
-    public static boolean isAwaitingRoleAction(Player player) {
-        return awaitingRoleAction.containsKey(player.getUniqueId());
-    }
-
-    public static String getRoleAction(Player player) {
-        return awaitingRoleAction.get(player.getUniqueId());
-    }
-
-    public static void setRoleAction(Player player, String action) {
-        awaitingRoleAction.put(player.getUniqueId(), action);
-    }
-
-    public static void handleRoleChatInput(Player actor, String message, ProShield plugin) {
-        String action = awaitingRoleAction.remove(actor.getUniqueId());
-        UUID plotId = awaitingRolePlot.remove(actor.getUniqueId());
-        if (action == null || plotId == null) {
-            plugin.getMessagesUtil().send(actor, "&7No role action pending.");
-            return;
-        }
-
-        Plot plot = plugin.getPlotManager().getPlotById(plotId);
-        if (plot == null) {
-            plugin.getMessagesUtil().send(actor, "&cThat claim no longer exists.");
-            return;
-        }
-
-        if (action.equalsIgnoreCase("add")) {
-            String targetName = message.trim();
-            if (targetName.isEmpty()) {
-                plugin.getMessagesUtil().send(actor, "&cNo player name supplied.");
-                return;
-            }
-
-            ClaimRoleManager roles = plugin.getRoleManager();
-            OfflinePlayer off = Bukkit.getOfflinePlayer(targetName);
-
-            if (off != null && plot.isOwner(off.getUniqueId())) {
-                plugin.getMessagesUtil().send(actor, "&cThat player already owns this claim.");
-                return;
-            }
-
-            boolean ok = roles.trustPlayer(plot, targetName, "trusted");
-            if (ok) {
-                plugin.getMessagesUtil().send(actor, "&aTrusted &e" + targetName + " &aas &6trusted&a.");
-            } else {
-                plugin.getMessagesUtil().send(actor, "&e" + targetName + " &7was already trusted.");
-            }
-        } else {
-            plugin.getMessagesUtil().send(actor, "&7Unhandled role action: " + action);
-        }
     }
 
     /* ===================
@@ -109,7 +43,6 @@ public class GUIManager {
             openRolesMenu(player);
             return;
         }
-
         if (menuName.equalsIgnoreCase("flags")) {
             openFlagsMenu(player);
             return;
@@ -125,38 +58,7 @@ public class GUIManager {
         int size = menuSec.getInt("size", 27);
         Inventory inv = Bukkit.createInventory(null, size, title);
 
-        ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
-        if (itemsSec != null) {
-            for (String slotStr : itemsSec.getKeys(false)) {
-                int slot = parseIntSafe(slotStr, -1);
-                if (slot < 0) continue;
-
-                ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
-                if (itemSec == null) continue;
-
-                Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
-                if (mat == null) mat = Material.STONE;
-
-                ItemStack stack = new ItemStack(mat);
-                ItemMeta meta = stack.getItemMeta();
-                if (meta == null) continue;
-
-                String name = itemSec.getString("name", "");
-                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
-
-                List<String> lore = itemSec.getStringList("lore");
-                if (lore != null && !lore.isEmpty()) {
-                    lore.replaceAll(s -> ChatColor.translateAlternateColorCodes('&', s));
-                    meta.setLore(lore);
-                }
-
-                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                stack.setItemMeta(meta);
-
-                inv.setItem(slot, stack);
-            }
-        }
-
+        fillStaticItems(inv, menuSec);
         player.openInventory(inv);
     }
 
@@ -182,9 +84,13 @@ public class GUIManager {
             for (String slotStr : itemsSec.getKeys(false)) {
                 int slot = parseIntSafe(slotStr, -1);
                 if (slot < 0) continue;
-
                 ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
                 if (itemSec == null) continue;
+
+                String flagKey = itemSec.getString("flag-key", "")
+                        .toLowerCase(Locale.ROOT).replace(" ", "-");
+                boolean state = plot.getFlag(flagKey,
+                        plugin.getConfig().getBoolean("claims.default-flags." + flagKey, false));
 
                 Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
                 if (mat == null) mat = Material.STONE;
@@ -198,16 +104,14 @@ public class GUIManager {
 
                 List<String> lore = new ArrayList<>();
                 for (String line : itemSec.getStringList("lore")) {
-                    boolean value = plot.getFlag(name.toLowerCase().replace(" ", "-"),
-                            plugin.getConfig().getBoolean("claims.default-flags." + name.toLowerCase().replace(" ", "-"), false));
-                    String state = value ? "&aON" : "&cOFF";
-                    lore.add(ChatColor.translateAlternateColorCodes('&', line.replace("{state}", state)));
+                    String stateText = state ? "&aON" : "&cOFF";
+                    lore.add(ChatColor.translateAlternateColorCodes('&',
+                            line.replace("{state}", stateText)));
                 }
                 meta.setLore(lore);
 
                 meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
                 stack.setItemMeta(meta);
-
                 inv.setItem(slot, stack);
             }
         }
@@ -216,7 +120,7 @@ public class GUIManager {
     }
 
     /* ======================
-     * Roles / Trusted players
+     * Roles menu
      * ====================== */
     private void openRolesMenu(Player player) {
         Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
@@ -230,7 +134,8 @@ public class GUIManager {
         }
 
         ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus.roles");
-        String title = ChatColor.translateAlternateColorCodes('&', menuSec != null ? menuSec.getString("title", "&bTrusted Players") : "&bTrusted Players");
+        String title = ChatColor.translateAlternateColorCodes('&',
+                menuSec != null ? menuSec.getString("title", "&bTrusted Players") : "&bTrusted Players");
         int size = menuSec != null ? menuSec.getInt("size", 27) : 27;
 
         Inventory inv = Bukkit.createInventory(null, size, title);
@@ -265,7 +170,8 @@ public class GUIManager {
                 lore.add(ChatColor.GRAY + "Overrides:");
                 for (String k : PERM_KEYS) {
                     if (perms.containsKey(k)) {
-                        lore.add(ChatColor.DARK_GRAY + " - " + k + ": " + (perms.get(k) ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF"));
+                        lore.add(ChatColor.DARK_GRAY + " - " + k + ": " +
+                                (perms.get(k) ? ChatColor.GREEN + "ON" : ChatColor.RED + "OFF"));
                     }
                 }
             }
@@ -275,12 +181,6 @@ public class GUIManager {
             skull.setItemMeta(meta);
         }
         return skull;
-    }
-
-    private int[] headFillPattern(int size) {
-        if (size <= 27) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25};
-        if (size <= 36) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34};
-        return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34, 37,38,39,40,41,42,43};
     }
 
     /* ===============
@@ -324,40 +224,8 @@ public class GUIManager {
                 case "safe zone" -> toggleFlag(plot, "safezone", player);
                 case "back" -> { openMenu(player, "main"); return; }
             }
-            openFlagsMenu(player);
+            openFlagsMenu(player); // refresh with updated ON/OFF
             return;
-        }
-
-        // EXPANSIONS
-        if (title.contains("Expansion Requests")) {
-            switch (name.toLowerCase(Locale.ROOT)) {
-                case "pending requests" -> showPendingRequests(player);
-                case "approve selected" -> handleExpansionApproval(player);
-                case "deny selected" -> openMenu(player, "deny-reasons");
-                case "back" -> openMenu(player, "main");
-            }
-            return;
-        }
-
-        // DENY REASONS
-        if (title.contains("Deny Reasons")) {
-            List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
-            if (pending.isEmpty()) {
-                plugin.getMessagesUtil().send(player, "&7No requests to deny.");
-                openMenu(player, "admin-expansions");
-                return;
-            }
-            ExpansionRequest req = pending.get(0);
-            if (name.equalsIgnoreCase("back")) { openMenu(player, "admin-expansions"); return; }
-            if (name.equalsIgnoreCase("other")) {
-                awaitingReason.put(player.getUniqueId(), req);
-                plugin.getMessagesUtil().send(player, "&eType your denial reason in chat...");
-                player.closeInventory();
-                return;
-            }
-            ExpansionQueue.denyRequest(req, name);
-            plugin.getMessagesUtil().send(player, "&cRequest denied (" + name + ").");
-            openMenu(player, "admin-expansions");
         }
     }
 
@@ -365,49 +233,46 @@ public class GUIManager {
      * Helpers
      * =============== */
     private void toggleFlag(Plot plot, String flag, Player player) {
-        boolean current = plot.getFlag(flag, false);
+        boolean current = plot.getFlag(flag,
+                plugin.getConfig().getBoolean("claims.default-flags." + flag, false));
         plot.setFlag(flag, !current);
-        MessagesUtil messages = plugin.getMessagesUtil();
-        messages.send(player, current ? "&c" + flag + " disabled." : "&a" + flag + " enabled.");
+        plugin.getMessagesUtil().send(player,
+                !current ? "&a" + flag + " enabled." : "&c" + flag + " disabled.");
     }
 
-    private void showPendingRequests(Player player) {
-        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
-        if (pending.isEmpty()) {
-            plugin.getMessagesUtil().send(player, "&7No pending requests.");
-            return;
-        }
-        for (ExpansionRequest req : pending) {
-            String pName = Bukkit.getOfflinePlayer(req.getPlayerId()).getName();
-            plugin.getMessagesUtil().send(player,
-                    "&eRequest: " + pName + " +" + req.getExtraRadius() + " blocks (" +
-                            (System.currentTimeMillis() - req.getRequestTime()) / 1000 + "s ago)");
+    private void fillStaticItems(Inventory inv, ConfigurationSection menuSec) {
+        ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
+        if (itemsSec == null) return;
+
+        for (String slotStr : itemsSec.getKeys(false)) {
+            int slot = parseIntSafe(slotStr, -1);
+            if (slot < 0) continue;
+            ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
+            if (itemSec == null) continue;
+
+            Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
+            if (mat == null) mat = Material.STONE;
+
+            ItemStack stack = new ItemStack(mat);
+            ItemMeta meta = stack.getItemMeta();
+            if (meta == null) continue;
+
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&',
+                    itemSec.getString("name", "")));
+            List<String> lore = itemSec.getStringList("lore");
+            lore.replaceAll(s -> ChatColor.translateAlternateColorCodes('&', s));
+            meta.setLore(lore);
+
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            stack.setItemMeta(meta);
+            inv.setItem(slot, stack);
         }
     }
 
-    private void handleExpansionApproval(Player player) {
-        List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
-        if (pending.isEmpty()) {
-            plugin.getMessagesUtil().send(player, "&7No requests to approve.");
-            return;
-        }
-        ExpansionRequest req = pending.get(0);
-        ExpansionQueue.approveRequest(req);
-        Player target = Bukkit.getPlayer(req.getPlayerId());
-        if (target != null) target.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
-        plugin.getMessagesUtil().send(player, "&aRequest approved.");
-    }
-
-    public static void provideManualReason(Player admin, String reason, ProShield plugin) {
-        ExpansionRequest req = awaitingReason.remove(admin.getUniqueId());
-        if (req == null) {
-            plugin.getMessagesUtil().send(admin, "&7No pending request to deny.");
-            return;
-        }
-        ExpansionQueue.denyRequest(req, reason);
-        Player target = Bukkit.getPlayer(req.getPlayerId());
-        if (target != null) target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
-        plugin.getMessagesUtil().send(admin, "&cRequest denied (" + reason + ").");
+    private int[] headFillPattern(int size) {
+        if (size <= 27) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25};
+        if (size <= 36) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34};
+        return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34, 37,38,39,40,41,42,43};
     }
 
     private int parseIntSafe(String s, int def) {

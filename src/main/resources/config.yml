@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 (Finalized for release build + Expansion Requests + Roles GUI + Compass Enhancements + Exit Button)
+# Version: 1.2.5 (Admin Tools + Per-World Controls + Exit Button)
 # ==========================================================
 
 settings:
@@ -32,13 +32,49 @@ protection:
       vertical-push: 0.25
       play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
-    despawn-inside: true            # toggle full despawn sweep on/off
-    despawn-interval-seconds: 30    # how often hostile mobs inside claims are cleaned up
+    despawn-inside: true               # toggle full despawn sweep on/off
+    despawn-interval-seconds: 30       # how often hostile mobs inside claims are cleaned up
 
   entities:
     wilderness:
       item-frames: false
       vehicles: false
+
+  # ============================
+  # Per-World Global Protections
+  # ============================
+  world-controls:
+    enabled: true
+
+    # Defaults used when a world doesn't have an explicit override
+    defaults:
+      block-break: true           # allow breaking by default
+      block-place: true           # allow placing by default
+      bucket-use: true            # allow buckets by default
+      explosions: true            # allow explosion block damage by default
+      mob-spawn: true             # allow natural mob spawns
+      mob-damage: true            # allow hostile mobs to hurt players
+      fire-burn: true             # allow blocks to burn
+      fire-spread: true           # allow fire to spread
+      ignite-flint: true          # allow flint & steel ignite
+      ignite-lava: true           # allow lava ignition
+      ignite-lightning: true      # allow lightning ignition
+
+    # Per-world overrides (toggled via Admin Tools → World Controls in the GUI)
+    worlds:
+      # example:
+      # world:
+      #   block-break: false
+      #   block-place: false
+      #   bucket-use: false
+      #   explosions: false
+      #   mob-spawn: false
+      #   mob-damage: false
+      #   fire-burn: false
+      #   fire-spread: false
+      #   ignite-flint: false
+      #   ignite-lava: false
+      #   ignite-lightning: true
 
 messages:
   prefix: "&3[ProShield]&r "
@@ -72,7 +108,7 @@ help:
     - "&c/proshield admin &7→ Open the admin menu"
     - "&c/proshield compass &7→ Give yourself a new ProShield Compass"
     - "&7Config: &fcompass-auto-replace &7= Automatically re-add compass on despawn if enabled"
-    - "&cCheck GUI → Expansion Requests"
+    - "&cCheck GUI → Admin Tools"
 
 gui:
   menus:
@@ -86,7 +122,7 @@ gui:
           lore:
             - "&7Protect your land"
             - "&fRadius: 50 blocks by default"
-          action: "command:claim"
+          action: "command:proshield claim"
 
         "13":
           material: PAPER
@@ -103,8 +139,8 @@ gui:
           name: "&cUnclaim Land"
           lore:
             - "&7Remove your claim"
-          action: "command:unclaim"
-          
+          action: "command:proshield unclaim"
+
         "21":
           material: PLAYER_HEAD
           name: "&bTrusted Players"
@@ -163,6 +199,7 @@ gui:
             - "&7Toggle protection of item frames"
             - "&fCurrent: {state}"
           action: "flag:item-frames"
+            # NOTE: flag-key also supported but action drives the toggle in code
           flag-key: "item-frames"
 
         "13":
@@ -246,7 +283,7 @@ gui:
 
     admin-tools:
       title: "&cAdmin Tools & Expansion Requests"
-      size: 36
+      size: 45
       items:
         "10":
           material: PAPER
@@ -263,10 +300,11 @@ gui:
           action: "command:proshield reload"
 
         "14":
-          material: COMMAND_BLOCK
+          material: REPEATER
           name: "&dWorld Controls"
           lore:
-            - "&7Manage global protections per world"
+            - "&7Manage protections for this world"
+            - "&8(affects: {world})"
           action: "menu:world-controls"
 
         "16":
@@ -275,6 +313,13 @@ gui:
           lore:
             - "&7Turn debug mode on/off"
           action: "command:proshield debug"
+
+        "19":
+          material: TRIPWIRE_HOOK
+          name: "&6Toggle Bypass (You)"
+          lore:
+            - "&7Bypass all checks while enabled"
+          action: "command:proshield bypass"
 
         "22":
           material: EMERALD
@@ -290,12 +335,112 @@ gui:
             - "&7Deny with reason"
           action: "expansion:deny"
 
-        "35":
+        "40":
           material: BARRIER
           name: "&cBack"
           lore:
             - "&7Return to Main Menu"
           action: "menu:main"
+
+    # Dynamic per-world control toggles (applies to the opener's current world)
+    world-controls:
+      title: "&dWorld Controls &8({world})"
+      size: 45
+      items:
+        "10":
+          material: IRON_PICKAXE
+          name: "&fBlock Break"
+          lore:
+            - "&7Allow block breaking"
+            - "&fCurrent: {state}"
+          action: "toggle:world.block-break"
+
+        "11":
+          material: STONE
+          name: "&fBlock Place"
+          lore:
+            - "&7Allow block placing"
+            - "&fCurrent: {state}"
+          action: "toggle:world.block-place"
+
+        "12":
+          material: WATER_BUCKET
+          name: "&fBucket Use"
+          lore:
+            - "&7Allow bucket use"
+            - "&fCurrent: {state}"
+          action: "toggle:world.bucket-use"
+
+        "13":
+          material: TNT
+          name: "&fExplosions"
+          lore:
+            - "&7Allow explosion block damage"
+            - "&fCurrent: {state}"
+          action: "toggle:world.explosions"
+
+        "14":
+          material: ZOMBIE_HEAD
+          name: "&fMob Spawn"
+          lore:
+            - "&7Allow natural mob spawning"
+            - "&fCurrent: {state}"
+          action: "toggle:world.mob-spawn"
+
+        "15":
+          material: IRON_SWORD
+          name: "&fMob Damage"
+          lore:
+            - "&7Allow mobs to damage players"
+            - "&fCurrent: {state}"
+          action: "toggle:world.mob-damage"
+
+        "19":
+          material: CAMPFIRE
+          name: "&fFire Burn"
+          lore:
+            - "&7Allow blocks to burn"
+            - "&fCurrent: {state}"
+          action: "toggle:world.fire-burn"
+
+        "20":
+          material: FLINT_AND_STEEL
+          name: "&fFire Spread"
+          lore:
+            - "&7Allow fire to spread"
+            - "&fCurrent: {state}"
+          action: "toggle:world.fire-spread"
+
+        "21":
+          material: FLINT_AND_STEEL
+          name: "&fIgnite: Flint & Steel"
+          lore:
+            - "&7Allow F&S ignite"
+            - "&fCurrent: {state}"
+          action: "toggle:world.ignite-flint"
+
+        "22":
+          material: LAVA_BUCKET
+          name: "&fIgnite: Lava"
+          lore:
+            - "&7Allow lava ignition"
+            - "&fCurrent: {state}"
+          action: "toggle:world.ignite-lava"
+
+        "23":
+          material: TRIDENT
+          name: "&fIgnite: Lightning"
+          lore:
+            - "&7Allow lightning ignition"
+            - "&fCurrent: {state}"
+          action: "toggle:world.ignite-lightning"
+
+        "40":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to Admin Tools"
+          action: "menu:admin-tools"
 
     deny-reasons:
       title: "&cDeny Reasons"

@@ -5,14 +5,11 @@ import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +70,12 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ChatColor.RED + "Only players can use this command.");
                     return true;
                 }
-                giveCompassIfMissing(player);
+                if (plugin.getCompassManager().hasCompass(player)) {
+                    player.sendMessage(ChatColor.YELLOW + "You already have a ProShield Compass.");
+                } else {
+                    plugin.getCompassManager().giveCompass(player);
+                    player.sendMessage(ChatColor.GREEN + "A ProShield Compass has been given to you.");
+                }
                 return true;
             }
             case "reload" -> {
@@ -95,7 +97,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             case "debug" -> {
-                if (!sender.hasPermission("proshield.admin")) {
+                if (!sender.hasPermission("proshield.admin.debug")) {
                     sender.sendMessage(ChatColor.RED + "No permission.");
                     return true;
                 }
@@ -126,7 +128,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ChatColor.RED + "No permission.");
                     return true;
                 }
-                guiManager.openMenu(player, "admin-tools"); // ✅ patched
+                guiManager.openMenu(player, "admin-tools");
                 return true;
             }
             default -> {
@@ -134,23 +136,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
         }
-    }
-
-    private void giveCompassIfMissing(Player player) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == Material.COMPASS) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null && meta.hasDisplayName()) {
-                    String stripped = ChatColor.stripColor(meta.getDisplayName());
-                    if (stripped != null && stripped.equalsIgnoreCase("ProShield Compass")) {
-                        player.sendMessage(ChatColor.YELLOW + "You already have a ProShield Compass.");
-                        return;
-                    }
-                }
-            }
-        }
-        plugin.getCompassManager().giveCompass(player);
-        player.sendMessage(ChatColor.GREEN + "A ProShield Compass has been given to you.");
     }
 
     private void sendHelp(CommandSender sender) {

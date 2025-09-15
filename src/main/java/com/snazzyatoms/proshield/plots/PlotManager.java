@@ -13,7 +13,7 @@ import java.util.*;
  * PlotManager
  * - In-memory map<world, map<chunkX, map<chunkZ, Plot>>>
  * - Handles claim, unclaim, lookup, info.
- * - Now supports radius-based expansion (per-plot).
+ * - Supports radius-based expansion (per-plot only).
  */
 public class PlotManager {
 
@@ -198,35 +198,29 @@ public class PlotManager {
     }
 
     /* ========================
-     * Radius-based Expansion
+     * Per-Plot Radius Expansion
      * ======================== */
 
     /**
-     * Expands the radius of a player's plot at their current location.
-     * - Ensures max-increase from config is respected.
-     * - Returns true if radius was increased.
+     * Expands only the specific plot at the given location.
+     * - Skips if player is not the owner.
+     * - Respects max-increase from config.
      */
-    public boolean expandClaim(UUID owner, int extraBlocks) {
-        Set<Plot> owned = getPlotsByOwner(owner);
-        if (owned.isEmpty()) return false;
+    public boolean expandPlot(UUID owner, Location at, int extraBlocks) {
+        Plot plot = getPlot(at);
+        if (plot == null || !plot.getOwner().equals(owner)) {
+            return false;
+        }
 
-        boolean changed = false;
         int maxIncrease = plugin.getConfig().getInt("claims.expansion.max-increase", 100);
+        int allowedIncrease = Math.min(extraBlocks, maxIncrease);
 
-        for (Plot plot : owned) {
-            int newRadius = plot.getRadius() + extraBlocks;
-            if (newRadius - plot.getRadius() > maxIncrease) {
-                newRadius = plot.getRadius() + maxIncrease;
-            }
-            if (newRadius > plot.getRadius()) {
-                plot.setRadius(newRadius);
-                changed = true;
-            }
-        }
-
-        if (changed) {
+        int newRadius = plot.getRadius() + allowedIncrease;
+        if (newRadius > plot.getRadius()) {
+            plot.setRadius(newRadius);
             saveAll();
+            return true;
         }
-        return changed;
+        return false;
     }
 }

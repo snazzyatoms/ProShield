@@ -1,62 +1,137 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.io.File;
+import java.util.*;
 
 /**
- * PlotManager handles claim storage and lookup.
- * Claims are stored by chunk coordinates per world.
+ * Minimal-yet-compatible PlotManager that exposes
+ * all methods other classes reference.
  */
 public class PlotManager {
 
     private final ProShield plugin;
+    private final MessagesUtil messages;
 
-    // Storage: world:x:z → claimId
-    private final Map<String, UUID> claimChunks = new HashMap<>();
+    // Indexes
     private final Map<UUID, Plot> claims = new HashMap<>();
+    private final Map<String, UUID> indexByChunk = new HashMap<>();
+    // key: world:x:z
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+        this.messages = plugin.getMessagesUtil();
     }
 
-    public Plot getClaim(UUID claimId) {
-        return claims.get(claimId);
+    // ---------- Keys ----------
+    private String key(Location loc) {
+        Chunk c = loc.getChunk();
+        return loc.getWorld().getName() + ":" + c.getX() + ":" + c.getZ();
+    }
+    private String key(String world, int x, int z) {
+        return world + ":" + x + ":" + z;
     }
 
-    public void addClaim(UUID claimId, Plot plot) {
-        claims.put(claimId, plot);
-        claimChunks.put(getKey(plot.getWorldName(), plot.getChunkX(), plot.getChunkZ()), claimId);
+    // ---------- Lookup ----------
+    public Plot getPlot(Location location) { // compatibility method
+        return getClaimAt(location);
     }
 
-    public void removeClaim(UUID claimId) {
-        Plot plot = claims.remove(claimId);
-        if (plot != null) {
-            claimChunks.remove(getKey(plot.getWorldName(), plot.getChunkX(), plot.getChunkZ()));
-        }
-    }
-
-    public boolean isClaimed(Location location) {
-        return getClaimIdAt(location) != null;
-    }
-
-    // ✅ FIX: Added methods required by ClaimRoleManager
     public Plot getClaimAt(Location location) {
-        UUID claimId = getClaimIdAt(location);
-        return claimId != null ? getClaim(claimId) : null;
+        UUID id = indexByChunk.get(key(location));
+        return id != null ? claims.get(id) : null;
     }
 
     public UUID getClaimIdAt(Location location) {
-        int chunkX = location.getChunk().getX();
-        int chunkZ = location.getChunk().getZ();
-        String worldName = location.getWorld().getName();
-        return claimChunks.get(getKey(worldName, chunkX, chunkZ));
+        return indexByChunk.get(key(location));
     }
 
-    private String getKey(String world, int x, int z) {
-        return world + ":" + x + ":" + z;
+    public Plot getPlotById(UUID id) {
+        return claims.get(id);
+    }
+
+    // ---------- Mutations ----------
+    public Plot createPlot(UUID ownerId, Location loc) {
+        String world = loc.getWorld().getName();
+        int cx = loc.getChunk().getX();
+        int cz = loc.getChunk().getZ();
+        if (indexByChunk.containsKey(key(loc))) return claims.get(indexByChunk.get(key(loc)));
+
+        UUID id = UUID.randomUUID();
+        Plot plot = new Plot(id, ownerId, world, cx, cz);
+        addClaim(id, plot);
+        return plot;
+    }
+
+    public void addClaim(UUID id, Plot plot) {
+        claims.put(id, plot);
+        indexByChunk.put(key(plot.getWorldName(), plot.getChunkX(), plot.getChunkZ()), id);
+    }
+
+    public void removePlot(Location loc) {
+        UUID id = indexByChunk.remove(key(loc));
+        if (id != null) claims.remove(id);
+    }
+
+    public void removeClaim(UUID id) {
+        Plot p = claims.remove(id);
+        if (p != null) {
+            indexByChunk.remove(key(p.getWorldName(), p.getChunkX(), p.getChunkZ()));
+        }
+    }
+
+    // ---------- Player helpers used by commands ----------
+    public void claimPlot(Player player) {
+        Plot existing = getPlot(player.getLocation());
+        if (existing != null) {
+            player.sendMessage(ChatColor.RED + "This chunk is already claimed by " + existing.getOwnerName() + ".");
+            return;
+        }
+        Plot plot = createPlot(player.getUniqueId(), player.getLocation());
+        player.sendMessage(ChatColor.GREEN + "You claimed this chunk. (" + plot.getChunkX() + ", " + plot.getChunkZ() + ")");
+    }
+
+    public void unclaimPlot(Player player) {
+        Plot plot = getPlot(player.getLocation());
+        if (plot == null) {
+            player.sendMessage(ChatColor.RED + "This chunk is not claimed.");
+            return;
+        }
+        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
+            player.sendMessage(ChatColor.RED + "Only the claim owner (or admin) can unclaim.");
+            return;
+        }
+        removePlot(player.getLocation());
+        player.sendMessage(ChatColor.GREEN + "You unclaimed this chunk.");
+    }
+
+    public void sendClaimInfo(Player player) {
+        Plot plot = getPlot(player.getLocation());
+        if (plot == null) {
+            player.sendMessage(ChatColor.YELLOW + "This chunk is unclaimed.");
+            return;
+        }
+        player.sendMessage(ChatColor.AQUA + "Claim Info:");
+        player.sendMessage(ChatColor.GRAY + " Owner: " + plot.getOwnerName());
+        player.sendMessage(ChatColor.GRAY + " World: " + plot.getWorldName());
+        player.sendMessage(ChatColor.GRAY + " Chunk: " + plot.getChunkX() + ", " + plot.getChunkZ());
+    }
+
+    // ---------- Persistence stubs ----------
+    public void saveAll() {
+        // TODO: persist to claims.yml
+        File f = new File(plugin.getDataFolder(), "claims.yml");
+        // serialize 'claims' as needed (omitted for brevity)
+    }
+
+    public void loadAll() {
+        // TODO: load from claims.yml
+        // rebuild indexes into 'claims' and 'indexByChunk'
     }
 }

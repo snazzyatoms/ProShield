@@ -18,7 +18,7 @@ import java.util.*;
  * - Tracks, persists, and manages expansion requests.
  * - Enforces cooldowns (via timestamp).
  * - Provides requests for admin GUI review.
- * - On approval, actually expands the specific player's claim radius (via PlotManager).
+ * - On approval, expands only the plot where the request was made (per-plot radius).
  */
 public class ExpansionRequestManager {
 
@@ -41,12 +41,10 @@ public class ExpansionRequestManager {
 
     /* =========================  Public API  ========================= */
 
-    /** Get the last known request for a player (any status). */
     public ExpansionRequest getLastRequest(UUID playerId) {
         return requests.get(playerId);
     }
 
-    /** Get all pending requests for Admin review. */
     public List<ExpansionRequest> getPendingRequests() {
         List<ExpansionRequest> list = new ArrayList<>();
         for (ExpansionRequest req : requests.values()) {
@@ -58,7 +56,6 @@ public class ExpansionRequestManager {
         return list;
     }
 
-    /** Add a new request (player submission). */
     public void addRequest(ExpansionRequest request) {
         requests.put(request.getRequester(), request);
         saveRequests();
@@ -72,12 +69,7 @@ public class ExpansionRequestManager {
         }
     }
 
-    /**
-     * Approve a pending request:
-     * - Expands ONLY the claim radius of the plot where request was made.
-     * - Marks request as APPROVED.
-     * - Notifies the player (success/failure).
-     */
+    /** Approve pending → expand only the plot at request location. */
     public void approveRequest(UUID playerId) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;
@@ -107,12 +99,7 @@ public class ExpansionRequestManager {
         }
     }
 
-    /**
-     * Deny a pending request with a reason.
-     * - Marks request as DENIED.
-     * - Saves reason.
-     * - Notifies player if online.
-     */
+    /** Deny pending with reason key → notify player if online. */
     public void denyRequest(UUID playerId, String reasonKey) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;

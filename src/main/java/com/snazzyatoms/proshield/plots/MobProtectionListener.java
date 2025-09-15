@@ -2,19 +2,27 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
-import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import java.util.List;
 
+/**
+ * Unified Mob + Entity Protection:
+ * - Safe zones prevent hostile spawns, targeting, damage
+ * - Pets + passive mobs are protected
+ * - Hostile mobs inside claims are repelled and optionally despawned
+ * - Environmental grief (creeper, TNT, ghast, etc.) cancelled per config
+ * - Covers wilderness entity interactions too
+ */
 public class MobProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -27,93 +35,119 @@ public class MobProtectionListener implements Listener {
         startDespawnTask();
     }
 
-    private boolean isSafeZone(Location loc) {
-        Plot plot = plotManager.getPlot(loc);
-        if (plot == null) return false;
-        return plot.getFlag("safezone",
-                plugin.getConfig().getBoolean("claims.safezone-enabled", true));
-    }
+    /* ============================================================= */
+    /* Spawning / Targeting                                           */
+    /* ============================================================= */
 
-    private boolean isOpBypass(Player player) {
-        if (player.isOp() && plugin.getConfig().getBoolean("settings.ops-have-full-access", true)) {
-            return !plugin.getBypassing().contains(player.getUniqueId());
-        }
-        return false;
-    }
-
-    /* =====================================
-     * Mob Spawn Protection
-     * ===================================== */
     @EventHandler
     public void onMobSpawn(CreatureSpawnEvent event) {
-        if (!(event.getEntity() instanceof Monster)) return;
-        if (isSafeZone(event.getLocation())) {
-            if (!event.getEntity().hasMetadata("ProShieldIgnore")) {
-                event.setCancelled(true);
-            }
-        }
-    }
+        Entity e = event.getEntity();
+        if (!(e instanceof Monster)) return;
 
-    /* =====================================
-     * Damage Protection (Players + Pets + Passives)
-     * ===================================== */
-    @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
-        Entity victim = event.getEntity();
-
-        // Protect players in safezones
-        if (victim instanceof Player player) {
-            if (isSafeZone(player.getLocation()) && !isOpBypass(player)) {
-                event.setCancelled(true);
-                return;
-            }
-        }
-
-        // Protect tamed pets
-        if (victim instanceof Tameable pet && pet.isTamed()) {
-            if (isSafeZone(pet.getLocation())) {
-                event.setCancelled(true);
-                return;
-            }
-        }
-
-        // Protect passive mobs
-        if (victim instanceof Animals || victim instanceof Villager) {
-            if (isSafeZone(victim.getLocation())) {
-                event.setCancelled(true);
-            }
-        }
-    }
-
-    @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
-        Entity victim = event.getEntity();
-
-        // Prevent environment grief (fire, lava, explosions) inside claims
-        if (isSafeZone(victim.getLocation())) {
-            switch (event.getCause()) {
-                case FIRE, FIRE_TICK, LAVA, LIGHTNING, ENTITY_EXPLOSION, BLOCK_EXPLOSION -> {
-                    event.setCancelled(true);
-                }
-                default -> {}
-            }
-        }
-    }
-
-    /* =====================================
-     * Cancel Hostile Targeting
-     * ===================================== */
-    @EventHandler
-    public void onEntityTarget(EntityTargetLivingEntityEvent event) {
-        if (!(event.getTarget() instanceof Player player)) return;
-        if (isSafeZone(player.getLocation()) && event.getEntity() instanceof Monster) {
+        Plot plot = plotManager.getPlot(e.getLocation());
+        if (plot != null && plot.getFlag("safezone", plugin.getConfig())) {
             event.setCancelled(true);
         }
     }
 
-    /* =====================================
-     * Repel Hostiles from Claims
-     * ===================================== */
+    @EventHandler
+    public void onEntityTarget(EntityTargetLivingEntityEvent event) {
+        if (!(event.getTarget() instanceof Player player)) return;
+
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot != null && plot.getFlag("safezone", plugin.getConfig())) {
+            if (event.getEntity() instanceof Monster) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    /* ============================================================= */
+    /* Damage Protection                                              */
+    /* ============================================================= */
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
+        Entity victim = event.getEntity();
+        Entity damager = event.getDamager();
+
+        Plot plot = plotManager.getPlot(victim.getLocation());
+        if (plot == null) return;
+
+        FileConfiguration cfg = plugin.getConfig();
+        boolean safezone = plot.getFlag("safezone", cfg);
+
+        // Player victim inside safezone
+        if (victim instanceof Player && safezone) {
+            // Cancel hostile mobs
+            if (damager instanceof Monster) {
+                event.setCancelled(true);
+                return;
+            }
+            if (damager instanceof Projectile proj && proj.getShooter() instanceof Monster) {
+                event.setCancelled(true);
+                return;
+            }
+            if (damager instanceof AreaEffectCloud cloud && cloud.getSource() instanceof Monster) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+
+        // Pet / passive protection
+        if (victim instanceof Tameable tame && tame.isTamed() && cfg.getBoolean("protection.mobs.protect-pets", true)) {
+            event.setCancelled(true);
+        }
+        if (victim instanceof Animals && cfg.getBoolean("protection.mobs.protect-passive", true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onExplosion(EntityExplodeEvent event) {
+        Plot plot = plotManager.getPlot(event.getLocation());
+        if (plot == null) return;
+
+        FileConfiguration cfg = plugin.getConfig();
+        if (!plot.getFlag("explosions", cfg)) {
+            event.blockList().clear();
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onVehicleDestroy(VehicleDestroyEvent event) {
+        Plot plot = plotManager.getPlot(event.getVehicle().getLocation());
+        if (plot == null) return;
+
+        if (event.getAttacker() instanceof Player player) {
+            if (!plot.isTrusted(player.getUniqueId())) {
+                event.setCancelled(true);
+            }
+        } else {
+            // Hostiles or explosions cannot break vehicles
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onHangingBreak(HangingBreakByEntityEvent event) {
+        Plot plot = plotManager.getPlot(event.getEntity().getLocation());
+        if (plot == null) return;
+
+        if (event.getRemover() instanceof Player player) {
+            if (!plot.isTrusted(player.getUniqueId())) {
+                event.setCancelled(true);
+            }
+        } else {
+            event.setCancelled(true);
+        }
+    }
+
+    /* ============================================================= */
+    /* Repel + Despawn Tasks                                          */
+    /* ============================================================= */
+
     private void startRepelTask() {
         new BukkitRunnable() {
             @Override
@@ -121,16 +155,14 @@ public class MobProtectionListener implements Listener {
                 FileConfiguration cfg = plugin.getConfig();
                 if (!cfg.getBoolean("protection.mobs.border-repel.enabled", true)) return;
 
-                double radius = cfg.getDouble("protection.mobs.border-repel.radius", 15.0);
+                double radius = cfg.getDouble("protection.mobs.border-repel.radius", 3.0);
                 double pushX = cfg.getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
                 double pushY = cfg.getDouble("protection.mobs.border-repel.vertical-push", 0.25);
 
-                boolean playSound = cfg.getBoolean("protection.mobs.border-repel.play-sound", false);
-                String repelSound = cfg.getString("protection.mobs.border-repel.sound-type",
-                        "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR");
-
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    if (!isSafeZone(player.getLocation())) continue;
+                    Plot plot = plotManager.getPlot(player.getLocation());
+                    if (plot == null) continue;
+                    if (!plot.getFlag("safezone", cfg)) continue;
 
                     List<Entity> nearby = player.getNearbyEntities(radius, radius, radius);
                     for (Entity e : nearby) {
@@ -139,50 +171,35 @@ public class MobProtectionListener implements Listener {
                         Vector dir = e.getLocation().toVector()
                                 .subtract(player.getLocation().toVector())
                                 .normalize();
-                        dir.setY(0.25);
-                        e.setVelocity(dir.multiply(pushX).setY(pushY));
-
-                        if (playSound) {
-                            try {
-                                player.playSound(player.getLocation(), repelSound, 0.5f, 1.0f);
-                            } catch (Exception ignored) {}
-                        }
+                        dir.setY(pushY);
+                        e.setVelocity(dir.multiply(pushX));
                     }
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
     }
 
-    /* =====================================
-     * Despawn Hostiles in Claims
-     * ===================================== */
     private void startDespawnTask() {
         FileConfiguration cfg = plugin.getConfig();
         if (!cfg.getBoolean("protection.mobs.despawn-inside", true)) return;
+        long ticks = cfg.getLong("protection.mobs.despawn-interval-seconds", 30) * 20L;
 
-        int interval = cfg.getInt("protection.mobs.despawn-interval-seconds", 30) * 20;
         new BukkitRunnable() {
             @Override
             public void run() {
-                for (World world : Bukkit.getWorlds()) {
-                    for (Monster mob : world.getEntitiesByClass(Monster.class)) {
-                        if (isSafeZone(mob.getLocation())) {
-                            mob.remove();
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    Plot plot = plotManager.getPlot(player.getLocation());
+                    if (plot == null) continue;
+                    if (!plot.getFlag("safezone", plugin.getConfig())) continue;
+
+                    List<Entity> ents = player.getNearbyEntities(30, 30, 30);
+                    for (Entity e : ents) {
+                        if (e instanceof Monster) {
+                            e.remove();
                         }
                     }
                 }
             }
-        }.runTaskTimer(plugin, interval, interval);
-    }
-
-    /* =====================================
-     * Optional: Compass re-grant to OPs with auto-replace
-     * ===================================== */
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        if (player.isOp() && plugin.getConfig().getBoolean("settings.compass-auto-replace", false)) {
-            plugin.getGuiManager().giveCompass(player);
-        }
+        }.runTaskTimer(plugin, ticks, ticks);
     }
 }

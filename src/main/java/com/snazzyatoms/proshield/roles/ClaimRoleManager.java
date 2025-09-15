@@ -37,6 +37,22 @@ public class ClaimRoleManager {
         return map.remove(playerName) != null;
     }
 
+    // === Wrappers for GUIManager compatibility ===
+    public boolean addTrusted(UUID plotId, String playerName) {
+        Plot plot = plugin.getPlotManager().getPlot(plotId);
+        if (plot == null) return false;
+        return trustPlayer(plot, playerName, "trusted");
+    }
+
+    public boolean removeTrusted(UUID plotId, String playerName) {
+        Plot plot = plugin.getPlotManager().getPlot(plotId);
+        if (plot == null) return false;
+        return untrustPlayer(plot, playerName);
+    }
+
+    /* ==================
+     * Query Ops
+     * ================== */
     public Map<String, String> getTrusted(UUID plotId) {
         Map<String, PlayerRoleData> map = trusted.getOrDefault(plotId, Collections.emptyMap());
         Map<String, String> roles = new HashMap<>();

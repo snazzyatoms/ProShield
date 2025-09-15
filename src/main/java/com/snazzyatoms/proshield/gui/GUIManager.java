@@ -338,7 +338,7 @@ public class GUIManager {
 
         if (action.startsWith("flag:")) {
             String flagKey = action.substring("flag:".length());
-            Plot plot = plugin.getPlotManager().getPlot(player.getLocation()));
+            Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
             if (plot != null) {
                 toggleFlag(plot, flagKey, player);
                 openFlagsMenu(player);
@@ -460,7 +460,7 @@ public class GUIManager {
         return awaitingDenyReason.contains(player.getUniqueId());
     }
 
-    public void provideManualReason(Player player, String input, ProShield _plugin) {
+    public void provideManualReason(Player player, String input) {
         if (!isAwaitingReason(player)) return;
 
         awaitingDenyReason.remove(player.getUniqueId());
@@ -485,137 +485,4 @@ public class GUIManager {
 
     // ----- Roles add/remove via chat -----
     public boolean isAwaitingRoleAction(Player player) {
-        return awaitingRoleAction.containsKey(player.getUniqueId());
-    }
-
-    public void handleRoleChatInput(Player player, String input, ProShield _plugin) {
-        RoleActionCtx ctx = awaitingRoleAction.remove(player.getUniqueId());
-        if (ctx == null) return;
-
-        String target = ChatColor.stripColor(input == null ? "" : input.trim());
-        if (target.isEmpty()) {
-            plugin.getMessagesUtil().send(player, "&cCancelled: empty player name.");
-            return;
-        }
-
-        ClaimRoleManager rm = plugin.getRoleManager();
-        boolean ok = false;
-        try {
-            if (ctx.type == RoleActionCtx.Type.ADD) {
-                // Adjust method names if your API differs
-                ok = rm.addTrusted(ctx.plotId, target);
-                if (ok) {
-                    plugin.getMessagesUtil().send(player, "&aTrusted &f" + target + " &ain this claim.");
-                }
-            } else {
-                ok = rm.removeTrusted(ctx.plotId, target);
-                if (ok) {
-                    plugin.getMessagesUtil().send(player, "&cUntrusted &f" + target + " &cfrom this claim.");
-                }
-            }
-        } catch (Throwable t) {
-            plugin.getMessagesUtil().send(player, "&cRole change failed: " + t.getMessage());
-            return;
-        }
-
-        if (!ok) {
-            plugin.getMessagesUtil().send(player, "&cNo change made (maybe already set?).");
-        }
-    }
-
-    /* ===============
-     * Helpers
-     * =============== */
-    private void toggleFlag(Plot plot, String flag, Player player) {
-        boolean current = plot.getFlag(flag,
-                plugin.getConfig().getBoolean("claims.default-flags." + flag, false));
-        plot.setFlag(flag, !current);
-        plugin.getMessagesUtil().send(player,
-                !current ? "&a" + flag + " enabled." : "&c" + flag + " disabled.");
-    }
-
-    private void toggleWorldControl(Player player, String key) {
-        String base = "protection.world-controls";
-        String world = player.getWorld().getName();
-
-        boolean current = getWorldControl(world, key);
-        boolean next = !current;
-
-        String path = base + ".worlds." + world + "." + key;
-        plugin.getConfig().set(path, next);
-        plugin.saveConfig();
-
-        plugin.getMessagesUtil().send(player, "&eWorld &7(" + world + ") &e" + key + " &7→ " + (next ? "&aON" : "&cOFF"));
-    }
-
-    private void resetWorldControls(Player player) {
-        String base = "protection.world-controls.worlds." + player.getWorld().getName();
-        plugin.getConfig().set(base, null); // clear overrides
-        plugin.saveConfig();
-        plugin.getMessagesUtil().send(player, "&eWorld controls reset to defaults for &7" + player.getWorld().getName());
-    }
-
-    private boolean getWorldControl(String world, String key) {
-        String base = "protection.world-controls";
-        if (!plugin.getConfig().getBoolean(base + ".enabled", true)) return true;
-
-        String worldPath = base + ".worlds." + world + "." + key;
-        if (plugin.getConfig().isSet(worldPath)) {
-            return plugin.getConfig().getBoolean(worldPath);
-        }
-        return plugin.getConfig().getBoolean(base + ".defaults." + key, true);
-    }
-
-    private void fillMenuItems(Inventory inv, ConfigurationSection menuSec, Player player) {
-        ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
-        if (itemsSec == null) return;
-
-        for (String slotStr : itemsSec.getKeys(false)) {
-            int slot = parseIntSafe(slotStr, -1);
-            if (slot < 0) continue;
-            ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
-            if (itemSec == null) continue;
-
-            Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
-            if (mat == null) mat = Material.STONE;
-
-            ItemStack stack = new ItemStack(mat);
-            ItemMeta meta = stack.getItemMeta();
-            if (meta == null) continue;
-
-            String name = itemSec.getString("name", "");
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&',
-                    name.replace("{world}", player.getWorld().getName())));
-
-            List<String> lore = new ArrayList<>();
-            for (String line : itemSec.getStringList("lore")) {
-                lore.add(ChatColor.translateAlternateColorCodes('&',
-                        line.replace("{world}", player.getWorld().getName())));
-            }
-            meta.setLore(lore);
-            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-            stack.setItemMeta(meta);
-            inv.setItem(slot, stack);
-        }
-    }
-
-    private int[] headFillPattern(int size) {
-        if (size <= 27) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25};
-        if (size <= 36) return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34};
-        return new int[]{10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34, 37,38,39,40,41,42,43};
-    }
-
-    private int parseIntSafe(String s, int def) {
-        try { return Integer.parseInt(s); } catch (Exception e) { return def; }
-    }
-
-    // Safe expansion manager accessor (optional dependency)
-    private Object safeExpansionManager() {
-        try {
-            var m = ProShield.class.getMethod("getExpansionManager");
-            return m.invoke(plugin);
-        } catch (Throwable ignored) {
-            return null;
-        }
-    }
-}
+        return awaitingRoleAction.containsKey(player.getUniqueId

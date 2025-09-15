@@ -2,6 +2,8 @@ package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.*;
 
@@ -17,10 +19,12 @@ public class Plot {
     private final int z; // chunk Z
 
     private UUID owner;
-    private boolean adminClaim; // ✅ Safe zone / admin area flag
 
-    private final Map<UUID, String> trusted = new HashMap<>();  // UUID -> role name
-    private final Map<String, Boolean> flags = new HashMap<>(); // flag key -> state
+    // Trusted players: UUID -> role key (matches config roles.available.*)
+    private final Map<UUID, String> trusted = new HashMap<>();
+
+    // Per-plot flags (overrides). If absent, fall back to config defaults.
+    private final Map<String, Boolean> flags = new HashMap<>();
 
     public Plot(UUID id, String world, int x, int z, UUID owner) {
         this.id = id;
@@ -28,40 +32,6 @@ public class Plot {
         this.x = x;
         this.z = z;
         this.owner = owner;
-        this.adminClaim = false;
-
-        // ===== Safe defaults (can be changed in GUI) =====
-        // Block/Container
-        flags.put("block-break", false);
-        flags.put("block-place", false);
-        flags.put("container-access", true);
-
-        // Explosions & fire
-        flags.put("explosions", false);
-        flags.put("fire-burn", false);
-        flags.put("fire-spread", false);
-        flags.put("ignite-flint", false);
-        flags.put("ignite-lava", false);
-        flags.put("ignite-lightning", false);
-
-        // Liquids / grief
-        flags.put("lava-flow", false);
-        flags.put("water-flow", false);
-        flags.put("bucket-empty", false);
-
-        // Mobs
-        flags.put("mob-spawn", false);       // hostile spawn blocked
-        flags.put("mob-damage", false);      // mobs cannot damage players in claim
-        flags.put("hostile-aggro", false);   // hostiles cannot target players in claim
-        flags.put("mob-repel", true);        // push hostiles away from players in claim
-        flags.put("mob-despawn", true);      // despawn hostiles that slip into a claim
-
-        // Pets & animals
-        flags.put("pet-protect", true);      // tamed pets protected from other players
-        flags.put("animal-protect", true);   // farm/passive animals protected from other players
-
-        // PvP
-        flags.put("pvp", true);
     }
 
     public static Plot of(Chunk chunk, UUID owner) {
@@ -72,25 +42,28 @@ public class Plot {
     public String getWorld() { return world; }
     public int getX() { return x; }
     public int getZ() { return z; }
+
     public UUID getOwner() { return owner; }
     public void setOwner(UUID owner) { this.owner = owner; }
 
-    public boolean isAdminClaim() { return adminClaim; }
-    public void setAdminClaim(boolean adminClaim) { this.adminClaim = adminClaim; }
-
+    // ---------- Trusted / Roles ----------
     public Map<UUID, String> getTrusted() { return Collections.unmodifiableMap(trusted); }
-    public Map<String, Boolean> getFlags() { return Collections.unmodifiableMap(flags); }
 
     public boolean isTrusted(UUID uuid) {
         if (uuid == null) return false;
-        if (adminClaim) return false; // admin/safe zones: only perms via admin GUI
         if (uuid.equals(owner)) return true;
         return trusted.containsKey(uuid);
     }
 
-    public void trust(UUID uuid, String role) {
-        if (uuid == null) return;
-        trusted.put(uuid, role == null ? "trusted" : role);
+    public String getRole(UUID uuid) {
+        if (uuid == null) return null;
+        if (uuid.equals(owner)) return "owner";
+        return trusted.get(uuid);
+    }
+
+    public void setRole(UUID uuid, String roleKey) {
+        if (uuid == null || roleKey == null) return;
+        trusted.put(uuid, roleKey.toLowerCase(Locale.ROOT));
     }
 
     public void untrust(UUID uuid) {
@@ -98,15 +71,32 @@ public class Plot {
         trusted.remove(uuid);
     }
 
-    /** Get a flag with default fallback if not set */
-    public boolean getFlag(String key, boolean def) {
-        return flags.getOrDefault(key, def);
+    public boolean hasPermission(UUID uuid, String permissionKey, FileConfiguration cfg) {
+        if (uuid == null) return false;
+        if (uuid.equals(owner)) return true; // owner = full access
+        String role = trusted.get(uuid);
+        if (role == null) return false;
+        ConfigurationSection perm = cfg.getConfigurationSection("roles.available." + role + ".permissions");
+        if (perm == null) return false;
+        return perm.getBoolean(permissionKey, false);
+    }
+
+    // ---------- Flags ----------
+    /** Get effective flag value: per-plot override or default from config flags.available */
+    public boolean getFlag(String key, FileConfiguration cfg) {
+        if (flags.containsKey(key)) return flags.get(key);
+        return cfg.getBoolean("flags.available." + key + ".default", false);
     }
 
     public void setFlag(String key, boolean value) {
         flags.put(key, value);
     }
 
+    public Map<String, Boolean> getRawFlags() {
+        return Collections.unmodifiableMap(flags);
+    }
+
+    // ---------- Match helper ----------
     public boolean matches(Location loc) {
         if (loc == null || loc.getWorld() == null) return false;
         if (!loc.getWorld().getName().equalsIgnoreCase(world)) return false;
@@ -121,7 +111,6 @@ public class Plot {
                 ", x=" + x +
                 ", z=" + z +
                 ", owner=" + owner +
-                ", adminClaim=" + adminClaim +
                 '}';
     }
 }

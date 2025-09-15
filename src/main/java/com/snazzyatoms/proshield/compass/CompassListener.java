@@ -2,6 +2,7 @@
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.gui.GUIManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -19,9 +20,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class CompassListener implements Listener {
 
     private final ProShield plugin;
+    private final GUIManager guiManager;
 
-    public CompassListener(ProShield plugin) {
+    public CompassListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
+        this.guiManager = guiManager;
     }
 
     @EventHandler
@@ -33,11 +36,13 @@ public class CompassListener implements Listener {
 
         if (item.getType() == Material.COMPASS) {
             ItemMeta meta = item.getItemMeta();
-            if (meta != null 
-                    && meta.hasDisplayName() 
-                    && ChatColor.stripColor(meta.getDisplayName()).equalsIgnoreCase("ProShield Compass")) {
+            if (meta != null && meta.hasDisplayName() &&
+                ChatColor.stripColor(meta.getDisplayName()).equalsIgnoreCase("ProShield Compass")) {
+
                 event.setCancelled(true);
-                plugin.getGuiManager().openMenu(player, "main"); // ✅ open main GUI
+
+                // ✅ Open the main GUI through GUIManager
+                guiManager.openMenu(player, "main");
             }
         }
     }

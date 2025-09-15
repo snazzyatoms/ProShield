@@ -42,7 +42,7 @@ public class CompassManager implements Listener {
     /**
      * Checks whether the player already has a ProShield compass.
      */
-    private boolean hasCompass(Player player) {
+    public boolean hasCompass(Player player) { // 🔓 made public
         for (ItemStack item : player.getInventory().getContents()) {
             if (item != null && item.getType() == Material.COMPASS) {
                 ItemMeta meta = item.getItemMeta();

@@ -45,7 +45,7 @@ public class GUIManager {
         FileConfiguration cfg = plugin.getConfig();
         ConfigurationSection menuSec = cfg.getConfigurationSection("gui.menus." + menuKey);
         if (menuSec == null) {
-            player.sendMessage(ChatColor.RED + "Menu not found: " + menuKey);
+            messages.send(player, "&cMenu not found: " + menuKey);
             return;
         }
 
@@ -88,7 +88,7 @@ public class GUIManager {
             if (clicked != null && clicked.hasItemMeta() && clicked.getItemMeta().hasDisplayName()) {
                 String itemName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
                 messages.send(player, "&eClicked: &f" + itemName);
-                // TODO: tie into actual action logic (claim, trust, flags, etc.)
+                // 🔔 TODO: Tie into actual action logic (claim, trust, flags, etc.)
             }
         }
     }
@@ -102,8 +102,8 @@ public class GUIManager {
 
     public void provideManualReason(Player player, String reason) {
         awaitingReason.remove(player.getUniqueId());
-        player.sendMessage(ChatColor.RED + "Expansion denied. Reason: " + ChatColor.GRAY + reason);
-        // TODO: hook into ExpansionManager when available
+        messages.send(player, "&cExpansion denied. Reason: &7" + reason);
+        // 🔔 TODO: Hook into ExpansionManager when available
     }
 
     public void setAwaitingReason(Player player, boolean waiting) {
@@ -119,8 +119,9 @@ public class GUIManager {
 
     public void handleRoleChatInput(Player player, String message) {
         awaitingRoleAction.remove(player.getUniqueId());
-        roleManager.assignRoleViaChat(player, message); // tie into ClaimRoleManager
-        player.sendMessage(ChatColor.GREEN + "Processed role input: " + ChatColor.GRAY + message);
+        // Delegates to ClaimRoleManager
+        roleManager.assignRoleViaChat(player, message);
+        messages.send(player, "&aProcessed role input: &7" + message);
     }
 
     public void setAwaitingRoleAction(Player player, boolean waiting) {

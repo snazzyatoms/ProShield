@@ -3,32 +3,47 @@ package com.snazzyatoms.proshield.listeners;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TNTPrimed;
-import org.bukkit.entity.Creeper;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.projectiles.ProjectileSource;
+
+import java.util.Map;
+import java.util.UUID;
 
 public class ProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
+    private final ClaimRoleManager roleManager;
 
     public ProtectionListener(ProShield plugin) {
         this.plugin = plugin;
         this.plotManager = plugin.getPlotManager();
+        this.roleManager = plugin.getRoleManager();
     }
 
     private Plot getPlot(Player player) {
         return plotManager.getPlot(player.getLocation());
+    }
+
+    private boolean hasPermission(Plot plot, Player player, String permKey) {
+        if (plot.isOwner(player.getUniqueId())) return true;
+
+        Map<String, Boolean> perms = roleManager.getPermissions(plot.getId(), player.getName());
+        if (perms.containsKey(permKey)) return perms.get(permKey);
+
+        // Fallback: trusted players inherit default "trusted" role
+        return plot.isTrusted(player.getUniqueId());
     }
 
     /* ========================
@@ -40,7 +55,7 @@ public class ProtectionListener implements Listener {
         Plot plot = plotManager.getPlot(event.getBlock().getLocation());
         if (plot == null) return;
 
-        if (!plot.isOwner(player.getUniqueId()) && !plot.isTrusted(player.getUniqueId())) {
+        if (!hasPermission(plot, player, "build")) {
             event.setCancelled(true);
             plugin.getMessagesUtil().send(player, "&cYou cannot break blocks in this claim.");
         }
@@ -52,7 +67,7 @@ public class ProtectionListener implements Listener {
         Plot plot = plotManager.getPlot(event.getBlock().getLocation());
         if (plot == null) return;
 
-        if (!plot.isOwner(player.getUniqueId()) && !plot.isTrusted(player.getUniqueId())) {
+        if (!hasPermission(plot, player, "build")) {
             event.setCancelled(true);
             plugin.getMessagesUtil().send(player, "&cYou cannot place blocks in this claim.");
         }
@@ -63,7 +78,7 @@ public class ProtectionListener implements Listener {
      * ======================== */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onEntityDamage(EntityDamageByEntityEvent event) {
-        // Protect players in claims
+        // Protect players
         if (event.getEntity() instanceof Player victim) {
             Plot plot = plotManager.getPlot(victim.getLocation());
             if (plot != null) {
@@ -76,17 +91,27 @@ public class ProtectionListener implements Listener {
                 }
                 // Mob attack
                 else if (event.getDamager() instanceof Monster) {
-                    if (!plot.getFlag("safezone", false)) {
+                    if (!plot.getFlag("safezone", true)) { // default true = mobs blocked
                         event.setCancelled(true);
                     }
                 }
-                // Projectile by mobs
-                else if (event.getDamager() instanceof org.bukkit.entity.Projectile proj) {
+                // Projectiles from mobs
+                else if (event.getDamager() instanceof Projectile proj) {
                     ProjectileSource shooter = proj.getShooter();
-                    if (shooter instanceof Monster && !plot.getFlag("safezone", false)) {
+                    if (shooter instanceof Monster && !plot.getFlag("safezone", true)) {
                         event.setCancelled(true);
                     }
                 }
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+    public void onEntityTarget(EntityTargetLivingEntityEvent event) {
+        if (event.getTarget() instanceof Player player && event.getEntity() instanceof Monster) {
+            Plot plot = plotManager.getPlot(player.getLocation());
+            if (plot != null && !plot.getFlag("safezone", true)) {
+                event.setCancelled(true); // mobs can’t even target players in claim
             }
         }
     }
@@ -101,19 +126,14 @@ public class ProtectionListener implements Listener {
 
         if (!plot.getFlag("explosions", false)) {
             event.blockList().clear(); // no block damage
-            // Extra: remove creeper if it explodes inside claim
-            if (event.getEntity() instanceof Creeper) {
-                event.getEntity().remove();
-            }
-            // Remove TNT entities too
-            if (event.getEntity() instanceof TNTPrimed) {
-                event.getEntity().remove();
+            if (event.getEntity() instanceof Creeper || event.getEntity() instanceof TNTPrimed) {
+                event.getEntity().remove(); // despawn inside claim
             }
         }
     }
 
     /* ========================
-     * ITEM FRAME / ARMOR STAND
+     * ITEM FRAMES / ARMOR STANDS
      * ======================== */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onHangingBreak(HangingBreakByEntityEvent event) {
@@ -121,23 +141,32 @@ public class ProtectionListener implements Listener {
         Plot plot = plotManager.getPlot(event.getEntity().getLocation());
         if (plot == null) return;
 
-        if (!plot.isOwner(player.getUniqueId()) && !plot.isTrusted(player.getUniqueId())) {
+        if (!hasPermission(plot, player, "build")) {
             event.setCancelled(true);
             plugin.getMessagesUtil().send(player, "&cYou cannot remove that here.");
         }
     }
 
+    /* ========================
+     * PLAYER INTERACT / CONTAINERS
+     * ======================== */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         Plot plot = getPlot(player);
         if (plot == null) return;
 
-        // Check containers, frames, etc. if needed:
-        if (!plot.isOwner(player.getUniqueId()) && !plot.isTrusted(player.getUniqueId())) {
-            if (!plot.getFlag("interact", false)) {
-                event.setCancelled(true);
-                plugin.getMessagesUtil().send(player, "&cYou cannot interact here.");
+        if (!plot.isOwner(player.getUniqueId())) {
+            if (event.getClickedBlock() != null && event.getClickedBlock().getState() instanceof InventoryHolder) {
+                if (!hasPermission(plot, player, "containers")) {
+                    event.setCancelled(true);
+                    plugin.getMessagesUtil().send(player, "&cYou cannot open containers in this claim.");
+                }
+            } else {
+                if (!hasPermission(plot, player, "interact")) {
+                    event.setCancelled(true);
+                    plugin.getMessagesUtil().send(player, "&cYou cannot interact here.");
+                }
             }
         }
     }

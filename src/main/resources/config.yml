@@ -25,10 +25,10 @@ protection:
   mobs:
     border-repel:
       enabled: true
-      radius: 3.0
+      radius: 15.0
       horizontal-push: 0.7
       vertical-push: 0.25
-      play-sound: true
+      play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
     despawn-inside: true
 
@@ -132,6 +132,7 @@ gui:
             - "&7Toggle TNT & creeper damage"
             - "&fCurrent: {state}"
           action: "flag:explosions"
+          flag-key: "explosions"
 
         "11":
           material: WATER_BUCKET
@@ -140,6 +141,7 @@ gui:
             - "&7Toggle bucket use inside claims"
             - "&fCurrent: {state}"
           action: "flag:buckets"
+          flag-key: "buckets"
 
         "12":
           material: ITEM_FRAME
@@ -148,6 +150,7 @@ gui:
             - "&7Toggle protection of item frames"
             - "&fCurrent: {state}"
           action: "flag:item-frames"
+          flag-key: "item-frames"
 
         "13":
           material: ARMOR_STAND
@@ -156,6 +159,7 @@ gui:
             - "&7Toggle protection of armor stands"
             - "&fCurrent: {state}"
           action: "flag:armor-stands"
+          flag-key: "armor-stands"
 
         "14":
           material: CHEST
@@ -164,6 +168,7 @@ gui:
             - "&7Toggle access to chests, hoppers, furnaces"
             - "&fCurrent: {state}"
           action: "flag:containers"
+          flag-key: "containers"
 
         "15":
           material: BONE
@@ -172,6 +177,7 @@ gui:
             - "&7Toggle pet protection"
             - "&fCurrent: {state}"
           action: "flag:pets"
+          flag-key: "pets"
 
         "16":
           material: IRON_SWORD
@@ -180,6 +186,7 @@ gui:
             - "&7Toggle combat inside claims"
             - "&fCurrent: {state}"
           action: "flag:pvp"
+          flag-key: "pvp"
 
         "17":
           material: SHIELD
@@ -188,6 +195,7 @@ gui:
             - "&7Toggle mob spawning & hostile damage"
             - "&fCurrent: {state}"
           action: "flag:safezone"
+          flag-key: "safezone"
 
         "26":
           material: BARRIER
@@ -206,6 +214,7 @@ gui:
           lore:
             - "&7Trust a new player"
           action: "role:add"
+          role-action: "add"
 
         "13":
           material: RED_WOOL
@@ -213,6 +222,7 @@ gui:
           lore:
             - "&7Untrust an existing player"
           action: "role:remove"
+          role-action: "remove"
 
         "26":
           material: BARRIER

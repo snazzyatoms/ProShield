@@ -19,10 +19,10 @@ public class Plot {
     private final int z; // chunk Z
 
     private UUID owner;
-    private int radius; // 🔹 protection radius in blocks (per-plot)
+    private int radius; // protection radius in blocks (per-plot)
 
-    private final Map<UUID, String> trusted = new HashMap<>();     // UUID -> role name
-    private final Map<String, Boolean> flags = new HashMap<>();    // flag key -> state
+    private final Map<UUID, String> trusted = new HashMap<>();
+    private final Map<String, Boolean> flags = new HashMap<>();
 
     public Plot(UUID id, String world, int x, int z, UUID owner, int radius) {
         this.id = id;
@@ -32,48 +32,39 @@ public class Plot {
         this.owner = owner;
         this.radius = radius;
 
-        // =============================
-        // Default protection flags
-        // =============================
-        // Building
+        // Defaults
         flags.put("block-break", false);
         flags.put("block-place", false);
         flags.put("bucket-use", false);
         flags.put("bucket-lava", false);
         flags.put("bucket-water", false);
 
-        // Explosions
         flags.put("explosions", false);
         flags.put("explosions-creeper", false);
         flags.put("explosions-tnt", false);
         flags.put("explosions-ghast", false);
         flags.put("explosions-other", false);
 
-        // Fire
         flags.put("fire-burn", false);
         flags.put("fire-spread", false);
         flags.put("ignite-flint", false);
         flags.put("ignite-lava", false);
         flags.put("ignite-lightning", false);
 
-        // Mobs
         flags.put("mob-spawn", false);
         flags.put("mob-damage", false);
-        flags.put("safezone", true);          // claims = safezones by default
-        flags.put("mob-repel", true);         // repel enabled
-        flags.put("mob-despawn", true);       // despawn inside claims
+        flags.put("safezone", true);
+        flags.put("mob-repel", true);
+        flags.put("mob-despawn", true);
+        flags.put("protect-pets", true);
+        flags.put("protect-passive", true);
 
-        // Pets & Animals (duplicate keys for compatibility across listeners)
-        flags.put("protect-pets", true);      // used in MobProtectionListener
-        flags.put("pet-protect", true);       // used in ProtectionListener
-        flags.put("protect-passive", true);   // used in MobProtectionListener
-        flags.put("animal-protect", true);    // used in ProtectionListener
+        flags.put("pvp", false);
 
-        // PvP
-        flags.put("pvp", false);              // PVP disabled inside claims by default
+        // Optional: admin-claim flag (default false)
+        flags.putIfAbsent("admin-claim", false);
     }
 
-    /** Factory for creating a new Plot at a chunk with radius from config. */
     public static Plot of(Chunk chunk, UUID owner, int radius) {
         return new Plot(UUID.randomUUID(),
                 chunk.getWorld().getName(),
@@ -83,9 +74,6 @@ public class Plot {
                 radius);
     }
 
-    /* =============================
-     * Accessors
-     * ============================= */
     public UUID getId() { return id; }
     public String getWorld() { return world; }
     public int getX() { return x; }
@@ -99,9 +87,6 @@ public class Plot {
     public Map<UUID, String> getTrusted() { return Collections.unmodifiableMap(trusted); }
     public Map<String, Boolean> getFlags() { return Collections.unmodifiableMap(flags); }
 
-    /* =============================
-     * Trust Management
-     * ============================= */
     public boolean isTrusted(UUID uuid) {
         if (uuid == null) return false;
         if (uuid.equals(owner)) return true;
@@ -118,14 +103,10 @@ public class Plot {
         trusted.remove(uuid);
     }
 
-    /* =============================
-     * Flag Management
-     * ============================= */
     /** Get a flag with config default fallback */
     public boolean getFlag(String key, FileConfiguration cfg) {
         if (flags.containsKey(key)) return flags.get(key);
 
-        // fallback to config defaults if defined
         if (cfg.isConfigurationSection("protection")) {
             for (String section : cfg.getConfigurationSection("protection").getKeys(true)) {
                 if (section.equalsIgnoreCase(key)) {
@@ -140,9 +121,12 @@ public class Plot {
         flags.put(key, value);
     }
 
-    /* =============================
-     * Location Helpers
-     * ============================= */
+    /** Treat admin claims as a flag or ownerless plots. */
+    public boolean isAdminClaim() {
+        Boolean flag = flags.get("admin-claim");
+        return (flag != null && flag) || owner == null;
+    }
+
     public boolean matches(Location loc) {
         if (loc == null || loc.getWorld() == null) return false;
         if (!loc.getWorld().getName().equalsIgnoreCase(world)) return false;

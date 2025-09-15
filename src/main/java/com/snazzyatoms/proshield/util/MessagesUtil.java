@@ -1,151 +1,74 @@
-# =========================================================
-# ProShield Messages
-# Version: 1.2.5
-# =========================================================
-# Supports color codes with '&' and placeholders:
-# {player}, {claim}, {role}, {owner}, {state}, {count}
-# =========================================================
+package com.snazzyatoms.proshield.util;
 
-prefix: "&3[ProShield]&r "
-debug-prefix: "&8[DEBUG]&r "
+import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.FileConfiguration;
 
-# -----------------------------
-# Help (merged dynamically)
-# -----------------------------
-help:
-  player:
-    - "&3&lProShield &7— Player Commands (requires &fproshield.player.access&7)"
-    - "&b/claim &7– Claim current chunk"
-    - "&b/unclaim &7– Unclaim current chunk"
-    - "&b/trust <player> [role] &7– Trust a player"
-    - "&b/untrust <player> &7– Remove trust"
-    - "&b/roles &7– Open roles GUI"
-    - "&b/transfer <player> &7– Transfer ownership"
-    - "&b/proshield compass &7– Get your compass"
+public class MessagesUtil {
+    private final ProShield plugin;
+    private final FileConfiguration messagesCfg;
 
-  admin:
-    - "&c&lAdmin Tools (requires &fproshield.admin&c)"
-    - "&c/proshield reload &7– Reload configs"
-    - "&c/proshield debug &7– Toggle debug mode"
-    - "&c/proshield bypass &7– Toggle admin bypass"
-    - "&c/proshield compass &7– Give admin compass"
-    - "&c/proshield admin &7– Open Admin GUI"
+    public MessagesUtil(ProShield plugin, FileConfiguration messagesCfg) {
+        this.plugin = plugin;
+        this.messagesCfg = messagesCfg;
+    }
 
-  senior:
-    - "&4&lSenior Admin Tools"
-    - "&4Expansion Requests &7– Requires &fproshield.admin.expansions"
-    - "&4World Controls &7– Requires &fproshield.admin.worldcontrols"
+    // Send to player
+    public void send(Player player, String message) {
+        if (player == null || message == null) return;
+        player.sendMessage(color(getPrefix() + message));
+    }
 
-# -----------------------------
-# General & Errors
-# -----------------------------
-error:
-  player-only: "&cThis command can only be run by a player."
-  no-permission: "&cYou don’t have permission."
-  no-claim: "&cYou are not standing in a claim."
-  not-owner: "&cOnly the claim owner can do that."
-  not-trusted: "&cYou are not trusted in this claim."
-  cannot-transfer: "&cYou cannot transfer this claim."
-  player-not-found: "&cCould not find player &e{player}&c."
-  unknown-command: "&cUnknown subcommand."
+    // Send to CommandSender (works for console too)
+    public void send(CommandSender sender, String message) {
+        if (sender == null || message == null) return;
+        sender.sendMessage(color(getPrefix() + message));
+    }
 
-messages:
-  reloaded: "&aProShield configs reloaded."
+    // Send raw (used for help menus where prefix is not wanted)
+    public void sendRaw(CommandSender sender, String message) {
+        if (sender == null || message == null) return;
+        sender.sendMessage(color(message));
+    }
 
-# -----------------------------
-# Claim Messages
-# -----------------------------
-claim:
-  success: "&aYou successfully claimed this chunk."
-  already-owned: "&cThis chunk is already claimed by {owner}."
-  unclaimed: "&aYou unclaimed this chunk."
-  not-owner: "&cYou are not the owner of this claim."
-  info: "&eClaim Info: &7Owner: {owner}, Trusted: {trusted}"
-  entering: "&aEntering claim: &e{claim}"
-  leaving: "&cLeaving claim: &e{claim}"
-  wilderness: "&7Entering Wilderness"
+    // Debug log
+    public void debug(String message) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info(color(getDebugPrefix() + message));
+        }
+    }
 
-# -----------------------------
-# Trust / Untrust / Roles
-# -----------------------------
-trust:
-  usage: "&eUsage: /trust <player> [role]"
-  added: "&a{player} was trusted with role {role} in claim {claim}."
-  already-trusted: "&e{player} is already trusted here."
-  self: "&cYou cannot trust yourself."
-  invalid-role: "&cInvalid role: {role}"
-  you-were-trusted: "&aYou were trusted in {claim} with role {role}."
-  failed: "&cCould not trust &e{player}&c."
+    // Look up a key from messages.yml, fall back to config.yml if not found
+    public String get(String path) {
+        if (messagesCfg != null && messagesCfg.contains(path)) {
+            return color(messagesCfg.getString(path, ""));
+        }
+        if (plugin.getConfig().contains(path)) {
+            return color(plugin.getConfig().getString(path, ""));
+        }
+        return color(path); // fallback: show path itself
+    }
 
-untrust:
-  usage: "&eUsage: /untrust <player>"
-  removed: "&c{player} was untrusted from claim {claim}."
-  not-trusted: "&e{player} is not trusted here."
-  you-were-untrusted: "&cYou were untrusted from {claim}."
+    // Prefix helpers
+    private String getPrefix() {
+        if (messagesCfg != null && messagesCfg.contains("prefix")) {
+            return color(messagesCfg.getString("prefix", "&7[ProShield]&r "));
+        }
+        return color(plugin.getConfig().getString("messages.prefix", "&7[ProShield]&r "));
+    }
 
-roles:
-  no-claim: "&cYou must be inside a claim to manage roles."
-  not-allowed: "&cYou must be the claim owner or co-owner to manage roles in {claim}."
-  opened: "&aOpening roles manager..."
-  updated: "&aUpdated role: {player} is now {role} in claim {claim}."
-  cleared: "&cRole cleared for {player} in claim {claim}."
+    private String getDebugPrefix() {
+        if (messagesCfg != null && messagesCfg.contains("debug-prefix")) {
+            return color(messagesCfg.getString("debug-prefix", "&8[Debug]&r "));
+        }
+        return color(plugin.getConfig().getString("messages.debug-prefix", "&8[Debug]&r "));
+    }
 
-# -----------------------------
-# Ownership Transfer
-# -----------------------------
-transfer:
-  usage: "&eUsage: /transfer <player>"
-  success: "&aYou transferred ownership of {claim} to {player}."
-  not-owner: "&cOnly the claim owner can transfer ownership."
-  self: "&cYou cannot transfer a claim to yourself."
-  target-offline: "&cThe target player must be online."
-  already-owner: "&eThat player is already the owner."
-  you-are-owner: "&aYou are now the owner of claim {claim}."
-  override-success: "&a(Admin) You reassigned ownership of {claim} to {player}."
-  override-fail: "&c(Admin) Transfer failed — {player} is not the current owner."
-  failed: "&cTransfer to &e{player}&c failed."
-
-# -----------------------------
-# Admin Messages
-# -----------------------------
-admin:
-  bypass-on: "&eBypass &aENABLED"
-  bypass-off: "&eBypass &cDISABLED"
-  debug-on: "&eDebug mode &aENABLED"
-  debug-off: "&eDebug mode &cDISABLED"
-
-# -----------------------------
-# Compass
-# -----------------------------
-compass:
-  given: "&aA ProShield compass has been added to your inventory."
-  already: "&eYou already have a ProShield compass."
-  command-success: "&aA ProShield Compass has been given to you."
-
-# -----------------------------
-# Flags
-# -----------------------------
-flags:
-  toggle: "&eFlag &b{flag}&e is now {state} for {claim}."
-  no-claim: "&cNo claim found here to toggle flags."
-
-# -----------------------------
-# Claim Expiry / Purge
-# -----------------------------
-claims:
-  expired: "&cClaim {claim} owned by {owner} has expired."
-  purged: "&c{count} expired claims were purged."
-
-# -----------------------------
-# Teleport
-# -----------------------------
-teleport:
-  success: "&aTeleported to claim owned by {owner}."
-  disabled: "&cClaim teleporting is disabled."
-  no-claims: "&7No claims found."
-
-# -----------------------------
-# Debug
-# -----------------------------
-debug:
-  generic: "&8[DEBUG] &7{message}"
+    // Colorizer
+    public String color(String input) {
+        if (input == null) return "";
+        return ChatColor.translateAlternateColorCodes('&', input);
+    }
+}

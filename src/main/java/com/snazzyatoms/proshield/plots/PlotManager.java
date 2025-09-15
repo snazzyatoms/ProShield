@@ -193,7 +193,7 @@ public class PlotManager {
         if (plot.getFlags().isEmpty()) {
             messages.send(player, "&eFlags: &7None set.");
         } else {
-            messages.send(player, "&eFlags: &f" + String.join(", ", plot.getFlags()));
+            messages.send(player, "&eFlags: &f" + String.join(", ", plot.getFlags().keySet())); // ✅ fix join on Map
         }
     }
 

@@ -4,6 +4,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -20,6 +21,7 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.Map;
@@ -35,6 +37,10 @@ public class ProtectionListener implements Listener {
         this.plugin = plugin;
         this.plotManager = plugin.getPlotManager();
         this.roleManager = plugin.getRoleManager();
+
+        // Start periodic safezone mob cleanup
+        long interval = 20L * 30; // every 30 seconds
+        Bukkit.getScheduler().runTaskTimer(plugin, this::sweepSafezoneMobs, interval, interval);
     }
 
     /* ===========
@@ -49,12 +55,11 @@ public class ProtectionListener implements Listener {
     private boolean isOwnerOrTrusted(Plot plot, Player p) {
         return plot != null && (plot.isOwner(p.getUniqueId()) || plot.isTrusted(p.getUniqueId()));
     }
-    /** Role-aware check: explicit per-player overrides (build/interact/containers/unclaim) */
     private boolean hasRoleOverride(UUID plotId, Player p, String key) {
         if (p == null || plotId == null) return false;
         if (plugin.getBypassing().contains(p.getUniqueId())) return true;
         Plot plot = plotManager.getPlotById(plotId);
-        if (plot != null && plot.isOwner(p.getUniqueId())) return true; // owners always allowed
+        if (plot != null && plot.isOwner(p.getUniqueId())) return true;
         Map<String, Boolean> perms = roleManager.getPermissions(plotId, p.getName());
         Boolean v = perms.get(key);
         return v != null && v;
@@ -184,7 +189,7 @@ public class ProtectionListener implements Listener {
     }
 
     /* ========================
-     * VEHICLES (boats/minecarts)
+     * VEHICLES
      * ======================== */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onVehicleUse(PlayerInteractEntityEvent event) {
@@ -204,7 +209,7 @@ public class ProtectionListener implements Listener {
     }
 
     /* ========================
-     * PVP / MOB DAMAGE / PETS
+     * PVP / MOBS / PETS
      * ======================== */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onEntityDamage(EntityDamageByEntityEvent event) {
@@ -212,23 +217,21 @@ public class ProtectionListener implements Listener {
         if (event.getEntity() instanceof Player victim) {
             Plot plot = plotManager.getPlot(victim.getLocation());
             if (plot != null) {
-                // PVP
                 if (event.getDamager() instanceof Player attacker) {
-                    boolean pvp = plot.getFlag("pvp", plugin.getConfig().getBoolean("claims.default-flags.pvp", false));
+                    boolean pvp = plot.getFlag("pvp",
+                            plugin.getConfig().getBoolean("claims.default-flags.pvp", false));
                     if (!pvp && !plugin.getBypassing().contains(attacker.getUniqueId())) {
                         event.setCancelled(true);
                         attacker.sendMessage(ChatColor.RED + "PVP is disabled in this claim!");
                     }
-                }
-                // Mob attack
-                else if (event.getDamager() instanceof Monster) {
-                    boolean safe = plot.getFlag("safezone", plugin.getConfig().getBoolean("claims.default-flags.safezone", true));
+                } else if (event.getDamager() instanceof Monster) {
+                    boolean safe = plot.getFlag("safezone",
+                            plugin.getConfig().getBoolean("claims.default-flags.safezone", true));
                     if (safe) event.setCancelled(true);
-                }
-                // Projectile by mobs
-                else if (event.getDamager() instanceof Projectile proj) {
+                } else if (event.getDamager() instanceof Projectile proj) {
                     ProjectileSource shooter = proj.getShooter();
-                    boolean safe = plot.getFlag("safezone", plugin.getConfig().getBoolean("claims.default-flags.safezone", true));
+                    boolean safe = plot.getFlag("safezone",
+                            plugin.getConfig().getBoolean("claims.default-flags.safezone", true));
                     if (safe && shooter instanceof Monster) event.setCancelled(true);
                 }
             }
@@ -250,31 +253,6 @@ public class ProtectionListener implements Listener {
                             event.setCancelled(true);
                         }
                     }
-                }
-            }
-        }
-
-        // Item frame / armor stand protection
-        if (event.getEntity() instanceof ItemFrame || event.getEntity() instanceof ArmorStand) {
-            Plot plot = plotAt(event.getEntity());
-            if (plot == null) return;
-
-            if (event.getEntity() instanceof ItemFrame) {
-                boolean protectFrames = plot.getFlag("item-frames",
-                        plugin.getConfig().getBoolean("claims.default-flags.item-frames", true));
-                if (protectFrames && event.getDamager() instanceof Player p &&
-                        !isOwnerOrTrusted(plot, p) && !hasRoleOverride(plot.getId(), p, "interact")) {
-                    event.setCancelled(true);
-                    plugin.getMessagesUtil().send(p, "&cItem frames are protected here.");
-                }
-            }
-            if (event.getEntity() instanceof ArmorStand) {
-                boolean protectStands = plot.getFlag("armor-stands",
-                        plugin.getConfig().getBoolean("claims.default-flags.armor-stands", true));
-                if (protectStands && event.getDamager() instanceof Player p &&
-                        !isOwnerOrTrusted(plot, p) && !hasRoleOverride(plot.getId(), p, "interact")) {
-                    event.setCancelled(true);
-                    plugin.getMessagesUtil().send(p, "&cArmor stands are protected here.");
                 }
             }
         }
@@ -300,7 +278,7 @@ public class ProtectionListener implements Listener {
     }
 
     /* ========================
-     * FIRE & IGNITE CONTROL
+     * FIRE / IGNITE
      * ======================== */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onBlockBurn(BlockBurnEvent event) {
@@ -342,6 +320,24 @@ public class ProtectionListener implements Listener {
                 plugin.getConfig().getBoolean("claims.default-flags.safezone", true));
         if (safe) {
             event.setCancelled(true);
+        }
+    }
+
+    /* ========================
+     * Periodic Sweep for Safezones
+     * ======================== */
+    private void sweepSafezoneMobs() {
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity e : world.getEntitiesByClass(Monster.class)) {
+                Plot plot = plotAt(e);
+                if (plot != null) {
+                    boolean safe = plot.getFlag("safezone",
+                            plugin.getConfig().getBoolean("claims.default-flags.safezone", true));
+                    if (safe) {
+                        e.remove();
+                    }
+                }
+            }
         }
     }
 }

@@ -25,7 +25,9 @@ public class GUIManager {
 
     private final ProShield plugin;
 
+    // For deny-reason via chat
     private static final Map<UUID, ExpansionRequest> awaitingReason = new HashMap<>();
+    // For roles via chat (e.g., "role:add")
     private static final Map<UUID, String> awaitingRoleAction = new HashMap<>();
     private static final Map<UUID, UUID> awaitingRolePlot = new HashMap<>();
 
@@ -33,6 +35,81 @@ public class GUIManager {
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
+    }
+
+    /* ========================
+     * Awaiting helper methods
+     * ======================== */
+    public static boolean isAwaitingReason(Player player) {
+        return awaitingReason.containsKey(player.getUniqueId());
+    }
+
+    public static boolean isAwaitingRoleAction(Player player) {
+        return awaitingRoleAction.containsKey(player.getUniqueId());
+    }
+
+    public static void setRoleAction(Player player, String action) {
+        awaitingRoleAction.put(player.getUniqueId(), action);
+    }
+
+    public static void cancelAwaiting(Player player) {
+        awaitingReason.remove(player.getUniqueId());
+        awaitingRoleAction.remove(player.getUniqueId());
+        awaitingRolePlot.remove(player.getUniqueId());
+    }
+
+    /** Chat hook: handle "role:add <playerName>" style input */
+    public static void handleRoleChatInput(Player actor, String message, ProShield plugin) {
+        String action = awaitingRoleAction.remove(actor.getUniqueId());
+        UUID plotId = awaitingRolePlot.remove(actor.getUniqueId());
+        if (action == null || plotId == null) {
+            plugin.getMessagesUtil().send(actor, "&7No role action pending.");
+            return;
+        }
+
+        Plot plot = plugin.getPlotManager().getPlotById(plotId);
+        if (plot == null) {
+            plugin.getMessagesUtil().send(actor, "&cThat claim no longer exists.");
+            return;
+        }
+
+        if (action.equalsIgnoreCase("add")) {
+            String targetName = message.trim();
+            if (targetName.isEmpty()) {
+                plugin.getMessagesUtil().send(actor, "&cNo player name supplied.");
+                return;
+            }
+
+            ClaimRoleManager roles = plugin.getRoleManager();
+            OfflinePlayer off = Bukkit.getOfflinePlayer(targetName);
+
+            if (off != null && plot.isOwner(off.getUniqueId())) {
+                plugin.getMessagesUtil().send(actor, "&cThat player already owns this claim.");
+                return;
+            }
+
+            boolean ok = roles.trustPlayer(plot, targetName, "trusted");
+            if (ok) {
+                plugin.getMessagesUtil().send(actor, "&aTrusted &e" + targetName + " &aas &6trusted&a.");
+            } else {
+                plugin.getMessagesUtil().send(actor, "&e" + targetName + " &7was already trusted.");
+            }
+        } else {
+            plugin.getMessagesUtil().send(actor, "&7Unhandled role action: " + action);
+        }
+    }
+
+    /** Chat hook: manual deny reason for expansion */
+    public static void provideManualReason(Player admin, String reason, ProShield plugin) {
+        ExpansionRequest req = awaitingReason.remove(admin.getUniqueId());
+        if (req == null) {
+            plugin.getMessagesUtil().send(admin, "&7No pending request to deny.");
+            return;
+        }
+        ExpansionQueue.denyRequest(req, reason);
+        Player target = Bukkit.getPlayer(req.getPlayerId());
+        if (target != null) target.sendMessage(ChatColor.RED + "Your expansion request was denied: " + reason);
+        plugin.getMessagesUtil().send(admin, "&cRequest denied (" + reason + ").");
     }
 
     /* ===================
@@ -145,6 +222,11 @@ public class GUIManager {
 
         Inventory inv = Bukkit.createInventory(null, size, title);
 
+        // Optional: static buttons from config (add/remove/back) if present
+        if (menuSec != null) {
+            fillMenuItems(inv, menuSec, player);
+        }
+
         ClaimRoleManager rm = plugin.getRoleManager();
         Map<String, String> trusted = rm.getTrusted(plot.getId());
         int[] slots = headFillPattern(size);
@@ -236,18 +318,15 @@ public class GUIManager {
             Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
             if (plot != null) {
                 toggleFlag(plot, flagKey, player);
-                openFlagsMenu(player);
+                openFlagsMenu(player); // refresh ON/OFF state text
             }
-        }
-        else if (action.startsWith("menu:")) {
+        } else if (action.startsWith("menu:")) {
             String menuName = action.substring("menu:".length());
             openMenu(player, menuName);
-        }
-        else if (action.startsWith("command:")) {
+        } else if (action.startsWith("command:")) {
             String cmdToRun = action.substring("command:".length());
             player.performCommand(cmdToRun);
-        }
-        else if (action.startsWith("reason:")) {
+        } else if (action.startsWith("reason:")) {
             String reasonKey = action.substring("reason:".length());
             List<ExpansionRequest> pending = ExpansionQueue.getPendingRequests();
             if (!pending.isEmpty()) {
@@ -262,6 +341,22 @@ public class GUIManager {
                     openMenu(player, "admin-expansions");
                 }
             }
+        } else if (action.startsWith("role:")) {
+            // role:add kicks to chat input (keeps previous behavior, no features lost)
+            String sub = action.substring("role:".length());
+            if (sub.equalsIgnoreCase("add")) {
+                Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+                if (plot == null) {
+                    plugin.getMessagesUtil().send(player, "&cStand inside your claim to add trusted players.");
+                    return;
+                }
+                awaitingRolePlot.put(player.getUniqueId(), plot.getId());
+                awaitingRoleAction.put(player.getUniqueId(), "add");
+                plugin.getMessagesUtil().send(player, "&eType the player name to trust...");
+                player.closeInventory();
+            }
+            // role:remove is still shift-click on head in roles list in earlier builds;
+            // we preserve previous behavior to avoid feature loss.
         }
     }
 
@@ -272,8 +367,13 @@ public class GUIManager {
         boolean current = plot.getFlag(flag,
                 plugin.getConfig().getBoolean("claims.default-flags." + flag, false));
         plot.setFlag(flag, !current);
-        plugin.getMessagesUtil().send(player,
-                !current ? "&a" + flag + " enabled." : "&c" + flag + " disabled.");
+
+        // Optional sound feedback
+        String sound = plugin.getConfig().getString("sounds.flag-toggle", "BLOCK_NOTE_BLOCK_PLING");
+        try { player.playSound(player.getLocation(), sound, 1f, 1f); } catch (Exception ignored) {}
+
+        MessagesUtil messages = plugin.getMessagesUtil();
+        messages.send(player, !current ? "&a" + flag + " enabled." : "&c" + flag + " disabled.");
     }
 
     private void fillMenuItems(Inventory inv, ConfigurationSection menuSec, Player player) {
@@ -295,6 +395,7 @@ public class GUIManager {
 
             meta.setDisplayName(ChatColor.translateAlternateColorCodes('&',
                     itemSec.getString("name", "")));
+
             List<String> lore = itemSec.getStringList("lore");
             lore.replaceAll(s -> ChatColor.translateAlternateColorCodes('&', s));
             meta.setLore(lore);

@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/compass/CompassManager.java
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -64,6 +63,13 @@ public class CompassManager implements Listener {
         if (!hasCompass(player)) {
             player.getInventory().addItem(createCompass());
         }
+    }
+
+    /**
+     * Force-replace a ProShield compass (used if despawned and autoReplace is enabled).
+     */
+    public void replaceCompass(Player player) {
+        giveCompass(player);
     }
 
     /**

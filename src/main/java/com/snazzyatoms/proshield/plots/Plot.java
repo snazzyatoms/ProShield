@@ -1,128 +1,68 @@
-// src/main/java/com/snazzyatoms/proshield/plots/Plot.java
 package com.snazzyatoms.proshield.plots;
 
-import org.bukkit.Chunk;
+import org.bukkit.Bukkit;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * Plot
- * ----
- * Represents a claimed chunk/area.
- * Supports trusted players, flags, and expansion radius.
+ * Represents a claimed plot of land in ProShield.
  */
 public class Plot {
+
     private final UUID id;
-    private UUID owner; // ⚡ must not be final if we allow transfer
-    private final String worldName;
-    private final int chunkX;
-    private final int chunkZ;
+    private final UUID ownerId;
+    private final Set<UUID> trusted;
+    private final Map<String, Boolean> flags;
 
-    private final Map<String, Boolean> flags = new HashMap<>();
-    private final Set<UUID> trusted = new HashSet<>();
-
-    // Expansion radius (default = 0 means just the chunk itself)
-    private int extraRadius = 0;
-
-    // Existing constructor
-    public Plot(UUID owner, String worldName, int chunkX, int chunkZ) {
-        this.id = UUID.randomUUID();
-        this.owner = owner;
-        this.worldName = worldName;
-        this.chunkX = chunkX;
-        this.chunkZ = chunkZ;
+    public Plot(UUID id, UUID ownerId) {
+        this.id = id;
+        this.ownerId = ownerId;
+        this.trusted = new HashSet<>();
+        this.flags = new HashMap<>();
     }
 
-    // ✅ New convenience constructor for Bukkit Chunk
-    public Plot(UUID owner, Chunk chunk) {
-        this(owner, chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
-    }
-
-    // --- Core info ---
     public UUID getId() {
         return id;
     }
 
-    public UUID getOwner() {
-        return owner;
+    public UUID getOwnerId() {
+        return ownerId;
     }
 
-    public void setOwner(UUID newOwner) {
-        this.owner = newOwner;
+    /** NEW: Returns the owner’s name (for messages and GUIs). */
+    public String getOwnerName() {
+        return Bukkit.getOfflinePlayer(ownerId).getName();
     }
 
     public boolean isOwner(UUID playerId) {
-        return owner != null && owner.equals(playerId);
-    }
-
-    // --- Trusted Players ---
-    public boolean isTrusted(UUID playerId) {
-        return isOwner(playerId) || trusted.contains(playerId);
-    }
-
-    public void addTrusted(UUID playerId) {
-        trusted.add(playerId);
-    }
-
-    public void removeTrusted(UUID playerId) {
-        trusted.remove(playerId);
+        return ownerId.equals(playerId);
     }
 
     public Set<UUID> getTrusted() {
         return trusted;
     }
 
-    // --- Location info ---
-    public String getWorldName() {
-        return worldName;
+    public void addTrusted(UUID uuid) {
+        trusted.add(uuid);
     }
 
-    public int getX() {
-        return chunkX;
+    public void removeTrusted(UUID uuid) {
+        trusted.remove(uuid);
     }
 
-    public int getZ() {
-        return chunkZ;
-    }
-
-    // --- Flags ---
-    public boolean getFlag(String flag, boolean def) {
-        return flags.getOrDefault(flag, def);
-    }
-
-    public void setFlag(String flag, boolean value) {
-        flags.put(flag, value);
+    public boolean isTrusted(UUID uuid) {
+        return trusted.contains(uuid);
     }
 
     public Map<String, Boolean> getFlags() {
         return flags;
     }
 
-    // --- Expansion ---
-    public int getExtraRadius() {
-        return extraRadius;
+    public boolean getFlag(String key, boolean def) {
+        return flags.getOrDefault(key, def);
     }
 
-    public void expand(int extra) {
-        if (extra > 0) {
-            this.extraRadius += extra;
-        }
-    }
-
-    // --- Utility ---
-    @Override
-    public String toString() {
-        return "Plot{" +
-                "owner=" + owner +
-                ", world='" + worldName + '\'' +
-                ", chunk=(" + chunkX + "," + chunkZ + ")" +
-                ", extraRadius=" + extraRadius +
-                ", flags=" + flags +
-                ", trusted=" + trusted +
-                '}';
+    public void setFlag(String key, boolean value) {
+        flags.put(key, value);
     }
 }

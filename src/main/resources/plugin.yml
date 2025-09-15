@@ -13,7 +13,7 @@ commands:
   proshield:
     description: Root ProShield command (help, claims, admin tools)
     usage: /<command> [help|claim|unclaim|info|compass|reload|debug|bypass|admin]
-    aliases: [ps, shield]
+    aliases: [ps, shield, claim, unclaim, info, compass, roles, trust, untrust, transfer]
     permission: proshield.use
 
 permissions:

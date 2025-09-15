@@ -1,7 +1,7 @@
 # ==========================================================
 # ProShield Messages
 # Version: 1.2.5
-# Generated & synced with ProShieldCommand + plugin config
+# Synced with GUIManager + config.yml
 # ==========================================================
 
 messages:
@@ -10,7 +10,7 @@ messages:
 
   # --- General Errors ---
   error:
-    player-only: "&cOnly players can use this command."
+    player-only: "&cOnly players can use this action."
     no-permission: "&cYou do not have permission to do this."
 
   # --- Compass ---
@@ -45,6 +45,12 @@ messages:
   expansion-disabled: "&cExpansion requests are disabled by the server."
   expansion-cooldown-title: "&cCooldown Active"
   expansion-cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
+
+  # Admin review GUI tooltips
+  expansion-admin-lore:
+    approve: "&aLeft-click: Approve this expansion"
+    deny: "&cRight-click: Deny and choose a reason"
+    info: "&7Use the deny reasons menu for detailed denial messages."
 
   # Deny reasons (used in Admin GUI → Deny menu)
   deny-reasons:

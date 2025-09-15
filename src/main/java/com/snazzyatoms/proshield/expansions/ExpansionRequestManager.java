@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.expansions;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -12,17 +13,18 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Handles lifecycle of ExpansionRequests:
- * - Adds new requests from players (only one active per player).
- * - Persists requests to expansion-requests.yml.
- * - Supports cooldown checks by keeping exact timestamps.
- * - Provides Admin GUI with pending requests to approve/deny.
+ * ExpansionRequestManager
+ * - Tracks, persists, and manages expansion requests.
+ * - Enforces cooldowns (via timestamp).
+ * - Provides requests for admin GUI review.
+ * - On approval, actually expands the player's claim radius (via PlotManager).
  */
 public class ExpansionRequestManager {
 
     private final ProShield plugin;
     private final MessagesUtil messages;
-    // Tracks requests by player (latest only per player)
+
+    // Tracks latest request per player (overwrites older entries)
     private final Map<UUID, ExpansionRequest> requests = new HashMap<>();
 
     private final File file;
@@ -51,7 +53,6 @@ public class ExpansionRequestManager {
                 list.add(req);
             }
         }
-        // Sort newest first
         list.sort(Comparator.comparingLong(ExpansionRequest::getTimestamp).reversed());
         return list;
     }
@@ -70,24 +71,42 @@ public class ExpansionRequestManager {
         }
     }
 
-    /** Approve a pending request. */
+    /**
+     * Approve a pending request:
+     * - Expands the claim radius via PlotManager.
+     * - Marks request as APPROVED.
+     * - Notifies the player (success/failure).
+     */
     public void approveRequest(UUID playerId) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;
+
+        PlotManager pm = plugin.getPlotManager();
+        boolean expanded = pm.expandClaim(playerId, req.getBlocks());
 
         req.setStatus(ExpansionRequest.Status.APPROVED);
         saveRequests();
 
         OfflinePlayer op = Bukkit.getOfflinePlayer(playerId);
         if (op.isOnline()) {
-            String msg = plugin.getConfig().getString("messages.expansion-approved",
-                    "&aYour claim expansion (+{blocks} blocks) was approved!")
-                    .replace("{blocks}", String.valueOf(req.getBlocks()));
+            String template = plugin.getConfig().getString("messages.expansion-approved",
+                    "&aYour claim expansion (+{blocks} blocks) was approved!");
+            String msg = template.replace("{blocks}", String.valueOf(req.getBlocks()));
             messages.send(op.getPlayer(), msg);
+
+            if (!expanded) {
+                // Notify if no new chunks were actually added
+                messages.send(op.getPlayer(), "&eNote: Expansion was approved, but no new chunks could be claimed (possible overlaps).");
+            }
         }
     }
 
-    /** Deny a pending request with a reason. */
+    /**
+     * Deny a pending request with a reason.
+     * - Marks request as DENIED.
+     * - Saves reason.
+     * - Notifies player if online.
+     */
     public void denyRequest(UUID playerId, String reasonKey) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;

@@ -27,6 +27,7 @@ claims:
   # Expansion request system (fully modular)
   expansion:
     enabled: true                      # Toggle expansion system on/off
+    show-in-gui: true                  # Show Request Expansion button in player GUI
     max-increase: 100                  # Max blocks a single request can add
     step-options: [10, 15, 20, 25]     # Allowed increments for players to choose in GUI
     cooldown-hours: 6                  # Default: players must wait 6h between requests

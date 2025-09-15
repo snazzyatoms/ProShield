@@ -30,7 +30,8 @@ protection:
       vertical-push: 0.25
       play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
-    despawn-inside: true
+    despawn-inside: true            # toggle full despawn sweep on/off
+    despawn-interval-seconds: 30    # how often hostile mobs inside claims are cleaned up
 
   entities:
     wilderness:

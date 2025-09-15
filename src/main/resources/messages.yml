@@ -19,8 +19,7 @@ messages:
     already-have: "&eYou already have a ProShield Compass."
 
   # --- Admin / System ---
-  messages:
-    reloaded: "&aProShield configuration reloaded."
+  reloaded: "&aProShield configuration reloaded."
 
   admin:
     debug-on: "&eDebug mode: &aENABLED"
@@ -40,7 +39,20 @@ messages:
   # --- Expansion Requests ---
   expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
   expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
-  expansion-denied: "&cYour claim expansion request was denied: {reason}"
+  expansion-denied: "&cYour expansion request was denied: {reason}"
+
+  # Modular expansion control messages
+  expansion-disabled: "&cExpansion requests are disabled by the server."
+  expansion-cooldown-title: "&cCooldown Active"
+  expansion-cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
+
+  # Deny reasons (used in Admin GUI → Deny menu)
+  deny-reasons:
+    too-large: "&cRequested expansion is too large."
+    abusive: "&cExpansion request denied due to abuse."
+    overlap: "&cRequested area overlaps an existing claim."
+    custom-1: "&cNot enough playtime yet for this expansion."
+    custom-2: "&cYour claim already reached the maximum size."
 
 # -----------------------------
 # Help (merged dynamically)

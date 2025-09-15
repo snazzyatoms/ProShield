@@ -30,6 +30,9 @@ public class GUIManager {
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
+    // Track pending role assignments
+    private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
+
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
         this.plotManager = plugin.getPlotManager();
@@ -75,9 +78,10 @@ public class GUIManager {
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
         int slot = 0;
-        for (UUID uuid : plot.getTrusted().keySet()) {
+        for (Map.Entry<UUID, String> entry : plot.getTrusted().entrySet()) {
+            UUID uuid = entry.getKey();
+            String role = entry.getValue();
             OfflinePlayer trusted = plugin.getServer().getOfflinePlayer(uuid);
-            String role = plot.getTrusted().get(uuid);
 
             ItemStack head = new ItemStack(Material.PLAYER_HEAD);
             ItemMeta meta = head.getItemMeta();
@@ -106,12 +110,21 @@ public class GUIManager {
         String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
         if (name == null) return;
 
-        OfflinePlayer target = Bukkit.getOfflinePlayer(name);
+        // Find the matching UUID from the claim instead of resolving name blindly
+        UUID targetUuid = null;
+        for (UUID uuid : plot.getTrusted().keySet()) {
+            OfflinePlayer op = plugin.getServer().getOfflinePlayer(uuid);
+            if (op.getName() != null && op.getName().equalsIgnoreCase(name)) {
+                targetUuid = uuid;
+                break;
+            }
+        }
+        if (targetUuid == null) return;
 
         if (event.isLeftClick()) {
-            openAssignRole(player, target.getUniqueId());
+            openAssignRole(player, targetUuid);
         } else if (event.isRightClick()) {
-            plot.untrust(target.getUniqueId());
+            plot.untrust(targetUuid);
             messages.send(player, "&cUntrusted &f" + name);
             plotManager.saveAll();
             openTrusted(player);
@@ -149,8 +162,7 @@ public class GUIManager {
         }
 
         actor.openInventory(inv);
-        // store pending assignment
-        plugin.getGuiManager().pendingRoleAssignments.put(actor.getUniqueId(), targetUuid);
+        this.pendingRoleAssignments.put(actor.getUniqueId(), targetUuid);
     }
 
     public void handleAssignRoleClick(Player player, InventoryClickEvent event) {
@@ -165,8 +177,6 @@ public class GUIManager {
         plotManager.saveAll();
         openTrusted(player);
     }
-
-    private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
 
     // ============================
     // CLAIM FLAGS MENU
@@ -229,6 +239,21 @@ public class GUIManager {
                 break;
             }
         }
+    }
+
+    // ============================
+    // EXPANSION REQUESTS MENU
+    // ============================
+    public void openExpansionRequests(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
+        int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
+
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        // For now, just a placeholder button until ExpansionRequestManager fully implemented
+        setItem(inv, 10, Material.EMERALD_BLOCK, "&aRequest Expansion",
+                "&7Click to send an expansion request.");
+        player.openInventory(inv);
     }
 
     // ============================

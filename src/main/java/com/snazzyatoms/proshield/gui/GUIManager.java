@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
@@ -27,6 +28,7 @@ public class GUIManager {
     private final ProShield plugin;
     private final MessagesUtil messages;
     private final ClaimRoleManager roleManager;
+    private final PlotManager plotManager;
 
     // Chat-input trackers
     private final Map<UUID, Boolean> awaitingReason = new HashMap<>();
@@ -36,6 +38,7 @@ public class GUIManager {
         this.plugin = plugin;
         this.messages = plugin.getMessagesUtil();
         this.roleManager = plugin.getRoleManager();
+        this.plotManager = plugin.getPlotManager();
     }
 
     // ---------------------------
@@ -45,7 +48,7 @@ public class GUIManager {
         FileConfiguration cfg = plugin.getConfig();
         ConfigurationSection menuSec = cfg.getConfigurationSection("gui.menus." + menuKey);
         if (menuSec == null) {
-            messages.send(player, "&cMenu not found: " + menuKey);
+            player.sendMessage(ChatColor.RED + "Menu not found: " + menuKey);
             return;
         }
 
@@ -68,7 +71,9 @@ public class GUIManager {
                 if (meta != null) {
                     meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
                     List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.GRAY + "Permission: " + perm);
+                    if (!perm.isEmpty()) {
+                        lore.add(ChatColor.GRAY + "Permission: " + perm);
+                    }
                     meta.setLore(lore);
                     item.setItemMeta(meta);
                 }
@@ -80,16 +85,56 @@ public class GUIManager {
     }
 
     public void handleClick(InventoryClickEvent event) {
-        if (event.getView().getTitle().contains("ProShield")) {
-            event.setCancelled(true);
-            Player player = (Player) event.getWhoClicked();
-            ItemStack clicked = event.getCurrentItem();
+        if (!event.getView().getTitle().contains("ProShield")) return;
 
-            if (clicked != null && clicked.hasItemMeta() && clicked.getItemMeta().hasDisplayName()) {
-                String itemName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        event.setCancelled(true);
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clicked = event.getCurrentItem();
+
+        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) {
+            return;
+        }
+
+        String itemName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+
+        // ---- Button Action Mapping ----
+        switch (itemName.toLowerCase()) {
+            case "claim land":
+                plotManager.claimPlot(player);
+                messages.send(player, "&aYou claimed this land.");
+                player.closeInventory();
+                break;
+
+            case "unclaim land":
+                plotManager.unclaimPlot(player);
+                messages.send(player, "&cYou unclaimed this land.");
+                player.closeInventory();
+                break;
+
+            case "claim info":
+                plotManager.sendClaimInfo(player);
+                player.closeInventory();
+                break;
+
+            case "trusted players":
+                roleManager.openTrustedPlayersMenu(player);
+                player.closeInventory();
+                break;
+
+            case "set role":
+                setAwaitingRoleAction(player, true);
+                messages.send(player, "&eType the role you want to assign in chat.");
+                player.closeInventory();
+                break;
+
+            case "flags":
+                plotManager.openFlagsMenu(player);
+                player.closeInventory();
+                break;
+
+            default:
                 messages.send(player, "&eClicked: &f" + itemName);
-                // 🔔 TODO: Tie into actual action logic (claim, trust, flags, etc.)
-            }
+                break;
         }
     }
 
@@ -102,8 +147,8 @@ public class GUIManager {
 
     public void provideManualReason(Player player, String reason) {
         awaitingReason.remove(player.getUniqueId());
-        messages.send(player, "&cExpansion denied. Reason: &7" + reason);
-        // 🔔 TODO: Hook into ExpansionManager when available
+        player.sendMessage(ChatColor.RED + "Expansion denied. Reason: " + ChatColor.GRAY + reason);
+        // hook into ExpansionManager when available
     }
 
     public void setAwaitingReason(Player player, boolean waiting) {
@@ -119,9 +164,8 @@ public class GUIManager {
 
     public void handleRoleChatInput(Player player, String message) {
         awaitingRoleAction.remove(player.getUniqueId());
-        // Delegates to ClaimRoleManager
-        roleManager.assignRoleViaChat(player, message);
-        messages.send(player, "&aProcessed role input: &7" + message);
+        roleManager.assignRoleViaChat(player, message); // tie into ClaimRoleManager
+        player.sendMessage(ChatColor.GREEN + "Processed role input: " + ChatColor.GRAY + message);
     }
 
     public void setAwaitingRoleAction(Player player, boolean waiting) {

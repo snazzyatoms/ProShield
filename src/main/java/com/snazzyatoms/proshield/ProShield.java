@@ -35,7 +35,7 @@ public class ProShield extends JavaPlugin implements Listener {
     private static ProShield instance;
 
     private MessagesUtil messagesUtil;
-    private FileConfiguration messagesConfig; // messages.yml (merged with defaults)
+    private FileConfiguration messagesConfig; // messages.yml
 
     private GUIManager guiManager;
     private ClaimRoleManager roleManager;
@@ -54,7 +54,7 @@ public class ProShield extends JavaPlugin implements Listener {
         // Ensure data folder & write defaults
         saveDefaultConfig();
         mergeConfig("config.yml");
-        loadMessagesConfig(); // creates/merges messages.yml
+        loadMessagesConfig();
 
         // Core utilities
         messagesUtil = new MessagesUtil(this, messagesConfig);
@@ -62,7 +62,7 @@ public class ProShield extends JavaPlugin implements Listener {
         // Managers
         plotManager   = new PlotManager(this);
         roleManager   = new ClaimRoleManager(this);
-        expansionRequestManager = new ExpansionRequestManager(this); // 🔹 NEW
+        expansionRequestManager = new ExpansionRequestManager(this, plotManager); // now linked to PlotManager
         guiManager    = new GUIManager(this);
         compassManager= new CompassManager(this, guiManager);
 
@@ -81,12 +81,11 @@ public class ProShield extends JavaPlugin implements Listener {
         // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this), this); // right-click compass → open GUI
-        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this); // explosions, fire, ignite
-        Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager), this); // block place/break
-        Bukkit.getPluginManager().registerEvents(this, this); // join-event below
+        Bukkit.getPluginManager().registerEvents(new CompassListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PlotListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(this, this); // join event
 
-        // Generate README from config → items and permissions always in sync
         generateReadme();
 
         getLogger().info("ProShield enabled successfully.");
@@ -97,28 +96,24 @@ public class ProShield extends JavaPlugin implements Listener {
         // Save persisted data
         roleManager.saveAll();
         plotManager.saveAll();
-        // expansionRequestManager saves automatically on each change, so nothing required here
+        // Expansion requests are saved immediately on change
 
         getLogger().info("ProShield disabled and data saved.");
     }
 
     // ---------------------------------------------------------------------
-    // messages.yml loader/merger (PUBLIC so commands can force reload cleanly)
+    // messages.yml loader/merger
     // ---------------------------------------------------------------------
     public void loadMessagesConfig() {
         try {
-            if (!getDataFolder().exists()) {
-                getDataFolder().mkdirs();
-            }
+            if (!getDataFolder().exists()) getDataFolder().mkdirs();
+
             File file = new File(getDataFolder(), "messages.yml");
-            if (!file.exists()) {
-                saveResource("messages.yml", false);
-            }
+            if (!file.exists()) saveResource("messages.yml", false);
 
             YamlConfiguration current = new YamlConfiguration();
             current.load(file);
 
-            // Merge defaults from the jar
             YamlConfiguration defaults = new YamlConfiguration();
             try (InputStreamReader reader =
                          new InputStreamReader(Objects.requireNonNull(getResource("messages.yml")), StandardCharsets.UTF_8)) {
@@ -140,7 +135,7 @@ public class ProShield extends JavaPlugin implements Listener {
             messagesConfig = current;
         } catch (IOException | InvalidConfigurationException e) {
             getLogger().severe("Failed to load/merge messages.yml: " + e.getMessage());
-            messagesConfig = getConfig(); // worst-case fallback
+            messagesConfig = getConfig(); // fallback
         }
     }
 
@@ -169,7 +164,6 @@ public class ProShield extends JavaPlugin implements Listener {
                     changed = true;
                 }
             }
-
             if (changed) {
                 current.save(file);
                 getLogger().info("[Config] " + fileName + " updated with new defaults.");
@@ -196,38 +190,26 @@ public class ProShield extends JavaPlugin implements Listener {
 
             sb.append("## 🚀 Quick Start\n");
             sb.append("1. Use `/proshield claim` to protect your current chunk.\n");
-            sb.append("2. Manage trusted players with `/trust <player> [role]` or via the GUI.\n");
+            sb.append("2. Manage trusted players via GUI or commands.\n");
             sb.append("3. Admins: `/proshield admin` for Admin Tools.\n\n");
 
-            sb.append("## 📖 Permissions Overview\n\n");
-            sb.append("- `proshield.player.access` → Basic player tools (claims, roles, compass).\n");
-            sb.append("- `proshield.admin` → Admin tools (reload, debug, bypass, admin GUI).\n");
-            sb.append("- `proshield.admin.expansions` → Expansion requests (approve/deny).\n");
-            sb.append("- `proshield.admin.worldcontrols` → Global/world protection controls.\n\n");
+            sb.append("## 📖 Permissions Overview\n");
+            sb.append("- `proshield.player.access` → Basic player tools.\n");
+            sb.append("- `proshield.admin` → Admin tools.\n");
+            sb.append("- `proshield.admin.expansions` → Expansion requests.\n");
+            sb.append("- `proshield.admin.worldcontrols` → World controls.\n\n");
 
-            sb.append("## 🧭 GUI Menus & Required Permissions\n");
+            sb.append("## 🧭 GUI Menus\n");
             if (cfg.isConfigurationSection("gui.menus")) {
                 for (String menu : Objects.requireNonNull(cfg.getConfigurationSection("gui.menus")).getKeys(false)) {
                     String base = "gui.menus." + menu;
                     String title = cfg.getString(base + ".title", "Untitled");
                     sb.append("\n### ").append(menu).append("\n");
                     sb.append("- **Title:** ").append(title).append("\n");
-                    if (cfg.isConfigurationSection(base + ".items")) {
-                        sb.append("- **Items:**\n");
-                        for (String slot : Objects.requireNonNull(cfg.getConfigurationSection(base + ".items")).getKeys(false)) {
-                            String iBase = base + ".items." + slot;
-                            String name = cfg.getString(iBase + ".name", "Unnamed");
-                            String perm = cfg.getString(iBase + ".permission", "none");
-                            sb.append("  - ").append(name).append(" → Requires `").append(perm).append("`\n");
-                        }
-                    } else {
-                        sb.append("- *(No items configured)*\n");
-                    }
                 }
             } else {
                 sb.append("\n*(No menus configured in config.yml)*\n");
             }
-            sb.append("\n");
 
             Files.writeString(readme.toPath(), sb.toString(), StandardCharsets.UTF_8);
             getLogger().info("Generated README.md");

@@ -56,13 +56,13 @@ public class ProShield extends JavaPlugin implements Listener {
         mergeConfig("config.yml");
         loadMessagesConfig();
 
-        // Core utilities
-        messagesUtil = new MessagesUtil(this); // ✅ patched constructor
+        // Core utilities (✅ single-arg constructor)
+        messagesUtil = new MessagesUtil(this);
 
         // Managers
         plotManager   = new PlotManager(this);
         roleManager   = new ClaimRoleManager(this);
-        expansionRequestManager = new ExpansionRequestManager(this, plotManager); // now linked to PlotManager
+        expansionRequestManager = new ExpansionRequestManager(this); // ✅ matches constructor
         guiManager    = new GUIManager(this);
         compassManager= new CompassManager(this, guiManager);
 
@@ -219,7 +219,7 @@ public class ProShield extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(org.bukkit.event.player.PlayerJoinEvent event) {
         if (getConfig().getBoolean("settings.give-compass-on-join", true)) {
             compassManager.giveCompass(event.getPlayer());
         }

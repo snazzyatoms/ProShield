@@ -27,8 +27,7 @@ public class Plot {
         this.z = z;
         this.owner = owner;
 
-        // Safe defaults (you can tune in config/GUI):
-        // Keep protected by default (no grief, no fire, no explosions, no mob damage in claims)
+        // Safe defaults (can be changed by config or GUI):
         flags.put("block-break", false);
         flags.put("block-place", false);
         flags.put("container-access", true);
@@ -38,15 +37,22 @@ public class Plot {
         flags.put("ignite-flint", false);
         flags.put("ignite-lava", false);
         flags.put("ignite-lightning", false);
-        flags.put("mob-spawn", false);      // mob spawning inside claims disabled
-        flags.put("mob-damage", false);     // mobs cannot damage players/entities in claims
-        flags.put("pvp", true);             // example toggle (left true by default)
+        flags.put("mob-spawn", false);   // disable hostile mobs spawning in claims
+        flags.put("mob-damage", false);  // mobs can’t damage players/entities
+        flags.put("pvp", true);          // allow PvP by default
     }
 
     public static Plot of(Chunk chunk, UUID owner) {
-        return new Plot(UUID.randomUUID(), chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), owner);
+        return new Plot(UUID.randomUUID(),
+                chunk.getWorld().getName(),
+                chunk.getX(),
+                chunk.getZ(),
+                owner);
     }
 
+    /* ========================
+     * Core getters/setters
+     * ======================== */
     public UUID getId() { return id; }
     public String getWorld() { return world; }
     public int getX() { return x; }
@@ -54,8 +60,12 @@ public class Plot {
     public UUID getOwner() { return owner; }
     public void setOwner(UUID owner) { this.owner = owner; }
 
-    public Map<UUID, String> getTrusted() { return Collections.unmodifiableMap(trusted); }
-    public Map<String, Boolean> getFlags() { return Collections.unmodifiableMap(flags); }
+    /* ========================
+     * Trusted
+     * ======================== */
+    public Map<UUID, String> getTrusted() {
+        return Collections.unmodifiableMap(trusted);
+    }
 
     public boolean isTrusted(UUID uuid) {
         if (uuid == null) return false;
@@ -64,16 +74,24 @@ public class Plot {
     }
 
     public void trust(UUID uuid, String role) {
-        if (uuid == null) return;
-        trusted.put(uuid, role == null ? "trusted" : role);
+        if (uuid != null) {
+            trusted.put(uuid, role == null ? "trusted" : role);
+        }
     }
 
     public void untrust(UUID uuid) {
-        if (uuid == null) return;
-        trusted.remove(uuid);
+        if (uuid != null) {
+            trusted.remove(uuid);
+        }
     }
 
-    /** Get a flag with default fallback if not set */
+    /* ========================
+     * Flags
+     * ======================== */
+    public Map<String, Boolean> getFlags() {
+        return Collections.unmodifiableMap(flags);
+    }
+
     public boolean getFlag(String key, boolean def) {
         return flags.getOrDefault(key, def);
     }
@@ -82,6 +100,9 @@ public class Plot {
         flags.put(key, value);
     }
 
+    /* ========================
+     * Utility
+     * ======================== */
     public boolean matches(Location loc) {
         if (loc == null || loc.getWorld() == null) return false;
         if (!loc.getWorld().getName().equalsIgnoreCase(world)) return false;
@@ -96,6 +117,8 @@ public class Plot {
                 ", x=" + x +
                 ", z=" + z +
                 ", owner=" + owner +
+                ", trusted=" + trusted.size() +
+                ", flags=" + flags.size() +
                 '}';
     }
 }

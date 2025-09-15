@@ -37,6 +37,8 @@ public class ProShield extends JavaPlugin implements Listener {
     private PlotManager plotManager;
     private CompassManager compassManager;
 
+    private FileConfiguration messagesConfig; // ✅ dedicated messages.yml
+
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
 
@@ -47,9 +49,9 @@ public class ProShield extends JavaPlugin implements Listener {
         // Save & merge configs
         saveDefaultConfig();
         mergeConfig("config.yml");
-        mergeConfig("messages.yml");
+        loadMessagesConfig(); // ✅ ensure messages.yml exists and merged
 
-        messages = new MessagesUtil(this);
+        messages = new MessagesUtil(this, messagesConfig);
 
         // Initialize managers
         plotManager = new PlotManager(this);
@@ -88,6 +90,43 @@ public class ProShield extends JavaPlugin implements Listener {
         roleManager.saveAll();
         plotManager.saveAll();
         getLogger().info("ProShield disabled and data saved.");
+    }
+
+    // --------------------
+    // Messages.yml loader
+    // --------------------
+    private void loadMessagesConfig() {
+        File file = new File(getDataFolder(), "messages.yml");
+        if (!file.exists()) {
+            saveResource("messages.yml", false);
+        }
+
+        messagesConfig = new YamlConfiguration();
+        try {
+            messagesConfig.load(file);
+
+            // Merge defaults
+            YamlConfiguration defaults = new YamlConfiguration();
+            try (InputStreamReader reader =
+                         new InputStreamReader(Objects.requireNonNull(getResource("messages.yml")), StandardCharsets.UTF_8)) {
+                defaults.load(reader);
+            }
+
+            boolean changed = false;
+            for (String key : defaults.getKeys(true)) {
+                if (!messagesConfig.contains(key)) {
+                    messagesConfig.set(key, defaults.get(key));
+                    getLogger().info("[Messages] Added missing key: " + key);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                messagesConfig.save(file);
+                getLogger().info("[Messages] messages.yml updated with new defaults.");
+            }
+        } catch (IOException | InvalidConfigurationException e) {
+            getLogger().severe("Failed to load messages.yml: " + e.getMessage());
+        }
     }
 
     // --------------------
@@ -135,9 +174,6 @@ public class ProShield extends JavaPlugin implements Listener {
         try {
             File readme = new File(getDataFolder(), "README.md");
             FileConfiguration cfg = getConfig();
-            FileConfiguration msgs = YamlConfiguration.loadConfiguration(
-                    new File(getDataFolder(), "messages.yml")
-            );
 
             StringBuilder sb = new StringBuilder();
             sb.append("# 🛡 ProShield Documentation\n\n");
@@ -200,6 +236,7 @@ public class ProShield extends JavaPlugin implements Listener {
     public ClaimRoleManager getRoleManager() { return roleManager; }
     public PlotManager getPlotManager() { return plotManager; }
     public CompassManager getCompassManager() { return compassManager; }
+    public FileConfiguration getMessagesConfig() { return messagesConfig; }
     public Set<UUID> getBypassing() { return bypassing; }
     public boolean isBypassing(UUID uuid) { return bypassing.contains(uuid); }
     public boolean isDebugEnabled() { return debugEnabled; }

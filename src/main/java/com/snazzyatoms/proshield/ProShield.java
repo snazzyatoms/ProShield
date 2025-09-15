@@ -24,6 +24,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -37,7 +40,7 @@ public class ProShield extends JavaPlugin implements Listener {
     private PlotManager plotManager;
     private CompassManager compassManager;
 
-    private FileConfiguration messagesConfig; // ✅ dedicated messages.yml
+    private FileConfiguration messagesConfig; // dedicated messages.yml
 
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
@@ -49,7 +52,7 @@ public class ProShield extends JavaPlugin implements Listener {
         // Save & merge configs
         saveDefaultConfig();
         mergeConfig("config.yml");
-        loadMessagesConfig(); // ✅ ensure messages.yml exists and merged
+        loadMessagesConfig(); // ensure messages.yml exists and merged
 
         messages = new MessagesUtil(this, messagesConfig);
 
@@ -78,7 +81,7 @@ public class ProShield extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
         Bukkit.getPluginManager().registerEvents(this, this); // join-event
 
-        // Generate README.md (and sync messages.yml version)
+        // Generate README.md
         generateReadme();
 
         getLogger().info("ProShield enabled successfully.");
@@ -95,7 +98,7 @@ public class ProShield extends JavaPlugin implements Listener {
     // --------------------
     // Messages.yml loader
     // --------------------
-    private void loadMessagesConfig() {
+    public void loadMessagesConfig() {
         File file = new File(getDataFolder(), "messages.yml");
         if (!file.exists()) {
             saveResource("messages.yml", false);
@@ -168,11 +171,11 @@ public class ProShield extends JavaPlugin implements Listener {
     }
 
     // --------------------
-    // README.md Generator
+    // README.md Generator (no commons-io)
     // --------------------
     private void generateReadme() {
         try {
-            File readme = new File(getDataFolder(), "README.md");
+            File readmeFile = new File(getDataFolder(), "README.md");
             FileConfiguration cfg = getConfig();
 
             StringBuilder sb = new StringBuilder();
@@ -210,48 +213,19 @@ public class ProShield extends JavaPlugin implements Listener {
                 }
             }
 
-            org.apache.commons.io.FileUtils.writeStringToFile(readme, sb.toString(), StandardCharsets.UTF_8);
+            // Write with JDK APIs (no commons-io)
+            Path path = readmeFile.toPath();
+            Files.createDirectories(path.getParent());
+            Files.write(
+                path,
+                sb.toString().getBytes(StandardCharsets.UTF_8),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING,
+                StandardOpenOption.WRITE
+            );
             getLogger().info("Generated README.md");
-
-            // ✅ Sync version in messages.yml
-            syncMessagesVersion();
         } catch (Exception e) {
             getLogger().severe("Failed to generate README.md: " + e.getMessage());
-        }
-    }
-
-    // --------------------
-    // Sync messages.yml version
-    // --------------------
-    private void syncMessagesVersion() {
-        try {
-            File file = new File(getDataFolder(), "messages.yml");
-            if (!file.exists()) return;
-
-            List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-            String versionLine = "# Version: " + getDescription().getVersion();
-
-            boolean updated = false;
-            for (int i = 0; i < lines.size(); i++) {
-                if (lines.get(i).startsWith("# Version:")) {
-                    lines.set(i, versionLine);
-                    updated = true;
-                    break;
-                }
-            }
-
-            if (!updated) {
-                // If no version line exists, inject it after the first line
-                lines.add(1, versionLine);
-                updated = true;
-            }
-
-            if (updated) {
-                java.nio.file.Files.write(file.toPath(), lines, StandardCharsets.UTF_8);
-                getLogger().info("[Messages] messages.yml version synced to " + getDescription().getVersion());
-            }
-        } catch (Exception e) {
-            getLogger().warning("Failed to sync messages.yml version: " + e.getMessage());
         }
     }
 

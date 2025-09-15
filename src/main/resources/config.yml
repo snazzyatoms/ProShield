@@ -68,11 +68,13 @@ messages:
 help:
   player:
     - "&bProShield Help &7- Player"
-    - "&a/claim &7→ Claim your current land (50 block radius)"
-    - "&a/unclaim &7→ Unclaim your land"
+    - "&a/proshield claim &7→ Claim your current land (50 block radius)"
+    - "&a/proshield unclaim &7→ Unclaim your land"
+    - "&a/proshield info &7→ View your claim details"
     - "&a/proshield compass &7→ Receive your ProShield Compass"
     - "&7Dropped compasses despawn after &f{compass-despawn-delay/20}s"
     - "&a/proshield help &7→ Show this help menu"
+
   admin:
     - "&cProShield Help &7- Admin"
     - "&c/proshield reload &7→ Reload the config"

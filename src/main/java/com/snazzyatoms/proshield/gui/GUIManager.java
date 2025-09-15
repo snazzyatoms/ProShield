@@ -162,7 +162,7 @@ public class GUIManager {
                         boolean state = getWorldControl(player.getWorld().getName(), key);
                         String stateText = state ? "&aON" : "&cOFF";
                         lore.add(ChatColor.translateAlternateColorCodes('&',
-                                line.replace("{state}", stateText)));
+                                line.replace("{state}", stateText).replace("{world}", worldName)));
                     } else {
                         lore.add(ChatColor.translateAlternateColorCodes('&',
                                 line.replace("{world}", worldName)));
@@ -179,7 +179,7 @@ public class GUIManager {
     }
 
     /* ======================
-     * Roles menu (unchanged)
+     * Roles menu
      * ====================== */
     private void openRolesMenu(Player player) {
         Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
@@ -250,7 +250,6 @@ public class GUIManager {
         String title = event.getView().getTitle();
         String itemName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
 
-        // Find which configured menu this title belongs to
         ConfigurationSection menus = plugin.getConfig().getConfigurationSection("gui.menus");
         if (menus == null) return;
 
@@ -267,7 +266,6 @@ public class GUIManager {
         }
         if (matchedMenu == null) return;
 
-        // Find item by display name
         ConfigurationSection itemsSec = matchedMenu.getConfigurationSection("items");
         if (itemsSec == null) return;
 
@@ -284,7 +282,7 @@ public class GUIManager {
         }
         if (action == null) return;
 
-        // Run the action
+        // Run actions
         if (action.equalsIgnoreCase("close")) {
             player.closeInventory();
             return;
@@ -317,13 +315,18 @@ public class GUIManager {
         if (action.startsWith("toggle:world.")) {
             String key = action.substring("toggle:world.".length());
             toggleWorldControl(player, key);
-            openWorldControlsMenu(player); // refresh states
+            openWorldControlsMenu(player);
+            return;
+        }
+
+        if (action.equalsIgnoreCase("reset:world")) {
+            resetWorldControls(player);
+            openWorldControlsMenu(player);
             return;
         }
 
         if (action.startsWith("reason:")) {
-            // handled by your expansion queue flow elsewhere
-            player.performCommand("proshield admin"); // safe fallback to admin screen
+            player.performCommand("proshield admin");
         }
     }
 
@@ -342,11 +345,9 @@ public class GUIManager {
         String base = "protection.world-controls";
         String world = player.getWorld().getName();
 
-        // read current (world override if present, else defaults)
         boolean current = getWorldControl(world, key);
         boolean next = !current;
 
-        // write to per-world override
         String path = base + ".worlds." + world + "." + key;
         plugin.getConfig().set(path, next);
         plugin.saveConfig();
@@ -354,9 +355,16 @@ public class GUIManager {
         plugin.getMessagesUtil().send(player, "&eWorld &7(" + world + ") &e" + key + " &7→ " + (next ? "&aON" : "&cOFF"));
     }
 
+    private void resetWorldControls(Player player) {
+        String base = "protection.world-controls.worlds." + player.getWorld().getName();
+        plugin.getConfig().set(base, null); // clear overrides
+        plugin.saveConfig();
+        plugin.getMessagesUtil().send(player, "&eWorld controls reset to defaults for &7" + player.getWorld().getName());
+    }
+
     private boolean getWorldControl(String world, String key) {
         String base = "protection.world-controls";
-        if (!plugin.getConfig().getBoolean(base + ".enabled", true)) return true; // if disabled, allow by default
+        if (!plugin.getConfig().getBoolean(base + ".enabled", true)) return true;
 
         String worldPath = base + ".worlds." + world + "." + key;
         if (plugin.getConfig().isSet(worldPath)) {

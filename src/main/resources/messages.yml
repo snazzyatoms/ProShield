@@ -69,9 +69,9 @@ help:
 
   admin:
     - "&c&lProShield — Admin Guide"
-    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, World Controls, Expansion Requests"
-    - "&cExpansion Requests &7→ Approve or deny player requests"
-    - "&cWorld Controls &7→ Toggle protections per world"
+    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"
+    - "&7Requires: &fproshield.admin"
+    - "&7Expansion Requests and World Controls require higher permissions."
     - "&7Available Commands (for admins only):"
     - "&f/proshield reload &7→ Reload configs"
     - "&f/proshield debug &7→ Toggle debug mode"

@@ -81,11 +81,16 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ChatColor.RED + "No permission.");
                     return true;
                 }
+
                 plugin.reloadConfig();
                 sender.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
 
-                if (plugin.getConfig().getBoolean("settings.give-compass-on-join", true)) {
-                    plugin.getCompassManager().giveCompassToAll(); // This also checks duplicates
+                // After reload, re-give compasses if enabled in config
+                boolean giveOnJoin = plugin.getConfig().getBoolean("settings.give-compass-on-join", true);
+                boolean autoReplace = plugin.getConfig().getBoolean("settings.compass-auto-replace", false);
+
+                if (giveOnJoin || autoReplace) {
+                    plugin.getCompassManager().giveCompassToAll();
                 }
                 return true;
             }
@@ -132,7 +137,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
     }
 
     private void giveCompassIfMissing(Player player) {
-        // Check inventory for an existing ProShield Compass
         for (ItemStack item : player.getInventory().getContents()) {
             if (item != null && item.getType() == Material.COMPASS) {
                 ItemMeta meta = item.getItemMeta();
@@ -145,7 +149,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 }
             }
         }
-        // If not found, give one
         plugin.getCompassManager().giveCompass(player);
         player.sendMessage(ChatColor.GREEN + "A ProShield Compass has been given to you.");
     }

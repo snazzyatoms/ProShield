@@ -1,10 +1,12 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 
 import java.util.*;
 
@@ -14,12 +16,11 @@ import java.util.*;
  * - Keeps an index of plots by ID and by (world, chunkX, chunkZ)
  * - Utility methods used across commands, GUI, roles, and expansion system
  * - Provides convenience overloads (by Location, UUID) to keep older call sites working
- *
- * NOTE: This manager does not send chat messages; callers decide UX.
  */
 public class PlotManager {
 
     private final ProShield plugin;
+    private final MessagesUtil messages;
 
     /** Primary storage by unique plot ID */
     private final Map<UUID, Plot> plotsById = new HashMap<>();
@@ -30,6 +31,7 @@ public class PlotManager {
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
+        this.messages = plugin.getMessagesUtil();
     }
 
     /* ======================
@@ -80,10 +82,6 @@ public class PlotManager {
      * Create / remove / mutate
      * ========================= */
 
-    /**
-     * Create a plot at the player's current chunk.
-     * Returns the created plot, or null if that chunk is already claimed.
-     */
     public Plot createPlot(UUID ownerId, Location loc) {
         if (ownerId == null || loc == null || loc.getWorld() == null) return null;
 
@@ -94,11 +92,18 @@ public class PlotManager {
         String k = key(world, cx, cz);
 
         if (byChunk.containsKey(k)) {
-            // Already claimed; caller should decide what to tell the user
-            return null;
+            return null; // already claimed
         }
 
         Plot plot = new Plot(ownerId, world, cx, cz);
+
+        // Apply default flags from config
+        if (plugin.getConfig().isConfigurationSection("claims.default-flags")) {
+            for (String flag : plugin.getConfig().getConfigurationSection("claims.default-flags").getKeys(false)) {
+                boolean state = plugin.getConfig().getBoolean("claims.default-flags." + flag, false);
+                plot.setFlag(flag, state);
+            }
+        }
 
         plotsById.put(plot.getId(), plot);
         byChunk.put(k, plot.getId());
@@ -106,30 +111,18 @@ public class PlotManager {
         return plot;
     }
 
-    /**
-     * Remove the plot in the given chunk.
-     * Returns true if a plot existed and was removed.
-     */
     public boolean removePlot(Location loc) {
         Plot p = getPlot(loc);
         if (p == null) return false;
         return removePlot(p);
     }
 
-    /**
-     * Remove a plot by its ID.
-     * Returns true if removed successfully.
-     */
     public boolean removePlot(UUID id) {
         if (id == null) return false;
         Plot p = getPlotById(id);
         return removePlot(p);
     }
 
-    /**
-     * Remove the provided plot object.
-     * Returns true when removed from all indexes.
-     */
     public boolean removePlot(Plot plot) {
         if (plot == null) return false;
 
@@ -148,11 +141,6 @@ public class PlotManager {
         return true;
     }
 
-    /**
-     * Expand (add extra radius) for one of the owner's plots.
-     * If owner has multiple plots, we expand the first found.
-     * Returns true if a plot was found & expanded.
-     */
     public boolean expandClaim(UUID ownerId, int extraRadius) {
         if (ownerId == null || extraRadius <= 0) return false;
         Plot p = getAnyPlotOwnedBy(ownerId);
@@ -161,18 +149,13 @@ public class PlotManager {
         return true;
     }
 
-    /**
-     * Transfer ownership of a plot by ID (utility kept for completeness).
-     * Returns true if success.
-     */
     public boolean transferOwnership(UUID plotId, UUID newOwnerId) {
         Plot p = getPlotById(plotId);
         if (p == null || newOwnerId == null) return false;
 
         UUID oldOwner = p.getOwner();
-        if (Objects.equals(oldOwner, newOwnerId)) return true; // no change
+        if (Objects.equals(oldOwner, newOwnerId)) return true;
 
-        // Update reverse index
         if (oldOwner != null) {
             Set<UUID> set = plotsByOwner.get(oldOwner);
             if (set != null) {
@@ -186,20 +169,70 @@ public class PlotManager {
     }
 
     /* ==================
+     * Command helpers
+     * ================== */
+
+    /** Called by /claim */
+    public void claimPlot(Player player) {
+        Plot created = createPlot(player.getUniqueId(), player.getLocation());
+        if (created == null) {
+            messages.send(player, "&cThis land is already claimed.");
+        } else {
+            messages.send(player, "&aLand claimed successfully!");
+        }
+    }
+
+    /** Called by /unclaim */
+    public void unclaimPlot(Player player) {
+        Plot plot = getPlot(player.getLocation());
+        if (plot == null) {
+            messages.send(player, "&cThis land is not claimed.");
+            return;
+        }
+        if (!plot.isOwner(player.getUniqueId())) {
+            messages.send(player, "&cYou are not the owner of this claim.");
+            return;
+        }
+        removePlot(plot);
+        messages.send(player, "&cYour claim has been unclaimed.");
+    }
+
+    /** Called by /proshield info */
+    public void sendClaimInfo(Player player) {
+        Plot plot = getPlot(player.getLocation());
+        if (plot == null) {
+            messages.send(player, "&eThis chunk is unclaimed.");
+            return;
+        }
+
+        messages.send(player, "&6--- Claim Info ---");
+        messages.send(player, "&7Owner: &f" + getPlayerName(plot.getOwner()));
+
+        if (plot.getTrusted().isEmpty()) {
+            messages.send(player, "&7Trusted: &cNone");
+        } else {
+            messages.send(player, "&7Trusted:");
+            plot.getTrusted().forEach((uuid, role) ->
+                messages.send(player, " &8- &f" + getPlayerName(uuid) + " &7(" + role + ")")
+            );
+        }
+
+        messages.send(player, "&7Flags:");
+        plot.getFlags().forEach((flag, state) ->
+            messages.send(player, " &8- &f" + flag + ": " + (state ? "&aON" : "&cOFF"))
+        );
+    }
+
+    /* ==================
      * Persistence hooks
-     * ==================
-     * These are placeholders to be implemented (YAML/JSON/DB). We keep
-     * the stubs so nothing breaks and we can add serialization later.
-     */
+     * ================== */
 
     public void loadAll() {
         // TODO: Load plotsById, byChunk, plotsByOwner from disk.
-        // Keep stub for now; caller expects method to exist.
     }
 
     public void saveAll() {
         // TODO: Save plotsById, byChunk, plotsByOwner to disk.
-        // Keep stub for now; caller expects method to exist.
     }
 
     /* ===============

@@ -37,102 +37,97 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase();
         switch (sub) {
-            case "help" -> {
-                sendHelp(sender);
-                return true;
-            }
+            case "help" -> sendHelp(sender);
+
             case "claim" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
-                    return true;
-                }
-                plotManager.claimPlot(player); // stub in PlotManager
-                return true;
-            }
-            case "unclaim" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
-                    return true;
-                }
-                plotManager.unclaimPlot(player); // stub in PlotManager
-                return true;
-            }
-            case "info" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
-                    return true;
-                }
-                plotManager.sendClaimInfo(player); // stub in PlotManager
-                return true;
-            }
-            case "compass" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
-                    return true;
-                }
-                guiManager.openMenu(player, "main");
-                return true;
-            }
-            case "reload" -> {
-                if (!sender.hasPermission("proshield.admin.reload")) {
-                    sender.sendMessage(ChatColor.RED + "No permission.");
-                    return true;
-                }
-                plugin.reloadConfig();
-                sender.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
-                return true;
-            }
-            case "debug" -> {
-                if (!sender.hasPermission("proshield.admin")) {
-                    sender.sendMessage(ChatColor.RED + "No permission.");
-                    return true;
-                }
-                plugin.toggleDebug();
-                sender.sendMessage(ChatColor.YELLOW + "Debug mode: " + plugin.isDebugEnabled());
-                return true;
-            }
-            case "bypass" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
-                    return true;
-                }
-                if (plugin.isBypassing(player.getUniqueId())) {
-                    plugin.getBypassing().remove(player.getUniqueId());
-                    sender.sendMessage(ChatColor.RED + "Bypass disabled.");
+                if (sender instanceof Player player) {
+                    plotManager.claimPlot(player);
                 } else {
-                    plugin.getBypassing().add(player.getUniqueId());
-                    sender.sendMessage(ChatColor.GREEN + "Bypass enabled.");
-                }
-                return true;
-            }
-            case "admin" -> {
-                if (!(sender instanceof Player player)) {
                     sender.sendMessage(ChatColor.RED + "Only players can use this command.");
-                    return true;
                 }
-                if (!sender.hasPermission("proshield.admin")) {
+            }
+
+            case "unclaim" -> {
+                if (sender instanceof Player player) {
+                    plotManager.unclaimPlot(player);
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+                }
+            }
+
+            case "info" -> {
+                if (sender instanceof Player player) {
+                    plotManager.sendClaimInfo(player);
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+                }
+            }
+
+            case "compass" -> {
+                if (sender instanceof Player player) {
+                    guiManager.openMenu(player, "main");
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+                }
+            }
+
+            case "reload" -> {
+                if (sender.hasPermission("proshield.admin.reload")) {
+                    plugin.reloadConfig();
+                    sender.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
+                } else {
                     sender.sendMessage(ChatColor.RED + "No permission.");
-                    return true;
                 }
-                guiManager.openMenu(player, "admin-expansions");
-                return true;
             }
-            default -> {
-                sendHelp(sender);
-                return true;
+
+            case "debug" -> {
+                if (sender.hasPermission("proshield.admin")) {
+                    plugin.toggleDebug();
+                    sender.sendMessage(ChatColor.YELLOW + "Debug mode: " + plugin.isDebugEnabled());
+                } else {
+                    sender.sendMessage(ChatColor.RED + "No permission.");
+                }
             }
+
+            case "bypass" -> {
+                if (sender instanceof Player player) {
+                    if (plugin.isBypassing(player.getUniqueId())) {
+                        plugin.getBypassing().remove(player.getUniqueId());
+                        sender.sendMessage(ChatColor.RED + "Bypass disabled.");
+                    } else {
+                        plugin.getBypassing().add(player.getUniqueId());
+                        sender.sendMessage(ChatColor.GREEN + "Bypass enabled.");
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+                }
+            }
+
+            case "admin" -> {
+                if (sender instanceof Player player) {
+                    if (sender.hasPermission("proshield.admin")) {
+                        guiManager.openMenu(player, "admin-expansions");
+                    } else {
+                        sender.sendMessage(ChatColor.RED + "No permission.");
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+                }
+            }
+
+            default -> sendHelp(sender);
         }
+
+        return true;
     }
 
     private void sendHelp(CommandSender sender) {
-        if (sender.hasPermission("proshield.admin")) {
-            for (String line : plugin.getConfig().getStringList("help.admin")) {
-                sender.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
-            }
-        } else {
-            for (String line : plugin.getConfig().getStringList("help.player")) {
-                sender.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
-            }
+        List<String> lines = sender.hasPermission("proshield.admin")
+                ? plugin.getConfig().getStringList("help.admin")
+                : plugin.getConfig().getStringList("help.player");
+
+        for (String line : lines) {
+            sender.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
         }
     }
 

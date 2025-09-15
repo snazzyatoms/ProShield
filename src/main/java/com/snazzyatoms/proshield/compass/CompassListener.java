@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/compass/CompassListener.java
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -32,21 +33,23 @@ public class CompassListener implements Listener {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        // Must be a compass
+        // Must be a compass with custom name
         if (item == null || item.getType() != Material.COMPASS) return;
 
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
-        // Normalize name (strip color codes)
         String displayName = ChatColor.stripColor(meta.getDisplayName());
-        if (displayName == null || !displayName.equalsIgnoreCase("ProShield Compass")) return;
+        if (displayName == null) return;
 
-        // Only trigger on right-click (air or block)
+        // Match case-insensitive name
+        if (!displayName.equalsIgnoreCase("ProShield Compass")) return;
+
+        // Only trigger on right-click
         Action action = event.getAction();
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
 
-        // Open the main GUI
+        // Open GUI
         guiManager.openMenu(player, "main");
         event.setCancelled(true);
     }

@@ -8,17 +8,21 @@ settings:
   compass-despawn-delay: 600
   compass-auto-replace: false
 
-  # Operators always have full access (player + admin)
-  # They also bypass all claim protections by default
+  # Operators: full control and bypass by default (can toggle bypass in GUI)
   ops-have-full-access: true
 
 claims:
-  default-radius: 50                  # Horizontal claim radius (in blocks)
-  min-y: 0                            # Vertical protection floor (near bedrock)
-  max-y: 200                          # Vertical protection ceiling
-  safezone-enabled: true              # Claims act as safezones by default
-  allow-admin-edit-claims: true       # Admins can modify other players' claims
-  allow-owner-claim-flags: true       # Claim owners can always edit their flags
+  # Horizontal protection radius (blocks) from claim center
+  default-radius: 50
+  # Vertical protection range
+  min-y: 0
+  max-y: 200
+  # Default: claims are safe zones (no hostile damage/targeting)
+  safezone-enabled: true
+  # Admins may edit/assist player claims via GUI
+  allow-admin-edit-claims: true
+  # Claim owners can always edit their flags in GUI
+  allow-owner-claim-flags: true
 
 protection:
   fire:
@@ -43,15 +47,18 @@ protection:
     water: false
 
   mobs:
+    # Hostiles are repelled near players inside their claims
     border-repel:
       enabled: true
       radius: 15.0
       horizontal-push: 0.7
       vertical-push: 0.25
-      play-sound: true
+      play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
+    # Periodically despawn hostiles inside claims
     despawn-inside: true
     despawn-interval-seconds: 30
+    # Core protections
     prevent-damage: true
     prevent-targeting: true
     protect-pets: true
@@ -81,6 +88,91 @@ protection:
       safezone: true
     worlds: {}
 
+# -----------------------------
+# Claim Roles (GUI-driven)
+# -----------------------------
+roles:
+  default: member
+  available:
+    member:
+      name: "&7Member"
+      lore:
+        - "&7Can access containers"
+        - "&cCannot build or break"
+        - "&cCannot toggle claim flags"
+      permissions:
+        build: false
+        containers: true
+        toggle-flags: false
+
+    builder:
+      name: "&aBuilder"
+      lore:
+        - "&aCan build & break blocks"
+        - "&7Can access containers"
+        - "&cCannot toggle claim flags"
+      permissions:
+        build: true
+        containers: true
+        toggle-flags: false
+
+    trusted:
+      name: "&bTrusted"
+      lore:
+        - "&aFull access except claim owner actions"
+      permissions:
+        build: true
+        containers: true
+        toggle-flags: true
+
+# -----------------------------
+# Per-Claim Flags (toggle in GUI)
+# -----------------------------
+flags:
+  available:
+    safezone:
+      name: "&bSafe Zone"
+      description:
+        - "&7Prevents hostile targeting and damage"
+        - "&7Repels & despawns hostiles (if enabled)"
+      default: true
+
+    pvp:
+      name: "&cPvP Allowed"
+      description:
+        - "&7Toggle whether players can PvP in this claim"
+      default: false
+
+    block-break:
+      name: "&fBlock Break"
+      description:
+        - "&7Allow trusted players to break blocks"
+      default: false
+
+    block-place:
+      name: "&fBlock Place"
+      description:
+        - "&7Allow trusted players to place blocks"
+      default: false
+
+    containers:
+      name: "&6Containers"
+      description:
+        - "&7Allow trusted players to open chests, barrels, etc."
+      default: true
+
+    explosions:
+      name: "&4Explosions"
+      description:
+        - "&7Allow TNT/Creeper/Ghast damage in claim"
+      default: false
+
+    fire:
+      name: "&6Fire"
+      description:
+        - "&7Allow fire burn/spread/ignite"
+      default: false
+
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
@@ -97,11 +189,11 @@ messages:
   expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
   expansion-denied: "&cYour claim expansion request was denied: {reason}"
 
-  # Configurable deny reasons
-  expansion-deny-reasons:
-    too-large: "&cRequested expansion too large."
+  deny-reasons:
+    too-large: "&cRequested expansion is too large."
     abusive: "&cExpansion request denied due to abuse."
-    other: "&cExpansion request denied."
+    overlap: "&cRequested area overlaps an existing claim."
+    custom-1: "&cNot enough playtime yet for this expansion."
 
 help:
   player:
@@ -122,203 +214,27 @@ help:
     - "&c/proshield compass &7→ Give yourself a new compass"
     - "&cCheck GUI → Admin Tools"
 
+# GUI (layout is handled by GUIManager; buttons are visible hints only)
 gui:
   menus:
     main:
       title: "&6ProShield Menu"
-      size: 27
-      items:
-        "11":
-          material: GRASS_BLOCK
-          name: "&aClaim Land"
-          lore:
-            - "&7Protect your land"
-            - "&fRadius: 50 blocks by default"
-          action: "command:proshield claim"
-          permission: "proshield.player.access"
-
-        "13":
-          material: PAPER
-          name: "&eClaim Info"
-          lore:
-            - "&7Shows claim details"
-            - "&7Flags, Owner, Trusted players"
-          action: "command:proshield info"
-          permission: "proshield.player.access"
-
-        "15":
-          material: BARRIER
-          name: "&cUnclaim Land"
-          lore:
-            - "&7Remove your claim from this land"
-          action: "command:proshield unclaim"
-          permission: "proshield.player.access"
-
-        "21":
-          material: PLAYER_HEAD
-          name: "&bTrusted Players"
-          lore:
-            - "&7Manage who can build in your claim"
-            - "&fAdd / Remove / Edit roles"
-          action: "menu:roles"
-          permission: "proshield.player.access"
-
-        "23":
-          material: CHEST
-          name: "&eClaim Flags"
-          lore:
-            - "&7Toggle protections for this claim"
-            - "&fExample: PVP, Explosions"
-          action: "menu:flags"
-          permission: "proshield.player.access"
-
-        "25":
-          material: EMERALD
-          name: "&aExpand Claim"
-          lore:
-            - "&7Request a claim expansion"
-            - "&fOptions: +10, +20, +30 blocks"
-          action: "menu:expansion"
-          permission: "proshield.player.access"
-
-        "26":
-          material: REDSTONE
-          name: "&cAdmin Tools"
-          lore:
-            - "&7Admin-only tools and controls"
-          action: "menu:admin-tools"
-          permission: "proshield.admin"
-
-        "37":
-          material: BARRIER
-          name: "&cBack"
-          action: "close"
-        "43":
-          material: BARRIER
-          name: "&cExit"
-          action: "close"
-
+      size: 45
     roles:
       title: "&bTrusted Players"
       size: 45
-      items:
-        "37":
-          material: BARRIER
-          name: "&cBack"
-          action: "menu:main"
-        "43":
-          material: BARRIER
-          name: "&cExit"
-          action: "close"
-
+    roles-nearby:
+      title: "&bNearby Players"
+      size: 45
+    assign-role:
+      title: "&bAssign Role"
+      size: 45
+    manage-trusted:
+      title: "&bManage Trusted"
+      size: 45
     flags:
       title: "&eClaim Flags"
       size: 45
-      items:
-        "10":
-          material: TNT
-          name: "&cExplosions"
-          lore:
-            - "&7Toggle explosions in this claim"
-            - "&fCurrent: {state}"
-          action: "toggle:claim.explosions"
-        "12":
-          material: FLINT_AND_STEEL
-          name: "&cFire Spread"
-          lore:
-            - "&7Toggle fire spread"
-            - "&fCurrent: {state}"
-          action: "toggle:claim.fire-spread"
-        "14":
-          material: ZOMBIE_HEAD
-          name: "&cMob Damage"
-          lore:
-            - "&7Toggle mob damage inside claim"
-            - "&fCurrent: {state}"
-          action: "toggle:claim.mob-damage"
-        "16":
-          material: DIAMOND_SWORD
-          name: "&cPVP"
-          lore:
-            - "&7Toggle PVP inside claim"
-            - "&fCurrent: {state}"
-          action: "toggle:claim.pvp"
-        "37":
-          material: BARRIER
-          name: "&cBack"
-          action: "menu:main"
-        "43":
-          material: BARRIER
-          name: "&cExit"
-          action: "close"
-
-    expansion:
-      title: "&aExpansion Request"
-      size: 27
-      items:
-        "11":
-          material: EMERALD
-          name: "&a+10 Blocks"
-          lore:
-            - "&7Request to expand by 10 blocks"
-          action: "expansion:10"
-        "13":
-          material: EMERALD
-          name: "&a+20 Blocks"
-          lore:
-            - "&7Request to expand by 20 blocks"
-          action: "expansion:20"
-        "15":
-          material: EMERALD
-          name: "&a+30 Blocks"
-          lore:
-            - "&7Request to expand by 30 blocks"
-          action: "expansion:30"
-        "25":
-          material: BARRIER
-          name: "&cBack"
-          action: "menu:main"
-        "26":
-          material: BARRIER
-          name: "&cExit"
-          action: "close"
-
     admin-tools:
-      title: "&cAdmin Tools & Expansion Requests"
+      title: "&cAdmin Tools"
       size: 45
-      items:
-        "10":
-          material: PAPER
-          name: "&ePending Requests"
-          lore:
-            - "&7View all player expansion requests"
-          action: "menu:expansion-requests"
-          permission: "proshield.admin.expansions"
-        "12":
-          material: BOOK
-          name: "&bReload Config"
-          action: "command:proshield reload"
-          permission: "proshield.admin"
-        "14":
-          material: REPEATER
-          name: "&dWorld Controls"
-          action: "menu:world-controls"
-          permission: "proshield.admin.worldcontrols"
-        "16":
-          material: LEVER
-          name: "&eToggle Debug"
-          action: "command:proshield debug"
-          permission: "proshield.admin"
-        "19":
-          material: TRIPWIRE_HOOK
-          name: "&6Toggle Bypass"
-          action: "command:proshield bypass"
-          permission: "proshield.admin"
-        "37":
-          material: BARRIER
-          name: "&cBack"
-          action: "menu:main"
-        "43":
-          material: BARRIER
-          name: "&cExit"
-          action: "close"

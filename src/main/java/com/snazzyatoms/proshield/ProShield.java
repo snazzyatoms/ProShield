@@ -2,6 +2,7 @@ package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.compass.CompassListener;
+import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.gui.ChatListener;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
@@ -11,13 +12,16 @@ import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-public class ProShield extends JavaPlugin {
+public class ProShield extends JavaPlugin implements Listener {
 
     private static ProShield instance;
 
@@ -25,6 +29,7 @@ public class ProShield extends JavaPlugin {
     private GUIManager guiManager;
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
+    private CompassManager compassManager;
 
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
@@ -40,6 +45,7 @@ public class ProShield extends JavaPlugin {
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
         guiManager = new GUIManager(this);
+        compassManager = new CompassManager(this, guiManager);
 
         // Load persisted data
         roleManager.loadAll();
@@ -58,6 +64,7 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
+        Bukkit.getPluginManager().registerEvents(this, this); // for join-event below
 
         getLogger().info("ProShield enabled successfully.");
     }
@@ -71,6 +78,19 @@ public class ProShield extends JavaPlugin {
         getLogger().info("ProShield disabled and data saved.");
     }
 
+    // --------------------
+    // Join listener
+    // --------------------
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        if (getConfig().getBoolean("settings.give-compass-on-join", true)) {
+            compassManager.giveCompass(event.getPlayer());
+        }
+    }
+
+    // --------------------
+    // Getters
+    // --------------------
     public static ProShield getInstance() {
         return instance;
     }
@@ -89,6 +109,10 @@ public class ProShield extends JavaPlugin {
 
     public PlotManager getPlotManager() {
         return plotManager;
+    }
+
+    public CompassManager getCompassManager() {
+        return compassManager;
     }
 
     public Set<UUID> getBypassing() {

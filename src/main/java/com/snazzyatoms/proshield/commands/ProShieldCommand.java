@@ -1,9 +1,11 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.ProShieldReloadEvent;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -85,6 +87,10 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 }
 
                 plugin.reloadConfig();
+
+                // 🔔 Fire reload event so all listeners can resync
+                Bukkit.getPluginManager().callEvent(new ProShieldReloadEvent(plugin));
+
                 sender.sendMessage(ChatColor.GREEN + "ProShield configuration reloaded.");
 
                 // After reload, re-give compasses if enabled in config

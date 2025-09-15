@@ -71,7 +71,8 @@ help:
     - "&bTrusted Players &7→ Manage roles & access"
     - "&bClaim Flags &7→ Toggle protections"
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
-    - "&7Note: All features are GUI-driven. Commands are not required."
+    - "&7Note: Expansion requests have a cooldown of &f{claims.expansion.cooldown-hours}h&7 (configurable)."
+    - "&7All features are GUI-driven. Commands are not required."
 
   admin:
     - "&c&lProShield — Admin Guide"

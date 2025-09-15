@@ -13,6 +13,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Collections;
 
+/**
+ * Handles giving and managing the ProShield Compass for players.
+ * Fully synchronized with CompassListener + GUIManager (v1.2.5).
+ */
 public class CompassManager implements Listener {
 
     private final ProShield plugin;
@@ -21,12 +25,11 @@ public class CompassManager implements Listener {
     public CompassManager(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
         this.guiManager = guiManager;
-        // Register join event
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
     /**
-     * Creates the ProShield compass item.
+     * Creates a correctly tagged ProShield Compass.
      */
     private ItemStack createCompass() {
         ItemStack compass = new ItemStack(Material.COMPASS);
@@ -40,40 +43,41 @@ public class CompassManager implements Listener {
     }
 
     /**
-     * Checks whether the player already has a ProShield compass.
+     * Checks if the player already has the official ProShield Compass.
      */
-    public boolean hasCompass(Player player) { // 🔓 made public
+    public boolean hasCompass(Player player) {
+        if (player == null) return false;
         for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == Material.COMPASS) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null && meta.hasDisplayName()
-                        && "§bProShield Compass".equals(meta.getDisplayName())) {
-                    return true;
-                }
+            if (item == null || item.getType() != Material.COMPASS) continue;
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null && meta.hasDisplayName()
+                    && "§bProShield Compass".equals(meta.getDisplayName())) {
+                return true;
             }
         }
         return false;
     }
 
     /**
-     * Gives the ProShield compass to a player,
-     * avoiding duplicates if they already have one.
+     * Gives the ProShield Compass if the player doesn’t already have one.
      */
     public void giveCompass(Player player) {
+        if (player == null) return;
         if (!hasCompass(player)) {
             player.getInventory().addItem(createCompass());
         }
     }
 
     /**
-     * Force-replace a ProShield compass (used if despawned and autoReplace is enabled).
+     * Force-replace a ProShield Compass (for despawn/auto-replace cases).
      */
     public void replaceCompass(Player player) {
+        if (player == null) return;
         giveCompass(player);
     }
 
     /**
-     * Gives the compass to all online players if settings allow it.
+     * Distributes compasses to all players if config allows.
      */
     public void giveCompassToAll() {
         boolean giveOnJoin = plugin.getConfig().getBoolean("settings.give-compass-on-join", true);
@@ -87,7 +91,7 @@ public class CompassManager implements Listener {
     }
 
     /**
-     * Handles compass distribution on player join.
+     * Handles compass distribution when players join.
      */
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {

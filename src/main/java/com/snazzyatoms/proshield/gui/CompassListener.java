@@ -1,5 +1,5 @@
-// src/main/java/com/snazzyatoms/proshield/gui/CompassListener.java
-package com.snazzyatoms.proshield.gui;
+// src/main/java/com/snazzyatoms/proshield/compass/CompassListener.java
+package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
@@ -33,8 +33,9 @@ public class CompassListener implements Listener {
 
         if (item.getType() == Material.COMPASS) {
             ItemMeta meta = item.getItemMeta();
-            if (meta != null && ChatColor.stripColor(meta.getDisplayName())
-                    .equalsIgnoreCase("ProShield Compass")) {
+            if (meta != null 
+                    && meta.hasDisplayName() 
+                    && ChatColor.stripColor(meta.getDisplayName()).equalsIgnoreCase("ProShield Compass")) {
                 event.setCancelled(true);
                 plugin.getGuiManager().openMenu(player, "main"); // ✅ open main GUI
             }

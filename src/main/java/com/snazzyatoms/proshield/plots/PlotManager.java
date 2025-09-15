@@ -13,7 +13,7 @@ import java.util.*;
  * -----------
  * - Keeps an index of plots by ID and by (world, chunkX, chunkZ)
  * - Utility methods used across commands, GUI, roles, and expansion system
- * - Provides convenience overloads (by Location) to keep older call sites working
+ * - Provides convenience overloads (by Location, UUID) to keep older call sites working
  *
  * NOTE: This manager does not send chat messages; callers decide UX.
  */
@@ -113,6 +113,16 @@ public class PlotManager {
     public boolean removePlot(Location loc) {
         Plot p = getPlot(loc);
         if (p == null) return false;
+        return removePlot(p);
+    }
+
+    /**
+     * Remove a plot by its ID.
+     * Returns true if removed successfully.
+     */
+    public boolean removePlot(UUID id) {
+        if (id == null) return false;
+        Plot p = getPlotById(id);
         return removePlot(p);
     }
 

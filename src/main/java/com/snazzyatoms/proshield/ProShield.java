@@ -61,7 +61,7 @@ public class ProShield extends JavaPlugin implements Listener {
 
         // Register listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ChatListener(this, guiManager), this); // ✅ updated constructor
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
         Bukkit.getPluginManager().registerEvents(this, this); // for join-event below

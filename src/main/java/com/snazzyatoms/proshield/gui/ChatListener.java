@@ -6,6 +6,11 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
+/**
+ * ChatListener
+ * - Handles chat input redirection for expansion deny reasons
+ *   and role management actions tied into GUIManager.
+ */
 public class ChatListener implements Listener {
 
     private final ProShield plugin;
@@ -24,6 +29,7 @@ public class ChatListener implements Listener {
         if (guiManager.isAwaitingReason(player)) {
             event.setCancelled(true);
             String reason = event.getMessage();
+            // Run safely on main thread
             plugin.getServer().getScheduler().runTask(plugin,
                     () -> guiManager.provideManualReason(player, reason));
             return;
@@ -33,6 +39,7 @@ public class ChatListener implements Listener {
         if (guiManager.isAwaitingRoleAction(player)) {
             event.setCancelled(true);
             String message = event.getMessage();
+            // Run safely on main thread
             plugin.getServer().getScheduler().runTask(plugin,
                     () -> guiManager.handleRoleChatInput(player, message));
         }

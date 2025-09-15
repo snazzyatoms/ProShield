@@ -2,9 +2,11 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 
 import java.util.*;
 
@@ -80,10 +82,6 @@ public class PlotManager {
      * Create / remove / mutate
      * ========================= */
 
-    /**
-     * Create a plot at the player's current chunk.
-     * Returns the created plot, or null if that chunk is already claimed.
-     */
     public Plot createPlot(UUID ownerId, Location loc) {
         if (ownerId == null || loc == null || loc.getWorld() == null) return null;
 
@@ -94,43 +92,29 @@ public class PlotManager {
         String k = key(world, cx, cz);
 
         if (byChunk.containsKey(k)) {
-            // Already claimed; caller should decide what to tell the user
-            return null;
+            return null; // Already claimed
         }
 
         Plot plot = new Plot(ownerId, world, cx, cz);
 
         plotsById.put(plot.getId(), plot);
         byChunk.put(k, plot.getId());
-        // ✅ Fixed generics
         plotsByOwner.computeIfAbsent(ownerId, _x -> new HashSet<UUID>()).add(plot.getId());
         return plot;
     }
 
-    /**
-     * Remove the plot in the given chunk.
-     * Returns true if a plot existed and was removed.
-     */
     public boolean removePlot(Location loc) {
         Plot p = getPlot(loc);
         if (p == null) return false;
         return removePlot(p);
     }
 
-    /**
-     * Remove a plot by its ID.
-     * Returns true if removed successfully.
-     */
     public boolean removePlot(UUID id) {
         if (id == null) return false;
         Plot p = getPlotById(id);
         return removePlot(p);
     }
 
-    /**
-     * Remove the provided plot object.
-     * Returns true when removed from all indexes.
-     */
     public boolean removePlot(Plot plot) {
         if (plot == null) return false;
 
@@ -149,11 +133,6 @@ public class PlotManager {
         return true;
     }
 
-    /**
-     * Expand (add extra radius) for one of the owner's plots.
-     * If owner has multiple plots, we expand the first found.
-     * Returns true if a plot was found & expanded.
-     */
     public boolean expandClaim(UUID ownerId, int extraRadius) {
         if (ownerId == null || extraRadius <= 0) return false;
         Plot p = getAnyPlotOwnedBy(ownerId);
@@ -162,10 +141,6 @@ public class PlotManager {
         return true;
     }
 
-    /**
-     * Transfer ownership of a plot by ID (utility kept for completeness).
-     * Returns true if success.
-     */
     public boolean transferOwnership(UUID plotId, UUID newOwnerId) {
         Plot p = getPlotById(plotId);
         if (p == null || newOwnerId == null) return false;
@@ -173,7 +148,6 @@ public class PlotManager {
         UUID oldOwner = p.getOwner();
         if (Objects.equals(oldOwner, newOwnerId)) return true; // no change
 
-        // Update reverse index
         if (oldOwner != null) {
             Set<UUID> set = plotsByOwner.get(oldOwner);
             if (set != null) {
@@ -182,27 +156,71 @@ public class PlotManager {
             }
         }
         p.setOwner(newOwnerId);
-
-        // ✅ Fixed generics
         plotsByOwner.computeIfAbsent(newOwnerId, _x -> new HashSet<UUID>()).add(p.getId());
         return true;
     }
 
     /* ==================
+     * Convenience stubs
+     * ================== */
+
+    /** Claim the current chunk for a player */
+    public void claimPlot(Player player) {
+        Plot existing = getPlot(player.getLocation());
+        if (existing != null) {
+            player.sendMessage(ChatColor.RED + "This chunk is already claimed.");
+            return;
+        }
+        Plot plot = createPlot(player.getUniqueId(), player.getLocation());
+        if (plot == null) {
+            player.sendMessage(ChatColor.RED + "Failed to claim this chunk.");
+        } else {
+            player.sendMessage(ChatColor.GREEN + "Chunk claimed successfully!");
+        }
+    }
+
+    /** Unclaim the current chunk if owned */
+    public void unclaimPlot(Player player) {
+        Plot plot = getPlot(player.getLocation());
+        if (plot == null) {
+            player.sendMessage(ChatColor.RED + "This chunk is not claimed.");
+            return;
+        }
+        if (!plot.isOwner(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "You are not the owner of this claim.");
+            return;
+        }
+        if (removePlot(plot)) {
+            player.sendMessage(ChatColor.YELLOW + "Your claim has been removed.");
+        } else {
+            player.sendMessage(ChatColor.RED + "Failed to unclaim this chunk.");
+        }
+    }
+
+    /** Show basic claim info */
+    public void sendClaimInfo(Player player) {
+        Plot plot = getPlot(player.getLocation());
+        if (plot == null) {
+            player.sendMessage(ChatColor.GRAY + "You are in the wilderness.");
+            return;
+        }
+        String ownerName = getPlayerName(plot.getOwner());
+        player.sendMessage(ChatColor.AQUA + "Claim Info:");
+        player.sendMessage(ChatColor.YELLOW + "Owner: " + ChatColor.WHITE + ownerName);
+        player.sendMessage(ChatColor.YELLOW + "World: " + ChatColor.WHITE + plot.getWorldName());
+        player.sendMessage(ChatColor.YELLOW + "Chunk: " + ChatColor.WHITE + plot.getX() + ", " + plot.getZ());
+    }
+
+    /* ==================
      * Persistence hooks
-     * ==================
-     * These are placeholders to be implemented (YAML/JSON/DB). We keep
-     * the stubs so nothing breaks and we can add serialization later.
-     */
+     * ================== */
 
     public void loadAll() {
-        // TODO: Load plotsById, byChunk, plotsByOwner from disk.
-        // Keep stub for now; caller expects method to exist.
+        // TODO
     }
 
     public void saveAll() {
-        // TODO: Save plotsById, byChunk, plotsByOwner to disk.
-        // Keep stub for now; caller expects method to exist.
+        // TODO
     }
 
     /* ===============

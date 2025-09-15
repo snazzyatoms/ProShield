@@ -82,6 +82,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 }
 
                 plugin.reloadConfig();
+                plugin.loadMessagesConfig(); // ✅ reload messages.yml too
 
                 // 🔔 Fire reload event so all listeners can resync
                 Bukkit.getPluginManager().callEvent(new ProShieldReloadEvent(plugin));

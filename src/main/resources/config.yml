@@ -32,21 +32,16 @@ protection:
       vertical-push: 0.25
       play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
-    despawn-inside: true               # toggle full despawn sweep on/off
-    despawn-interval-seconds: 30       # how often hostile mobs inside claims are cleaned up
+    despawn-inside: true
+    despawn-interval-seconds: 30
 
   entities:
     wilderness:
       item-frames: false
       vehicles: false
 
-  # ============================
-  # Per-World Global Protections
-  # ============================
   world-controls:
     enabled: true
-
-    # Defaults used when a world doesn't have an explicit override
     defaults:
       block-break: true
       block-place: true
@@ -59,29 +54,13 @@ protection:
       ignite-flint: true
       ignite-lava: true
       ignite-lightning: true
-
-    # Per-world overrides (toggled via Admin Tools → World Controls in the GUI)
-    worlds:
-      # example:
-      # world:
-      #   block-break: false
-      #   block-place: false
-      #   bucket-use: false
-      #   explosions: false
-      #   mob-spawn: false
-      #   mob-damage: false
-      #   fire-burn: false
-      #   fire-spread: false
-      #   ignite-flint: false
-      #   ignite-lava: false
-      #   ignite-lightning: true
+    worlds: {}
 
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
   show-wilderness: true
   admin-flag-chat: true
-
   enter-own: "&aYou entered your claim."
   enter-other: "&aYou entered {owner}'s claim."
   leave-own: "&cYou left your claim."
@@ -96,18 +75,17 @@ help:
     - "&bProShield Help &7- Player"
     - "&a/claim &7→ Claim your current land (50 block radius)"
     - "&a/unclaim &7→ Unclaim your land"
-    - "&a/proshield compass &7→ Receive your ProShield Compass (replaces if lost)"
-    - "&7Dropped compasses despawn automatically after &f{compass-despawn-delay/20}s"
+    - "&a/proshield compass &7→ Receive your ProShield Compass"
+    - "&7Dropped compasses despawn after &f{compass-despawn-delay/20}s"
     - "&a/proshield help &7→ Show this help menu"
-
   admin:
     - "&cProShield Help &7- Admin"
     - "&c/proshield reload &7→ Reload the config"
     - "&c/proshield debug &7→ Toggle debug mode"
     - "&c/proshield bypass &7→ Toggle bypass mode"
     - "&c/proshield admin &7→ Open the admin menu"
-    - "&c/proshield compass &7→ Give yourself a new ProShield Compass"
-    - "&7Config: &fcompass-auto-replace &7= Automatically re-add compass on despawn if enabled"
+    - "&c/proshield compass &7→ Give yourself a new compass"
+    - "&7Config: &fcompass-auto-replace &7= Auto re-add compass on despawn"
     - "&cCheck GUI → Admin Tools"
 
 gui:
@@ -123,46 +101,38 @@ gui:
             - "&7Protect your land"
             - "&fRadius: 50 blocks by default"
           action: "command:proshield claim"
-
         "13":
           material: PAPER
           name: "&eClaim Info"
           lore:
             - "&7Shows your current claim details"
-            - "&7Default vs. Current Radius"
             - "&7Protected: Pets, Containers, Frames, Stands"
             - "&7Explosions/Fire disabled"
           action: "command:proshield info"
-
         "15":
           material: BARRIER
           name: "&cUnclaim Land"
           lore:
             - "&7Remove your claim"
           action: "command:proshield unclaim"
-
         "21":
           material: PLAYER_HEAD
           name: "&bTrusted Players"
           lore:
             - "&7Manage who can build in your claim"
-            - "&7Add or remove trusted players"
           action: "menu:roles"
-
         "23":
           material: CHEST
           name: "&eClaim Flags"
           lore:
             - "&7Toggle special protections"
           action: "menu:flags"
-
         "25":
           material: BARRIER
           name: "&cExit Menu"
           lore:
             - "&7Click to close this menu"
           action: "close"
-
         "26":
           material: REDSTONE
           name: "&cAdmin Tools"
@@ -174,40 +144,125 @@ gui:
       title: "&dClaim Flags"
       size: 27
       items:
-        "10": { ... }   # (unchanged, keeping your previous items)
-        "26": { ... }
+        "10":
+          material: TNT
+          name: "&cExplosions"
+          lore:
+            - "&7Toggle TNT & creeper damage"
+            - "&fCurrent: {state}"
+          action: "flag:explosions"
+        "11":
+          material: WATER_BUCKET
+          name: "&bBuckets"
+          lore:
+            - "&7Toggle bucket use inside claims"
+            - "&fCurrent: {state}"
+          action: "flag:buckets"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "menu:main"
 
     roles:
       title: "&bTrusted Players"
       size: 27
       items:
-        "11": { ... }
-        "26": { ... }
+        "11":
+          material: GREEN_WOOL
+          name: "&aAdd Player"
+          lore:
+            - "&7Trust a new player"
+          action: "role:add"
+        "13":
+          material: RED_WOOL
+          name: "&cRemove Player"
+          lore:
+            - "&7Untrust an existing player"
+          action: "role:remove"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to main menu"
+          action: "menu:main"
 
     admin-tools:
       title: "&cAdmin Tools & Expansion Requests"
       size: 45
       items:
-        "10": { ... }
-        "40": { ... }
+        "10":
+          material: PAPER
+          name: "&ePending Requests"
+          lore:
+            - "&7View player requests"
+          action: "menu:expansion-requests"
+        "12":
+          material: BOOK
+          name: "&bReload Config"
+          lore:
+            - "&7Reload ProShield configuration"
+          action: "command:proshield reload"
+        "14":
+          material: REPEATER
+          name: "&dWorld Controls"
+          lore:
+            - "&7Manage protections for this world"
+            - "&8(affects: {world})"
+          action: "menu:world-controls"
+        "16":
+          material: LEVER
+          name: "&eToggle Debug"
+          lore:
+            - "&7Turn debug mode on/off"
+          action: "command:proshield debug"
+        "19":
+          material: TRIPWIRE_HOOK
+          name: "&6Toggle Bypass (You)"
+          lore:
+            - "&7Bypass all checks while enabled"
+          action: "command:proshield bypass"
+        "40":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to Main Menu"
+          action: "menu:main"
 
-    # Dynamic per-world control toggles (applies to the opener's current world)
     world-controls:
       title: "&dWorld Controls &8({world})"
       size: 45
       items:
-        "10": { ... }
-        "23": { ... }
+        "10":
+          material: IRON_PICKAXE
+          name: "&fBlock Break"
+          lore:
+            - "&7Allow block breaking"
+            - "&fCurrent: {state}"
+          action: "toggle:world.block-break"
+        "23":
+          material: TRIDENT
+          name: "&fIgnite: Lightning"
+          lore:
+            - "&7Allow lightning ignition"
+            - "&fCurrent: {state}"
+          action: "toggle:world.ignite-lightning"
         "31":
           material: REDSTONE_BLOCK
           name: "&cReset to Defaults"
           lore:
-            - "&7Clear all overrides for this world"
+            - "&7Clear overrides for this world"
             - "&fFalls back to default settings"
           action: "menu:world-reset-confirm"
-        "40": { ... }
+        "40":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to Admin Tools"
+          action: "menu:admin-tools"
 
-    # ✅ NEW Confirmation menu for reset
+    # ✅ New confirmation GUI
     world-reset-confirm:
       title: "&cConfirm Reset for {world}"
       size: 27
@@ -216,18 +271,16 @@ gui:
           material: GREEN_WOOL
           name: "&aYes, Reset"
           lore:
-            - "&7This will reset all world controls"
-            - "&7for &f{world} &7to the default values."
-            - "&cClaims and per-claim flags will NOT be affected."
+            - "&7This will reset world controls"
+            - "&7for &f{world} &7to defaults."
+            - "&cClaims will NOT be affected."
           action: "reset:world.confirm"
-
         "15":
           material: RED_WOOL
           name: "&cNo, Cancel"
           lore:
-            - "&7Return without making changes."
+            - "&7Return without changes"
           action: "menu:world-controls"
-
         "26":
           material: BARRIER
           name: "&cBack"
@@ -239,8 +292,24 @@ gui:
       title: "&cDeny Reasons"
       size: 27
       items:
-        "11": { ... }
-        "26": { ... }
+        "11":
+          material: BARRIER
+          name: "&cToo Large"
+          lore:
+            - "&7Requested expansion too big"
+          action: "reason:too-large"
+        "13":
+          material: REDSTONE
+          name: "&cAbusive"
+          lore:
+            - "&7Expansion abusive"
+          action: "reason:abusive"
+        "26":
+          material: BARRIER
+          name: "&cBack"
+          lore:
+            - "&7Return to Admin Tools"
+          action: "menu:admin-tools"
 
 sounds:
   button-click: "UI_BUTTON_CLICK"

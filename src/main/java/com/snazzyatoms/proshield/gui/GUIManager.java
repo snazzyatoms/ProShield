@@ -110,6 +110,11 @@ public class GUIManager {
             return;
         }
 
+        if (menuName.equalsIgnoreCase("flags")) {
+            openFlagsMenu(player);
+            return;
+        }
+
         ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus." + menuName);
         if (menuSec == null) {
             plugin.getLogger().warning("Menu not found in config: " + menuName);
@@ -145,15 +150,64 @@ public class GUIManager {
                     meta.setLore(lore);
                 }
 
-                // Hide all attributes & extra text
-                meta.addItemFlags(
-                        ItemFlag.HIDE_ATTRIBUTES,
-                        ItemFlag.HIDE_ENCHANTS,
-                        ItemFlag.HIDE_UNBREAKABLE,
-                        ItemFlag.HIDE_POTION_EFFECTS
-                );
-
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
                 stack.setItemMeta(meta);
+
+                inv.setItem(slot, stack);
+            }
+        }
+
+        player.openInventory(inv);
+    }
+
+    /* ======================
+     * Flags menu (dynamic state)
+     * ====================== */
+    private void openFlagsMenu(Player player) {
+        Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+        if (plot == null) {
+            plugin.getMessagesUtil().send(player, "&cYou must stand inside a claim to manage flags.");
+            return;
+        }
+
+        ConfigurationSection menuSec = plugin.getConfig().getConfigurationSection("gui.menus.flags");
+        if (menuSec == null) return;
+
+        String title = ChatColor.translateAlternateColorCodes('&', menuSec.getString("title", "&bClaim Flags"));
+        int size = menuSec.getInt("size", 27);
+        Inventory inv = Bukkit.createInventory(null, size, title);
+
+        ConfigurationSection itemsSec = menuSec.getConfigurationSection("items");
+        if (itemsSec != null) {
+            for (String slotStr : itemsSec.getKeys(false)) {
+                int slot = parseIntSafe(slotStr, -1);
+                if (slot < 0) continue;
+
+                ConfigurationSection itemSec = itemsSec.getConfigurationSection(slotStr);
+                if (itemSec == null) continue;
+
+                Material mat = Material.matchMaterial(itemSec.getString("material", "STONE"));
+                if (mat == null) mat = Material.STONE;
+
+                ItemStack stack = new ItemStack(mat);
+                ItemMeta meta = stack.getItemMeta();
+                if (meta == null) continue;
+
+                String name = itemSec.getString("name", "");
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+
+                List<String> lore = new ArrayList<>();
+                for (String line : itemSec.getStringList("lore")) {
+                    boolean value = plot.getFlag(name.toLowerCase().replace(" ", "-"),
+                            plugin.getConfig().getBoolean("claims.default-flags." + name.toLowerCase().replace(" ", "-"), false));
+                    String state = value ? "&aON" : "&cOFF";
+                    lore.add(ChatColor.translateAlternateColorCodes('&', line.replace("{state}", state)));
+                }
+                meta.setLore(lore);
+
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                stack.setItemMeta(meta);
+
                 inv.setItem(slot, stack);
             }
         }
@@ -186,20 +240,9 @@ public class GUIManager {
         int[] slots = headFillPattern(size);
         int idx = 0;
 
-        if (trusted.isEmpty()) {
-            ItemStack placeholder = new ItemStack(Material.BARRIER);
-            ItemMeta meta = placeholder.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(ChatColor.RED + "No trusted players yet");
-                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                placeholder.setItemMeta(meta);
-            }
-            inv.setItem(size / 2, placeholder);
-        } else {
-            for (Map.Entry<String, String> e : trusted.entrySet()) {
-                if (idx >= slots.length) break;
-                inv.setItem(slots[idx++], createPlayerHead(e.getKey(), e.getValue(), plot.getId()));
-            }
+        for (Map.Entry<String, String> e : trusted.entrySet()) {
+            if (idx >= slots.length) break;
+            inv.setItem(slots[idx++], createPlayerHead(e.getKey(), e.getValue(), plot.getId()));
         }
 
         awaitingRolePlot.put(player.getUniqueId(), plot.getId());
@@ -227,17 +270,8 @@ public class GUIManager {
                 }
             }
 
-            lore.add("");
-            lore.add(ChatColor.YELLOW + "Click: Manage");
-            lore.add(ChatColor.RED + "Shift-Click: Untrust");
-
             meta.setLore(lore);
-            meta.addItemFlags(
-                    ItemFlag.HIDE_ATTRIBUTES,
-                    ItemFlag.HIDE_ENCHANTS,
-                    ItemFlag.HIDE_UNBREAKABLE,
-                    ItemFlag.HIDE_POTION_EFFECTS
-            );
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             skull.setItemMeta(meta);
         }
         return skull;
@@ -266,7 +300,7 @@ public class GUIManager {
                 case "claim info" -> player.performCommand("proshield info");
                 case "unclaim land" -> player.performCommand("proshield unclaim");
                 case "trusted players" -> openMenu(player, "roles");
-                case "claim flags" -> openMenu(player, "flags");
+                case "claim flags" -> openFlagsMenu(player);
                 case "admin tools" -> openMenu(player, "admin-expansions");
             }
             return;
@@ -290,8 +324,7 @@ public class GUIManager {
                 case "safe zone" -> toggleFlag(plot, "safezone", player);
                 case "back" -> { openMenu(player, "main"); return; }
             }
-            // reopen flags menu only if not "back"
-            if (!name.equalsIgnoreCase("back")) openMenu(player, "flags");
+            openFlagsMenu(player);
             return;
         }
 

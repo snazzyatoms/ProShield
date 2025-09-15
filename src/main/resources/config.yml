@@ -23,6 +23,11 @@ claims:
   allow-admin-edit-claims: true
   # Claim owners can always edit their flags in GUI
   allow-owner-claim-flags: true
+  # Expansion request limits
+  expansion:
+    enabled: true
+    max-increase: 100               # Max blocks a single request can add
+    step-options: [10, 15, 20, 25]  # Allowed increments for players to choose in GUI
 
 protection:
   fire:
@@ -194,6 +199,7 @@ messages:
     abusive: "&cExpansion request denied due to abuse."
     overlap: "&cRequested area overlaps an existing claim."
     custom-1: "&cNot enough playtime yet for this expansion."
+    custom-2: "&cYour claim already reached the maximum size."
 
 help:
   player:
@@ -214,7 +220,7 @@ help:
     - "&c/proshield compass &7→ Give yourself a new compass"
     - "&cCheck GUI → Admin Tools"
 
-# GUI (layout is handled by GUIManager; buttons are visible hints only)
+# GUI definitions (menus handled in GUIManager)
 gui:
   menus:
     main:
@@ -238,3 +244,9 @@ gui:
     admin-tools:
       title: "&cAdmin Tools"
       size: 45
+    expansion-requests:
+      title: "&eExpansion Requests"
+      size: 45
+    deny-reasons:
+      title: "&cDeny Reasons"
+      size: 27

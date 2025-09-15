@@ -4,7 +4,6 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Material;
 import org.bukkit.block.Container;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -53,7 +52,7 @@ public class PlotListener implements Listener {
     public void onExplosion(EntityExplodeEvent event) {
         Plot plot = plotManager.getPlot(event.getLocation());
         if (plot != null && !plot.getFlag("explosions", false)) {
-            event.blockList().clear(); // no block damage
+            event.blockList().clear(); // prevent block damage
         }
     }
 
@@ -62,6 +61,7 @@ public class PlotListener implements Listener {
     // -------------------
     @EventHandler
     public void onBucketUse(PlayerBucketEmptyEvent event) {
+        if (event.getBlockClicked() == null) return;
         Plot plot = plotManager.getPlot(event.getBlockClicked().getLocation());
         if (plot != null && !plot.getFlag("buckets", false)) {
             event.setCancelled(true);
@@ -90,6 +90,7 @@ public class PlotListener implements Listener {
     @EventHandler
     public void onPetDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Tameable pet)) return;
+
         Plot plot = plotManager.getPlot(event.getEntity().getLocation());
         if (plot != null && !plot.getFlag("pets", false)) {
             event.setCancelled(true);
@@ -108,7 +109,7 @@ public class PlotListener implements Listener {
         if (plot != null && event.getRemover() instanceof Player player) {
             if (event.getEntity() instanceof ItemFrame && !plot.getFlag("item-frames", false)) {
                 event.setCancelled(true);
-                messages.send(player, "&cItem frames are protected.");
+                messages.send(player, "&cItem frames are protected in this claim.");
             }
         }
     }
@@ -116,10 +117,11 @@ public class PlotListener implements Listener {
     @EventHandler
     public void onArmorStandInteract(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof ArmorStand)) return;
+
         Plot plot = plotManager.getPlot(event.getRightClicked().getLocation());
         if (plot != null && !plot.getFlag("armor-stands", false)) {
             event.setCancelled(true);
-            messages.send(event.getPlayer(), "&cArmor stands are protected.");
+            messages.send(event.getPlayer(), "&cArmor stands are protected in this claim.");
         }
     }
 
@@ -129,7 +131,9 @@ public class PlotListener implements Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Plot plot = plotManager.getPlot(event.getBlock().getLocation());
-        if (plot != null && !plot.isOwner(event.getPlayer().getUniqueId()) && !plot.isTrusted(event.getPlayer().getUniqueId())) {
+        if (plot != null &&
+            !plot.isOwner(event.getPlayer().getUniqueId()) &&
+            !plot.isTrusted(event.getPlayer().getUniqueId())) {
             event.setCancelled(true);
             messages.send(event.getPlayer(), "&cYou cannot place blocks in this claim.");
         }

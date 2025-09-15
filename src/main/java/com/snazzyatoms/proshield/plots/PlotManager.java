@@ -4,6 +4,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -149,4 +150,30 @@ public class PlotManager {
         }
     }
 
-    public void send
+    /* ========================
+     * Info
+     * ======================== */
+    public void sendClaimInfo(Player player) {
+        Location at = player.getLocation();
+        Plot plot = getPlot(at);
+        if (plot == null) {
+            messages.send(player, plugin.getMessagesConfig().getString("error.no-claim", "&cNo claim at your location."));
+            return;
+        }
+
+        OfflinePlayer owner = plugin.getServer().getOfflinePlayer(plot.getOwner());
+        String ownerName = (owner.getName() != null ? owner.getName() : owner.getUniqueId().toString());
+
+        messages.send(player, "&6--- Claim Info ---");
+        messages.send(player, "&eWorld: &f" + plot.getWorld());
+        messages.send(player, "&eChunk: &f" + plot.getX() + ", " + plot.getZ());
+        messages.send(player, "&eOwner: &f" + ownerName);
+        messages.send(player, "&eTrusted: &f" + plot.getTrusted().size());
+
+        if (plot.getFlags().isEmpty()) {
+            messages.send(player, "&eFlags: &7None set.");
+        } else {
+            messages.send(player, "&eFlags: &f" + String.join(", ", plot.getFlags()));
+        }
+    }
+}

@@ -138,7 +138,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             case "claim" -> {
                 Plot existing = plotManager.getPlot(player.getLocation());
                 if (existing != null) {
-                    messages.send(player, "&cThis land is already claimed by &e" + existing.getOwnerName());
+                    String ownerName = existing.getOwnerName() != null ? existing.getOwnerName() : "Unknown";
+                    messages.send(player, "&cThis land is already claimed by &e" + ownerName);
                     return true;
                 }
                 Plot newPlot = plotManager.createPlot(player.getUniqueId(), player.getLocation());
@@ -160,7 +161,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     messages.send(player, "&cYou do not own this claim.");
                     return true;
                 }
-                boolean removed = plotManager.removePlot(plot.getId());
+                boolean removed = plotManager.removePlot(plot);
                 if (removed) {
                     messages.send(player, "&aYour claim has been removed.");
                     String sound = plugin.getConfig().getString("sounds.unclaim-success", "ENTITY_ITEM_BREAK");
@@ -232,7 +233,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        if (!(sender instanceof Player player)) return Collections.emptyList();
+        if (!(sender instanceof Player)) return Collections.emptyList();
 
         if (args.length == 1) {
             return Arrays.asList("help", "reload", "debug", "bypass", "compass",
@@ -242,7 +243,6 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         }
 
         if ((args[0].equalsIgnoreCase("approve") || args[0].equalsIgnoreCase("deny")) && args.length == 2) {
-            // Suggest pending request player names
             Set<UUID> pendingPlayers = ExpansionQueue.getPendingRequests().stream()
                     .map(ExpansionRequest::getPlayerId)
                     .collect(Collectors.toSet());

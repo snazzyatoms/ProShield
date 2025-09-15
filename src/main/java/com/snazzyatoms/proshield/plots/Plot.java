@@ -62,8 +62,12 @@ public class Plot {
         flags.put("safezone", true);          // claims = safezones by default
         flags.put("mob-repel", true);         // repel enabled
         flags.put("mob-despawn", true);       // despawn inside claims
-        flags.put("protect-pets", true);      // protect tamed pets
-        flags.put("protect-passive", true);   // protect passive mobs
+
+        // Pets & Animals (duplicate keys for compatibility across listeners)
+        flags.put("protect-pets", true);      // used in MobProtectionListener
+        flags.put("pet-protect", true);       // used in ProtectionListener
+        flags.put("protect-passive", true);   // used in MobProtectionListener
+        flags.put("animal-protect", true);    // used in ProtectionListener
 
         // PvP
         flags.put("pvp", false);              // PVP disabled inside claims by default

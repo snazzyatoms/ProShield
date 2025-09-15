@@ -209,22 +209,29 @@ messages:
 
 help:
   player:
-    - "&bProShield Help &7- Player"
-    - "&a/proshield claim &7→ Claim your current land (50 block radius)"
-    - "&a/proshield unclaim &7→ Unclaim your land"
-    - "&a/proshield info &7→ View your claim details"
-    - "&a/proshield compass &7→ Receive your ProShield Compass"
-    - "&7Dropped compasses despawn after &f{compass-despawn-delay/20}s"
-    - "&a/proshield help &7→ Show this help menu"
+    - "&3&lProShield &7— Player Guide"
+    - "&aRight-click your ProShield Compass &7→ Open the main menu"
+    - "&bMain Menu &7→ Claim Land, Info, Unclaim, Trusted Players, Claim Flags"
+    - "&bTrusted Players &7→ Manage roles & access"
+    - "&bClaim Flags &7→ Toggle protections"
+    - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
+    - "&7Note: All features are GUI-driven. Commands are not required."
 
   admin:
-    - "&cProShield Help &7- Admin"
-    - "&c/proshield reload &7→ Reload the config"
-    - "&c/proshield debug &7→ Toggle debug mode"
-    - "&c/proshield bypass &7→ Toggle bypass mode"
-    - "&c/proshield admin &7→ Open the admin menu"
-    - "&c/proshield compass &7→ Give yourself a new compass"
-    - "&cCheck GUI → Admin Tools"
+    - "&c&lProShield — Admin Guide"
+    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"
+    - "&7Requires: &fproshield.admin"
+    - "&7Expansion Requests and World Controls require higher permissions."
+    - "&7Available Commands (for admins only):"
+    - "&f/proshield reload &7→ Reload configs"
+    - "&f/proshield debug &7→ Toggle debug mode"
+    - "&f/proshield bypass &7→ Toggle admin bypass"
+    - "&f/proshield admin &7→ Open Admin Tools GUI"
+
+  senior:
+    - "&4&lSenior Admin Tools"
+    - "&4Expansion Requests &7– Requires &fproshield.admin.expansions"
+    - "&4World Controls &7– Requires &fproshield.admin.worldcontrols"
 
 # GUI definitions (menus handled in GUIManager)
 gui:

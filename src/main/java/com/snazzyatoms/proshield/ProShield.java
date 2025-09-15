@@ -57,7 +57,7 @@ public class ProShield extends JavaPlugin implements Listener {
         loadMessagesConfig();
 
         // Core utilities
-        messagesUtil = new MessagesUtil(this, messagesConfig);
+        messagesUtil = new MessagesUtil(this); // ✅ patched constructor
 
         // Managers
         plotManager   = new PlotManager(this);

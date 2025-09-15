@@ -7,8 +7,6 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import java.util.UUID;
-
 /**
  * Optional helper used by some codepaths:
  * provides convenience wrappers around player-facing actions.
@@ -37,14 +35,30 @@ public class PlayerCommandDispatcher {
         plotManager.sendClaimInfo(player);
     }
 
-    // Examples for legacy calls in your code (if any)
+    /**
+     * Print a quick summary of the claim the player is standing in.
+     */
     public void printClaimSummary(Player player) {
         Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
             messages.send(player, "&7No claim here.");
             return;
         }
+
+        // Owner info
         OfflinePlayer owner = plugin.getServer().getOfflinePlayer(plot.getOwner());
-        messages.send(player, "&eOwner: &f" + (owner.getName() == null ? owner.getUniqueId() : owner.getName()));
-        messages.send(player, "&eTrusted: &f" + plot.getTrusted().size());
-        messages.send
+        String ownerName = (owner.getName() != null ? owner.getName() : owner.getUniqueId().toString());
+
+        messages.send(player, "&eOwner: &f" + ownerName);
+
+        // Trusted count
+        messages.send(player, "&eTrusted Players: &f" + plot.getTrusted().size());
+
+        // Flags
+        if (plot.getFlags().isEmpty()) {
+            messages.send(player, "&eFlags: &7None set.");
+        } else {
+            messages.send(player, "&eFlags: &f" + String.join(", ", plot.getFlags()));
+        }
+    }
+}

@@ -2,161 +2,65 @@ package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
-import org.bukkit.Location;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import java.io.File;
-import java.util.*;
+import java.util.Locale;
+import java.util.UUID;
 
-/**
- * ClaimRoleManager
- * - trusted players per plot
- * - role strings + per-player boolean flags
- * - chat-driven "assignRoleViaChat" for GUIManager flow
- */
 public class ClaimRoleManager {
 
     private final ProShield plugin;
-
-    // Map<plotId, Map<playerName, PlayerRoleData>>
-    private final Map<UUID, Map<String, PlayerRoleData>> trusted = new HashMap<>();
+    private final PlotManager plotManager;
+    private final MessagesUtil messages;
 
     public ClaimRoleManager(ProShield plugin) {
         this.plugin = plugin;
-    }
-
-    /* ========================
-     * Core Trust / Untrust Ops
-     * ======================== */
-    public boolean trustPlayer(Plot plot, String playerName, String role) {
-        Map<String, PlayerRoleData> map = trusted.computeIfAbsent(plot.getId(), k -> new HashMap<>());
-        if (map.containsKey(playerName)) return false;
-        map.put(playerName, new PlayerRoleData(role));
-        return true;
-    }
-
-    public boolean untrustPlayer(Plot plot, String playerName) {
-        Map<String, PlayerRoleData> map = trusted.get(plot.getId());
-        if (map == null) return false;
-        return map.remove(playerName) != null;
-    }
-
-    // === Wrappers for GUI ===
-    public boolean addTrusted(UUID plotId, String playerName) {
-        Plot plot = plugin.getPlotManager().getPlotById(plotId);
-        if (plot == null) return false;
-        return trustPlayer(plot, playerName, "trusted");
-    }
-
-    public boolean removeTrusted(UUID plotId, String playerName) {
-        Plot plot = plugin.getPlotManager().getPlotById(plotId);
-        if (plot == null) return false;
-        return untrustPlayer(plot, playerName);
-    }
-
-    /* ==================
-     * Query Ops
-     * ================== */
-    public Map<String, String> getTrusted(UUID plotId) {
-        Map<String, PlayerRoleData> map = trusted.getOrDefault(plotId, Collections.emptyMap());
-        Map<String, String> roles = new HashMap<>();
-        for (Map.Entry<String, PlayerRoleData> e : map.entrySet()) {
-            roles.put(e.getKey(), e.getValue().getRole());
-        }
-        return roles;
-    }
-
-    public String getRole(UUID plotId, String playerName) {
-        Map<String, PlayerRoleData> map = trusted.get(plotId);
-        if (map == null) return null;
-        PlayerRoleData data = map.get(playerName);
-        return data != null ? data.getRole() : null;
-    }
-
-    /* ==================
-     * Permissions system
-     * ================== */
-    public Map<String, Boolean> getPermissions(UUID plotId, String playerName) {
-        Map<String, PlayerRoleData> map = trusted.get(plotId);
-        if (map == null) return Collections.emptyMap();
-        PlayerRoleData data = map.get(playerName);
-        if (data == null) return Collections.emptyMap();
-        return data.getPermissions();
-    }
-
-    public void setPermission(UUID plotId, String playerName, String key, boolean value) {
-        Map<String, PlayerRoleData> map = trusted.computeIfAbsent(plotId, k -> new HashMap<>());
-        PlayerRoleData data = map.computeIfAbsent(playerName, k -> new PlayerRoleData("trusted"));
-        data.setPermission(key, value);
-    }
-
-    /* ===========================
-     * Chat-driven role assignment
-     * =========================== */
-    public void assignRoleViaChat(Player player, String chatLine) {
-        if (player == null || chatLine == null || chatLine.isEmpty()) return;
-
-        // Format: "<playerName> [role]"  (role optional → defaults to "trusted")
-        String[] parts = chatLine.trim().split("\\s+", 2);
-        String targetName = parts[0];
-        String role = parts.length > 1 ? parts[1] : "trusted";
-
-        Location loc = player.getLocation();
-        UUID plotId = plugin.getPlotManager().getClaimIdAt(loc);
-        if (plotId == null) {
-            player.sendMessage("§cNo claim found here.");
-            return;
-        }
-        Plot plot = plugin.getPlotManager().getPlotById(plotId);
-        if (plot == null) {
-            player.sendMessage("§cNo claim data found.");
-            return;
-        }
-        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
-            player.sendMessage("§cOnly the owner (or admin) can manage roles.");
-            return;
-        }
-
-        Map<String, PlayerRoleData> map = trusted.computeIfAbsent(plotId, k -> new HashMap<>());
-        PlayerRoleData data = map.get(targetName);
-        if (data == null) {
-            data = new PlayerRoleData(role);
-            map.put(targetName, data);
-            player.sendMessage("§aTrusted §f" + targetName + " §ain this claim as §e" + role + "§a.");
-        } else {
-            data.setRole(role);
-            player.sendMessage("§aUpdated §f" + targetName + " §arole to §e" + role + "§a.");
-        }
-    }
-
-    /* ==================
-     * Persistence Stubs
-     * ================== */
-    public void saveAll() {
-        // TODO: persist trusted-> roles.yml
-        File f = new File(plugin.getDataFolder(), "roles.yml");
-        // write out as needed
+        this.plotManager = plugin.getPlotManager();
+        this.messages = plugin.getMessagesUtil();
     }
 
     public void loadAll() {
-        // TODO: read roles.yml and rebuild trusted map
+        // load roles from disk if you persist them separately
     }
 
-    /* ==================
-     * Data Class
-     * ================== */
-    public static class PlayerRoleData {
-        private String role;
-        private final Map<String, Boolean> permissions = new HashMap<>();
+    public void saveAll() {
+        // persist roles if applicable
+    }
 
-        public PlayerRoleData(String role) {
-            this.role = role;
+    /**
+     * Assign a role to a nearby target (invoked from chat after GUI click).
+     * @param actor owner/co-owner who is assigning
+     * @param targetUuid player to assign a role to
+     * @param rawRole role name typed in chat
+     */
+    public void assignRoleViaChat(Player actor, UUID targetUuid, String rawRole) {
+        if (actor == null || targetUuid == null || rawRole == null) return;
+
+        Plot plot = plotManager.getPlot(actor.getLocation());
+        if (plot == null) {
+            messages.send(actor, "&cYou must stand inside your claim to manage roles.");
+            return;
+        }
+        if (!plot.getOwner().equals(actor.getUniqueId()) && !actor.hasPermission("proshield.admin")) {
+            messages.send(actor, "&cOnly the owner (or admin) can assign roles in this claim.");
+            return;
         }
 
-        public String getRole() { return role; }
-        public void setRole(String role) { this.role = role; }
+        String role = rawRole.trim().toLowerCase(Locale.ROOT);
+        // Normalize a few common synonyms
+        if (role.equals("member") || role.equals("builder") || role.equals("trusted") || role.equals("co-owner")) {
+            // ok
+        } else {
+            // default to "trusted"
+            role = "trusted";
+        }
 
-        public Map<String, Boolean> getPermissions() { return permissions; }
-        public void setPermission(String key, boolean value) { permissions.put(key, value); }
+        plot.trust(targetUuid, role);
+        OfflinePlayer target = plugin.getServer().getOfflinePlayer(targetUuid);
+        messages.send(actor, "&aAssigned &f" + (target.getName() == null ? target.getUniqueId() : target.getName())
+                + " &ato role &f" + role + " &ain this claim.");
     }
 }

@@ -1,11 +1,13 @@
 package com.snazzyatoms.proshield.expansions;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -24,15 +26,18 @@ import java.util.*;
  * - Enforces cooldowns (via timestamp).
  * - Provides requests for admin GUI review.
  * - On approval, expands only the plot where the request was made (per-plot radius).
- * - Fully integrated with GUIManager v1.2.5.
+ * - Fully integrated with GUI flows (player request + admin review + deny submenu).
  */
 public class ExpansionRequestManager {
 
     private final ProShield plugin;
     private final MessagesUtil messages;
 
-    // Tracks latest request per player (overwrites older entries)
+    // Latest request per player
     private final Map<UUID, ExpansionRequest> requests = new HashMap<>();
+
+    // Admin deny submenu context: which player the admin is denying
+    private final Map<UUID, UUID> pendingDenyTarget = new HashMap<>(); // admin -> requester
 
     private final File file;
     private final FileConfiguration data;
@@ -45,7 +50,7 @@ public class ExpansionRequestManager {
         loadRequests();
     }
 
-    /* =========================  Public API  ========================= */
+    /* =========================  Public API (model)  ========================= */
 
     public ExpansionRequest getLastRequest(UUID playerId) {
         return requests.get(playerId);
@@ -70,12 +75,11 @@ public class ExpansionRequestManager {
         if (op.isOnline()) {
             String msg = plugin.getConfig().getString("messages.expansion-request",
                     "&eYour expansion request for +{blocks} blocks has been sent to admins.")
-                    .replace("{blocks}", String.valueOf(request.getBlocks()));
+                .replace("{blocks}", String.valueOf(request.getBlocks()));
             messages.send(op.getPlayer(), msg);
         }
     }
 
-    /** Approve pending → expand only the plot at request location. */
     public void approveRequest(UUID playerId) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;
@@ -102,7 +106,6 @@ public class ExpansionRequestManager {
         }
     }
 
-    /** Deny pending with reason key → notify player if online. */
     public void denyRequest(UUID playerId, String reasonKey) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;
@@ -116,12 +119,155 @@ public class ExpansionRequestManager {
         if (op.isOnline()) {
             String msg = plugin.getConfig().getString("messages.expansion-denied",
                     "&cYour expansion request was denied: {reason}")
-                    .replace("{reason}", reason);
+                .replace("{reason}", reason);
             messages.send(op.getPlayer(), msg);
         }
     }
 
-    /* =========================  Admin GUI  ========================= */
+    /* =========================  Player GUI (submit request)  ========================= */
+
+    public void openPlayerRequestMenu(Player player) {
+        FileConfiguration cfg = plugin.getConfig();
+
+        if (!cfg.getBoolean("claims.expansion.enabled", true)) {
+            messages.send(player, cfg.getString("messages.expansion-disabled", "&cExpansion requests are disabled by the server."));
+            return;
+        }
+
+        // Must be inside a claim and be the owner
+        Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+        if (plot == null || !plot.getOwner().equals(player.getUniqueId())) {
+            messages.send(player, "&cYou must stand in your own claim to request an expansion.");
+            return;
+        }
+
+        // Cooldown check
+        long cooldownH = cfg.getLong("claims.expansion.cooldown-hours", 6);
+        long cooldownMs = cooldownH * 60L * 60L * 1000L;
+        ExpansionRequest last = requests.get(player.getUniqueId());
+        if (last != null && last.getStatus() == ExpansionRequest.Status.PENDING) {
+            messages.send(player, "&cYou already have a pending request.");
+            return;
+        }
+        if (last != null) {
+            long since = System.currentTimeMillis() - last.getTimestamp();
+            if (since < cooldownMs) {
+                long remain = cooldownMs - since;
+                long hrs = remain / 3_600_000L;
+                long mins = (remain % 3_600_000L) / 60_000L;
+                String title = cfg.getString("messages.expansion-cooldown-title", "&cCooldown Active");
+                String body = cfg.getString("messages.expansion-cooldown-active", "&7You can request again in &f{hours}h {minutes}m&7.")
+                        .replace("{hours}", String.valueOf(hrs))
+                        .replace("{minutes}", String.valueOf(mins));
+                messages.send(player, title + " " + body);
+                return;
+            }
+        }
+
+        // Build menu with step options
+        String title = "&aRequest Expansion";
+        int size = 45;
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        List<Integer> steps = cfg.getIntegerList("claims.expansion.step-options");
+        if (steps == null || steps.isEmpty()) steps = Arrays.asList(10, 15, 20, 25);
+
+        int slot = 10;
+        for (Integer step : steps) {
+            ItemStack item = new ItemStack(Material.EMERALD);
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(messages.color("&a+" + step + " blocks"));
+                meta.setLore(Arrays.asList(
+                        messages.color("&7Click to request this amount"),
+                        messages.color("&7This will be reviewed by admins")
+                ));
+                item.setItemMeta(meta);
+            }
+            inv.setItem(slot++, item);
+            if ((slot % 9) == 8) slot += 3; // keep it grid-spaced nicely
+        }
+
+        // Close button
+        ItemStack close = new ItemStack(Material.BARRIER);
+        ItemMeta cm = close.getItemMeta();
+        if (cm != null) {
+            cm.setDisplayName(messages.color("&cExit"));
+            close.setItemMeta(cm);
+        }
+        inv.setItem(size - 1, close);
+
+        player.openInventory(inv);
+    }
+
+    public void handlePlayerRequestClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta() || clicked.getType() == Material.AIR) return;
+
+        String name = clicked.getItemMeta().getDisplayName();
+        if (name == null) return;
+
+        if (name.contains("Exit")) {
+            player.closeInventory();
+            return;
+        }
+
+        // parse “+{blocks} blocks”
+        String stripped = org.bukkit.ChatColor.stripColor(name);
+        if (stripped == null) return;
+        stripped = stripped.trim();
+        if (!stripped.startsWith("+") || !stripped.toLowerCase(Locale.ROOT).contains("blocks")) return;
+
+        int plusIdx = stripped.indexOf('+');
+        int spaceIdx = stripped.indexOf(' ', plusIdx + 1);
+        int amount;
+        try {
+            amount = Integer.parseInt(stripped.substring(plusIdx + 1, spaceIdx));
+        } catch (Exception e) {
+            return;
+        }
+
+        // Validations again (owner + cooldown)
+        FileConfiguration cfg = plugin.getConfig();
+        Plot plot = plugin.getPlotManager().getPlot(player.getLocation());
+        if (plot == null || !plot.getOwner().equals(player.getUniqueId())) {
+            messages.send(player, "&cYou must stand in your own claim to request an expansion.");
+            return;
+        }
+
+        long cooldownH = cfg.getLong("claims.expansion.cooldown-hours", 6);
+        long cooldownMs = cooldownH * 60L * 60L * 1000L;
+        ExpansionRequest last = requests.get(player.getUniqueId());
+        if (last != null && last.getStatus() == ExpansionRequest.Status.PENDING) {
+            messages.send(player, "&cYou already have a pending request.");
+            return;
+        }
+        if (last != null) {
+            long since = System.currentTimeMillis() - last.getTimestamp();
+            if (since < cooldownMs) {
+                long remain = cooldownMs - since;
+                long hrs = remain / 3_600_000L;
+                long mins = (remain % 3_600_000L) / 60_000L;
+                String title = cfg.getString("messages.expansion-cooldown-title", "&cCooldown Active");
+                String body = cfg.getString("messages.expansion-cooldown-active", "&7You can request again in &f{hours}h {minutes}m&7.")
+                        .replace("{hours}", String.valueOf(hrs))
+                        .replace("{minutes}", String.valueOf(mins));
+                messages.send(player, title + " " + body);
+                return;
+            }
+        }
+
+        // Max increase clamp (per request)
+        int maxIncrease = cfg.getInt("claims.expansion.max-increase", 100);
+        int finalAmount = Math.min(amount, maxIncrease);
+
+        ExpansionRequest req = new ExpansionRequest(player.getUniqueId(), finalAmount, player.getLocation());
+        addRequest(req);
+        messages.send(player, "&aExpansion request submitted for &f+" + finalAmount + " &ablocks.");
+        player.closeInventory();
+    }
+
+    /* =========================  Admin GUI (review + deny)  ========================= */
 
     public void openRequestMenu(Player player) {
         String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
@@ -149,7 +295,6 @@ public class ExpansionRequestManager {
         }
 
         if (slot == 0) {
-            // no requests
             ItemStack item = new ItemStack(Material.BARRIER);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
@@ -186,10 +331,94 @@ public class ExpansionRequestManager {
             messages.send(player, "&aApproved expansion for " + name);
             openRequestMenu(player);
         } else if (event.isRightClick()) {
-            denyRequest(targetUuid, "custom-1"); // default deny reason, can expand into deny menu
-            messages.send(player, "&cDenied expansion for " + name);
-            openRequestMenu(player);
+            pendingDenyTarget.put(player.getUniqueId(), targetUuid);
+            openDenyMenu(player);
         }
+    }
+
+    private void openDenyMenu(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.deny-reasons.title", "&cDeny Reasons");
+        int size = 27;
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        ConfigurationSection sec = plugin.getMessagesConfig().getConfigurationSection("messages.deny-reasons");
+        int slot = 10;
+        if (sec != null) {
+            for (String key : sec.getKeys(false)) {
+                String reason = plugin.getMessagesConfig().getString("messages.deny-reasons." + key, "&c" + key);
+                ItemStack paper = new ItemStack(Material.PAPER);
+                ItemMeta meta = paper.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(messages.color(reason));
+                    // encode key in lore for robust parsing
+                    meta.setLore(Collections.singletonList(messages.color("&8key:" + key)));
+                    paper.setItemMeta(meta);
+                }
+                inv.setItem(slot++, paper);
+                if ((slot % 9) == 8) slot += 3;
+            }
+        }
+
+        // Back
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta bm = back.getItemMeta();
+        if (bm != null) {
+            bm.setDisplayName(messages.color("&7Back"));
+            back.setItemMeta(bm);
+        }
+        inv.setItem(size - 9, back);
+
+        // Exit
+        ItemStack exit = new ItemStack(Material.BARRIER);
+        ItemMeta em = exit.getItemMeta();
+        if (em != null) {
+            em.setDisplayName(messages.color("&cExit"));
+            exit.setItemMeta(em);
+        }
+        inv.setItem(size - 1, exit);
+
+        player.openInventory(inv);
+    }
+
+    public void handleDenyClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String name = clicked.getItemMeta().getDisplayName();
+        if (name == null) return;
+
+        String stripped = org.bukkit.ChatColor.stripColor(name);
+        if (stripped == null) return;
+
+        if (stripped.equalsIgnoreCase("Back")) {
+            openRequestMenu(player);
+            return;
+        }
+        if (stripped.equalsIgnoreCase("Exit")) {
+            player.closeInventory();
+            return;
+        }
+
+        // Extract key from lore line "&8key:{key}"
+        String key = null;
+        List<String> lore = clicked.getItemMeta().getLore();
+        if (lore != null) {
+            for (String line : lore) {
+                String s = org.bukkit.ChatColor.stripColor(line);
+                if (s != null && s.startsWith("key:")) {
+                    key = s.substring("key:".length());
+                    break;
+                }
+            }
+        }
+        if (key == null || key.isBlank()) return;
+
+        UUID targetId = pendingDenyTarget.remove(player.getUniqueId());
+        if (targetId == null) return;
+
+        denyRequest(targetId, key);
+        messages.send(player, "&cDenied expansion (" + key + ") for &f" + name);
+        openRequestMenu(player);
     }
 
     /* =========================  Persistence  ========================= */

@@ -10,7 +10,7 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * GUIListener
- * Dispatches clicks to GUIManager handlers.
+ * Dispatches clicks to GUIManager/Expansion handlers.
  * Cancels vanilla movement to keep menus safe.
  */
 public class GUIListener implements Listener {
@@ -33,12 +33,14 @@ public class GUIListener implements Listener {
         if (title == null) return;
 
         // Only handle our menus
-        if (!title.contains("ProShield")
-                && !title.contains("Trusted Players")
-                && !title.contains("Assign Role")
-                && !title.contains("Claim Flags")
-                && !title.contains("Admin Tools")
-                && !title.contains("Expansion Requests")) {
+        if (!title.contains("ProShield") &&
+            !title.contains("Trusted Players") &&
+            !title.contains("Assign Role") &&
+            !title.contains("Claim Flags") &&
+            !title.contains("Admin Tools") &&
+            !title.contains("Expansion Requests") &&
+            !title.contains("Deny Reasons") &&
+            !title.contains("Request Expansion")) {
             return;
         }
 
@@ -57,8 +59,11 @@ public class GUIListener implements Listener {
         } else if (title.contains("Admin Tools")) {
             guiManager.handleAdminClick(player, event);
         } else if (title.contains("Expansion Requests")) {
-            // hook into ExpansionRequestManager when player clicks inside Expansion menu
             plugin.getExpansionRequestManager().handleRequestClick(player, event);
+        } else if (title.contains("Deny Reasons")) {
+            plugin.getExpansionRequestManager().handleDenyClick(player, event);
+        } else if (title.contains("Request Expansion")) {
+            plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
         }
     }
 
@@ -85,8 +90,7 @@ public class GUIListener implements Listener {
         } else if (stripped.contains("claim flags")) {
             guiManager.openFlags(player);
         } else if (stripped.contains("request expansion")) {
-            // open the Expansion Requests GUI
-            guiManager.openExpansionRequests(player);
+            plugin.getExpansionRequestManager().openPlayerRequestMenu(player);
         } else if (stripped.contains("admin tools")) {
             if (player.hasPermission("proshield.admin")) {
                 guiManager.openAdminTools(player);

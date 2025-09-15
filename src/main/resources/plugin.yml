@@ -14,27 +14,44 @@ commands:
     description: Root ProShield command (help, claims, admin tools)
     usage: /<command> [help|claim|unclaim|info|compass|reload|debug|bypass|admin]
     aliases: [ps, shield, claim, unclaim, info, compass, roles, trust, untrust, transfer]
-    permission: proshield.use
+    permission: proshield.player.access
 
 permissions:
-  # General Use
-  proshield.use:
-    description: Use ProShield commands & GUIs
-    default: true
-
-  proshield.flags:
-    description: Allow players to toggle claim flags (in their own claims)
+  # --- Player Core ---
+  proshield.player.access:
+    description: Full access to all standard player features (GUI, claim, unclaim, flags, roles, transfer)
     default: true
 
   proshield.unlimited:
     description: Ignore max-claims limit
     default: op
 
-  # Admin Core
+  # --- Admin Core ---
   proshield.admin:
-    description: Access admin tools (admin GUI, expansion requests, purge, force unclaim)
+    description: Access Admin Tools menu (reload, debug, bypass)
     default: op
+    children:
+      proshield.admin.reload: true
+      proshield.admin.debug: true
+      proshield.admin.bypass: true
 
   proshield.admin.reload:
     description: Reload ProShield config
+    default: op
+
+  proshield.admin.debug:
+    description: Toggle debug mode
+    default: op
+
+  proshield.admin.bypass:
+    description: Toggle bypass mode
+    default: op
+
+  # --- Senior Admin (High Control) ---
+  proshield.admin.expansions:
+    description: Approve/Deny expansion requests in GUI
+    default: op
+
+  proshield.admin.worldcontrols:
+    description: Change per-world controls in GUI
     default: op

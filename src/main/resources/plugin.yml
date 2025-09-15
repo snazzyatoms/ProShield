@@ -11,18 +11,18 @@ description: >
 
 commands:
   proshield:
-    description: Root ProShield command (player help + admin tools dispatcher)
-    usage: /<command> [help|reload|debug|bypass|admin]
+    description: Root ProShield command (help menu + admin tools dispatcher)
+    usage: /<command> [help|reload|debug|bypass|admin|compass|info]
     aliases: [ps, shield]
     permission: proshield.use
 
   claim:
-    description: Claim your current land
+    description: Claim your current chunk or land
     usage: /<command>
     permission: proshield.use
 
   unclaim:
-    description: Unclaim your current land
+    description: Unclaim your current chunk or land
     usage: /<command>
     permission: proshield.use
 
@@ -39,7 +39,7 @@ commands:
     aliases: [removetrust]
 
   roles:
-    description: Manage claim roles via GUI
+    description: Open the trusted players / roles GUI
     usage: /<command>
     permission: proshield.use
 
@@ -51,7 +51,7 @@ commands:
 permissions:
   # General Use
   proshield.use:
-    description: Use ProShield commands & GUI
+    description: Use ProShield commands & GUIs
     default: true
 
   proshield.flags:

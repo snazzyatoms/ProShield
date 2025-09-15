@@ -13,7 +13,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Map;
 import java.util.UUID;
 
 public class GUIListener implements Listener {
@@ -33,14 +32,11 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) return;
 
-        String menu = guiManager.isInMenu(player, "trusted") ? "trusted"
-                    : guiManager.isInMenu(player, "flags") ? "flags"
-                    : guiManager.isInMenu(player, "main") ? "main"
-                    : null;
-
+        // Which menu are we in?
+        String menu = guiManager.getOpenMenu(player);
         if (menu == null) return;
 
-        event.setCancelled(true); // Always block item dragging in GUIs
+        event.setCancelled(true); // Always block item movement
         ItemStack clicked = event.getCurrentItem();
         ItemMeta meta = clicked.getItemMeta();
         if (meta == null) return;
@@ -59,7 +55,7 @@ public class GUIListener implements Listener {
         }
 
         /* =========================
-         * MAIN MENU ACTIONS
+         * MAIN MENU
          * ========================= */
         if (menu.equals("main")) {
             switch (name) {
@@ -68,11 +64,15 @@ public class GUIListener implements Listener {
                 case "§eClaim Info" -> plotManager.sendClaimInfo(player);
                 case "§bTrusted Players" -> guiManager.openTrustedMenu(player);
                 case "§eClaim Flags" -> guiManager.openFlagsMenu(player);
+                case "§cAdmin Tools" -> {
+                    if (player.isOp() || player.hasPermission("proshield.admin"))
+                        guiManager.openMenu(player, "admin-tools");
+                }
             }
         }
 
         /* =========================
-         * FLAGS MENU ACTIONS
+         * FLAGS MENU
          * ========================= */
         if (menu.equals("flags")) {
             Plot plot = plotManager.getPlot(player.getLocation());
@@ -81,17 +81,17 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            String[] parts = name.replace("§f", "").split(":");
-            if (parts.length == 2) {
-                String flag = parts[0].trim();
-                boolean state = name.contains("§aON");
-                plot.setFlag(flag, !state);
+            String flagKey = guiManager.resolveFlagKey(name);
+            if (flagKey != null) {
+                boolean current = plot.getFlag(flagKey, false);
+                plot.setFlag(flagKey, !current);
+                player.sendMessage("§eFlag " + flagKey + " set to " + !current);
                 guiManager.openFlagsMenu(player); // Refresh
             }
         }
 
         /* =========================
-         * TRUST MENU ACTIONS
+         * TRUSTED MENU
          * ========================= */
         if (menu.equals("trusted")) {
             Plot plot = plotManager.getPlot(player.getLocation());
@@ -105,9 +105,9 @@ public class GUIListener implements Listener {
                 Player target = Bukkit.getPlayerExact(targetName);
                 if (target != null) {
                     plot.trust(target.getUniqueId(), "trusted");
-                    player.sendMessage("§aTrusted " + targetName + " in your claim.");
+                    player.sendMessage("§aTrusted " + targetName);
                 }
-                guiManager.openTrustedMenu(player); // Refresh
+                guiManager.openTrustedMenu(player);
             } else if (name.startsWith("§e")) {
                 String targetName = name.substring(2).split(" ")[0];
                 OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
@@ -115,7 +115,43 @@ public class GUIListener implements Listener {
                     plot.untrust(target.getUniqueId());
                     player.sendMessage("§cRemoved trust for " + target.getName());
                 }
-                guiManager.openTrustedMenu(player); // Refresh
+                guiManager.openTrustedMenu(player);
+            }
+        }
+
+        /* =========================
+         * ADMIN TOOLS
+         * ========================= */
+        if (menu.equals("admin-tools") && (player.isOp() || player.hasPermission("proshield.admin"))) {
+            switch (name) {
+                case "§bReload Config" -> {
+                    plugin.reloadConfig();
+                    player.sendMessage("§aConfig reloaded.");
+                }
+                case "§dWorld Controls" -> guiManager.openMenu(player, "world-controls");
+                case "§eToggle Debug" -> {
+                    plugin.setDebugEnabled(!plugin.isDebugEnabled());
+                    player.sendMessage("§aDebug toggled: " + plugin.isDebugEnabled());
+                }
+                case "§6Toggle Bypass (You)" -> {
+                    boolean now = plugin.toggleBypass(player.getUniqueId());
+                    player.sendMessage("§eBypass " + (now ? "enabled" : "disabled"));
+                }
+                case "§ePending Requests" -> guiManager.openMenu(player, "expansion-requests");
+                case "§aApprove Selected" -> guiManager.handleExpansionApproval(player, true);
+                case "§cDeny Selected" -> guiManager.handleExpansionApproval(player, false);
+            }
+        }
+
+        /* =========================
+         * WORLD CONTROLS
+         * ========================= */
+        if (menu.equals("world-controls") && (player.isOp() || player.hasPermission("proshield.admin.worldcontrols"))) {
+            String flagKey = guiManager.resolveWorldFlagKey(name);
+            if (flagKey != null) {
+                boolean state = plugin.getWorldControlManager().toggleFlag(player.getWorld().getName(), flagKey);
+                player.sendMessage("§eWorld flag " + flagKey + " set to " + state);
+                guiManager.openMenu(player, "world-controls");
             }
         }
     }

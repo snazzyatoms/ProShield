@@ -33,11 +33,12 @@ public class GUIListener implements Listener {
         if (title == null) return;
 
         // Only handle our menus
-        if (!title.contains("ProShield") &&
-            !title.contains("Trusted Players") &&
-            !title.contains("Assign Role") &&
-            !title.contains("Claim Flags") &&
-            !title.contains("Admin Tools")) {
+        if (!title.contains("ProShield")
+                && !title.contains("Trusted Players")
+                && !title.contains("Assign Role")
+                && !title.contains("Claim Flags")
+                && !title.contains("Admin Tools")
+                && !title.contains("Expansion Requests")) {
             return;
         }
 
@@ -55,6 +56,9 @@ public class GUIListener implements Listener {
             guiManager.handleFlagsClick(player, event);
         } else if (title.contains("Admin Tools")) {
             guiManager.handleAdminClick(player, event);
+        } else if (title.contains("Expansion Requests")) {
+            // hook into ExpansionRequestManager when player clicks inside Expansion menu
+            plugin.getExpansionRequestManager().handleRequestClick(player, event);
         }
     }
 
@@ -81,7 +85,8 @@ public class GUIListener implements Listener {
         } else if (stripped.contains("claim flags")) {
             guiManager.openFlags(player);
         } else if (stripped.contains("request expansion")) {
-            plugin.getExpansionRequestManager().openRequestMenu(player);
+            // open the Expansion Requests GUI
+            guiManager.openExpansionRequests(player);
         } else if (stripped.contains("admin tools")) {
             if (player.hasPermission("proshield.admin")) {
                 guiManager.openAdminTools(player);

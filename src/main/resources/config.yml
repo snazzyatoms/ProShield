@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (Expanded Admin Tools + Fixed Claim GUI)
+# Version: 1.2.5 (Finalized for release build + Expansion Requests + Roles GUI + Compass Enhancements + Exit Button)
 # ==========================================================
 
 settings:
@@ -58,8 +58,8 @@ messages:
 help:
   player:
     - "&bProShield Help &7- Player"
-    - "&a/proshield claim &7→ Claim your current land (50 block radius)"
-    - "&a/proshield unclaim &7→ Unclaim your land"
+    - "&a/claim &7→ Claim your current land (50 block radius)"
+    - "&a/unclaim &7→ Unclaim your land"
     - "&a/proshield compass &7→ Receive your ProShield Compass (replaces if lost)"
     - "&7Dropped compasses despawn automatically after &f{compass-despawn-delay/20}s"
     - "&a/proshield help &7→ Show this help menu"
@@ -69,10 +69,10 @@ help:
     - "&c/proshield reload &7→ Reload the config"
     - "&c/proshield debug &7→ Toggle debug mode"
     - "&c/proshield bypass &7→ Toggle bypass mode"
-    - "&c/proshield admin &7→ Open the admin tools menu"
+    - "&c/proshield admin &7→ Open the admin menu"
     - "&c/proshield compass &7→ Give yourself a new ProShield Compass"
     - "&7Config: &fcompass-auto-replace &7= Automatically re-add compass on despawn if enabled"
-    - "&cCheck GUI → Admin Tools"
+    - "&cCheck GUI → Expansion Requests"
 
 gui:
   menus:
@@ -86,13 +86,16 @@ gui:
           lore:
             - "&7Protect your land"
             - "&fRadius: 50 blocks by default"
-          action: "command:proshield claim"   # ✅ Fixed
+          action: "command:proshield claim"
 
         "13":
           material: PAPER
           name: "&eClaim Info"
           lore:
             - "&7Shows your current claim details"
+            - "&7Default vs. Current Radius"
+            - "&7Protected: Pets, Containers, Frames, Stands"
+            - "&7Explosions/Fire disabled"
           action: "command:proshield info"
 
         "15":
@@ -100,7 +103,7 @@ gui:
           name: "&cUnclaim Land"
           lore:
             - "&7Remove your claim"
-          action: "command:proshield unclaim" # ✅ Fixed
+          action: "command:proshield unclaim"
           
         "21":
           material: PLAYER_HEAD
@@ -117,12 +120,19 @@ gui:
             - "&7Toggle special protections"
           action: "menu:flags"
 
+        "25":
+          material: BARRIER
+          name: "&cExit Menu"
+          lore:
+            - "&7Click to close this menu"
+          action: "close"
+
         "26":
           material: REDSTONE
           name: "&cAdmin Tools"
           lore:
             - "&7Access tools & expansion requests"
-          action: "menu:admin-tools"          # ✅ Unified menu
+          action: "menu:admin-tools"
 
     flags:
       title: "&dClaim Flags"
@@ -239,128 +249,53 @@ gui:
       size: 36
       items:
         "10":
-          material: BOOK
-          name: "&eReload Config"
-          lore:
-            - "&7Reload ProShield configuration"
-          action: "command:proshield reload"
-
-        "11":
-          material: LEVER
-          name: "&eToggle Debug"
-          lore:
-            - "&7Enable/Disable debug mode"
-          action: "command:proshield debug"
-
-        "12":
-          material: BARRIER
-          name: "&cToggle Bypass"
-          lore:
-            - "&7Bypass claim restrictions"
-          action: "command:proshield bypass"
-
-        "13":
-          material: TNT
-          name: "&cForce Unclaim"
-          lore:
-            - "&7Remove a claim from the current chunk"
-          action: "command:proshield forceunclaim"
-
-        "14":
-          material: LAVA_BUCKET
-          name: "&6World Controls"
-          lore:
-            - "&7Toggle global protections (fire, explosions, etc.)"
-          action: "menu:world-controls"
-
-        "16":
-          material: PAPER
-          name: "&eExpansion Requests"
-          lore:
-            - "&7View and manage player requests"
-          action: "menu:admin-expansions"
-
-        "35":
-          material: BARRIER
-          name: "&cBack"
-          lore:
-            - "&7Return to main menu"
-          action: "menu:main"
-
-    world-controls:
-      title: "&6World Controls"
-      size: 27
-      items:
-        "11":
-          material: FIRE_CHARGE
-          name: "&cFire Spread"
-          lore:
-            - "&7Toggle fire spread globally"
-            - "&fCurrent: {state}"
-          action: "global-flag:fire"
-
-        "12":
-          material: TNT
-          name: "&cExplosions"
-          lore:
-            - "&7Toggle TNT & creeper explosions globally"
-            - "&fCurrent: {state}"
-          action: "global-flag:explosions"
-
-        "13":
-          material: WATER_BUCKET
-          name: "&bBuckets"
-          lore:
-            - "&7Toggle bucket use globally"
-            - "&fCurrent: {state}"
-          action: "global-flag:buckets"
-
-        "14":
-          material: ZOMBIE_HEAD
-          name: "&aMob Spawning"
-          lore:
-            - "&7Toggle hostile mob spawning globally"
-            - "&fCurrent: {state}"
-          action: "global-flag:mob-spawn"
-
-        "26":
-          material: BARRIER
-          name: "&cBack"
-          lore:
-            - "&7Return to Admin Tools"
-          action: "menu:admin-tools"
-
-    admin-expansions:
-      title: "&cExpansion Requests"
-      size: 27
-      items:
-        "11":
           material: PAPER
           name: "&ePending Requests"
           lore:
             - "&7View and manage all player requests"
           action: "menu:expansion-requests"
 
-        "13":
+        "12":
+          material: BOOK
+          name: "&bReload Config"
+          lore:
+            - "&7Reloads ProShield configuration"
+          action: "command:proshield reload"
+
+        "14":
+          material: COMMAND_BLOCK
+          name: "&dWorld Controls"
+          lore:
+            - "&7Manage global protections per world"
+          action: "menu:world-controls"
+
+        "16":
+          material: LEVER
+          name: "&eToggle Debug"
+          lore:
+            - "&7Turn debug mode on/off"
+          action: "command:proshield debug"
+
+        "22":
           material: EMERALD
           name: "&aApprove Selected"
           lore:
-            - "&7Approve and apply instantly"
+            - "&7Approve selected expansion request"
           action: "expansion:approve"
 
-        "15":
+        "24":
           material: REDSTONE
           name: "&cDeny Selected"
           lore:
             - "&7Deny with reason"
           action: "expansion:deny"
 
-        "26":
+        "35":
           material: BARRIER
           name: "&cBack"
           lore:
-            - "&7Return to Admin Tools"
-          action: "menu:admin-tools"
+            - "&7Return to Main Menu"
+          action: "menu:main"
 
     deny-reasons:
       title: "&cDeny Reasons"
@@ -391,5 +326,33 @@ gui:
           material: BARRIER
           name: "&cBack"
           lore:
-            - "&7Return to Expansion Requests"
+            - "&7Return to Admin Tools"
           action: "menu:admin-tools"
+
+sounds:
+  button-click: "UI_BUTTON_CLICK"
+  claim-success: "ENTITY_PLAYER_LEVELUP"
+  unclaim-success: "ENTITY_ITEM_BREAK"
+  flag-toggle: "BLOCK_NOTE_BLOCK_PLING"
+  admin-action: "ENTITY_EXPERIENCE_ORB_PICKUP"
+  repel-sound: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
+
+claims:
+  default-radius: 50
+  instant-apply: true
+  default-flags:
+    pvp: false
+    explosions: false
+    fire: false
+    containers: true
+    armor-stands: true
+    item-frames: true
+    buckets: false
+    pets: true
+    safezone: true
+
+expansion:
+  deny-reasons:
+    too-large: "Requested expansion is too big"
+    abusive: "Expansion considered abusive"
+    other: "Denied for other reasons"

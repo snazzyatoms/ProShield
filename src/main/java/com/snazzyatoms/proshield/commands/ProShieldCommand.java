@@ -126,7 +126,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ChatColor.RED + "No permission.");
                     return true;
                 }
-                guiManager.openMenu(player, "admin-expansions");
+                guiManager.openMenu(player, "admin-tools"); // ✅ patched
                 return true;
             }
             default -> {

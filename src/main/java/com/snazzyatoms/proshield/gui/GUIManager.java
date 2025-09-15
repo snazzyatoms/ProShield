@@ -52,7 +52,8 @@ public class GUIManager {
         }
 
         String rawTitle = menuSec.getString("title", "Menu");
-        String title = ChatColor.translateAlternateColorCodes('&', rawTitle.replace("{world}", player.getWorld().getName()));
+        String title = ChatColor.translateAlternateColorCodes('&',
+                rawTitle.replace("{world}", player.getWorld().getName()));
         int size = menuSec.getInt("size", 27);
         Inventory inv = Bukkit.createInventory(null, size, title);
 
@@ -319,9 +320,16 @@ public class GUIManager {
             return;
         }
 
-        if (action.equalsIgnoreCase("reset:world")) {
+        // ✅ NEW: Confirmation GUI support
+        if (action.equalsIgnoreCase("reset:world.confirm")) {
             resetWorldControls(player);
             openWorldControlsMenu(player);
+            return;
+        }
+
+        if (action.equalsIgnoreCase("reset:world")) {
+            // Open confirmation GUI (dynamic world in title)
+            openMenu(player, "world-reset-confirm");
             return;
         }
 

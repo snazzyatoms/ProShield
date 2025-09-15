@@ -39,13 +39,13 @@ public class ClaimRoleManager {
 
     // === Wrappers for GUIManager compatibility ===
     public boolean addTrusted(UUID plotId, String playerName) {
-        Plot plot = plugin.getPlotManager().getPlot(plotId);
+        Plot plot = plugin.getPlotManager().getPlotById(plotId); // ✅ fixed
         if (plot == null) return false;
         return trustPlayer(plot, playerName, "trusted");
     }
 
     public boolean removeTrusted(UUID plotId, String playerName) {
-        Plot plot = plugin.getPlotManager().getPlot(plotId);
+        Plot plot = plugin.getPlotManager().getPlotById(plotId); // ✅ fixed
         if (plot == null) return false;
         return untrustPlayer(plot, playerName);
     }

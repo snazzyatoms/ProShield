@@ -5,6 +5,7 @@ import org.bukkit.event.HandlerList;
 
 /**
  * Fired by ProShield after /proshield reload or Admin GUI reload.
+ * Synchronous to ensure thread-safety with Bukkit API.
  */
 public class ProShieldReloadEvent extends Event {
 
@@ -12,7 +13,7 @@ public class ProShieldReloadEvent extends Event {
     private final ProShield plugin;
 
     public ProShieldReloadEvent(ProShield plugin) {
-        super(true); // true = async, false = sync. Adjust if you prefer sync.
+        super(false); // sync event (safe for Bukkit API calls)
         this.plugin = plugin;
     }
 

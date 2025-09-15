@@ -2,12 +2,13 @@ package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.*;
 
 /**
  * Plot (claim) stored by chunk coordinates and world name.
- * Stores owner, trusted roles, and per-plot flags.
+ * Stores owner, trusted roles, per-plot flags, and radius (for expansion).
  * All protections default to safe/secure state as defined in config.yml.
  */
 public class Plot {
@@ -18,15 +19,18 @@ public class Plot {
     private final int z; // chunk Z
 
     private UUID owner;
+    private int radius; // 🔹 protection radius in blocks (per-plot)
+
     private final Map<UUID, String> trusted = new HashMap<>();     // UUID -> role name
     private final Map<String, Boolean> flags = new HashMap<>();    // flag key -> state
 
-    public Plot(UUID id, String world, int x, int z, UUID owner) {
+    public Plot(UUID id, String world, int x, int z, UUID owner, int radius) {
         this.id = id;
         this.world = world;
         this.x = x;
         this.z = z;
         this.owner = owner;
+        this.radius = radius;
 
         // =============================
         // Default protection flags
@@ -65,8 +69,14 @@ public class Plot {
         flags.put("pvp", false);              // PVP disabled inside claims by default
     }
 
-    public static Plot of(Chunk chunk, UUID owner) {
-        return new Plot(UUID.randomUUID(), chunk.getWorld().getName(), chunk.getX(), chunk.getZ(), owner);
+    /** Factory for creating a new Plot at a chunk with radius from config. */
+    public static Plot of(Chunk chunk, UUID owner, int radius) {
+        return new Plot(UUID.randomUUID(),
+                chunk.getWorld().getName(),
+                chunk.getX(),
+                chunk.getZ(),
+                owner,
+                radius);
     }
 
     /* =============================
@@ -78,6 +88,9 @@ public class Plot {
     public int getZ() { return z; }
     public UUID getOwner() { return owner; }
     public void setOwner(UUID owner) { this.owner = owner; }
+
+    public int getRadius() { return radius; }
+    public void setRadius(int radius) { this.radius = radius; }
 
     public Map<UUID, String> getTrusted() { return Collections.unmodifiableMap(trusted); }
     public Map<String, Boolean> getFlags() { return Collections.unmodifiableMap(flags); }
@@ -105,7 +118,7 @@ public class Plot {
      * Flag Management
      * ============================= */
     /** Get a flag with config default fallback */
-    public boolean getFlag(String key, org.bukkit.configuration.file.FileConfiguration cfg) {
+    public boolean getFlag(String key, FileConfiguration cfg) {
         if (flags.containsKey(key)) return flags.get(key);
 
         // fallback to config defaults if defined
@@ -140,6 +153,7 @@ public class Plot {
                 ", x=" + x +
                 ", z=" + z +
                 ", owner=" + owner +
+                ", radius=" + radius +
                 ", trusted=" + trusted.size() +
                 ", flags=" + flags +
                 '}';

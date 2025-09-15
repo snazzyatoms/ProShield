@@ -4,6 +4,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -17,7 +18,7 @@ import java.util.*;
  * - Tracks, persists, and manages expansion requests.
  * - Enforces cooldowns (via timestamp).
  * - Provides requests for admin GUI review.
- * - On approval, actually expands the player's claim radius (via PlotManager).
+ * - On approval, actually expands the specific player's claim radius (via PlotManager).
  */
 public class ExpansionRequestManager {
 
@@ -73,7 +74,7 @@ public class ExpansionRequestManager {
 
     /**
      * Approve a pending request:
-     * - Expands the claim radius via PlotManager.
+     * - Expands ONLY the claim radius of the plot where request was made.
      * - Marks request as APPROVED.
      * - Notifies the player (success/failure).
      */
@@ -82,7 +83,12 @@ public class ExpansionRequestManager {
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;
 
         PlotManager pm = plugin.getPlotManager();
-        boolean expanded = pm.expandClaim(playerId, req.getBlocks());
+        Location at = req.getRequestedAt();
+        boolean expanded = false;
+
+        if (at != null) {
+            expanded = pm.expandPlot(playerId, at, req.getBlocks());
+        }
 
         req.setStatus(ExpansionRequest.Status.APPROVED);
         saveRequests();
@@ -95,8 +101,8 @@ public class ExpansionRequestManager {
             messages.send(op.getPlayer(), msg);
 
             if (!expanded) {
-                // Notify if no new chunks were actually added
-                messages.send(op.getPlayer(), "&eNote: Expansion was approved, but no new chunks could be claimed (possible overlaps).");
+                messages.send(op.getPlayer(),
+                        "&eNote: Expansion was approved, but no new radius could be applied (not the owner or invalid plot).");
             }
         }
     }
@@ -136,8 +142,9 @@ public class ExpansionRequestManager {
                 long timestamp = data.getLong("requests." + key + ".timestamp");
                 String statusStr = data.getString("requests." + key + ".status", "PENDING");
                 String denyReason = data.getString("requests." + key + ".denyReason", null);
+                Location at = (Location) data.get("requests." + key + ".location");
 
-                ExpansionRequest req = new ExpansionRequest(uuid, blocks);
+                ExpansionRequest req = new ExpansionRequest(uuid, blocks, at);
                 req.setStatus(ExpansionRequest.Status.valueOf(statusStr));
                 req.setDenyReason(denyReason);
                 setTimestampUnsafe(req, timestamp);
@@ -156,6 +163,7 @@ public class ExpansionRequestManager {
             data.set(path + ".timestamp", req.getTimestamp());
             data.set(path + ".status", req.getStatus().name());
             data.set(path + ".denyReason", req.getDenyReason());
+            data.set(path + ".location", req.getRequestedAt());
         }
         try {
             data.save(file);

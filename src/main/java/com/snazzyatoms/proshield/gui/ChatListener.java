@@ -17,14 +17,14 @@ public class ChatListener implements Listener {
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        GUIManager gui = plugin.getGuiManager();
+        GUIManager gui = plugin.getGuiManager(); // <-- use instance, not static
 
         // --- EXPANSION DENY REASONS ---
         if (gui.isAwaitingReason(player)) {
             event.setCancelled(true);
             String reason = event.getMessage();
             plugin.getServer().getScheduler().runTask(plugin,
-                    () -> gui.provideManualReason(player, reason));
+                    () -> gui.provideManualReason(player, reason, plugin));
             return;
         }
 
@@ -33,7 +33,7 @@ public class ChatListener implements Listener {
             event.setCancelled(true);
             String message = event.getMessage();
             plugin.getServer().getScheduler().runTask(plugin,
-                    () -> gui.handleRoleChatInput(player, message));
+                    () -> gui.handleRoleChatInput(player, message, plugin));
         }
     }
 }

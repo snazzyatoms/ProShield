@@ -23,11 +23,13 @@ claims:
   allow-admin-edit-claims: true
   # Claim owners can always edit their flags in GUI
   allow-owner-claim-flags: true
-  # Expansion request limits
+
+  # Expansion request system (fully modular)
   expansion:
-    enabled: true
-    max-increase: 100               # Max blocks a single request can add
-    step-options: [10, 15, 20, 25]  # Allowed increments for players to choose in GUI
+    enabled: true                      # Toggle expansion system on/off
+    max-increase: 100                  # Max blocks a single request can add
+    step-options: [10, 15, 20, 25]     # Allowed increments for players to choose in GUI
+    cooldown-hours: 6                  # Default: players must wait 6h between requests
 
 protection:
   fire:
@@ -190,9 +192,13 @@ messages:
   leave-other: "&cYou left {owner}'s claim."
   wilderness: "&7You entered the wilderness."
 
+  # Expansion request messages (fully configurable)
   expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
   expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
-  expansion-denied: "&cYour claim expansion request was denied: {reason}"
+  expansion-denied: "&cYour expansion request was denied: {reason}"
+  expansion-disabled: "&cExpansion requests are disabled by the server."
+  expansion-cooldown-title: "&cCooldown Active"
+  expansion-cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
 
   deny-reasons:
     too-large: "&cRequested expansion is too large."

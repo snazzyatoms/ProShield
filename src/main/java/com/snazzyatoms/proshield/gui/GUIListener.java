@@ -10,9 +10,8 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * GUIListener
- * - Delegates all inventory clicks into GUIManager.handleClick
- * - Cancels item movement in GUIs
- * - Fully synced with GUIManager v1.2.5 (approve/deny submenu etc.)
+ * Dispatches clicks to GUIManager handlers.
+ * Cancels vanilla movement to keep menus safe.
  */
 public class GUIListener implements Listener {
 
@@ -30,16 +29,65 @@ public class GUIListener implements Listener {
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        // Check if this inventory belongs to a ProShield menu (title contains "ProShield" etc.)
         String title = event.getView().getTitle();
-        if (title == null || !title.contains("ProShield") && !title.contains("Expansion") && !title.contains("Admin Tools")) {
-            return; // not our menu
+        if (title == null) return;
+
+        // Only handle our menus
+        if (!title.contains("ProShield") &&
+            !title.contains("Trusted Players") &&
+            !title.contains("Assign Role") &&
+            !title.contains("Claim Flags") &&
+            !title.contains("Admin Tools")) {
+            return;
         }
 
-        // Always cancel vanilla item movement in GUIs
+        // Always cancel vanilla movement
         event.setCancelled(true);
 
-        // Forward to GUIManager’s central click handler
-        guiManager.handleClick(event);
+        // Dispatch to correct handler
+        if (title.contains("ProShield Menu")) {
+            handleMainClick(player, event);
+        } else if (title.contains("Trusted Players")) {
+            guiManager.handleTrustedClick(player, event);
+        } else if (title.contains("Assign Role")) {
+            guiManager.handleAssignRoleClick(player, event);
+        } else if (title.contains("Claim Flags")) {
+            guiManager.handleFlagsClick(player, event);
+        } else if (title.contains("Admin Tools")) {
+            guiManager.handleAdminClick(player, event);
+        }
+    }
+
+    private void handleMainClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String name = clicked.getItemMeta().getDisplayName();
+        if (name == null) return;
+
+        String stripped = name.replace("§", "").toLowerCase();
+
+        if (stripped.contains("claim land")) {
+            plugin.getPlotManager().claimPlot(player);
+            player.closeInventory();
+        } else if (stripped.contains("claim info")) {
+            plugin.getPlotManager().sendClaimInfo(player);
+            player.closeInventory();
+        } else if (stripped.contains("unclaim")) {
+            plugin.getPlotManager().unclaimPlot(player);
+            player.closeInventory();
+        } else if (stripped.contains("trusted players")) {
+            guiManager.openTrusted(player);
+        } else if (stripped.contains("claim flags")) {
+            guiManager.openFlags(player);
+        } else if (stripped.contains("request expansion")) {
+            plugin.getExpansionRequestManager().openRequestMenu(player);
+        } else if (stripped.contains("admin tools")) {
+            if (player.hasPermission("proshield.admin")) {
+                guiManager.openAdminTools(player);
+            } else {
+                plugin.getMessagesUtil().send(player, "&cYou don’t have permission to use Admin Tools.");
+            }
+        }
     }
 }

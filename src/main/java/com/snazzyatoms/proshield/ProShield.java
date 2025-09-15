@@ -41,7 +41,7 @@ public class ProShield extends JavaPlugin {
         roleManager = new ClaimRoleManager(this);
         guiManager = new GUIManager(this);
 
-        // Load persisted data
+        // Load persisted data (stubs retained)
         roleManager.loadAll();
         plotManager.loadAll();
 
@@ -57,9 +57,7 @@ public class ProShield extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
         Bukkit.getPluginManager().registerEvents(new CompassListener(this, guiManager), this);
-
-        // ✅ New protection listener
-        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ProtectionListener(this), this); // NEW: full protection wiring
 
         getLogger().info("ProShield enabled successfully.");
     }

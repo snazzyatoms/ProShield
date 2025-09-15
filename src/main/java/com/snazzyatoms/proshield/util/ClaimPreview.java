@@ -1,75 +1,34 @@
-// src/main/java/com/snazzyatoms/proshield/util/ClaimPreview.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.plots.Plot;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Particle;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
 /**
- * ClaimPreview
- *
- * ✅ Cleaned: ClaimPreviewTask is no longer defined here.
- * Uses the standalone ClaimPreviewTask.java file instead.
+ * Simple visual boundary preview for a plot using particles.
  */
 public class ClaimPreview {
 
     public static void show(Player player, Plot plot) {
-        World world = Bukkit.getWorld(plot.getWorldName());
+        if (player == null || plot == null) return;
+        World world = Bukkit.getWorld(plot.getWorld());
         if (world == null) return;
 
-        int bx = plot.getX() << 4; // chunk to block coords
-        int bz = plot.getZ() << 4;
+        int cx = plot.getX();
+        int cz = plot.getZ();
+        int minX = (cx << 4);
+        int minZ = (cz << 4);
+        int maxX = minX + 15;
+        int maxZ = minZ + 15;
+        int y = player.getLocation().getBlockY() + 1;
 
-        // Schedule repeating particle preview
-        BukkitRunnable runnable = new BukkitRunnable() {
-            int ticks = 0;
-
-            @Override
-            public void run() {
-                if (!player.isOnline()) {
-                    cancel();
-                    return;
-                }
-
-                Location base = player.getLocation();
-                double y = base.getY() + 1.0;
-
-                // Emit particles along claim border
-                for (int i = 0; i < 16; i++) {
-                    spawnParticle(player, world, bx + i, y, bz);
-                    spawnParticle(player, world, bx + i, y, bz + 16);
-                    spawnParticle(player, world, bx, y, bz + i);
-                    spawnParticle(player, world, bx + 16, y, bz + i);
-                }
-
-                ticks++;
-                if (ticks > 60) { // ~3 seconds
-                    cancel();
-                }
-            }
-        };
-
-        int taskId = runnable.runTaskTimer(
-                Bukkit.getPluginManager().getPlugin("ProShield"),
-                0L, 10L
-        ).getTaskId();
-
-        // Track task so it can be stopped globally
-        ClaimPreviewTask.track(taskId);
-    }
-
-    private static void spawnParticle(Player player, World world, double x, double y, double z) {
-        Location loc = new Location(world, x + 0.5, y, z + 0.5);
-        player.spawnParticle(
-                Particle.VILLAGER_HAPPY, // ✅ works in 1.20.1
-                loc,
-                3, // count
-                0.2, 0.2, 0.2, // offsets
-                0.01 // speed
-        );
+        for (int x = minX; x <= maxX; x += 1) {
+            world.spawnParticle(Particle.VILLAGER_HAPPY, x + 0.5, y, minZ + 0.5, 1, 0, 0, 0, 0);
+            world.spawnParticle(Particle.VILLAGER_HAPPY, x + 0.5, y, maxZ + 0.5, 1, 0, 0, 0, 0);
+        }
+        for (int z = minZ; z <= maxZ; z += 1) {
+            world.spawnParticle(Particle.VILLAGER_HAPPY, minX + 0.5, y, z + 0.5, 1, 0, 0, 0, 0);
+            world.spawnParticle(Particle.VILLAGER_HAPPY, maxX + 0.5, y, z + 0.5, 1, 0, 0, 0, 0);
+        }
     }
 }

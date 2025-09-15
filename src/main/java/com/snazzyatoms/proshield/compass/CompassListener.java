@@ -22,6 +22,7 @@ import org.bukkit.inventory.meta.ItemMeta;
  * ---------------
  * - Opens GUI when compass is right-clicked
  * - Schedules auto-despawn with sound/particles when ProShield Compass is dropped
+ * - Optionally auto-replaces compass after despawn (configurable)
  */
 public class CompassListener implements Listener {
 
@@ -67,6 +68,7 @@ public class CompassListener implements Listener {
 
         // Configurable despawn delay (ticks)
         int delayTicks = plugin.getConfig().getInt("settings.compass-despawn-delay", 600);
+        boolean autoReplace = plugin.getConfig().getBoolean("settings.compass-auto-replace", false);
 
         if (delayTicks > 0) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -85,6 +87,18 @@ public class CompassListener implements Listener {
                     Player player = event.getPlayer();
                     if (player != null && player.isOnline()) {
                         player.sendMessage(ChatColor.RED + "Your dropped ProShield Compass has despawned.");
+
+                        // Auto-replace if enabled
+                        if (autoReplace) {
+                            ItemStack newCompass = new ItemStack(Material.COMPASS);
+                            ItemMeta newMeta = newCompass.getItemMeta();
+                            if (newMeta != null) {
+                                newMeta.setDisplayName("§bProShield Compass");
+                                newCompass.setItemMeta(newMeta);
+                            }
+                            player.getInventory().addItem(newCompass);
+                            player.sendMessage(ChatColor.GREEN + "A new ProShield Compass has been returned to you.");
+                        }
                     }
                 }
             }, delayTicks);

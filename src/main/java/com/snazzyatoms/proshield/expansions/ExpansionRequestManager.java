@@ -11,11 +11,18 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * Handles lifecycle of ExpansionRequests:
+ * - Adds new requests from players (only one active per player).
+ * - Persists requests to expansion-requests.yml.
+ * - Supports cooldown checks by keeping exact timestamps.
+ * - Provides Admin GUI with pending requests to approve/deny.
+ */
 public class ExpansionRequestManager {
 
     private final ProShield plugin;
     private final MessagesUtil messages;
-    // Stores the most recent request per player (sufficient for cooldown & review)
+    // Tracks requests by player (latest only per player)
     private final Map<UUID, ExpansionRequest> requests = new HashMap<>();
 
     private final File file;
@@ -31,23 +38,25 @@ public class ExpansionRequestManager {
 
     /* =========================  Public API  ========================= */
 
-    /** Last request from a player (any status). Used for cooldown logic. */
+    /** Get the last known request for a player (any status). */
     public ExpansionRequest getLastRequest(UUID playerId) {
         return requests.get(playerId);
     }
 
-    /** All pending requests (for admin GUI). */
+    /** Get all pending requests for Admin review. */
     public List<ExpansionRequest> getPendingRequests() {
         List<ExpansionRequest> list = new ArrayList<>();
         for (ExpansionRequest req : requests.values()) {
-            if (req.getStatus() == ExpansionRequest.Status.PENDING) list.add(req);
+            if (req.getStatus() == ExpansionRequest.Status.PENDING) {
+                list.add(req);
+            }
         }
-        // newest first (optional)
+        // Sort newest first
         list.sort(Comparator.comparingLong(ExpansionRequest::getTimestamp).reversed());
         return list;
     }
 
-    /** Add & persist a new request; informs player if online. */
+    /** Add a new request (player submission). */
     public void addRequest(ExpansionRequest request) {
         requests.put(request.getRequester(), request);
         saveRequests();
@@ -61,7 +70,7 @@ public class ExpansionRequestManager {
         }
     }
 
-    /** Approve (keeps a record with APPROVED status) and notify player. */
+    /** Approve a pending request. */
     public void approveRequest(UUID playerId) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;
@@ -78,7 +87,7 @@ public class ExpansionRequestManager {
         }
     }
 
-    /** Deny (keeps a record with DENIED status + reason) and notify player. */
+    /** Deny a pending request with a reason. */
     public void denyRequest(UUID playerId, String reasonKey) {
         ExpansionRequest req = requests.get(playerId);
         if (req == null || req.getStatus() != ExpansionRequest.Status.PENDING) return;
@@ -110,17 +119,8 @@ public class ExpansionRequestManager {
                 String denyReason = data.getString("requests." + key + ".denyReason", null);
 
                 ExpansionRequest req = new ExpansionRequest(uuid, blocks);
-                // overwrite timestamp/status/reason to match stored
-                // (we don't expose setters for timestamp; do it by reflection or re-create)
-                // Easy approach: re-create object via constructor then set fields via methods we have:
                 req.setStatus(ExpansionRequest.Status.valueOf(statusStr));
                 req.setDenyReason(denyReason);
-
-                // We want the original timestamp; hack-free way: store in the file and read back during save.
-                // Since we can't set timestamp directly, we’ll keep it in memory map with path info.
-                // Simpler: store the request, then keep a shadow map of timestamps if needed.
-                // But cooldown uses newest request; loading with current time could shorten cooldown.
-                // To keep exact timestamp, we’ll stash it in a side map:
                 setTimestampUnsafe(req, timestamp);
 
                 requests.put(uuid, req);
@@ -145,8 +145,7 @@ public class ExpansionRequestManager {
         }
     }
 
-    /* =========================  Timestamp injection (internal)  ========================= */
-    // Safely set the timestamp for a loaded request without changing API surface.
+    /* =========================  Timestamp Injection ========================= */
     private void setTimestampUnsafe(ExpansionRequest req, long ts) {
         try {
             java.lang.reflect.Field f = ExpansionRequest.class.getDeclaredField("timestamp");

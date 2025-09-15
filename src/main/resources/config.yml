@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 
+# Version: 1.2.5
 # ==========================================================
 
 settings:
@@ -8,33 +8,61 @@ settings:
   compass-despawn-delay: 600
   compass-auto-replace: false
 
+  # Operators always have full access (player + admin)
+  # They also bypass all claim protections by default
+  ops-have-full-access: true
+
+claims:
+  default-radius: 50                  # Horizontal claim radius (in blocks)
+  min-y: 0                            # Vertical protection floor (near bedrock)
+  max-y: 200                          # Vertical protection ceiling
+  safezone-enabled: true              # Claims act as safezones by default
+  allow-admin-edit-claims: true       # Admins can modify other players' claims
+  allow-owner-claim-flags: true       # Claim owners can always edit their flags
+
 protection:
   fire:
-    enabled: false
+    enabled: true
     burn: false
     spread: false
     ignite:
       flint_and_steel: false
       lava: false
       lightning: false
+
   explosions:
-    enabled: false
+    enabled: true                     # Global toggle
+    creeper: false                     # Creeper damage inside claims
+    tnt: false                         # TNT damage inside claims
+    ghast: false                       # Ghast fireballs
+    other: false                       # Any other explosion type
+
   buckets:
     enabled: true
+    lava: false                        # Prevent lava griefing
+    water: false                       # Prevent water griefing
+
   mobs:
     border-repel:
       enabled: true
       radius: 15.0
       horizontal-push: 0.7
       vertical-push: 0.25
-      play-sound: false
+      play-sound: true
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
     despawn-inside: true
     despawn-interval-seconds: 30
+    prevent-damage: true               # No mob damage in claims
+    prevent-targeting: true            # Hostiles cannot target players in claims
+    protect-pets: true                 # Pets (wolves, cats, horses, etc.) cannot be harmed
+    protect-passive: true              # Passive mobs (cows, sheep, etc.) cannot be harmed
+
   entities:
     wilderness:
       item-frames: false
+      armor-stands: false
       vehicles: false
+
   world-controls:
     enabled: true
     defaults:
@@ -49,6 +77,8 @@ protection:
       ignite-flint: true
       ignite-lava: true
       ignite-lightning: true
+      pvp: true
+      safezone: true
     worlds: {}
 
 messages:
@@ -56,11 +86,13 @@ messages:
   debug-prefix: "&8[Debug]&r "
   show-wilderness: true
   admin-flag-chat: true
+
   enter-own: "&aYou entered your claim."
   enter-other: "&aYou entered {owner}'s claim."
   leave-own: "&cYou left your claim."
   leave-other: "&cYou left {owner}'s claim."
   wilderness: "&7You entered the wilderness."
+
   expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
   expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
   expansion-denied: "&cYour claim expansion request was denied: {reason}"
@@ -82,7 +114,6 @@ help:
     - "&c/proshield bypass &7→ Toggle bypass mode"
     - "&c/proshield admin &7→ Open the admin menu"
     - "&c/proshield compass &7→ Give yourself a new compass"
-    - "&7Config: &fcompass-auto-replace &7= Auto re-add compass on despawn"
     - "&cCheck GUI → Admin Tools"
 
 gui:
@@ -217,28 +248,36 @@ gui:
             - "&7Return to Main Menu"
           action: "menu:main"
 
+    roles:
+      title: "&bTrusted Players"
+      size: 45
+      items:
+        "37":
+          material: BARRIER
+          name: "&cBack"
+          action: "menu:main"
+        "43":
+          material: BARRIER
+          name: "&cExit"
+          action: "close"
+
+    flags:
+      title: "&eClaim Flags"
+      size: 45
+      items:
+        "37":
+          material: BARRIER
+          name: "&cBack"
+          action: "menu:main"
+        "43":
+          material: BARRIER
+          name: "&cExit"
+          action: "close"
+
     world-controls:
       title: "&dWorld Controls &8({world})"
       size: 45
       items:
-        "10":
-          material: IRON_PICKAXE
-          name: "&fBlock Break"
-          lore:
-            - "&7Allow block breaking"
-            - "&fCurrent: {state}"
-          action: "toggle:world.block-break"
-          permission: "proshield.admin.worldcontrols"
-
-        "23":
-          material: TRIDENT
-          name: "&fIgnite: Lightning"
-          lore:
-            - "&7Allow lightning ignition"
-            - "&fCurrent: {state}"
-          action: "toggle:world.ignite-lightning"
-          permission: "proshield.admin.worldcontrols"
-
         "31":
           material: REDSTONE_BLOCK
           name: "&cReset to Defaults"
@@ -247,68 +286,11 @@ gui:
             - "&fFalls back to default settings"
           action: "menu:world-reset-confirm"
           permission: "proshield.admin.worldcontrols"
-
-        "40":
+        "37":
           material: BARRIER
           name: "&cBack"
-          lore:
-            - "&7Return to Admin Tools"
           action: "menu:admin-tools"
-
-    world-reset-confirm:
-      title: "&cConfirm Reset for {world}"
-      size: 27
-      items:
-        "11":
-          material: GREEN_WOOL
-          name: "&aYes, Reset"
-          lore:
-            - "&7This will reset world controls"
-            - "&7for &f{world} &7to defaults."
-            - "&cClaims will NOT be affected."
-          action: "reset:world.confirm"
-          permission: "proshield.admin.worldcontrols"
-
-        "15":
-          material: RED_WOOL
-          name: "&cNo, Cancel"
-          lore:
-            - "&7Return without changes"
-          action: "menu:world-controls"
-          permission: "proshield.admin.worldcontrols"
-
-        "26":
+        "43":
           material: BARRIER
-          name: "&cBack"
-          lore:
-            - "&7Return to World Controls"
-          action: "menu:world-controls"
-          permission: "proshield.admin.worldcontrols"
-
-    deny-reasons:
-      title: "&cDeny Reasons"
-      size: 27
-      items:
-        "11":
-          material: BARRIER
-          name: "&cToo Large"
-          lore:
-            - "&7Requested expansion too big"
-          action: "reason:too-large"
-          permission: "proshield.admin.expansions"
-
-        "13":
-          material: REDSTONE
-          name: "&cAbusive"
-          lore:
-            - "&7Expansion abusive"
-          action: "reason:abusive"
-          permission: "proshield.admin.expansions"
-
-        "26":
-          material: BARRIER
-          name: "&cBack"
-          lore:
-            - "&7Return to Admin Tools"
-          action: "menu:admin-tools"
-          permission: "proshield.admin.expansions"
+          name: "&cExit"
+          action: "close"

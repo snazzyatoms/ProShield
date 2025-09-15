@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 (Admin Tools + Per-World Controls + Exit Button)
+# Version: 1.2.5 (Admin Tools + Per-World Controls + Exit Button + Reset Defaults)
 # ==========================================================
 
 settings:
@@ -48,17 +48,17 @@ protection:
 
     # Defaults used when a world doesn't have an explicit override
     defaults:
-      block-break: true           # allow breaking by default
-      block-place: true           # allow placing by default
-      bucket-use: true            # allow buckets by default
-      explosions: true            # allow explosion block damage by default
-      mob-spawn: true             # allow natural mob spawns
-      mob-damage: true            # allow hostile mobs to hurt players
-      fire-burn: true             # allow blocks to burn
-      fire-spread: true           # allow fire to spread
-      ignite-flint: true          # allow flint & steel ignite
-      ignite-lava: true           # allow lava ignition
-      ignite-lightning: true      # allow lightning ignition
+      block-break: true
+      block-place: true
+      bucket-use: true
+      explosions: true
+      mob-spawn: true
+      mob-damage: true
+      fire-burn: true
+      fire-spread: true
+      ignite-flint: true
+      ignite-lava: true
+      ignite-lightning: true
 
     # Per-world overrides (toggled via Admin Tools → World Controls in the GUI)
     worlds:
@@ -199,7 +199,6 @@ gui:
             - "&7Toggle protection of item frames"
             - "&fCurrent: {state}"
           action: "flag:item-frames"
-            # NOTE: flag-key also supported but action drives the toggle in code
           flag-key: "item-frames"
 
         "13":
@@ -434,6 +433,14 @@ gui:
             - "&7Allow lightning ignition"
             - "&fCurrent: {state}"
           action: "toggle:world.ignite-lightning"
+
+        "31":
+          material: REDSTONE_BLOCK
+          name: "&cReset to Defaults"
+          lore:
+            - "&7Clear all overrides for this world"
+            - "&fFalls back to default settings"
+          action: "reset:world"
 
         "40":
           material: BARRIER

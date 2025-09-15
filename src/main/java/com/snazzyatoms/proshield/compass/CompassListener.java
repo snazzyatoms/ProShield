@@ -13,7 +13,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 /**
  * Opens the main ProShield GUI when a player right-clicks the ProShield Compass.
- * Constructor matches ProShield.java: new CompassListener(this)
+ * Fully synchronized with GUIManager (v1.2.5).
  */
 public class CompassListener implements Listener {
 
@@ -23,6 +23,7 @@ public class CompassListener implements Listener {
         this.plugin = plugin;
     }
 
+    /** Checks if an item is the ProShield Compass */
     private boolean isProShieldCompass(ItemStack item) {
         if (item == null || item.getType() != Material.COMPASS) return false;
         ItemMeta meta = item.getItemMeta();
@@ -33,14 +34,17 @@ public class CompassListener implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
-        // Only fire for main hand to avoid double triggers on some servers
+        // Avoid double triggers from off-hand
         if (event.getHand() != EquipmentSlot.HAND) return;
 
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
         if (!isProShieldCompass(item)) return;
 
+        // Cancel vanilla compass behavior
         event.setCancelled(true);
-        plugin.getGuiManager().openMenu(player, "main");
+
+        // Open Main Menu through GUIManager
+        plugin.getGuiManager().openMain(player);
     }
 }

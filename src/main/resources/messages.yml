@@ -55,26 +55,28 @@ messages:
     custom-2: "&cYour claim already reached the maximum size."
 
 # -----------------------------
-# Help (merged dynamically)
+# Help (GUI-first style)
 # -----------------------------
 help:
   player:
-    - "&3&lProShield &7— Player Commands (requires &fproshield.player.access&7)"
-    - "&b/claim &7– Claim current chunk"
-    - "&b/unclaim &7– Unclaim current chunk"
-    - "&b/trust <player> [role] &7– Trust a player"
-    - "&b/untrust <player> &7– Remove trust"
-    - "&b/roles &7– Open roles GUI"
-    - "&b/transfer <player> &7– Transfer ownership"
-    - "&b/proshield compass &7– Get your compass"
+    - "&3&lProShield &7— Player Guide"
+    - "&aRight-click your ProShield Compass &7→ Open the main menu"
+    - "&bMain Menu &7→ Claim Land, Info, Unclaim, Trusted Players, Claim Flags"
+    - "&bTrusted Players &7→ Manage roles & access"
+    - "&bClaim Flags &7→ Toggle protections"
+    - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
+    - "&7Note: All features are GUI-driven. Commands are not required."
 
   admin:
-    - "&c&lAdmin Tools (requires &fproshield.admin&c)"
-    - "&c/proshield reload &7– Reload configs"
-    - "&c/proshield debug &7– Toggle debug mode"
-    - "&c/proshield bypass &7– Toggle admin bypass"
-    - "&c/proshield compass &7– Give admin compass"
-    - "&c/proshield admin &7– Open Admin GUI"
+    - "&c&lProShield — Admin Guide"
+    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, World Controls, Expansion Requests"
+    - "&cExpansion Requests &7→ Approve or deny player requests"
+    - "&cWorld Controls &7→ Toggle protections per world"
+    - "&7Available Commands (for admins only):"
+    - "&f/proshield reload &7→ Reload configs"
+    - "&f/proshield debug &7→ Toggle debug mode"
+    - "&f/proshield bypass &7→ Toggle admin bypass"
+    - "&f/proshield admin &7→ Open Admin Tools GUI"
 
   senior:
     - "&4&lSenior Admin Tools"

@@ -11,10 +11,11 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * GUIListener
- * - Central dispatcher for GUIManager
- * - Cancels vanilla item movement
- * - Routes clicks to correct handlers
- * - Claim Info is tooltip-only (ignored on click)
+ * - Central dispatcher
+ * - Cancels vanilla movement
+ * - Back/Exit handled safely
+ * - Claim Info clicks are ignored (tooltip only)
+ * - Distinguishes between player request and admin review expansion menus
  */
 public class GUIListener implements Listener {
 
@@ -42,11 +43,12 @@ public class GUIListener implements Listener {
                 && !title.contains("Claim Flags")
                 && !title.contains("Admin Tools")
                 && !title.contains("Expansion Requests")
+                && !title.contains("Request Expansion")
                 && !title.contains("Deny Reasons")) {
             return;
         }
 
-        event.setCancelled(true); // always cancel vanilla behavior
+        event.setCancelled(true); // always cancel vanilla movement
 
         if (title.contains("ProShield Menu")) {
             handleMainClick(player, event);
@@ -59,13 +61,11 @@ public class GUIListener implements Listener {
         } else if (title.contains("Admin Tools")) {
             guiManager.handleAdminClick(player, event);
         } else if (title.contains("Expansion Requests")) {
-            // If it's the admin view
-            if (player.hasPermission("proshield.admin")) {
-                guiManager.handleExpansionReviewClick(player, event);
-            } else {
-                // player’s own expansion request menu
-                plugin.getExpansionRequestManager().handleRequestClick(player, event);
-            }
+            // Admin review menu
+            guiManager.handleExpansionReviewClick(player, event);
+        } else if (title.contains("Request Expansion")) {
+            // Player request menu
+            plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
         } else if (title.contains("Deny Reasons")) {
             guiManager.handleDenyReasonClick(player, event);
         }
@@ -75,13 +75,15 @@ public class GUIListener implements Listener {
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
 
-        String name = clicked.getItemMeta().getDisplayName().replace("§", "").toLowerCase();
+        String name = clicked.getItemMeta().getDisplayName()
+                .replace("§", "")
+                .toLowerCase();
 
         if (name.contains("claim land")) {
             plugin.getPlotManager().claimPlot(player);
             player.closeInventory();
         } else if (name.contains("claim info")) {
-            // Tooltip only – ignore
+            // Tooltip only – ignore click
         } else if (name.contains("unclaim")) {
             plugin.getPlotManager().unclaimPlot(player);
             player.closeInventory();
@@ -90,10 +92,10 @@ public class GUIListener implements Listener {
         } else if (name.contains("claim flags")) {
             guiManager.openFlags(player);
         } else if (name.contains("request expansion")) {
-            plugin.getExpansionRequestManager().openRequestMenu(player);
-        } else if (name.equalsIgnoreCase("back")) {
+            plugin.getExpansionRequestManager().openPlayerRequestMenu(player);
+        } else if (name.equals("back")) {
             guiManager.openMain(player);
-        } else if (name.equalsIgnoreCase("exit")) {
+        } else if (name.equals("exit")) {
             player.closeInventory();
         } else if (name.contains("admin tools")) {
             if (player.hasPermission("proshield.admin")) {
@@ -104,7 +106,6 @@ public class GUIListener implements Listener {
         }
     }
 
-    // Extra safety: if a player closes "Assign Role", clear pending state so nothing lingers.
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;

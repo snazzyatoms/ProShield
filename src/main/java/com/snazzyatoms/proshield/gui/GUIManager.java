@@ -5,6 +5,7 @@ import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import com.snazzyatoms.proshield.expansions.ExpansionRequest;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -262,32 +263,6 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
-    public void handleAdminClick(Player player, InventoryClickEvent event) {
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-
-        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        if (name == null) return;
-
-        if (name.equalsIgnoreCase("Reload Configs")) {
-            plugin.reloadConfig();
-            plugin.loadMessagesConfig();
-            messages.send(player, "&aConfigs reloaded.");
-        } else if (name.equalsIgnoreCase("Toggle Debug")) {
-            plugin.toggleDebug();
-            messages.send(player, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aENABLED" : "&cDISABLED"));
-        } else if (name.equalsIgnoreCase("Toggle Bypass")) {
-            UUID uuid = player.getUniqueId();
-            if (plugin.isBypassing(uuid)) {
-                plugin.getBypassing().remove(uuid);
-                messages.send(player, "&cBypass disabled.");
-            } else {
-                plugin.getBypassing().add(uuid);
-                messages.send(player, "&aBypass enabled.");
-            }
-        }
-    }
-
     // ============================
     // EXPANSION REVIEW MENU
     // ============================
@@ -316,6 +291,54 @@ public class GUIManager {
         addExit(inv);
 
         player.openInventory(inv);
+    }
+
+    // ============================
+    // DENY REASONS MENU
+    // ============================
+    public void openDenyReasons(Player player, UUID targetId) {
+        String title = plugin.getConfig().getString("gui.menus.deny-reasons.title", "&cDeny Reasons");
+        int size = plugin.getConfig().getInt("gui.menus.deny-reasons.size", 27);
+
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        ConfigurationSection reasons = plugin.getConfig().getConfigurationSection("messages.deny-reasons");
+        if (reasons != null) {
+            int slot = 0;
+            for (String key : reasons.getKeys(false)) {
+                String reason = reasons.getString(key);
+                ItemStack item = new ItemStack(Material.PAPER);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(messages.color("&f" + ChatColor.stripColor(reason)));
+                    meta.setLore(Collections.singletonList(messages.color("&7Click to deny with this reason")));
+                    item.setItemMeta(meta);
+                }
+                inv.setItem(slot++, item);
+            }
+        }
+
+        addBack(inv);
+        addExit(inv);
+
+        player.openInventory(inv);
+        pendingDenyTargets.put(player.getUniqueId(), targetId);
+    }
+
+    private final Map<UUID, UUID> pendingDenyTargets = new HashMap<>();
+
+    public void handleDenyReasonClick(Player player, InventoryClickEvent event) {
+        UUID targetId = pendingDenyTargets.remove(player.getUniqueId());
+        if (targetId == null) return;
+
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String reasonText = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (reasonText == null) return;
+
+        plugin.getExpansionRequestManager().denyRequest(targetId, reasonText);
+        player.closeInventory();
     }
 
     // ============================

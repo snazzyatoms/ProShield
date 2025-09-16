@@ -400,8 +400,4 @@ public class GUIManager {
             inv.setItem(22, simpleItem(Material.BARRIER, "&7No Pending Requests", "&7There are no requests to review."));
         } else {
             int slot = 0;
-            for (ExpansionRequest req : pending) {
-                OfflinePlayer p = Bukkit.getOfflinePlayer(req.getRequester());
-                String name = p.getName() != null ? p.getName() : p.getUniqueId().toString();
-                }
-        }
+            for (ExpansionRequest

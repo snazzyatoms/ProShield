@@ -22,10 +22,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.*;
 
 /**
- * GUIManager (v1.2.5)
+ * GUIManager (v1.2.5-final)
  * - Main, Trusted, Assign Role, Flags, Admin Tools, Expansion Request (player), Expansion Review (admin), Deny Reasons
  * - Claim Info is tooltip-only (no chat spam).
- * - Back/Exit are in every menu and are safe to click.
+ * - Back/Exit are in every menu and functional.
  */
 public class GUIManager {
 
@@ -37,8 +37,10 @@ public class GUIManager {
     private final ExpansionRequestManager expansionManager;
     private final MessagesUtil messages;
 
-    // For deny submenu (admin -> target)
+    // Track deny targets for admin submenu
     private final Map<UUID, UUID> pendingDenyTarget = new HashMap<>();
+    // Track pending role assignments
+    private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -48,7 +50,7 @@ public class GUIManager {
         this.messages = plugin.getMessagesUtil();
     }
 
-    /* ---------- Buttons ---------- */
+    /* ---------- Common Buttons ---------- */
     private ItemStack backButton() {
         return simpleItem(Material.ARROW, "&eBack", "&7Return to previous menu");
     }
@@ -79,9 +81,7 @@ public class GUIManager {
         if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) return false;
         String s = ChatColor.stripColor(item.getItemMeta().getDisplayName());
         if (s == null) return false;
-        s = s.trim().toLowerCase(Locale.ROOT);
-        String n = needle.trim().toLowerCase(Locale.ROOT);
-        return s.equals(n);
+        return s.trim().equalsIgnoreCase(needle.trim());
     }
     private boolean isBack(ItemStack item) { return isNamed(item, "back"); }
     private boolean isExit(ItemStack item) { return isNamed(item, "exit"); }
@@ -110,7 +110,7 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
-    /** Tooltip item for current claim (or wilderness) */
+    /** Tooltip item for current claim */
     private ItemStack buildClaimInfoItem(Player player) {
         Plot plot = plotManager.getPlot(player.getLocation());
         List<String> lore = new ArrayList<>();
@@ -118,7 +118,9 @@ public class GUIManager {
             lore.add("&7No claim here.");
         } else {
             OfflinePlayer owner = plugin.getServer().getOfflinePlayer(plot.getOwner());
-            String ownerName = owner.getName() != null ? owner.getName() : owner.getUniqueId().toString();
+            String ownerName = (owner != null && owner.getName() != null)
+                    ? owner.getName()
+                    : plot.getOwner().toString().substring(0, 8);
             lore.add("&7World: &f" + plot.getWorld());
             lore.add("&7Chunk: &f" + plot.getX() + ", " + plot.getZ());
             lore.add("&7Owner: &f" + ownerName);
@@ -144,12 +146,196 @@ public class GUIManager {
     /* ============================
      * TRUSTED PLAYERS MENU
      * ============================ */
-    // ... (unchanged trusted/roles code) ...
+    public void openTrusted(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.roles.title", "&bTrusted Players");
+        int size = plugin.getConfig().getInt("gui.menus.roles.size", 45);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) {
+            inv.setItem(13, simpleItem(Material.BARRIER, "&cNo claim here", "&7Stand inside your claim to manage roles."));
+            placeNavButtons(inv);
+            player.openInventory(inv);
+            return;
+        }
+
+        int slot = 0;
+        for (Map.Entry<UUID,String> e : plot.getTrusted().entrySet()) {
+            UUID uuid = e.getKey();
+            if (uuid.equals(plot.getOwner()) || uuid.equals(player.getUniqueId())) continue;
+
+            OfflinePlayer trusted = plugin.getServer().getOfflinePlayer(uuid);
+            String display = (trusted != null && trusted.getName() != null)
+                    ? trusted.getName()
+                    : uuid.toString().substring(0, 8);
+
+            List<String> lore = new ArrayList<>();
+            lore.add(messages.color("&7Role: &b" + e.getValue()));
+            lore.add(messages.color("&aLeft-click: Assign new role"));
+            lore.add(messages.color("&cRight-click: Untrust"));
+            lore.add(HIDDEN_UUID_TAG + uuid);
+
+            ItemStack head = simpleItem(Material.PLAYER_HEAD, "&f" + display, lore.toArray(new String[0]));
+            inv.setItem(slot++, head);
+        }
+
+        placeNavButtons(inv);
+        player.openInventory(inv);
+    }
+
+    private UUID extractHiddenUuid(ItemStack item) {
+        if (item == null || !item.hasItemMeta() || item.getItemMeta().getLore() == null) return null;
+        for (String line : item.getItemMeta().getLore()) {
+            String raw = ChatColor.stripColor(line);
+            if (raw != null && raw.startsWith("#UUID:")) {
+                try { return UUID.fromString(raw.substring("#UUID:".length()).trim()); }
+                catch (Exception ignored) {}
+            }
+        }
+        return null;
+    }
+
+    public void handleTrustedClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (isBack(clicked)) { openMain(player); return; }
+        if (isExit(clicked)) { player.closeInventory(); return; }
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) return;
+
+        UUID targetUuid = extractHiddenUuid(clicked);
+        if (targetUuid == null) return;
+
+        if (event.isLeftClick()) {
+            openAssignRole(player, targetUuid);
+        } else if (event.isRightClick()) {
+            plot.untrust(targetUuid);
+            String name = Optional.ofNullable(Bukkit.getOfflinePlayer(targetUuid).getName())
+                    .orElse(targetUuid.toString().substring(0, 8));
+            messages.send(player, "&cUntrusted &f" + name);
+            plotManager.saveAll();
+            openTrusted(player);
+        }
+    }
+
+    /* ============================
+     * ASSIGN ROLE MENU
+     * ============================ */
+    private void openAssignRole(Player actor, UUID targetUuid) {
+        String title = plugin.getConfig().getString("gui.menus.assign-role.title", "&bAssign Role");
+        int size = plugin.getConfig().getInt("gui.menus.assign-role.size", 45);
+        Inventory inv = Bukkit.createInventory(actor, size, messages.color(title));
+
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("roles.available");
+        if (section != null) {
+            int slot = 0;
+            for (String roleKey : section.getKeys(false)) {
+                String name = section.getString(roleKey + ".name", roleKey);
+                List<String> lore = section.getStringList(roleKey + ".lore");
+                List<String> coloredLore = new ArrayList<>();
+                for (String line : lore) coloredLore.add(messages.color(line));
+                coloredLore.add(messages.color("&7Click to assign this role"));
+
+                ItemStack item = simpleItem(Material.BOOK, name, coloredLore.toArray(new String[0]));
+                inv.setItem(slot++, item);
+            }
+        }
+
+        placeNavButtons(inv);
+        actor.openInventory(inv);
+        pendingRoleAssignments.put(actor.getUniqueId(), targetUuid);
+    }
+
+    public void clearPendingRoleAssignment(UUID actor) {
+        pendingRoleAssignments.remove(actor);
+    }
+
+    public void handleAssignRoleClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (isBack(clicked)) { clearPendingRoleAssignment(player.getUniqueId()); openTrusted(player); return; }
+        if (isExit(clicked)) { clearPendingRoleAssignment(player.getUniqueId()); player.closeInventory(); return; }
+
+        UUID targetUuid = pendingRoleAssignments.remove(player.getUniqueId());
+        if (targetUuid == null) return;
+
+        if (clicked == null || !clicked.hasItemMeta()) return;
+        String roleName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (roleName == null) return;
+
+        roleManager.assignRoleViaChat(player, targetUuid, roleName);
+        plotManager.saveAll();
+        openTrusted(player);
+    }
 
     /* ============================
      * CLAIM FLAGS MENU
      * ============================ */
-    // ... (unchanged flags code) ...
+    public void openFlags(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.flags.title", "&eClaim Flags");
+        int size = plugin.getConfig().getInt("gui.menus.flags.size", 45);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) {
+            inv.setItem(13, simpleItem(Material.BARRIER, "&cNo claim here", "&7Stand inside your claim to manage flags."));
+            placeNavButtons(inv);
+            player.openInventory(inv);
+            return;
+        }
+
+        if (plugin.getConfig().isConfigurationSection("flags.available")) {
+            int slot = 0;
+            for (String key : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
+                String path = "flags.available." + key;
+                String name = plugin.getConfig().getString(path + ".name", key);
+                boolean current = plot.getFlags().getOrDefault(key, plugin.getConfig().getBoolean(path + ".default", false));
+
+                ItemStack item = new ItemStack(current ? Material.LIME_DYE : Material.GRAY_DYE);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(messages.color(name));
+                    meta.setLore(Arrays.asList(
+                            messages.color("&7Click to toggle"),
+                            messages.color("&fCurrent: " + (current ? "&aEnabled" : "&cDisabled"))
+                    ));
+                    item.setItemMeta(meta);
+                }
+                inv.setItem(slot++, item);
+            }
+        }
+
+        placeNavButtons(inv);
+        player.openInventory(inv);
+    }
+
+    public void handleFlagsClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (isBack(clicked)) { openMain(player); return; }
+        if (isExit(clicked)) { player.closeInventory(); return; }
+
+        Plot plot = plotManager.getPlot(player.getLocation());
+        if (plot == null) return;
+
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (name == null) return;
+
+        for (String key : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
+            String display = plugin.getConfig().getString("flags.available." + key + ".name", key);
+            if (ChatColor.stripColor(messages.color(display)).equalsIgnoreCase(name)) {
+                boolean current = plot.getFlags().getOrDefault(key,
+                        plugin.getConfig().getBoolean("flags.available." + key + ".default", false));
+                boolean newValue = !current;
+                plot.setFlag(key, newValue);
+                messages.send(player, "&eFlag &f" + key + " &eis now " + (newValue ? "&aEnabled" : "&cDisabled"));
+                plotManager.saveAll();
+                openFlags(player);
+                break;
+            }
+        }
+    }
 
     /* ============================
      * ADMIN TOOLS
@@ -159,7 +345,7 @@ public class GUIManager {
         int size = plugin.getConfig().getInt("gui.menus.admin-tools.size", 45);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        inv.setItem(10, simpleItem(Material.REPEATER, "&eReload Configs", "&7Reload ProShield configs & messages."));
+        inv.setItem(10, simpleItem(Material.REPEATER, "&eReload Configs", "&7Reload ProShield configs."));
         inv.setItem(12, simpleItem(Material.ENDER_EYE, "&aToggle Debug", "&7Enable/disable debug logging."));
         inv.setItem(14, simpleItem(Material.BARRIER, "&cToggle Bypass", "&7Admin bypass for claims."));
         inv.setItem(16, simpleItem(Material.EMERALD, "&eExpansion Requests", "&7Review pending player requests."));
@@ -179,8 +365,8 @@ public class GUIManager {
 
         if (name.equalsIgnoreCase("Reload Configs")) {
             plugin.reloadConfig();
-            plugin.loadMessagesConfig(); // 🔥 reload messages.yml too
-            messages.send(player, "&aConfigs & messages reloaded.");
+            plugin.loadMessagesConfig();
+            messages.send(player, "&aConfigs reloaded.");
         } else if (name.equalsIgnoreCase("Toggle Debug")) {
             plugin.toggleDebug();
             messages.send(player, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aENABLED" : "&cDISABLED"));
@@ -199,7 +385,13 @@ public class GUIManager {
     }
 
     /* ============================
-     * EXPANSION REVIEW + DENY REASONS
+     * EXPANSION REQUESTS
      * ============================ */
-    // ... (unchanged expansion request + deny reasons code) ...
-}
+    public void openRequestMenu(Player player) {
+        plugin.getExpansionRequestManager().openPlayerRequestMenu(player);
+    }
+
+    public void openExpansionReview(Player admin) {
+        String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
+        int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
+        Inventory inv = Bukkit.createInventory(admin, size, messages

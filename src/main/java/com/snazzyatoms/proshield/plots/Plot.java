@@ -2,6 +2,7 @@ package com.snazzyatoms.proshield.plots;
 
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.*;
@@ -21,6 +22,7 @@ public class Plot {
     private UUID owner;
     private int radius; // protection radius in blocks (per-plot)
 
+    // Keep mutable so persistence + GUI can modify them
     private final Map<UUID, String> trusted = new HashMap<>();
     private final Map<String, Boolean> flags = new HashMap<>();
 
@@ -32,37 +34,7 @@ public class Plot {
         this.owner = owner;
         this.radius = radius;
 
-        // Defaults
-        flags.put("block-break", false);
-        flags.put("block-place", false);
-        flags.put("bucket-use", false);
-        flags.put("bucket-lava", false);
-        flags.put("bucket-water", false);
-
-        flags.put("explosions", false);
-        flags.put("explosions-creeper", false);
-        flags.put("explosions-tnt", false);
-        flags.put("explosions-ghast", false);
-        flags.put("explosions-other", false);
-
-        flags.put("fire-burn", false);
-        flags.put("fire-spread", false);
-        flags.put("ignite-flint", false);
-        flags.put("ignite-lava", false);
-        flags.put("ignite-lightning", false);
-
-        flags.put("mob-spawn", false);
-        flags.put("mob-damage", false);
-        flags.put("safezone", true);
-        flags.put("mob-repel", true);
-        flags.put("mob-despawn", true);
-        flags.put("protect-pets", true);
-        flags.put("protect-passive", true);
-
-        flags.put("pvp", false);
-
-        // Optional: admin-claim flag (default false)
-        flags.putIfAbsent("admin-claim", false);
+        setDefaultFlags();
     }
 
     public static Plot of(Chunk chunk, UUID owner, int radius) {
@@ -72,6 +44,44 @@ public class Plot {
                 chunk.getZ(),
                 owner,
                 radius);
+    }
+
+    private void setDefaultFlags() {
+        // Core build/place
+        flags.putIfAbsent("block-break", false);
+        flags.putIfAbsent("block-place", false);
+        flags.putIfAbsent("bucket-use", false);
+        flags.putIfAbsent("bucket-lava", false);
+        flags.putIfAbsent("bucket-water", false);
+
+        // Explosions
+        flags.putIfAbsent("explosions", false);
+        flags.putIfAbsent("explosions-creeper", false);
+        flags.putIfAbsent("explosions-tnt", false);
+        flags.putIfAbsent("explosions-ghast", false);
+        flags.putIfAbsent("explosions-other", false);
+
+        // Fire
+        flags.putIfAbsent("fire-burn", false);
+        flags.putIfAbsent("fire-spread", false);
+        flags.putIfAbsent("ignite-flint", false);
+        flags.putIfAbsent("ignite-lava", false);
+        flags.putIfAbsent("ignite-lightning", false);
+
+        // Mobs
+        flags.putIfAbsent("mob-spawn", false);
+        flags.putIfAbsent("mob-damage", false);
+        flags.putIfAbsent("safezone", true);
+        flags.putIfAbsent("mob-repel", true);
+        flags.putIfAbsent("mob-despawn", true);
+        flags.putIfAbsent("protect-pets", true);
+        flags.putIfAbsent("protect-passive", true);
+
+        // PvP
+        flags.putIfAbsent("pvp", false);
+
+        // Optional admin-claim
+        flags.putIfAbsent("admin-claim", false);
     }
 
     public UUID getId() { return id; }
@@ -84,12 +94,12 @@ public class Plot {
     public int getRadius() { return radius; }
     public void setRadius(int radius) { this.radius = radius; }
 
-    public Map<UUID, String> getTrusted() { return Collections.unmodifiableMap(trusted); }
-    public Map<String, Boolean> getFlags() { return Collections.unmodifiableMap(flags); }
+    public Map<UUID, String> getTrusted() { return trusted; }
+    public Map<String, Boolean> getFlags() { return flags; }
 
     public boolean isTrusted(UUID uuid) {
         if (uuid == null) return false;
-        if (uuid.equals(owner)) return true;
+        if (uuid.equals(owner)) return true; // owner always trusted
         return trusted.containsKey(uuid);
     }
 
@@ -131,6 +141,18 @@ public class Plot {
         if (loc == null || loc.getWorld() == null) return false;
         if (!loc.getWorld().getName().equalsIgnoreCase(world)) return false;
         return loc.getChunk().getX() == x && loc.getChunk().getZ() == z;
+    }
+
+    /** Utility: display trusted players as names instead of UUIDs */
+    public List<String> getTrustedNames() {
+        List<String> list = new ArrayList<>();
+        for (UUID uuid : trusted.keySet()) {
+            OfflinePlayer off = org.bukkit.Bukkit.getOfflinePlayer(uuid);
+            if (off != null && off.getName() != null) {
+                list.add(off.getName() + " (" + trusted.get(uuid) + ")");
+            }
+        }
+        return list;
     }
 
     @Override

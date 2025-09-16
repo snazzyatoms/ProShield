@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,18 +11,18 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * GUIListener
- * Dispatches clicks to GUIManager handlers.
- * Cancels vanilla movement to keep menus safe.
- * Includes global handling for Back + Exit buttons.
+ * - Universal Back/Exit handling
+ * - Dispatches to GUIManager for each menu
+ * - Cancels vanilla item movement
  */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager guiManager;
+    private final GUIManager gui;
 
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.guiManager = guiManager;
+        this.gui = guiManager;
     }
 
     @EventHandler
@@ -33,65 +34,64 @@ public class GUIListener implements Listener {
         String title = event.getView().getTitle();
         if (title == null) return;
 
-        // Only handle our menus
-        if (!title.contains("ProShield")
-                && !title.contains("Trusted Players")
-                && !title.contains("Assign Role")
-                && !title.contains("Claim Flags")
-                && !title.contains("Admin Tools")
-                && !title.contains("Expansion Requests")
-                && !title.contains("Expansion Request")
-                && !title.contains("Deny Reasons")) {
+        String t = strip(title);
+        if (!(t.contains("ProShield") ||
+              t.contains("Trusted Players") ||
+              t.contains("Assign Role") ||
+              t.contains("Claim Flags") ||
+              t.contains("Admin Tools") ||
+              t.contains("Expansion Requests") ||
+              t.contains("Deny Reasons") ||
+              t.contains("Request Claim Expansion"))) {
             return;
         }
 
-        // Always cancel vanilla movement
+        // Cancel vanilla inventory behavior
         event.setCancelled(true);
 
-        // Global Back / Exit
-        String rawName = clicked.hasItemMeta() && clicked.getItemMeta().hasDisplayName()
-                ? clicked.getItemMeta().getDisplayName().replace("§", "").toLowerCase()
+        // Universal Back/Exit by item display name (color-safe)
+        String itemName = clicked.hasItemMeta() && clicked.getItemMeta().hasDisplayName()
+                ? strip(clicked.getItemMeta().getDisplayName())
                 : "";
 
-        if (rawName.equalsIgnoreCase("back") || rawName.contains("return to")) {
-            if (title.contains("Trusted Players")
-                    || title.contains("Claim Flags")
-                    || title.contains("Admin Tools")) {
-                guiManager.openMain(player);
-            } else if (title.contains("Assign Role")) {
-                guiManager.openTrusted(player);
-            } else if (title.contains("Expansion Requests")) {
-                guiManager.openAdminTools(player);
-            } else if (title.contains("Deny Reasons")) {
-                guiManager.openExpansionReview(player);
-            } else if (title.contains("Expansion Request")) {
-                guiManager.openMain(player);
+        if (itemName.equalsIgnoreCase("Back") || itemName.equalsIgnoreCase("Return")
+                || itemName.contains("Return to")) {
+            if (t.contains("Trusted Players") || t.contains("Claim Flags") || t.contains("Admin Tools")) {
+                gui.openMain(player);
+            } else if (t.contains("Assign Role")) {
+                gui.openTrusted(player);
+            } else if (t.contains("Expansion Requests")) {
+                gui.openAdminTools(player);
+            } else if (t.contains("Deny Reasons")) {
+                gui.openExpansionReview(player);
+            } else if (t.contains("Request Claim Expansion")) {
+                gui.openMain(player);
             }
             return;
         }
 
-        if (rawName.equalsIgnoreCase("exit")) {
+        if (itemName.equalsIgnoreCase("Exit")) {
             player.closeInventory();
             return;
         }
 
-        // Dispatch to correct handler
-        if (title.contains("ProShield Menu")) {
+        // Dispatch
+        if (t.contains("ProShield Menu")) {
             handleMainClick(player, event);
-        } else if (title.contains("Trusted Players")) {
-            guiManager.handleTrustedClick(player, event);
-        } else if (title.contains("Assign Role")) {
-            guiManager.handleAssignRoleClick(player, event);
-        } else if (title.contains("Claim Flags")) {
-            guiManager.handleFlagsClick(player, event);
-        } else if (title.contains("Admin Tools")) {
-            guiManager.handleAdminClick(player, event);
-        } else if (title.contains("Expansion Requests")) {
-            guiManager.handleExpansionReviewClick(player, event);
-        } else if (title.contains("Deny Reasons")) {
-            guiManager.handleDenyReasonClick(player, event);
-        } else if (title.contains("Expansion Request")) {
-            guiManager.handleExpansionRequestClick(player, event);
+        } else if (t.contains("Trusted Players")) {
+            gui.handleTrustedClick(player, event);
+        } else if (t.contains("Assign Role")) {
+            gui.handleAssignRoleClick(player, event);
+        } else if (t.contains("Claim Flags")) {
+            gui.handleFlagsClick(player, event);
+        } else if (t.contains("Admin Tools")) {
+            gui.handleAdminClick(player, event);
+        } else if (t.contains("Expansion Requests")) {
+            gui.handleExpansionReviewClick(player, event);
+        } else if (t.contains("Deny Reasons")) {
+            gui.handleDenyReasonClick(player, event);
+        } else if (t.contains("Request Claim Expansion")) {
+            gui.handleExpansionRequestClick(player, event);
         }
     }
 
@@ -99,34 +99,36 @@ public class GUIListener implements Listener {
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
 
-        String name = clicked.getItemMeta().getDisplayName();
-        if (name == null) return;
+        String name = strip(clicked.getItemMeta().getDisplayName());
+        if (name.isEmpty()) return;
 
-        String stripped = name.replace("§", "").toLowerCase();
+        String lowered = name.toLowerCase();
 
-        if (stripped.contains("claim land")) {
+        if (lowered.contains("claim land")) {
             plugin.getPlotManager().claimPlot(player);
             player.closeInventory();
-        } else if (stripped.contains("claim info")) {
+        } else if (lowered.contains("claim info")) {
             plugin.getPlotManager().sendClaimInfo(player);
             player.closeInventory();
-        } else if (stripped.contains("unclaim")) {
+        } else if (lowered.contains("unclaim")) {
             plugin.getPlotManager().unclaimPlot(player);
             player.closeInventory();
-        } else if (stripped.contains("trusted players")) {
-            guiManager.openTrusted(player);
-        } else if (stripped.contains("claim flags")) {
-            guiManager.openFlags(player);
-        } else if (stripped.contains("request expansion")) {
-            guiManager.openRequestMenu(player); // ✅ now handled by GUIManager
-        } else if (stripped.contains("admin tools")) {
+        } else if (lowered.contains("trusted players")) {
+            gui.openTrusted(player);
+        } else if (lowered.contains("claim flags")) {
+            gui.openFlags(player);
+        } else if (lowered.contains("request expansion")) {
+            gui.openExpansionRequestMenu(player);
+        } else if (lowered.contains("admin tools")) {
             if (player.hasPermission("proshield.admin")) {
-                guiManager.openAdminTools(player);
+                gui.openAdminTools(player);
             } else {
                 plugin.getMessagesUtil().send(player, "&cYou don’t have permission to use Admin Tools.");
             }
-        } else if (stripped.contains("exit")) {
+        } else if (lowered.contains("exit")) {
             player.closeInventory();
         }
     }
+
+    private String strip(String s) { return s == null ? "" : ChatColor.stripColor(s).trim(); }
 }

@@ -30,7 +30,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Keep admin/debug/bypass commands for staff
+        // Admin commands
         switch (args[0].toLowerCase()) {
             case "reload" -> {
                 if (!sender.hasPermission("proshield.admin")) {

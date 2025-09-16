@@ -1,40 +1,42 @@
 package com.snazzyatoms.proshield.expansions;
 
-import org.bukkit.Location;
-
 import java.util.UUID;
 
+/**
+ * Represents a pending claim expansion request.
+ * Stores requester, target claim, requested increase, and timestamp.
+ */
 public class ExpansionRequest {
 
-    public enum Status { PENDING, APPROVED, DENIED }
+    private final UUID requester;      // Player UUID
+    private final UUID plotId;         // Claim/Plot ID
+    private final int amount;          // How many blocks to expand radius
+    private final long timestamp;      // When the request was made
 
-    private final UUID requester;
-    private final int blocks;
-    private final long timestamp;
-    private final Location requestedAt; // 🔹 Where the request was made
-
-    private Status status;
-    private String denyReason;
-
-    public ExpansionRequest(UUID requester, int blocks, Location requestedAt) {
+    public ExpansionRequest(UUID requester, UUID plotId, int amount, long timestamp) {
         this.requester = requester;
-        this.blocks = blocks;
-        this.requestedAt = requestedAt;
-        this.timestamp = System.currentTimeMillis();
-        this.status = Status.PENDING;
+        this.plotId = plotId;
+        this.amount = amount;
+        this.timestamp = timestamp;
     }
 
-    /* ==================== Accessors ==================== */
+    /** Player UUID who made the request */
+    public UUID getRequester() {
+        return requester;
+    }
 
-    public UUID getRequester() { return requester; }
-    public int getBlocks() { return blocks; }
-    public long getTimestamp() { return timestamp; }
+    /** Target plot/claim ID */
+    public UUID getPlotId() {
+        return plotId;
+    }
 
-    public Location getRequestedAt() { return requestedAt; }
+    /** Amount of blocks to expand */
+    public int getAmount() {
+        return amount;
+    }
 
-    public Status getStatus() { return status; }
-    public void setStatus(Status status) { this.status = status; }
-
-    public String getDenyReason() { return denyReason; }
-    public void setDenyReason(String denyReason) { this.denyReason = denyReason; }
+    /** When request was created (ms since epoch) */
+    public long getTimestamp() {
+        return timestamp;
+    }
 }

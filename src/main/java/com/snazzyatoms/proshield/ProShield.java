@@ -72,6 +72,12 @@ public class ProShield extends JavaPlugin {
     @Override
     public void onDisable() {
         plotManager.saveAll();
+
+        // Clean up GUI cache (safety)
+        if (guiCache != null) {
+            guiCache.clear();
+        }
+
         getLogger().info("🛑 ProShield disabled.");
     }
 
@@ -118,7 +124,12 @@ public class ProShield extends JavaPlugin {
         return debugEnabled;
     }
 
+    /**
+     * Loads messages.yml from resources.
+     * Copies it if missing, ensures config is available for MessagesUtil.
+     */
     public void loadMessagesConfig() {
         saveResource("messages.yml", false);
+        // MessagesUtil can parse this file if needed.
     }
 }

@@ -409,3 +409,12 @@ public class GUIManager {
                 lore.add(messages.color("&7Requested at: &f" + req.getRequestedAt()));
                 lore.add(messages.color("&7Radius: &f" + req.getRequestedRadius()));
                 lore.add(messages.color("&aLeft-click: Approve"));
+ItemStack item = simpleItem(Material.PAPER, "&fRequest from " + name, lore.toArray(new String[0]));
+                inv.setItem(slot++, item);
+            }
+        }
+
+        placeNavButtons(inv);
+        admin.openInventory(inv);
+    }
+}

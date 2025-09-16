@@ -50,17 +50,18 @@ public class ClaimRoleManager {
         }
 
         String role = rawRole.trim().toLowerCase(Locale.ROOT);
-        // Normalize a few common synonyms
-        if (role.equals("member") || role.equals("builder") || role.equals("trusted") || role.equals("co-owner")) {
-            // ok
-        } else {
-            // default to "trusted"
-            role = "trusted";
+        // Normalize allowed roles
+        if (!(role.equals("member") || role.equals("builder") || role.equals("trusted") || role.equals("co-owner"))) {
+            role = "trusted"; // fallback
         }
 
-        plot.trust(targetUuid, role);
+        // ✅ Updated: use getTrusted() map instead of removed trust() method
+        plot.getTrusted().put(targetUuid, role);
+
         OfflinePlayer target = plugin.getServer().getOfflinePlayer(targetUuid);
-        messages.send(actor, "&aAssigned &f" + (target.getName() == null ? target.getUniqueId() : target.getName())
-                + " &ato role &f" + role + " &ain this claim.");
+        String targetName = (target.getName() != null ? target.getName() : target.getUniqueId().toString());
+
+        messages.send(actor, "&aAssigned &f" + targetName + " &ato role &f" + role + " &ain this claim.");
+        plotManager.saveAll(); // persist the update
     }
 }

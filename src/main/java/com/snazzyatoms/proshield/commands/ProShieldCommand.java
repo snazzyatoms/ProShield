@@ -35,6 +35,13 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
+            // If no arguments, open the main menu
+            if (args.length == 0) {
+                guiManager.openMain(player);
+                return true;
+            }
+
+            // Otherwise, show help
             messages.send(player, "&bProShield Commands:");
             messages.send(player, "&f/ps claim &7- Claim your current chunk.");
             messages.send(player, "&f/ps unclaim &7- Unclaim your chunk.");
@@ -95,7 +102,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 }
                 break;
             default:
-                // Instead of old openMenu, call the new main menu
+                // Any unknown command → open main GUI
                 guiManager.openMain(player);
                 break;
         }

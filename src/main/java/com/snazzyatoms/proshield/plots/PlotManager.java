@@ -53,7 +53,7 @@ public class PlotManager {
                 if (plotsConfig.contains("plots." + key + ".flags")) {
                     Map<String, Object> flags = plotsConfig.getConfigurationSection("plots." + key + ".flags").getValues(false);
                     for (Map.Entry<String, Object> entry : flags.entrySet()) {
-                        plot.setFlag(entry.getKey(), Boolean.parseBoolean(entry.getValue().toString()));
+                        plot.getFlags().put(entry.getKey(), Boolean.parseBoolean(entry.getValue().toString()));
                     }
                 }
 
@@ -96,7 +96,7 @@ public class PlotManager {
     public Plot getPlotAt(Location loc) {
         if (loc == null) return null;
         for (Plot plot : plots.values()) {
-            if (plot.isInPlot(loc)) {
+            if (plot.contains(loc)) { // ✅ updated to new method
                 return plot;
             }
         }
@@ -129,7 +129,7 @@ public class PlotManager {
     public void expandPlot(UUID id, int extraRadius) {
         Plot plot = plots.get(id);
         if (plot != null) {
-            plot.setRadius(plot.getRadius() + extraRadius);
+            plot.setRadius(plot.getRadius() + extraRadius); // ✅ still valid with int setter
             saveAll();
         }
     }

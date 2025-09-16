@@ -40,3 +40,24 @@ permissions:
   proshield.admin.worldcontrols:
     description: Manage per-world controls in Admin Tools GUI
     default: op
+
+  # --- Protection / Flags (NEW) ---
+  proshield.flags.safezone:
+    description: Control safezone flag (repels/blocks mobs, despawns inside)
+    default: op
+
+  proshield.flags.explosions:
+    description: Control explosions flag
+    default: op
+
+  proshield.flags.fire:
+    description: Control fire spread / ignite flags
+    default: op
+
+  proshield.flags.buckets:
+    description: Control bucket usage flags
+    default: op
+
+  proshield.flags.entities:
+    description: Control entity protection flags (vehicles, frames, pets, passives)
+    default: op

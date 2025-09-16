@@ -23,7 +23,7 @@ import java.util.*;
 
 /**
  * GUIManager (v1.2.5-persist-mobs)
- * - Main, Trusted, Assign Role, Flags, Admin Tools, Expansion Request (player), Expansion Review (admin), Deny Reasons
+ * - Main, Trusted, Assign Role, Flags, Admin Tools, Expansion Request (player), Expansion Review (admin)
  * - Claim Info is tooltip-only (no chat spam).
  * - Back/Exit are in every menu and are safe to click.
  */
@@ -390,30 +390,22 @@ public class GUIManager {
     /* ============================
      * ADMIN EXPANSION REVIEW
      * ============================ */
-   } else {
+    public void openExpansionReview(Player admin) {
+        String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
+        int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
+        Inventory inv = Bukkit.createInventory(admin, size, messages.color(title));
+
+        List<ExpansionRequest> pending = expansionManager.getPendingRequests();
+        if (pending.isEmpty()) {
+            inv.setItem(22, simpleItem(Material.BARRIER, "&7No Pending Requests", "&7There are no requests to review."));
+        } else {
             int slot = 0;
             for (ExpansionRequest req : pending) {
-                OfflinePlayer p = Bukkit.getOfflinePlayer(req.getRequester());
-                String name = p.getName() != null ? p.getName() : p.getUniqueId().toString();
+                UUID requester = req.getPlayerUuid();
+                OfflinePlayer p = Bukkit.getOfflinePlayer(requester);
+                String name = (p != null && p.getName() != null) ? p.getName() : requester.toString();
 
                 List<String> lore = new ArrayList<>();
-                lore.add(messages.color("&7Blocks: &f" + req.getBlocks()));
-                lore.add(messages.color("&7Requested: &f" + new Date(req.getTimestamp())));
+                lore.add(messages.color("&7Requested at: &f" + req.getRequestedAt()));
+                lore.add(messages.color("&7Radius: &f" + req.getRequestedRadius()));
                 lore.add(messages.color("&aLeft-click: Approve"));
-                lore.add(messages.color("&cRight-click: Deny"));
-
-                ItemStack paper = new ItemStack(Material.PAPER);
-                ItemMeta meta = paper.getItemMeta();
-                if (meta != null) {
-                    meta.setDisplayName(messages.color("&f" + name));
-                    meta.setLore(lore);
-                    paper.setItemMeta(meta);
-                }
-                inv.setItem(slot++, paper);
-            }
-        }
-
-        placeNavButtons(inv);
-        admin.openInventory(inv);
-    }
-}

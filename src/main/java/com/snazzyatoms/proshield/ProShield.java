@@ -44,7 +44,7 @@ public class ProShield extends JavaPlugin {
         this.messages = new MessagesUtil(this);
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
-        this.expansionRequestManager = new ExpansionRequestManager(this);
+        this.expansionRequestManager = new ExpansionRequestManager(this, plotManager);
         this.guiManager = new GUIManager(this);
 
         // Listeners
@@ -59,8 +59,8 @@ public class ProShield extends JavaPlugin {
             cmd.setTabCompleter(executor);
         }
 
-        // Player dispatcher (GUI + command handling)
-        new PlayerCommandDispatcher(this, plotManager);
+        // Player dispatcher (opens GUI, compass, etc.)
+        new PlayerCommandDispatcher(this);
 
         getLogger().info("✅ ProShield enabled. Running version " + getDescription().getVersion());
     }
@@ -72,43 +72,17 @@ public class ProShield extends JavaPlugin {
     }
 
     // Accessors
-    public MessagesUtil getMessagesUtil() {
-        return messages;
-    }
+    public MessagesUtil getMessagesUtil() { return messages; }
+    public GUIManager getGuiManager() { return guiManager; }
+    public ClaimRoleManager getRoleManager() { return roleManager; }
+    public PlotManager getPlotManager() { return plotManager; }
+    public ExpansionRequestManager getExpansionRequestManager() { return expansionRequestManager; }
 
-    public GUIManager getGuiManager() {
-        return guiManager;
-    }
+    public Set<UUID> getBypassing() { return bypassing; }
+    public boolean isBypassing(UUID uuid) { return bypassing.contains(uuid); }
 
-    public ClaimRoleManager getRoleManager() {
-        return roleManager;
-    }
+    public void toggleDebug() { debugEnabled = !debugEnabled; }
+    public boolean isDebugEnabled() { return debugEnabled; }
 
-    public PlotManager getPlotManager() {
-        return plotManager;
-    }
-
-    public ExpansionRequestManager getExpansionRequestManager() {
-        return expansionRequestManager;
-    }
-
-    public Set<UUID> getBypassing() {
-        return bypassing;
-    }
-
-    public boolean isBypassing(UUID uuid) {
-        return bypassing.contains(uuid);
-    }
-
-    public void toggleDebug() {
-        debugEnabled = !debugEnabled;
-    }
-
-    public boolean isDebugEnabled() {
-        return debugEnabled;
-    }
-
-    public void loadMessagesConfig() {
-        saveResource("messages.yml", false);
-    }
+    public void loadMessagesConfig() { saveResource("messages.yml", false); }
 }

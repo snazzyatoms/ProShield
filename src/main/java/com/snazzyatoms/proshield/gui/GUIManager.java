@@ -390,16 +390,30 @@ public class GUIManager {
     /* ============================
      * ADMIN EXPANSION REVIEW
      * ============================ */
-    public void openExpansionReview(Player admin) {
-        String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
-        int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
-        Inventory inv = Bukkit.createInventory(admin, size, messages.color(title));
-
-        List<ExpansionRequest> pending = expansionManager.getPendingRequests();
-        if (pending.isEmpty()) {
-            inv.setItem(22, simpleItem(Material.BARRIER, "&7No Pending Requests", "&7There are no requests to review."));
-        } else {
+   } else {
             int slot = 0;
-            for (ExpansionRequest)
-}
+            for (ExpansionRequest req : pending) {
+                OfflinePlayer p = Bukkit.getOfflinePlayer(req.getRequester());
+                String name = p.getName() != null ? p.getName() : p.getUniqueId().toString();
+
+                List<String> lore = new ArrayList<>();
+                lore.add(messages.color("&7Blocks: &f" + req.getBlocks()));
+                lore.add(messages.color("&7Requested: &f" + new Date(req.getTimestamp())));
+                lore.add(messages.color("&aLeft-click: Approve"));
+                lore.add(messages.color("&cRight-click: Deny"));
+
+                ItemStack paper = new ItemStack(Material.PAPER);
+                ItemMeta meta = paper.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(messages.color("&f" + name));
+                    meta.setLore(lore);
+                    paper.setItemMeta(meta);
+                }
+                inv.setItem(slot++, paper);
+            }
+        }
+
+        placeNavButtons(inv);
+        admin.openInventory(inv);
+    }
 }

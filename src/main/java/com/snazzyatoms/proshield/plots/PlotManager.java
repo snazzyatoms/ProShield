@@ -2,14 +2,9 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 
 import java.io.File;
@@ -18,9 +13,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * PlotManager (v1.2.5)
+ * PlotManager (v1.2.5-clean)
  * - Handles claim persistence (save/load to disk).
- * - Handles mob despawn + repel in claims.
+ * - Handles claim and unclaim logic.
+ * - All mob protection logic moved to MobProtectionListener.
  */
 public class PlotManager {
 
@@ -35,7 +31,6 @@ public class PlotManager {
         this.messages = plugin.getMessagesUtil();
         this.dataFile = new File(plugin.getDataFolder(), "claims.yml");
         loadAll();
-        startMobTasks();
     }
 
     /* =========================================================
@@ -52,8 +47,13 @@ public class PlotManager {
         }
 
         int radius = plugin.getConfig().getInt("claims.default-radius", 50);
-        Plot plot = new Plot(chunk.getWorld().getName(), chunk.getX(), chunk.getZ(),
-                player.getUniqueId(), radius);
+        Plot plot = new Plot(
+                chunk.getWorld().getName(),
+                chunk.getX(),
+                chunk.getZ(),
+                player.getUniqueId(),
+                radius
+        );
 
         plots.put(key, plot);
         saveAll();
@@ -116,6 +116,7 @@ public class PlotManager {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void loadAll() {
         FileConfiguration cfg = plugin.getYaml("claims", dataFile);
         if (!cfg.isConfigurationSection("claims")) return;
@@ -132,8 +133,13 @@ public class PlotManager {
             int radius = cfg.getInt("claims." + key + ".radius", plugin.getConfig().getInt("claims.default-radius", 50));
 
             Plot plot = new Plot(world, x, z, owner, radius);
-            plot.getTrusted().putAll((Map<String, String>) cfg.getConfigurationSection("claims." + key + ".trusted").getValues(false));
-            plot.getFlags().putAll((Map<String, Boolean>) cfg.getConfigurationSection("claims." + key + ".flags").getValues(false));
+
+            if (cfg.isConfigurationSection("claims." + key + ".trusted")) {
+                plot.getTrusted().putAll((Map<String, String>) cfg.getConfigurationSection("claims." + key + ".trusted").getValues(false));
+            }
+            if (cfg.isConfigurationSection("claims." + key + ".flags")) {
+                plot.getFlags().putAll((Map<String, Boolean>) cfg.getConfigurationSection("claims." + key + ".flags").getValues(false));
+            }
 
             plots.put(key, plot);
         }
@@ -142,65 +148,5 @@ public class PlotManager {
 
     private String key(Chunk chunk) {
         return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
-    }
-
-    /* =========================================================
-     * Mob Handling
-     * ========================================================= */
-
-    private void startMobTasks() {
-        Bukkit.getScheduler().runTaskTimer(plugin, this::handleMobDespawn, 20L, 20L * 10); // every 10s
-        Bukkit.getScheduler().runTaskTimer(plugin, this::handleMobRepel, 20L, 20L * 5);   // every 5s
-    }
-
-    private void handleMobDespawn() {
-        if (!plugin.getConfig().getBoolean("protection.mobs.despawn-inside", true)) return;
-
-        for (Plot plot : plots.values()) {
-            World world = Bukkit.getWorld(plot.getWorld());
-            if (world == null) continue;
-
-            int cx = plot.getX();
-            int cz = plot.getZ();
-            Chunk chunk = world.getChunkAt(cx, cz);
-
-            for (Entity e : chunk.getEntities()) {
-                if (e instanceof Monster monster) {
-                    monster.remove();
-                }
-            }
-        }
-    }
-
-    private void handleMobRepel() {
-        if (!plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) return;
-
-        double radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 15.0);
-        double pushH = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
-        double pushV = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
-
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Plot plot = getPlot(player.getLocation());
-            if (plot == null) continue;
-
-            List<Entity> nearby = player.getNearbyEntities(radius, radius, radius);
-            for (Entity e : nearby) {
-                if (e instanceof Monster monster) {
-                    Location pLoc = player.getLocation();
-                    Location mLoc = monster.getLocation();
-
-                    double dx = mLoc.getX() - pLoc.getX();
-                    double dz = mLoc.getZ() - pLoc.getZ();
-                    double dist = Math.sqrt(dx * dx + dz * dz);
-
-                    if (dist < 0.1) dist = 0.1;
-
-                    double vx = (dx / dist) * pushH;
-                    double vz = (dz / dist) * pushH;
-
-                    monster.setVelocity(monster.getVelocity().add(new org.bukkit.util.Vector(vx, pushV, vz)));
-                }
-            }
-        }
     }
 }

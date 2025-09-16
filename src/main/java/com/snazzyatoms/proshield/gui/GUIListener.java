@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
  * GUIListener
  * Dispatches clicks to GUIManager handlers.
  * Cancels vanilla movement to keep menus safe.
+ * Includes global handling for Back + Exit buttons.
  */
 public class GUIListener implements Listener {
 
@@ -45,6 +46,28 @@ public class GUIListener implements Listener {
 
         // Always cancel vanilla movement
         event.setCancelled(true);
+
+        // Handle universal Back / Exit buttons
+        String rawName = clicked.hasItemMeta() && clicked.getItemMeta().hasDisplayName()
+                ? clicked.getItemMeta().getDisplayName().replace("§", "").toLowerCase()
+                : "";
+
+        if (rawName.equalsIgnoreCase("back") || rawName.contains("return to")) {
+            // Go back depending on which menu we’re in
+            if (title.contains("Trusted Players") || title.contains("Claim Flags") || title.contains("Admin Tools")) {
+                guiManager.openMain(player);
+            } else if (title.contains("Assign Role")) {
+                guiManager.openTrusted(player);
+            } else if (title.contains("Deny Reasons")) {
+                guiManager.openMain(player); // or open expansion review if desired
+            }
+            return;
+        }
+
+        if (rawName.equalsIgnoreCase("exit")) {
+            player.closeInventory();
+            return;
+        }
 
         // Dispatch to correct handler
         if (title.contains("ProShield Menu")) {
@@ -94,6 +117,8 @@ public class GUIListener implements Listener {
             } else {
                 plugin.getMessagesUtil().send(player, "&cYou don’t have permission to use Admin Tools.");
             }
+        } else if (stripped.contains("exit")) {
+            player.closeInventory();
         }
     }
 }

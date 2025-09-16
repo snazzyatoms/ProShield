@@ -50,11 +50,11 @@ public class ProShield extends JavaPlugin {
         this.guiCache = new GUICache();
         this.guiManager = new GUIManager(this);
 
-        // Listeners
+        // Register listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
 
-        // Commands
+        // Register commands
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
             ProShieldCommand executor = new ProShieldCommand(this);
@@ -62,7 +62,7 @@ public class ProShield extends JavaPlugin {
             cmd.setTabCompleter(executor);
         }
 
-        // Player dispatcher (opens GUI, etc.)
+        // Player command dispatcher (compass, shortcuts, etc.)
         new PlayerCommandDispatcher(this);
 
         getLogger().info("✅ ProShield enabled. Running version " + getDescription().getVersion());
@@ -74,19 +74,50 @@ public class ProShield extends JavaPlugin {
         getLogger().info("🛑 ProShield disabled.");
     }
 
-    // Accessors
-    public MessagesUtil getMessagesUtil() { return messages; }
-    public GUIManager getGuiManager() { return guiManager; }
-    public ClaimRoleManager getRoleManager() { return roleManager; }
-    public PlotManager getPlotManager() { return plotManager; }
-    public ExpansionRequestManager getExpansionRequestManager() { return expansionRequestManager; }
-    public GUICache getGuiCache() { return guiCache; }
+    /* =============================================================
+     * Accessors
+     * ============================================================= */
+    public MessagesUtil getMessagesUtil() {
+        return messages;
+    }
 
-    public Set<UUID> getBypassing() { return bypassing; }
-    public boolean isBypassing(UUID uuid) { return bypassing.contains(uuid); }
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
 
-    public void toggleDebug() { debugEnabled = !debugEnabled; }
-    public boolean isDebugEnabled() { return debugEnabled; }
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
+    }
 
-    public void loadMessagesConfig() { saveResource("messages.yml", false); }
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ExpansionRequestManager getExpansionRequestManager() {
+        return expansionRequestManager;
+    }
+
+    public GUICache getGuiCache() {
+        return guiCache;
+    }
+
+    public Set<UUID> getBypassing() {
+        return bypassing;
+    }
+
+    public boolean isBypassing(UUID uuid) {
+        return bypassing.contains(uuid);
+    }
+
+    public void toggleDebug() {
+        debugEnabled = !debugEnabled;
+    }
+
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public void loadMessagesConfig() {
+        saveResource("messages.yml", false);
+    }
 }

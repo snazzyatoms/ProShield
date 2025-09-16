@@ -1,129 +1,92 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.plots.PlotManager;
-import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
-    private final GUIManager guiManager;
-    private final PlotManager plotManager;
-    private final MessagesUtil messages;
 
-    public ProShieldCommand(ProShield plugin, GUIManager guiManager, PlotManager plotManager, MessagesUtil messages) {
+    public ProShieldCommand(ProShield plugin) {
         this.plugin = plugin;
-        this.guiManager = guiManager;
-        this.plotManager = plotManager;
-        this.messages = messages;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("This command is only for players.");
-            return true;
-        }
-
-        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-            // If no arguments, open the main menu
-            if (args.length == 0) {
-                guiManager.openMain(player);
-                return true;
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // If no args → open GUI main menu
+        if (args.length == 0) {
+            if (sender instanceof Player player) {
+                plugin.getGuiManager().openMain(player);
+            } else {
+                sender.sendMessage("§cOnly players can use this command.");
             }
-
-            // Otherwise, show help
-            messages.send(player, "&bProShield Commands:");
-            messages.send(player, "&f/ps claim &7- Claim your current chunk.");
-            messages.send(player, "&f/ps unclaim &7- Unclaim your chunk.");
-            messages.send(player, "&f/ps info &7- Info about your claim.");
-            messages.send(player, "&f/ps compass &7- Get a ProShield compass.");
-            messages.send(player, "&f/ps admin &7- Open Admin Tools (if admin).");
             return true;
         }
 
+        // Keep admin/debug/bypass commands for staff
         switch (args[0].toLowerCase()) {
-            case "claim":
-                plotManager.claimPlot(player);
-                break;
-            case "unclaim":
-                plotManager.unclaimPlot(player);
-                break;
-            case "info":
-                plotManager.sendClaimInfo(player);
-                break;
-            case "compass":
-                plugin.getCompassManager().giveCompass(player);
-                break;
-            case "reload":
-                if (player.hasPermission("proshield.admin")) {
-                    plugin.reloadConfig();
-                    plugin.loadMessagesConfig();
-                    messages.send(player, "&aConfigs reloaded.");
-                } else {
-                    messages.send(player, "&cNo permission.");
+            case "reload" -> {
+                if (!sender.hasPermission("proshield.admin")) {
+                    sender.sendMessage("§cYou don’t have permission.");
+                    return true;
                 }
-                break;
-            case "debug":
-                if (player.hasPermission("proshield.admin")) {
-                    plugin.toggleDebug();
-                    messages.send(player, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aENABLED" : "&cDISABLED"));
-                } else {
-                    messages.send(player, "&cNo permission.");
+                plugin.reloadConfig();
+                plugin.loadMessagesConfig();
+                sender.sendMessage("§aProShield configs reloaded.");
+            }
+            case "debug" -> {
+                if (!sender.hasPermission("proshield.admin")) {
+                    sender.sendMessage("§cYou don’t have permission.");
+                    return true;
                 }
-                break;
-            case "bypass":
-                if (player.hasPermission("proshield.admin")) {
-                    if (plugin.isBypassing(player.getUniqueId())) {
-                        plugin.getBypassing().remove(player.getUniqueId());
-                        messages.send(player, "&cBypass disabled.");
-                    } else {
-                        plugin.getBypassing().add(player.getUniqueId());
-                        messages.send(player, "&aBypass enabled.");
-                    }
-                } else {
-                    messages.send(player, "&cNo permission.");
+                plugin.toggleDebug();
+                sender.sendMessage("§eDebug mode: " + (plugin.isDebugEnabled() ? "§aENABLED" : "§cDISABLED"));
+            }
+            case "bypass" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("§cOnly players can use this command.");
+                    return true;
                 }
-                break;
-            case "admin":
-                if (player.hasPermission("proshield.admin")) {
-                    guiManager.openAdminTools(player);
-                } else {
-                    messages.send(player, "&cNo permission.");
+                if (!player.hasPermission("proshield.admin")) {
+                    player.sendMessage("§cYou don’t have permission.");
+                    return true;
                 }
-                break;
-            default:
-                // Any unknown command → open main GUI
-                guiManager.openMain(player);
-                break;
+                if (plugin.isBypassing(player.getUniqueId())) {
+                    plugin.getBypassing().remove(player.getUniqueId());
+                    player.sendMessage("§cBypass disabled.");
+                } else {
+                    plugin.getBypassing().add(player.getUniqueId());
+                    player.sendMessage("§aBypass enabled.");
+                }
+            }
+            case "admin" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("§cOnly players can use this command.");
+                    return true;
+                }
+                if (!player.hasPermission("proshield.admin")) {
+                    player.sendMessage("§cYou don’t have permission.");
+                    return true;
+                }
+                plugin.getGuiManager().openAdminTools(player);
+            }
+            default -> sender.sendMessage("§cUnknown subcommand. Use /proshield admin, reload, debug, or bypass.");
         }
         return true;
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-        List<String> options = new ArrayList<>();
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            options.add("claim");
-            options.add("unclaim");
-            options.add("info");
-            options.add("compass");
-            if (sender.hasPermission("proshield.admin")) {
-                options.add("reload");
-                options.add("debug");
-                options.add("bypass");
-                options.add("admin");
-            }
+            return List.of("admin", "reload", "debug", "bypass");
         }
-        return options;
+        return Collections.emptyList();
     }
 }

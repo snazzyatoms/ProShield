@@ -3,7 +3,7 @@ package com.snazzyatoms.proshield.plots;
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
+import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -14,19 +14,22 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
-import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import java.util.List;
 
 /**
- * Unified Protection Listener
- * - Handles mobs, explosions, fire, lava/water grief, pets, passive animals
- * - Provides safezones inside claims
- * - Repels/Despawns hostile mobs inside claims
- * - Prevents environmental grief
+ * MobProtectionListener
+ * Unified protection for claims:
+ * - Prevent hostile targeting/damage in safezones
+ * - Repel hostiles near players inside claims
+ * - Periodically despawn hostiles inside claims
+ * - Block explosion grief inside claims (flags.explosions=false)
+ * - Fire/ignite controls via granular flags
+ * - Protect vehicles/frames in claims (trusted only)
  */
 public class MobProtectionListener implements Listener {
 
@@ -40,9 +43,9 @@ public class MobProtectionListener implements Listener {
         startDespawnTask();
     }
 
-    /* ============================================================= */
-    /* Spawning / Targeting                                           */
-    /* ============================================================= */
+    /* =========================
+     * Spawning / Targeting
+     * ========================= */
 
     @EventHandler
     public void onMobSpawn(CreatureSpawnEvent event) {
@@ -60,13 +63,59 @@ public class MobProtectionListener implements Listener {
         if (plot != null && plot.getFlag("safezone", plugin.getConfig())) {
             if (event.getEntity() instanceof Monster) {
                 event.setCancelled(true);
+                event.setTarget(null);
             }
         }
     }
 
-    /* ============================================================= */
-    /* Damage Protection                                              */
-    /* ============================================================= */
+    /**
+     * If a player moves into a claim (safezone), calm nearby angry mobs:
+     * - clear targets
+     * - reset anger (for zombified piglins, etc.)
+     * - optionally play a subtle sound (config)
+     */
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (event.getTo() == null) return;
+        Player player = event.getPlayer();
+
+        Plot plot = plotManager.getPlot(event.getTo());
+        if (plot == null) return;
+        if (!plot.getFlag("safezone", plugin.getConfig())) return;
+
+        // Only act when crossing chunk/claim boundaries or significant move
+        if (event.getFrom().getChunk() == event.getTo().getChunk()) return;
+
+        double radius = 16.0;
+        List<Entity> nearby = player.getNearbyEntities(radius, radius, radius);
+        for (Entity e : nearby) {
+            if (!(e instanceof Monster monster)) continue;
+
+            // Clear any target on entry
+            if (monster.getTarget() != null && monster.getTarget().getUniqueId().equals(player.getUniqueId())) {
+                monster.setTarget(null);
+            }
+
+            // Clear anger if applicable
+            if (monster instanceof PigZombie pigZombie) {
+                pigZombie.setAngry(false);
+                pigZombie.setTarget(null);
+            }
+        }
+
+        // Optional feedback
+        if (plugin.getConfig().getBoolean("protection.mobs.border-repel.play-sound", false)) {
+            try {
+                String s = plugin.getConfig().getString("protection.mobs.border-repel.sound-type", "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR");
+                Sound sound = Sound.valueOf(s);
+                player.playSound(player.getLocation(), sound, 0.25f, 1.0f);
+            } catch (IllegalArgumentException ignored) { }
+        }
+    }
+
+    /* =========================
+     * Damage Protection
+     * ========================= */
 
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
@@ -75,36 +124,37 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlot(victim.getLocation());
 
         if (plot == null) return;
-        FileConfiguration cfg = plugin.getConfig();
-        boolean safezone = plot.getFlag("safezone", cfg);
+        boolean safezone = plot.getFlag("safezone", plugin.getConfig());
 
-        // Player victim inside safezone
+        // Player is safe from hostiles in safezone
         if (victim instanceof Player && safezone) {
             if (damager instanceof Monster) { event.setCancelled(true); return; }
             if (damager instanceof Projectile proj && proj.getShooter() instanceof Monster) { event.setCancelled(true); return; }
             if (damager instanceof AreaEffectCloud cloud && cloud.getSource() instanceof Monster) { event.setCancelled(true); return; }
         }
 
-        // Pets & passive animals
-        if (victim instanceof Tameable tame && tame.isTamed() && cfg.getBoolean("protection.mobs.protect-pets", true)) {
+        // Pets & passive animals protection (config-driven)
+        if (victim instanceof Tameable tame && tame.isTamed()
+                && plugin.getConfig().getBoolean("protection.mobs.protect-pets", true)) {
             event.setCancelled(true);
         }
-        if (victim instanceof Animals && cfg.getBoolean("protection.mobs.protect-passive", true)) {
+        if (victim instanceof Animals
+                && plugin.getConfig().getBoolean("protection.mobs.protect-passive", true)) {
             event.setCancelled(true);
         }
     }
 
-    /* ============================================================= */
-    /* Explosion / Fire / Grief                                       */
-    /* ============================================================= */
+    /* =========================
+     * Explosions / Fire / Grief
+     * ========================= */
 
     @EventHandler
     public void onExplosion(EntityExplodeEvent event) {
         Plot plot = plotManager.getPlot(event.getLocation());
         if (plot == null) return;
 
-        FileConfiguration cfg = plugin.getConfig();
-        if (!plot.getFlag("explosions", cfg)) {
+        boolean allowExplosions = plot.getFlag("explosions", plugin.getConfig());
+        if (!allowExplosions) {
             event.blockList().clear();
             event.setCancelled(true);
         }
@@ -115,17 +165,17 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlot(event.getBlock().getLocation());
         if (plot == null) return;
 
-        FileConfiguration cfg = plugin.getConfig();
         switch (event.getCause()) {
             case FLINT_AND_STEEL -> {
-                if (!plot.getFlag("ignite-flint", cfg)) event.setCancelled(true);
+                if (!plot.getFlag("ignite-flint", plugin.getConfig())) event.setCancelled(true);
             }
             case LAVA -> {
-                if (!plot.getFlag("ignite-lava", cfg)) event.setCancelled(true);
+                if (!plot.getFlag("ignite-lava", plugin.getConfig())) event.setCancelled(true);
             }
             case LIGHTNING -> {
-                if (!plot.getFlag("ignite-lightning", cfg)) event.setCancelled(true);
+                if (!plot.getFlag("ignite-lightning", plugin.getConfig())) event.setCancelled(true);
             }
+            default -> { /* leave others to vanilla or other flags */ }
         }
     }
 
@@ -143,12 +193,11 @@ public class MobProtectionListener implements Listener {
     public void onBucketEmpty(PlayerBucketEmptyEvent event) {
         Plot plot = plotManager.getPlot(event.getBlock().getLocation());
         if (plot == null) return;
-        FileConfiguration cfg = plugin.getConfig();
 
-        if (event.getBucket() == Material.LAVA_BUCKET && !plot.getFlag("bucket-lava", cfg)) {
+        if (event.getBucket() == Material.LAVA_BUCKET && !plot.getFlag("bucket-lava", plugin.getConfig())) {
             event.setCancelled(true);
         }
-        if (event.getBucket() == Material.WATER_BUCKET && !plot.getFlag("bucket-water", cfg)) {
+        if (event.getBucket() == Material.WATER_BUCKET && !plot.getFlag("bucket-water", plugin.getConfig())) {
             event.setCancelled(true);
         }
     }
@@ -157,14 +206,16 @@ public class MobProtectionListener implements Listener {
     public void onBucketFill(PlayerBucketFillEvent event) {
         Plot plot = plotManager.getPlot(event.getBlock().getLocation());
         if (plot == null) return;
+
+        // Generic bucket-use toggle (use this if you expose such a flag in future)
         if (!plot.getFlag("bucket-use", plugin.getConfig())) {
             event.setCancelled(true);
         }
     }
 
-    /* ============================================================= */
-    /* Entity Protections (Frames, Vehicles, etc.)                    */
-    /* ============================================================= */
+    /* =========================
+     * Entity Protections
+     * ========================= */
 
     @EventHandler
     public void onVehicleDestroy(VehicleDestroyEvent event) {
@@ -194,9 +245,9 @@ public class MobProtectionListener implements Listener {
         }
     }
 
-    /* ============================================================= */
-    /* Repel + Despawn Tasks                                          */
-    /* ============================================================= */
+    /* =========================
+     * Repel + Despawn Tasks
+     * ========================= */
 
     private void startRepelTask() {
         new BukkitRunnable() {

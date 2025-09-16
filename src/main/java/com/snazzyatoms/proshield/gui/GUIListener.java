@@ -59,7 +59,7 @@ public class GUIListener implements Listener {
             } else if (title.contains("Assign Role")) {
                 guiManager.openTrusted(player);
             } else if (title.contains("Deny Reasons")) {
-                guiManager.openMain(player); // or open expansion review if desired
+                guiManager.openExpansionReview(player); // ✅ go back to Expansion Review
             }
             return;
         }

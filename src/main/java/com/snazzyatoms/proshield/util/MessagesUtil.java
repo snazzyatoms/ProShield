@@ -3,16 +3,44 @@ package com.snazzyatoms.proshield.util;
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Objects;
 
 public class MessagesUtil {
+
     private final ProShield plugin;
-    private final FileConfiguration msgs; // messages.yml loaded into ProShield#getMessagesConfig
+    private FileConfiguration msgs;
+    private final File messagesFile;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        this.msgs = plugin.getMessagesConfig() != null ? plugin.getMessagesConfig() : plugin.getConfig();
+        this.messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+        reload();
+    }
+
+    /** Reloads messages.yml */
+    public void reload() {
+        if (!messagesFile.exists()) {
+            plugin.saveResource("messages.yml", false);
+        }
+        this.msgs = YamlConfiguration.loadConfiguration(messagesFile);
+
+        // Defaults from jar
+        InputStream defStream = plugin.getResource("messages.yml");
+        if (defStream != null) {
+            YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream));
+            this.msgs.setDefaults(defConfig);
+        }
+    }
+
+    public FileConfiguration getConfig() {
+        return msgs;
     }
 
     public void send(Player player, String message) {
@@ -38,23 +66,19 @@ public class MessagesUtil {
     }
 
     public String color(String input) {
-        if (input == null) return "";
-        return ChatColor.translateAlternateColorCodes('&', input);
+        return ChatColor.translateAlternateColorCodes('&', Objects.requireNonNullElse(input, ""));
     }
 
     private String prefix() {
-        return msgs.getString("messages.prefix",
-                msgs.getString("prefix", "&3[ProShield]&r "));
+        return msgs.getString("messages.prefix", "&3[ProShield]&r ");
     }
 
     private String debugPrefix() {
-        return msgs.getString("messages.debug-prefix",
-                msgs.getString("debug-prefix", "&8[Debug]&r "));
+        return msgs.getString("messages.debug-prefix", "&8[Debug]&r ");
     }
 
     public String get(String path) {
-        String v = msgs.getString(path, null);
-        if (v == null) v = plugin.getConfig().getString(path, "");
+        String v = msgs.getString(path, "");
         return color(v);
     }
 }

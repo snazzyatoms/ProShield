@@ -8,9 +8,8 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 /**
  * ChatListener
- * - Delegates all special chat input (deny reasons, role input, etc.)
- *   into GUIManager.handleChatInput.
- * - Keeps main thread safe by rescheduling any GUI work.
+ * Currently reserved for future chat-based inputs.
+ * For now, it does not handle role assignment (GUI-based only).
  */
 public class ChatListener implements Listener {
 
@@ -26,14 +25,8 @@ public class ChatListener implements Listener {
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
 
-        // If GUIManager expects chat input from this player
-        if (guiManager.isAwaitingChatInput(player)) {
-            event.setCancelled(true);
-            String message = event.getMessage();
-
-            // Switch back to main thread for GUI actions
-            plugin.getServer().getScheduler().runTask(plugin,
-                    () -> guiManager.handleChatInput(player, message));
-        }
+        // No chat-based inputs are in use anymore.
+        // All trust/roles/flags/expansion are fully GUI-driven.
+        // We keep this listener in case future features need chat capture.
     }
 }

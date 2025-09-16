@@ -2,225 +2,205 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * PlotManager
- * - In-memory map<world, map<chunkX, map<chunkZ, Plot>>>
- * - Handles claim, unclaim, lookup, info.
- * - Supports radius-based expansion (per-plot only).
+ * PlotManager (v1.2.5)
+ * - Handles claim persistence (save/load to disk).
+ * - Handles mob despawn + repel in claims.
  */
 public class PlotManager {
 
     private final ProShield plugin;
     private final MessagesUtil messages;
+    private final Map<String, Plot> plots = new ConcurrentHashMap<>();
 
-    // world -> x -> z -> Plot
-    private final Map<String, Map<Integer, Map<Integer, Plot>>> plots = new HashMap<>();
+    private final File dataFile;
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
         this.messages = plugin.getMessagesUtil();
+        this.dataFile = new File(plugin.getDataFolder(), "claims.yml");
+        loadAll();
+        startMobTasks();
     }
 
-    /* ========================
-     * Index helpers
-     * ======================== */
-    private Map<Integer, Map<Integer, Plot>> worldIndex(String world) {
-        return plots.computeIfAbsent(world.toLowerCase(Locale.ROOT), w -> new HashMap<>());
-    }
+    /* =========================================================
+     * Claim Management
+     * ========================================================= */
 
-    private Map<Integer, Plot> xIndex(String world, int x) {
-        return worldIndex(world).computeIfAbsent(x, ix -> new HashMap<>());
-    }
+    public boolean claimPlot(Player player) {
+        Chunk chunk = player.getLocation().getChunk();
+        String key = key(chunk);
 
-    private Plot get(String world, int x, int z) {
-        Map<Integer, Map<Integer, Plot>> w = plots.get(world.toLowerCase(Locale.ROOT));
-        if (w == null) return null;
-        Map<Integer, Plot> row = w.get(x);
-        if (row == null) return null;
-        return row.get(z);
-    }
-
-    private void put(Plot plot) {
-        xIndex(plot.getWorld(), plot.getX()).put(plot.getZ(), plot);
-    }
-
-    private void remove(String world, int x, int z) {
-        Map<Integer, Map<Integer, Plot>> w = plots.get(world.toLowerCase(Locale.ROOT));
-        if (w == null) return;
-        Map<Integer, Plot> row = w.get(x);
-        if (row == null) return;
-        row.remove(z);
-        if (row.isEmpty()) w.remove(x);
-        if (w.isEmpty()) plots.remove(world.toLowerCase(Locale.ROOT));
-    }
-
-    private boolean isClaimed(String world, int x, int z) {
-        return get(world, x, z) != null;
-    }
-
-    /* ========================
-     * Persistence stubs
-     * ======================== */
-    public void loadAll() {
-        // TODO: Load plots from disk
-        // When loaded, call put(plot);
-    }
-
-    public void saveAll() {
-        // TODO: Save plots to disk
-    }
-
-    /* ========================
-     * Lookups
-     * ======================== */
-    public Plot getPlot(Location loc) {
-        if (loc == null || loc.getWorld() == null) return null;
-        Chunk c = loc.getChunk();
-        return get(loc.getWorld().getName(), c.getX(), c.getZ());
-    }
-
-    public UUID getClaimIdAt(Location loc) {
-        Plot p = getPlot(loc);
-        return p != null ? p.getId() : null;
-    }
-
-    public Plot getPlotByChunk(String world, int x, int z) {
-        return get(world, x, z);
-    }
-
-    public Set<Plot> getPlotsByOwner(UUID owner) {
-        Set<Plot> out = new HashSet<>();
-        for (Map<Integer, Map<Integer, Plot>> w : plots.values()) {
-            for (Map<Integer, Plot> row : w.values()) {
-                for (Plot p : row.values()) {
-                    if (p.getOwner().equals(owner)) out.add(p);
-                }
-            }
-        }
-        return out;
-    }
-
-    /* ========================
-     * Claim ops
-     * ======================== */
-    public boolean createPlot(UUID owner, Location at) {
-        if (at == null || at.getWorld() == null) return false;
-        Chunk c = at.getChunk();
-        String w = at.getWorld().getName();
-        if (get(w, c.getX(), c.getZ()) != null) return false;
-
-        int defaultRadius = plugin.getConfig().getInt("claims.default-radius", 50);
-        Plot plot = Plot.of(c, owner, defaultRadius);
-        put(plot);
-        return true;
-    }
-
-    public boolean removePlot(Location at) {
-        if (at == null || at.getWorld() == null) return false;
-        Chunk c = at.getChunk();
-        Plot existing = get(at.getWorld().getName(), c.getX(), c.getZ());
-        if (existing == null) return false;
-        remove(at.getWorld().getName(), c.getX(), c.getZ());
-        return true;
-    }
-
-    public void claimPlot(Player player) {
-        if (player == null || player.getLocation() == null) return;
-        Location at = player.getLocation();
-        Plot existing = getPlot(at);
-        if (existing != null) {
-            String ownerName = plugin.getServer().getOfflinePlayer(existing.getOwner()).getName();
-            messages.send(player, plugin.getMessagesConfig().getString("claim.already-owned", "&cThis chunk is already claimed by {owner}.")
-                    .replace("{owner}", ownerName == null ? "Unknown" : ownerName));
-            return;
-        }
-        if (createPlot(player.getUniqueId(), at)) {
-            messages.send(player, plugin.getMessagesConfig().getString("claim.success", "&aYou successfully claimed this chunk."));
-            saveAll();
-        } else {
-            messages.send(player, "&cFailed to claim here.");
-        }
-    }
-
-    public void unclaimPlot(Player player) {
-        if (player == null) return;
-        Location at = player.getLocation();
-        Plot p = getPlot(at);
-        if (p == null) {
-            messages.send(player, plugin.getMessagesConfig().getString("error.no-claim", "&cNo claim at your location."));
-            return;
-        }
-        if (!p.getOwner().equals(player.getUniqueId()) && !player.hasPermission("proshield.admin")) {
-            messages.send(player, plugin.getMessagesConfig().getString("claim.not-owner", "&cYou are not the owner of this claim."));
-            return;
-        }
-        if (removePlot(at)) {
-            messages.send(player, plugin.getMessagesConfig().getString("claim.unclaimed", "&aYou unclaimed this chunk."));
-            saveAll();
-        } else {
-            messages.send(player, "&cFailed to unclaim here.");
-        }
-    }
-
-    /* ========================
-     * Info
-     * ======================== */
-    public void sendClaimInfo(Player player) {
-        Location at = player.getLocation();
-        Plot plot = getPlot(at);
-        if (plot == null) {
-            messages.send(player, plugin.getMessagesConfig().getString("error.no-claim", "&cNo claim at your location."));
-            return;
-        }
-
-        OfflinePlayer owner = plugin.getServer().getOfflinePlayer(plot.getOwner());
-        String ownerName = (owner.getName() != null ? owner.getName() : owner.getUniqueId().toString());
-
-        messages.send(player, "&6--- Claim Info ---");
-        messages.send(player, "&eWorld: &f" + plot.getWorld());
-        messages.send(player, "&eChunk: &f" + plot.getX() + ", " + plot.getZ());
-        messages.send(player, "&eOwner: &f" + ownerName);
-        messages.send(player, "&eRadius: &f" + plot.getRadius() + " blocks");
-        messages.send(player, "&eTrusted: &f" + plot.getTrusted().size());
-
-        if (plot.getFlags().isEmpty()) {
-            messages.send(player, "&eFlags: &7None set.");
-        } else {
-            messages.send(player, "&eFlags: &f" + String.join(", ", plot.getFlags().keySet())); // ✅ fix join on Map
-        }
-    }
-
-    /* ========================
-     * Per-Plot Radius Expansion
-     * ======================== */
-
-    /**
-     * Expands only the specific plot at the given location.
-     * - Skips if player is not the owner.
-     * - Respects max-increase from config.
-     */
-    public boolean expandPlot(UUID owner, Location at, int extraBlocks) {
-        Plot plot = getPlot(at);
-        if (plot == null || !plot.getOwner().equals(owner)) {
+        if (plots.containsKey(key)) {
+            messages.send(player, "&cThis chunk is already claimed.");
             return false;
         }
 
-        int maxIncrease = plugin.getConfig().getInt("claims.expansion.max-increase", 100);
-        int allowedIncrease = Math.min(extraBlocks, maxIncrease);
+        int radius = plugin.getConfig().getInt("claims.default-radius", 50);
+        Plot plot = new Plot(chunk.getWorld().getName(), chunk.getX(), chunk.getZ(),
+                player.getUniqueId(), radius);
 
-        int newRadius = plot.getRadius() + allowedIncrease;
-        if (newRadius > plot.getRadius()) {
-            plot.setRadius(newRadius);
-            saveAll();
-            return true;
+        plots.put(key, plot);
+        saveAll();
+        messages.send(player, "&aYou successfully claimed this chunk.");
+        return true;
+    }
+
+    public boolean unclaimPlot(Player player) {
+        Chunk chunk = player.getLocation().getChunk();
+        String key = key(chunk);
+
+        Plot plot = plots.get(key);
+        if (plot == null) {
+            messages.send(player, "&cNo claim here.");
+            return false;
         }
-        return false;
+
+        if (!plot.getOwner().equals(player.getUniqueId())
+                && !player.hasPermission("proshield.admin")) {
+            messages.send(player, "&cYou do not own this claim.");
+            return false;
+        }
+
+        plots.remove(key);
+        saveAll();
+        messages.send(player, "&cYou unclaimed this chunk.");
+        return true;
+    }
+
+    public Plot getPlot(Location loc) {
+        if (loc == null) return null;
+        String key = key(loc.getChunk());
+        return plots.get(key);
+    }
+
+    public Collection<Plot> getAllPlots() {
+        return plots.values();
+    }
+
+    /* =========================================================
+     * Persistence
+     * ========================================================= */
+
+    public void saveAll() {
+        FileConfiguration cfg = plugin.getYaml("claims", dataFile);
+
+        cfg.set("claims", null);
+        for (Plot plot : plots.values()) {
+            String path = "claims." + plot.getWorld() + "," + plot.getX() + "," + plot.getZ();
+            cfg.set(path + ".owner", plot.getOwner().toString());
+            cfg.set(path + ".radius", plot.getRadius());
+            cfg.set(path + ".trusted", plot.getTrusted());
+            cfg.set(path + ".flags", plot.getFlags());
+        }
+
+        try {
+            cfg.save(dataFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save claims.yml: " + e.getMessage());
+        }
+    }
+
+    private void loadAll() {
+        FileConfiguration cfg = plugin.getYaml("claims", dataFile);
+        if (!cfg.isConfigurationSection("claims")) return;
+
+        for (String key : cfg.getConfigurationSection("claims").getKeys(false)) {
+            String[] parts = key.split(",");
+            if (parts.length != 3) continue;
+
+            String world = parts[0];
+            int x = Integer.parseInt(parts[1]);
+            int z = Integer.parseInt(parts[2]);
+
+            UUID owner = UUID.fromString(cfg.getString("claims." + key + ".owner"));
+            int radius = cfg.getInt("claims." + key + ".radius", plugin.getConfig().getInt("claims.default-radius", 50));
+
+            Plot plot = new Plot(world, x, z, owner, radius);
+            plot.getTrusted().putAll((Map<String, String>) cfg.getConfigurationSection("claims." + key + ".trusted").getValues(false));
+            plot.getFlags().putAll((Map<String, Boolean>) cfg.getConfigurationSection("claims." + key + ".flags").getValues(false));
+
+            plots.put(key, plot);
+        }
+        plugin.getLogger().info("Loaded " + plots.size() + " claims.");
+    }
+
+    private String key(Chunk chunk) {
+        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
+    }
+
+    /* =========================================================
+     * Mob Handling
+     * ========================================================= */
+
+    private void startMobTasks() {
+        Bukkit.getScheduler().runTaskTimer(plugin, this::handleMobDespawn, 20L, 20L * 10); // every 10s
+        Bukkit.getScheduler().runTaskTimer(plugin, this::handleMobRepel, 20L, 20L * 5);   // every 5s
+    }
+
+    private void handleMobDespawn() {
+        if (!plugin.getConfig().getBoolean("protection.mobs.despawn-inside", true)) return;
+
+        for (Plot plot : plots.values()) {
+            World world = Bukkit.getWorld(plot.getWorld());
+            if (world == null) continue;
+
+            int cx = plot.getX();
+            int cz = plot.getZ();
+            Chunk chunk = world.getChunkAt(cx, cz);
+
+            for (Entity e : chunk.getEntities()) {
+                if (e instanceof Monster monster) {
+                    monster.remove();
+                }
+            }
+        }
+    }
+
+    private void handleMobRepel() {
+        if (!plugin.getConfig().getBoolean("protection.mobs.border-repel.enabled", true)) return;
+
+        double radius = plugin.getConfig().getDouble("protection.mobs.border-repel.radius", 15.0);
+        double pushH = plugin.getConfig().getDouble("protection.mobs.border-repel.horizontal-push", 0.7);
+        double pushV = plugin.getConfig().getDouble("protection.mobs.border-repel.vertical-push", 0.25);
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Plot plot = getPlot(player.getLocation());
+            if (plot == null) continue;
+
+            List<Entity> nearby = player.getNearbyEntities(radius, radius, radius);
+            for (Entity e : nearby) {
+                if (e instanceof Monster monster) {
+                    Location pLoc = player.getLocation();
+                    Location mLoc = monster.getLocation();
+
+                    double dx = mLoc.getX() - pLoc.getX();
+                    double dz = mLoc.getZ() - pLoc.getZ();
+                    double dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < 0.1) dist = 0.1;
+
+                    double vx = (dx / dist) * pushH;
+                    double vz = (dz / dist) * pushH;
+
+                    monster.setVelocity(monster.getVelocity().add(new org.bukkit.util.Vector(vx, pushV, vz)));
+                }
+            }
+        }
     }
 }

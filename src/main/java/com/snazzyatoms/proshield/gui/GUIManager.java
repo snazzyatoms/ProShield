@@ -403,3 +403,5 @@ public class GUIManager {
             for (ExpansionRequest req : pending) {
                 OfflinePlayer p = Bukkit.getOfflinePlayer(req.getRequester());
                 String name = p.getName() != null ? p.getName() : p.getUniqueId().toString();
+                }
+        }

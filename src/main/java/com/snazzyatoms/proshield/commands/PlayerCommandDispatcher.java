@@ -4,62 +4,88 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.stream.Collectors;
+import java.util.Arrays;
 
-/**
- * Optional helper used by some codepaths:
- * provides convenience wrappers around player-facing actions.
- */
-public class PlayerCommandDispatcher {
+public class PlayerCommandDispatcher implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    public PlayerCommandDispatcher(ProShield plugin, PlotManager plotManager) {
+    public PlayerCommandDispatcher(ProShield plugin) {
         this.plugin = plugin;
-        this.plotManager = plotManager;
+        this.plotManager = plugin.getPlotManager();
         this.messages = plugin.getMessagesUtil();
+
+        Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    public void claim(Player player) {
-        plotManager.claimPlot(player);
+    /* =====================================================
+     * Handle right-click with compass → open GUI
+     * ===================================================== */
+    @EventHandler
+    public void onCompassClick(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = event.getItem();
+        if (item == null || item.getType() != Material.COMPASS) return;
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
+
+        String name = meta.getDisplayName();
+        if (!name.contains("ProShield")) return;
+
+        // Prevent default compass action
+        event.setCancelled(true);
+
+        // Open main GUI
+        plugin.getGuiManager().openMain(player);
     }
 
-    public void unclaim(Player player) {
-        plotManager.unclaimPlot(player);
-    }
-
-    public void info(Player player) {
-        plotManager.sendClaimInfo(player);
-    }
-
-    /**
-     * Print a quick summary of the claim the player is standing in.
-     */
-    public void printClaimSummary(Player player) {
+    /* =====================================================
+     * Utility → Show claim info in chat (optional fallback)
+     * ===================================================== */
+    public void sendClaimInfo(Player player) {
         Plot plot = plotManager.getPlot(player.getLocation());
         if (plot == null) {
-            messages.send(player, "&7No claim here.");
+            messages.send(player, "&7You are in the wilderness.");
             return;
         }
 
-        // Owner info
-        OfflinePlayer owner = plugin.getServer().getOfflinePlayer(plot.getOwner());
-        String ownerName = (owner.getName() != null ? owner.getName() : owner.getUniqueId().toString());
+        String ownerName = Bukkit.getOfflinePlayer(plot.getOwner()).getName();
+        if (ownerName == null) ownerName = plot.getOwner().toString();
 
-        messages.send(player, "&eOwner: &f" + ownerName);
-        messages.send(player, "&eTrusted Players: &f" + plot.getTrusted().size());
+        messages.send(player, "&aClaim Info:");
+        messages.send(player, "&7World: &f" + plot.getWorld());
+        messages.send(player, "&7Chunk: &f" + plot.getX() + ", " + plot.getZ());
+        messages.send(player, "&7Owner: &f" + ownerName);
+        messages.send(player, "&7Radius: &f" + plot.getRadius());
+        messages.send(player, "&7Flags: &f" + Arrays.toString(plot.getFlags().entrySet().toArray()));
+    }
 
-        if (plot.getFlags().isEmpty()) {
-            messages.send(player, "&eFlags: &7None set.");
-        } else {
-            // ✅ fix join on Map
-            String flags = plot.getFlags().keySet().stream().collect(Collectors.joining(", "));
-            messages.send(player, "&eFlags: &f" + flags);
+    /* =====================================================
+     * Give player a ProShield compass
+     * ===================================================== */
+    public void giveCompass(Player player) {
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(messages.color("&6ProShield Compass"));
+            meta.setLore(Arrays.asList(
+                    messages.color("&7Right-click to open the ProShield menu"),
+                    messages.color("&7Manage your claims, flags & trusted players")
+            ));
+            compass.setItemMeta(meta);
         }
+        player.getInventory().addItem(compass);
     }
 }

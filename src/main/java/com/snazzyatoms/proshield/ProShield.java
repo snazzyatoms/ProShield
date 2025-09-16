@@ -1,29 +1,28 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
-import com.snazzyatoms.proshield.compass.CompassListener;
-import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.gui.ChatListener;
-import com.snazzyatoms.proshield.gui.cache.GUICache;
-import com.snazzyatoms.proshield.listeners.MobControlTasks;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.tasks.EntityBorderRepelTask;
+import com.snazzyatoms.proshield.tasks.EntityMobRepelTask;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * ProShield main plugin class
- * v1.2.5 – fully patched with MobControlTasks
- */
 public class ProShield extends JavaPlugin {
 
     private static ProShield instance;
@@ -33,15 +32,15 @@ public class ProShield extends JavaPlugin {
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
     private ExpansionRequestManager expansionRequestManager;
-    private CompassManager compassManager;
-    private GUICache guiCache;
+
+    private FileConfiguration messagesConfig;
 
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
 
-    public static ProShield getInstance() {
-        return instance;
-    }
+    // Repel tasks
+    private EntityMobRepelTask mobRepelTask;
+    private EntityBorderRepelTask borderRepelTask;
 
     @Override
     public void onEnable() {
@@ -50,43 +49,69 @@ public class ProShield extends JavaPlugin {
         saveDefaultConfig();
         loadMessagesConfig();
 
-        messages = new MessagesUtil(this);
-        roleManager = new ClaimRoleManager(this);
-        plotManager = new PlotManager(this);
-        expansionRequestManager = new ExpansionRequestManager(this);
-        guiManager = new GUIManager(this);
-        compassManager = new CompassManager(this, guiManager);
-        guiCache = new GUICache();
+        this.messages = new MessagesUtil(this);
+        this.roleManager = new ClaimRoleManager(this);
+        this.plotManager = new PlotManager(this);
+        this.expansionRequestManager = new ExpansionRequestManager(this);
+        this.guiManager = new GUIManager(this);
 
         // Register commands
-        PluginCommand cmd = getCommand("proshield");
-        if (cmd != null) {
+        PluginCommand psCommand = getCommand("proshield");
+        if (psCommand != null) {
             ProShieldCommand executor = new ProShieldCommand(this, guiManager, plotManager, messages);
-            cmd.setExecutor(executor);
-            cmd.setTabCompleter(executor);
+            psCommand.setExecutor(executor);
+            psCommand.setTabCompleter(executor);
         }
 
         // Register listeners
-        Bukkit.getPluginManager().registerEvents(new CompassListener(this), this);
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(compassManager, this);
 
-        // ✅ Start mob repel + despawn control (config-driven)
-        new MobControlTasks(this);
-
-        // Distribute compasses to online players if config allows
-        compassManager.giveCompassToAll();
+        // Tasks for mob repel / despawn
+        this.mobRepelTask = new EntityMobRepelTask(this);
+        this.borderRepelTask = new EntityBorderRepelTask(this);
+        mobRepelTask.runTaskTimer(this, 0L, 20L * 30); // every 30s
+        borderRepelTask.runTaskTimer(this, 0L, 20L * 5); // every 5s
 
         getLogger().info("ProShield v" + getDescription().getVersion() + " enabled!");
     }
 
     @Override
     public void onDisable() {
+        if (mobRepelTask != null) mobRepelTask.cancel();
+        if (borderRepelTask != null) borderRepelTask.cancel();
         getLogger().info("ProShield disabled.");
     }
 
-    /* ======================= Accessors ======================= */
+    // ==================================================
+    // Config + Messages Handling
+    // ==================================================
+    public void loadMessagesConfig() {
+        File file = new File(getDataFolder(), "messages.yml");
+        if (!file.exists()) {
+            saveResource("messages.yml", false);
+        }
+        messagesConfig = YamlConfiguration.loadConfiguration(file);
+    }
+
+    public FileConfiguration getMessagesConfig() {
+        return messagesConfig;
+    }
+
+    public void saveMessagesConfig() {
+        try {
+            messagesConfig.save(new File(getDataFolder(), "messages.yml"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ==================================================
+    // Getters
+    // ==================================================
+    public static ProShield getInstance() {
+        return instance;
+    }
 
     public MessagesUtil getMessagesUtil() {
         return messages;
@@ -108,31 +133,38 @@ public class ProShield extends JavaPlugin {
         return expansionRequestManager;
     }
 
-    public CompassManager getCompassManager() {
-        return compassManager;
-    }
-
-    public GUICache getGuiCache() {
-        return guiCache;
-    }
-
     public Set<UUID> getBypassing() {
         return bypassing;
+    }
+
+    // ==================================================
+    // Debug + Bypass
+    // ==================================================
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public void toggleDebug() {
+        debugEnabled = !debugEnabled;
     }
 
     public boolean isBypassing(UUID uuid) {
         return bypassing.contains(uuid);
     }
 
-    public boolean isDebugEnabled() {
-        return debugEnabled;
+    // Utility: reload both configs
+    @Override
+    public void reloadConfig() {
+        super.reloadConfig();
+        loadMessagesConfig();
     }
 
-    public void toggleDebug() {
-        this.debugEnabled = !this.debugEnabled;
-    }
-
-    public void loadMessagesConfig() {
-        saveResource("messages.yml", false);
+    // ==================================================
+    // Utilities
+    // ==================================================
+    public void sendDebug(Player player, String msg) {
+        if (debugEnabled) {
+            messages.send(player, "&8[Debug] " + msg);
+        }
     }
 }

@@ -34,35 +34,38 @@ public class GUIListener implements Listener {
         if (title == null) return;
 
         // Only handle our menus
-        if (!title.contains("ProShield") &&
-            !title.contains("Trusted Players") &&
-            !title.contains("Assign Role") &&
-            !title.contains("Claim Flags") &&
-            !title.contains("Admin Tools") &&
-            !title.contains("Expansion Requests") &&
-            !title.contains("Deny Reasons")) {
+        if (!title.contains("ProShield")
+                && !title.contains("Trusted Players")
+                && !title.contains("Assign Role")
+                && !title.contains("Claim Flags")
+                && !title.contains("Admin Tools")
+                && !title.contains("Expansion Requests")
+                && !title.contains("Expansion Request")
+                && !title.contains("Deny Reasons")) {
             return;
         }
 
         // Always cancel vanilla movement
         event.setCancelled(true);
 
-        // Handle universal Back / Exit buttons
+        // Global Back / Exit
         String rawName = clicked.hasItemMeta() && clicked.getItemMeta().hasDisplayName()
                 ? clicked.getItemMeta().getDisplayName().replace("§", "").toLowerCase()
                 : "";
 
         if (rawName.equalsIgnoreCase("back") || rawName.contains("return to")) {
-            if (title.contains("Trusted Players") ||
-                title.contains("Claim Flags") ||
-                title.contains("Admin Tools")) {
+            if (title.contains("Trusted Players")
+                    || title.contains("Claim Flags")
+                    || title.contains("Admin Tools")) {
                 guiManager.openMain(player);
             } else if (title.contains("Assign Role")) {
                 guiManager.openTrusted(player);
             } else if (title.contains("Expansion Requests")) {
-                guiManager.openAdminTools(player); // back from requests → Admin Tools
+                guiManager.openAdminTools(player);
             } else if (title.contains("Deny Reasons")) {
-                guiManager.openExpansionReview(player); // back from deny → expansion review
+                guiManager.openExpansionReview(player);
+            } else if (title.contains("Expansion Request")) {
+                guiManager.openMain(player);
             }
             return;
         }
@@ -87,6 +90,8 @@ public class GUIListener implements Listener {
             guiManager.handleExpansionReviewClick(player, event);
         } else if (title.contains("Deny Reasons")) {
             guiManager.handleDenyReasonClick(player, event);
+        } else if (title.contains("Expansion Request")) {
+            guiManager.handleExpansionRequestClick(player, event);
         }
     }
 
@@ -113,7 +118,7 @@ public class GUIListener implements Listener {
         } else if (stripped.contains("claim flags")) {
             guiManager.openFlags(player);
         } else if (stripped.contains("request expansion")) {
-            plugin.getExpansionRequestManager().openRequestMenu(player);
+            guiManager.openRequestMenu(player); // ✅ now handled by GUIManager
         } else if (stripped.contains("admin tools")) {
             if (player.hasPermission("proshield.admin")) {
                 guiManager.openAdminTools(player);

@@ -390,31 +390,38 @@ public class GUIManager {
     /* ============================
      * ADMIN EXPANSION REVIEW
      * ============================ */
-    public void openExpansionReview(Player admin) {
-        String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
-        int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
-        Inventory inv = Bukkit.createInventory(admin, size, messages.color(title));
+   public void handleExpansionReviewClick(Player admin, InventoryClickEvent event) {
+    ItemStack clicked = event.getCurrentItem();
+    if (isBack(clicked)) { openAdminTools(admin); return; }
+    if (isExit(clicked)) { admin.closeInventory(); return; }
+    if (clicked == null || !clicked.hasItemMeta()) return;
 
+    String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+    if (name == null) return;
+
+    // Match "Request from <name>"
+    if (name.startsWith("Request from")) {
+        // Try to match to a pending request
         List<ExpansionRequest> pending = expansionManager.getPendingRequests();
-        if (pending.isEmpty()) {
-            inv.setItem(22, simpleItem(Material.BARRIER, "&7No Pending Requests", "&7There are no requests to review."));
-        } else {
-            int slot = 0;
-            for (ExpansionRequest req : pending) {
-                UUID requester = req.getPlayerUuid();
-                OfflinePlayer p = Bukkit.getOfflinePlayer(requester);
-                String name = (p != null && p.getName() != null) ? p.getName() : requester.toString();
+        for (ExpansionRequest req : pending) {
+            OfflinePlayer requester = Bukkit.getOfflinePlayer(req.getPlayerUuid());
+            String expectedName = (requester != null && requester.getName() != null)
+                    ? requester.getName() : req.getPlayerUuid().toString();
 
-                List<String> lore = new ArrayList<>();
-                lore.add(messages.color("&7Requested at: &f" + req.getRequestedAt()));
-                lore.add(messages.color("&7Radius: &f" + req.getRequestedRadius()));
-                lore.add(messages.color("&aLeft-click: Approve"));
-ItemStack item = simpleItem(Material.PAPER, "&fRequest from " + name, lore.toArray(new String[0]));
-                inv.setItem(slot++, item);
+            if (name.equalsIgnoreCase("Request from " + expectedName)) {
+                if (event.isLeftClick()) {
+                    // Approve request
+                    expansionManager.approveRequest(req);
+                    messages.send(admin, "&aApproved expansion for &f" + expectedName);
+                } else if (event.isRightClick()) {
+                    // Deny request
+                    expansionManager.denyRequest(req, "No reason provided");
+                    messages.send(admin, "&cDenied expansion for &f" + expectedName);
+                }
+                // Refresh GUI
+                openExpansionReview(admin);
+                break;
             }
         }
-
-        placeNavButtons(inv);
-        admin.openInventory(inv);
     }
 }

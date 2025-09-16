@@ -11,10 +11,10 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * GUIListener
- * - Central dispatcher
- * - Cancels vanilla movement
- * - Back/Exit handled safely
- * - Claim Info clicks are ignored (tooltip only)
+ * - Central dispatcher for GUIManager
+ * - Cancels vanilla item movement
+ * - Routes clicks to correct handlers
+ * - Claim Info is tooltip-only (ignored on click)
  */
 public class GUIListener implements Listener {
 
@@ -46,7 +46,7 @@ public class GUIListener implements Listener {
             return;
         }
 
-        event.setCancelled(true); // always
+        event.setCancelled(true); // always cancel vanilla behavior
 
         if (title.contains("ProShield Menu")) {
             handleMainClick(player, event);
@@ -59,7 +59,13 @@ public class GUIListener implements Listener {
         } else if (title.contains("Admin Tools")) {
             guiManager.handleAdminClick(player, event);
         } else if (title.contains("Expansion Requests")) {
-            guiManager.handleExpansionReviewClick(player, event);
+            // If it's the admin view
+            if (player.hasPermission("proshield.admin")) {
+                guiManager.handleExpansionReviewClick(player, event);
+            } else {
+                // player’s own expansion request menu
+                plugin.getExpansionRequestManager().handleRequestClick(player, event);
+            }
         } else if (title.contains("Deny Reasons")) {
             guiManager.handleDenyReasonClick(player, event);
         }
@@ -75,7 +81,7 @@ public class GUIListener implements Listener {
             plugin.getPlotManager().claimPlot(player);
             player.closeInventory();
         } else if (name.contains("claim info")) {
-            // Tooltip only – ignore click
+            // Tooltip only – ignore
         } else if (name.contains("unclaim")) {
             plugin.getPlotManager().unclaimPlot(player);
             player.closeInventory();
@@ -85,9 +91,9 @@ public class GUIListener implements Listener {
             guiManager.openFlags(player);
         } else if (name.contains("request expansion")) {
             plugin.getExpansionRequestManager().openRequestMenu(player);
-        } else if (name.equals("back")) {
+        } else if (name.equalsIgnoreCase("back")) {
             guiManager.openMain(player);
-        } else if (name.equals("exit")) {
+        } else if (name.equalsIgnoreCase("exit")) {
             player.closeInventory();
         } else if (name.contains("admin tools")) {
             if (player.hasPermission("proshield.admin")) {

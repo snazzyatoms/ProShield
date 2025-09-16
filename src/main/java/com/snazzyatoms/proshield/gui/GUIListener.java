@@ -53,13 +53,16 @@ public class GUIListener implements Listener {
                 : "";
 
         if (rawName.equalsIgnoreCase("back") || rawName.contains("return to")) {
-            // Go back depending on which menu we’re in
-            if (title.contains("Trusted Players") || title.contains("Claim Flags") || title.contains("Admin Tools")) {
+            if (title.contains("Trusted Players") ||
+                title.contains("Claim Flags") ||
+                title.contains("Admin Tools")) {
                 guiManager.openMain(player);
             } else if (title.contains("Assign Role")) {
                 guiManager.openTrusted(player);
+            } else if (title.contains("Expansion Requests")) {
+                guiManager.openAdminTools(player); // back from requests → Admin Tools
             } else if (title.contains("Deny Reasons")) {
-                guiManager.openExpansionReview(player); // ✅ go back to Expansion Review
+                guiManager.openExpansionReview(player); // back from deny → expansion review
             }
             return;
         }

@@ -116,6 +116,8 @@ public class PlotManager {
         FileConfiguration cfg = plugin.getYaml("claims", dataFile);
         if (!cfg.isConfigurationSection("claims")) return;
 
+        int migrated = 0;
+
         for (String key : cfg.getConfigurationSection("claims").getKeys(false)) {
             String[] parts = key.split(",");
             if (parts.length != 3) continue;
@@ -129,13 +131,13 @@ public class PlotManager {
 
             Plot plot = new Plot(world, x, z, owner, radius);
 
-            // Load trusted
+            // Trusted
             if (cfg.isConfigurationSection("claims." + key + ".trusted")) {
                 plot.getTrusted().putAll((Map<String, String>)
                         cfg.getConfigurationSection("claims." + key + ".trusted").getValues(false));
             }
 
-            // Load flags
+            // Flags
             if (cfg.isConfigurationSection("claims." + key + ".flags")) {
                 Map<String, Object> rawFlags = cfg.getConfigurationSection("claims." + key + ".flags").getValues(false);
                 for (Map.Entry<String, Object> e : rawFlags.entrySet()) {
@@ -144,20 +146,27 @@ public class PlotManager {
                     }
                 }
 
-                // 🔄 Migration: old "fire" flag -> new granular ones
+                // Migration: old "fire" -> granular flags
                 if (plot.getFlags().containsKey("fire")) {
                     boolean fireVal = plot.getFlags().get("fire");
-                    plot.getFlags().putIfAbsent("fire-spread", fireVal);
-                    plot.getFlags().putIfAbsent("ignite-flint", fireVal);
-                    plot.getFlags().putIfAbsent("ignite-lava", fireVal);
-                    plot.getFlags().putIfAbsent("ignite-lightning", fireVal);
-                    // Optionally remove old fire key
+                    boolean changed = false;
+                    if (!plot.getFlags().containsKey("fire-spread")) { plot.getFlags().put("fire-spread", fireVal); changed = true; }
+                    if (!plot.getFlags().containsKey("ignite-flint")) { plot.getFlags().put("ignite-flint", fireVal); changed = true; }
+                    if (!plot.getFlags().containsKey("ignite-lava")) { plot.getFlags().put("ignite-lava", fireVal); changed = true; }
+                    if (!plot.getFlags().containsKey("ignite-lightning")) { plot.getFlags().put("ignite-lightning", fireVal); changed = true; }
                     plot.getFlags().remove("fire");
+                    if (changed) migrated++;
                 }
             }
 
             plots.put(key, plot);
         }
+
+        if (migrated > 0) {
+            plugin.getLogger().info("[ProShield] Migrated fire flag → granular flags for " + migrated + " claim(s).");
+            saveAll();
+        }
+
         plugin.getLogger().info("Loaded " + plots.size() + " claims.");
     }
 

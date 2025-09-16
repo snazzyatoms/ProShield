@@ -1,11 +1,11 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.expansions.ExpansionRequest;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import com.snazzyatoms.proshield.expansions.ExpansionRequest;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -22,7 +22,7 @@ import java.util.*;
 /**
  * GUIManager
  * Central manager for all ProShield menus (main, flags, trusted, roles, admin, expansion).
- * Fully functional with Back + Exit controls (v1.2.5+).
+ * Fully functional (v1.2.5+) with Back/Exit and deny reasons.
  */
 public class GUIManager {
 
@@ -30,6 +30,9 @@ public class GUIManager {
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
+
+    private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
+    private final Map<UUID, UUID> pendingExpansionTargets = new HashMap<>();
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -57,8 +60,8 @@ public class GUIManager {
         }
         setItem(inv, 32, Material.COMMAND_BLOCK, "&cAdmin Tools", "&7Admin-only controls.");
 
-        // Exit button only (Main has no Back)
-        addExit(inv);
+        // Exit button
+        setItem(inv, 40, Material.BARRIER, "&cExit", "&7Close this menu.");
 
         player.openInventory(inv);
     }
@@ -97,8 +100,8 @@ public class GUIManager {
             inv.setItem(slot++, head);
         }
 
-        addBack(inv);
-        addExit(inv);
+        // Back button
+        setItem(inv, size - 9, Material.ARROW, "&aBack", "&7Return to main menu");
 
         player.openInventory(inv);
     }
@@ -112,6 +115,11 @@ public class GUIManager {
 
         String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
         if (name == null) return;
+
+        if (name.equalsIgnoreCase("Back")) {
+            openMain(player);
+            return;
+        }
 
         OfflinePlayer target = Bukkit.getOfflinePlayer(name);
 
@@ -155,12 +163,11 @@ public class GUIManager {
             }
         }
 
-        addBack(inv);
-        addExit(inv);
+        // Back button
+        setItem(inv, size - 9, Material.ARROW, "&aBack", "&7Return to trusted players");
 
         actor.openInventory(inv);
-        // store pending assignment
-        plugin.getGuiManager().pendingRoleAssignments.put(actor.getUniqueId(), targetUuid);
+        pendingRoleAssignments.put(actor.getUniqueId(), targetUuid);
     }
 
     public void handleAssignRoleClick(Player player, InventoryClickEvent event) {
@@ -175,8 +182,6 @@ public class GUIManager {
         plotManager.saveAll();
         openTrusted(player);
     }
-
-    private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
 
     // ============================
     // CLAIM FLAGS MENU
@@ -214,8 +219,8 @@ public class GUIManager {
             }
         }
 
-        addBack(inv);
-        addExit(inv);
+        // Back button
+        setItem(inv, size - 9, Material.ARROW, "&aBack", "&7Return to main menu");
 
         player.openInventory(inv);
     }
@@ -229,6 +234,11 @@ public class GUIManager {
 
         String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
         if (name == null) return;
+
+        if (name.equalsIgnoreCase("Back")) {
+            openMain(player);
+            return;
+        }
 
         for (String key : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
             String display = plugin.getConfig().getString("flags.available." + key + ".name", key);
@@ -256,11 +266,42 @@ public class GUIManager {
         setItem(inv, 10, Material.REPEATER, "&eReload Configs", "&7Reload ProShield configs.");
         setItem(inv, 12, Material.ENDER_EYE, "&aToggle Debug", "&7Enable/disable debug logging.");
         setItem(inv, 14, Material.BARRIER, "&cToggle Bypass", "&7Admin bypass for claims.");
+        setItem(inv, 16, Material.CHEST, "&eExpansion Requests", "&7Review pending claim expansion requests.");
 
-        addBack(inv);
-        addExit(inv);
+        // Back button
+        setItem(inv, size - 9, Material.ARROW, "&aBack", "&7Return to main menu");
 
         player.openInventory(inv);
+    }
+
+    public void handleAdminClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (name == null) return;
+
+        if (name.equalsIgnoreCase("Reload Configs")) {
+            plugin.reloadConfig();
+            plugin.loadMessagesConfig();
+            messages.send(player, "&aConfigs reloaded.");
+        } else if (name.equalsIgnoreCase("Toggle Debug")) {
+            plugin.toggleDebug();
+            messages.send(player, "&eDebug mode: " + (plugin.isDebugEnabled() ? "&aENABLED" : "&cDISABLED"));
+        } else if (name.equalsIgnoreCase("Toggle Bypass")) {
+            UUID uuid = player.getUniqueId();
+            if (plugin.isBypassing(uuid)) {
+                plugin.getBypassing().remove(uuid);
+                messages.send(player, "&cBypass disabled.");
+            } else {
+                plugin.getBypassing().add(uuid);
+                messages.send(player, "&aBypass enabled.");
+            }
+        } else if (name.equalsIgnoreCase("Expansion Requests")) {
+            openExpansionReview(player);
+        } else if (name.equalsIgnoreCase("Back")) {
+            openMain(player);
+        }
     }
 
     // ============================
@@ -272,31 +313,63 @@ public class GUIManager {
 
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        plugin.getExpansionRequestManager().getPendingRequests().forEach(req -> {
-            ItemStack item = new ItemStack(Material.BOOK);
+        List<ExpansionRequest> requests = plugin.getExpansionRequestManager().getPendingRequests();
+        int slot = 0;
+        for (ExpansionRequest req : requests) {
+            OfflinePlayer op = plugin.getServer().getOfflinePlayer(req.getRequester());
+
+            ItemStack item = new ItemStack(Material.PAPER);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                OfflinePlayer op = Bukkit.getOfflinePlayer(req.getRequester());
-                meta.setDisplayName(messages.color("&f" + op.getName() + " &7(+ " + req.getBlocks() + " blocks)"));
+                meta.setDisplayName(messages.color("&fRequest from &b" + (op.getName() != null ? op.getName() : req.getRequester().toString())));
                 meta.setLore(Arrays.asList(
-                        messages.color("&aLeft-click: Approve"),
-                        messages.color("&cRight-click: Deny")
+                        messages.color("&7Blocks: &a" + req.getBlocks()),
+                        messages.color("&7Click green to approve, red to deny")
                 ));
                 item.setItemMeta(meta);
             }
-            inv.addItem(item);
-        });
+            inv.setItem(slot++, item);
+            pendingExpansionTargets.put(player.getUniqueId(), req.getRequester());
+        }
 
-        addBack(inv);
-        addExit(inv);
+        // Approve / Deny buttons
+        setItem(inv, size - 18, Material.LIME_WOOL, "&aApprove", "&7Approve selected request");
+        setItem(inv, size - 17, Material.RED_WOOL, "&cDeny", "&7Deny selected request");
+
+        // Back button
+        setItem(inv, size - 9, Material.ARROW, "&aBack", "&7Return to admin tools");
 
         player.openInventory(inv);
+    }
+
+    public void handleExpansionReviewClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String rawName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (rawName == null) return;
+
+        if (rawName.contains("Approve")) {
+            UUID target = pendingExpansionTargets.remove(player.getUniqueId());
+            if (target != null) {
+                plugin.getExpansionRequestManager().approveRequest(target);
+                messages.send(player, "&aExpansion approved.");
+            }
+            openExpansionReview(player);
+        } else if (rawName.contains("Deny")) {
+            UUID target = pendingExpansionTargets.get(player.getUniqueId());
+            if (target != null) {
+                openDenyReasons(player, target);
+            }
+        } else if (rawName.equalsIgnoreCase("Back")) {
+            openAdminTools(player);
+        }
     }
 
     // ============================
     // DENY REASONS MENU
     // ============================
-    public void openDenyReasons(Player player, UUID targetId) {
+    public void openDenyReasons(Player player, UUID target) {
         String title = plugin.getConfig().getString("gui.menus.deny-reasons.title", "&cDeny Reasons");
         int size = plugin.getConfig().getInt("gui.menus.deny-reasons.size", 27);
 
@@ -306,39 +379,34 @@ public class GUIManager {
         if (reasons != null) {
             int slot = 0;
             for (String key : reasons.getKeys(false)) {
-                String reason = reasons.getString(key);
-                ItemStack item = new ItemStack(Material.PAPER);
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
-                    meta.setDisplayName(messages.color("&f" + ChatColor.stripColor(reason)));
-                    meta.setLore(Collections.singletonList(messages.color("&7Click to deny with this reason")));
-                    item.setItemMeta(meta);
-                }
-                inv.setItem(slot++, item);
+                String reason = plugin.getConfig().getString("messages.deny-reasons." + key, key);
+                setItem(inv, slot++, Material.PAPER, "&c" + key, reason);
             }
         }
 
-        addBack(inv);
-        addExit(inv);
+        // Back button
+        setItem(inv, size - 9, Material.ARROW, "&aBack", "&7Return to expansion requests");
 
+        pendingExpansionTargets.put(player.getUniqueId(), target);
         player.openInventory(inv);
-        pendingDenyTargets.put(player.getUniqueId(), targetId);
     }
 
-    private final Map<UUID, UUID> pendingDenyTargets = new HashMap<>();
-
     public void handleDenyReasonClick(Player player, InventoryClickEvent event) {
-        UUID targetId = pendingDenyTargets.remove(player.getUniqueId());
-        if (targetId == null) return;
+        UUID target = pendingExpansionTargets.remove(player.getUniqueId());
+        if (target == null) return;
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
 
-        String reasonText = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        if (reasonText == null) return;
+        String key = ChatColor.stripColor(clicked.getItemMeta().getDisplayName()).replace("c", "").trim().toLowerCase();
+        if (key.equalsIgnoreCase("Back")) {
+            openExpansionReview(player);
+            return;
+        }
 
-        plugin.getExpansionRequestManager().denyRequest(targetId, reasonText);
-        player.closeInventory();
+        plugin.getExpansionRequestManager().denyRequest(target, key);
+        messages.send(player, "&cExpansion request denied for reason: " + key);
+        openExpansionReview(player);
     }
 
     // ============================
@@ -355,13 +423,5 @@ public class GUIManager {
             item.setItemMeta(meta);
         }
         inv.setItem(slot, item);
-    }
-
-    private void addBack(Inventory inv) {
-        setItem(inv, 36, Material.ARROW, "&cBack", "&7Return to previous menu");
-    }
-
-    private void addExit(Inventory inv) {
-        setItem(inv, 44, Material.BARRIER, "&4Exit", "&7Close this menu");
     }
 }

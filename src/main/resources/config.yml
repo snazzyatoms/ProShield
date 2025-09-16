@@ -8,30 +8,22 @@ settings:
   give-compass-on-join: true
   compass-despawn-delay: 600
   compass-auto-replace: false
-
-  # Operators: full control and bypass by default (can toggle bypass in GUI)
   ops-have-full-access: true
 
 claims:
-  # Horizontal protection radius (blocks) from claim center
   default-radius: 50
-  # Vertical protection range
   min-y: 0
   max-y: 200
-  # Default: claims are safe zones (no hostile damage/targeting)
   safezone-enabled: true
-  # Admins may edit/assist player claims via GUI
   allow-admin-edit-claims: true
-  # Claim owners can always edit their flags in GUI
   allow-owner-claim-flags: true
 
-  # Expansion request system
   expansion:
-    enabled: true                      # Toggle expansion system on/off
-    show-in-gui: true                  # Show Request Expansion button in player GUI
-    max-increase: 100                  # Max blocks a single request can add
-    step-options: [10, 15, 20, 25]     # Allowed increments for players to choose in GUI
-    cooldown-hours: 6                  # Default cooldown between requests
+    enabled: true
+    show-in-gui: true
+    max-increase: 100
+    step-options: [10, 15, 20, 25]
+    cooldown-hours: 6
 
 protection:
   fire:
@@ -56,7 +48,6 @@ protection:
     water: false
 
   mobs:
-    # Hostiles are repelled near players inside their claims
     border-repel:
       enabled: true
       radius: 15.0
@@ -64,10 +55,8 @@ protection:
       vertical-push: 0.25
       play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
-    # Periodically despawn hostiles inside claims
     despawn-inside: true
     despawn-interval-seconds: 30
-    # Core protections
     prevent-damage: true
     prevent-targeting: true
     protect-pets: true
@@ -97,9 +86,6 @@ protection:
       safezone: true
     worlds: {}
 
-# -----------------------------
-# Claim Roles (GUI-driven)
-# -----------------------------
 roles:
   default: member
   available:
@@ -134,9 +120,6 @@ roles:
         containers: true
         toggle-flags: true
 
-# -----------------------------
-# Per-Claim Flags (toggle in GUI)
-# -----------------------------
 flags:
   available:
     safezone:
@@ -182,9 +165,6 @@ flags:
         - "&7Allow fire burn/spread/ignite"
       default: false
 
-# -----------------------------
-# Messages (synced with MessagesUtil & GUI tooltips)
-# -----------------------------
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
@@ -212,9 +192,6 @@ messages:
     custom-1: "&cNot enough playtime yet for this expansion."
     custom-2: "&cYour claim already reached the maximum size."
 
-# -----------------------------
-# Help Pages
-# -----------------------------
 help:
   player:
     - "&3&lProShield &7— Player Guide"
@@ -242,9 +219,6 @@ help:
     - "&4Expansion Requests &7– Requires &fproshield.admin.expansions"
     - "&4World Controls &7– Requires &fproshield.admin.worldcontrols"
 
-# -----------------------------
-# GUI Definitions
-# -----------------------------
 gui:
   menus:
     main:

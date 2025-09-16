@@ -1,106 +1,112 @@
 package com.snazzyatoms.proshield.plots;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
- * Represents a land claim (plot) in ProShield.
+ * Represents a claimed plot in ProShield.
+ * Stores owner, world, coordinates, flags, trusted players, and role assignments.
  */
 public class Plot {
 
-    private final UUID id;
-    private final UUID owner;
-    private final String world;
-    private final int x;
-    private final int z;
-    private int radius;
+    private final UUID id;           // Unique ID of this plot
+    private final String world;      // World name
+    private final int x;             // Chunk X
+    private final int z;             // Chunk Z
+    private final UUID owner;        // Owner UUID
+    private final int radius;        // Claim radius (blocks)
 
-    // Trusted players and their roles
-    private final Map<UUID, String> trusted = new HashMap<>();
+    private boolean adminClaim;      // Is this claim owned/admin-managed
 
-    // Per-claim flags (string key → boolean/string value)
-    private final Map<String, String> flags = new HashMap<>();
+    // Per-claim flags (PvP, explosions, safezone, etc.)
+    private final Map<String, Boolean> flags = new HashMap<>();
 
-    public Plot(UUID owner, String world, int x, int z, UUID id, int radius) {
-        this.owner = owner;
+    // Trusted players + roles
+    private final Set<UUID> trusted = new HashSet<>();
+    private final Map<UUID, String> roles = new HashMap<>();
+
+    public Plot(UUID id, String world, int x, int z, UUID owner, int radius) {
+        this.id = id;
         this.world = world;
         this.x = x;
         this.z = z;
-        this.id = id;
+        this.owner = owner;
         this.radius = radius;
+        this.adminClaim = false;
     }
 
-    /* ======================
-     * Core getters
-     * ====================== */
-    public UUID getId() {
-        return id;
-    }
+    // -------------------
+    // Core Getters
+    // -------------------
+    public UUID getId() { return id; }
+    public String getWorld() { return world; }
+    public int getX() { return x; }
+    public int getZ() { return z; }
+    public UUID getOwner() { return owner; }
+    public int getRadius() { return radius; }
 
-    public UUID getOwner() {
-        return owner;
-    }
-
-    public String getWorld() {
-        return world;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    public int getRadius() {
-        return radius;
-    }
-
-    public void setRadius(int radius) {
-        this.radius = radius;
-    }
-
-    /* ======================
-     * Trusted players
-     * ====================== */
-    public Map<UUID, String> getTrusted() {
-        return trusted;
-    }
-
-    public void trust(UUID uuid, String role) {
-        trusted.put(uuid, role);
-    }
-
-    public void untrust(UUID uuid) {
-        trusted.remove(uuid);
-    }
-
-    public boolean isTrusted(UUID uuid) {
-        return trusted.containsKey(uuid);
-    }
-
-    /* ======================
-     * Flags
-     * ====================== */
-    public Map<String, String> getFlags() {
-        return flags;
+    // -------------------
+    // Flags
+    // -------------------
+    public boolean getFlag(String key) {
+        return flags.getOrDefault(key, false);
     }
 
     public void setFlag(String key, boolean value) {
-        flags.put(key, String.valueOf(value));
-    }
-
-    public void setFlag(String key, String value) {
         flags.put(key, value);
     }
 
-    public boolean getFlagAsBool(String key, boolean def) {
-        String val = flags.get(key);
-        if (val == null) return def;
-        return Boolean.parseBoolean(val);
+    public Map<String, Boolean> getFlags() {
+        return flags;
     }
 
-    public String getFlagAsString(String key, String def) {
-        return flags.getOrDefault(key, def);
+    // -------------------
+    // Admin Claim
+    // -------------------
+    public boolean isAdminClaim() {
+        return adminClaim;
+    }
+
+    public void setAdminClaim(boolean adminClaim) {
+        this.adminClaim = adminClaim;
+    }
+
+    // -------------------
+    // Trusted Players
+    // -------------------
+    public void addTrusted(UUID uuid) {
+        trusted.add(uuid);
+    }
+
+    public void removeTrusted(UUID uuid) {
+        trusted.remove(uuid);
+        roles.remove(uuid);
+    }
+
+    public boolean isTrusted(UUID uuid) {
+        return trusted.contains(uuid);
+    }
+
+    public Set<UUID> getTrusted() {
+        return trusted;
+    }
+
+    // -------------------
+    // Roles
+    // -------------------
+    public void setRole(UUID uuid, String role) {
+        trusted.add(uuid);
+        roles.put(uuid, role);
+    }
+
+    public String getRole(UUID uuid) {
+        return roles.getOrDefault(uuid, "member");
+    }
+
+    public Map<UUID, String> getRoles() {
+        return roles;
     }
 }

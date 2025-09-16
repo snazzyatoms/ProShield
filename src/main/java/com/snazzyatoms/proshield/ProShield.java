@@ -5,7 +5,6 @@ import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.MobProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
@@ -27,7 +26,6 @@ public class ProShield extends JavaPlugin {
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
     private ExpansionRequestManager expansionRequestManager;
-    private GUICache guiCache;
 
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
@@ -46,15 +44,14 @@ public class ProShield extends JavaPlugin {
         this.messages = new MessagesUtil(this);
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
-        this.expansionRequestManager = new ExpansionRequestManager(this, plotManager);
-        this.guiCache = new GUICache();
+        this.expansionRequestManager = new ExpansionRequestManager(this);
         this.guiManager = new GUIManager(this);
 
-        // Register listeners
+        // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
 
-        // Register commands
+        // Commands
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
             ProShieldCommand executor = new ProShieldCommand(this);
@@ -62,8 +59,8 @@ public class ProShield extends JavaPlugin {
             cmd.setTabCompleter(executor);
         }
 
-        // Player command dispatcher (compass, shortcuts, etc.)
-        new PlayerCommandDispatcher(this);
+        // Player dispatcher (GUI + command handling)
+        new PlayerCommandDispatcher(this, plotManager);
 
         getLogger().info("✅ ProShield enabled. Running version " + getDescription().getVersion());
     }
@@ -74,9 +71,7 @@ public class ProShield extends JavaPlugin {
         getLogger().info("🛑 ProShield disabled.");
     }
 
-    /* =============================================================
-     * Accessors
-     * ============================================================= */
+    // Accessors
     public MessagesUtil getMessagesUtil() {
         return messages;
     }
@@ -95,10 +90,6 @@ public class ProShield extends JavaPlugin {
 
     public ExpansionRequestManager getExpansionRequestManager() {
         return expansionRequestManager;
-    }
-
-    public GUICache getGuiCache() {
-        return guiCache;
     }
 
     public Set<UUID> getBypassing() {

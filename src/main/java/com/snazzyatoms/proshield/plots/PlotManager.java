@@ -1,176 +1,134 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Chunk;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
-/**
- * PlotManager (v1.2.5)
- * - Handles claim persistence (save/load to disk).
- * - Claiming/unclaiming chunks, trust, and flags.
- * - Migration for granular fire flags (fire-spread, ignite-*).
- */
 public class PlotManager {
 
     private final ProShield plugin;
-    private final MessagesUtil messages;
-    private final Map<String, Plot> plots = new ConcurrentHashMap<>();
-
-    private final File dataFile;
+    private final Map<UUID, Plot> plots = new HashMap<>();
+    private final File plotsFile;
+    private FileConfiguration plotsConfig;
 
     public PlotManager(ProShield plugin) {
         this.plugin = plugin;
-        this.messages = plugin.getMessagesUtil();
-        this.dataFile = new File(plugin.getDataFolder(), "claims.yml");
+        this.plotsFile = new File(plugin.getDataFolder(), "plots.yml");
         loadAll();
     }
 
-    /* =========================================================
-     * Claim Management
-     * ========================================================= */
-
-    public boolean claimPlot(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        String key = key(chunk);
-
-        if (plots.containsKey(key)) {
-            messages.send(player, "&cThis chunk is already claimed.");
-            return false;
+    public void loadAll() {
+        if (!plotsFile.exists()) {
+            try {
+                plotsFile.getParentFile().mkdirs();
+                plotsFile.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Could not create plots.yml", e);
+            }
         }
 
-        int radius = plugin.getConfig().getInt("claims.default-radius", 50);
-        Plot plot = new Plot(chunk.getWorld().getName(), chunk.getX(), chunk.getZ(),
-                player.getUniqueId(), radius);
+        this.plotsConfig = YamlConfiguration.loadConfiguration(plotsFile);
+        plots.clear();
 
-        plots.put(key, plot);
-        saveAll();
-        messages.send(player, "&aYou successfully claimed this chunk.");
-        return true;
-    }
+        if (plotsConfig.isConfigurationSection("plots")) {
+            for (String key : plotsConfig.getConfigurationSection("plots").getKeys(false)) {
+                try {
+                    ConfigurationSection section = plotsConfig.getConfigurationSection("plots." + key);
+                    if (section == null) continue;
 
-    public boolean unclaimPlot(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        String key = key(chunk);
+                    UUID id = UUID.fromString(key);
+                    UUID owner = UUID.fromString(section.getString("owner"));
+                    String world = section.getString("world");
+                    int x = section.getInt("x");
+                    int z = section.getInt("z");
+                    int radius = section.getInt("radius", plugin.getConfig().getInt("claims.default-radius", 50));
 
-        Plot plot = plots.get(key);
-        if (plot == null) {
-            messages.send(player, "&cNo claim here.");
-            return false;
+                    // Safely convert flags
+                    Map<String, Object> rawFlags = section.getConfigurationSection("flags") != null
+                            ? section.getConfigurationSection("flags").getValues(false)
+                            : new HashMap<>();
+                    Map<String, String> flags = new HashMap<>();
+                    for (Map.Entry<String, Object> e : rawFlags.entrySet()) {
+                        flags.put(e.getKey(), String.valueOf(e.getValue()));
+                    }
+
+                    // Create Plot with correct constructor
+                    Plot plot = new Plot(owner, world, x, z, id, radius);
+                    plot.getFlags().putAll(flags);
+                    plots.put(id, plot);
+
+                } catch (Exception ex) {
+                    plugin.getLogger().log(Level.WARNING, "Failed to load plot " + key, ex);
+                }
+            }
         }
 
-        if (!plot.getOwner().equals(player.getUniqueId())
-                && !player.hasPermission("proshield.admin")) {
-            messages.send(player, "&cYou do not own this claim.");
-            return false;
-        }
-
-        plots.remove(key);
-        saveAll();
-        messages.send(player, "&cYou unclaimed this chunk.");
-        return true;
+        plugin.getLogger().info("Loaded " + plots.size() + " plots.");
     }
-
-    public Plot getPlot(Location loc) {
-        if (loc == null) return null;
-        String key = key(loc.getChunk());
-        return plots.get(key);
-    }
-
-    public Collection<Plot> getAllPlots() {
-        return plots.values();
-    }
-
-    /* =========================================================
-     * Persistence
-     * ========================================================= */
 
     public void saveAll() {
-        FileConfiguration cfg = plugin.getYaml("claims", dataFile);
-
-        cfg.set("claims", null);
+        plotsConfig.set("plots", null);
         for (Plot plot : plots.values()) {
-            String path = "claims." + plot.getWorld() + "," + plot.getX() + "," + plot.getZ();
-            cfg.set(path + ".owner", plot.getOwner().toString());
-            cfg.set(path + ".radius", plot.getRadius());
-            cfg.set(path + ".trusted", plot.getTrusted());
-            cfg.set(path + ".flags", plot.getFlags());
+            String path = "plots." + plot.getId();
+            plotsConfig.set(path + ".owner", plot.getOwner().toString());
+            plotsConfig.set(path + ".world", plot.getWorld());
+            plotsConfig.set(path + ".x", plot.getX());
+            plotsConfig.set(path + ".z", plot.getZ());
+            plotsConfig.set(path + ".radius", plot.getRadius());
+
+            // Save flags
+            plotsConfig.createSection(path + ".flags", plot.getFlags());
         }
 
         try {
-            cfg.save(dataFile);
+            plotsConfig.save(plotsFile);
         } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save claims.yml: " + e.getMessage());
+            plugin.getLogger().log(Level.SEVERE, "Could not save plots.yml", e);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void loadAll() {
-        FileConfiguration cfg = plugin.getYaml("claims", dataFile);
-        if (!cfg.isConfigurationSection("claims")) return;
+    public Plot createPlot(UUID owner, Location loc) {
+        UUID id = UUID.randomUUID();
+        String world = loc.getWorld().getName();
+        int x = loc.getChunk().getX();
+        int z = loc.getChunk().getZ();
+        int radius = plugin.getConfig().getInt("claims.default-radius", 50);
 
-        int migrated = 0;
-
-        for (String key : cfg.getConfigurationSection("claims").getKeys(false)) {
-            String[] parts = key.split(",");
-            if (parts.length != 3) continue;
-
-            String world = parts[0];
-            int x = Integer.parseInt(parts[1]);
-            int z = Integer.parseInt(parts[2]);
-
-            UUID owner = UUID.fromString(cfg.getString("claims." + key + ".owner"));
-            int radius = cfg.getInt("claims." + key + ".radius", plugin.getConfig().getInt("claims.default-radius", 50));
-
-            Plot plot = new Plot(world, x, z, owner, radius);
-
-            // Trusted
-            if (cfg.isConfigurationSection("claims." + key + ".trusted")) {
-                plot.getTrusted().putAll((Map<String, String>)
-                        cfg.getConfigurationSection("claims." + key + ".trusted").getValues(false));
-            }
-
-            // Flags
-            if (cfg.isConfigurationSection("claims." + key + ".flags")) {
-                Map<String, Object> rawFlags = cfg.getConfigurationSection("claims." + key + ".flags").getValues(false);
-                for (Map.Entry<String, Object> e : rawFlags.entrySet()) {
-                    if (e.getValue() instanceof Boolean b) {
-                        plot.getFlags().put(e.getKey(), b);
-                    }
-                }
-
-                // Migration: old "fire" -> granular flags
-                if (plot.getFlags().containsKey("fire")) {
-                    boolean fireVal = plot.getFlags().get("fire");
-                    boolean changed = false;
-                    if (!plot.getFlags().containsKey("fire-spread")) { plot.getFlags().put("fire-spread", fireVal); changed = true; }
-                    if (!plot.getFlags().containsKey("ignite-flint")) { plot.getFlags().put("ignite-flint", fireVal); changed = true; }
-                    if (!plot.getFlags().containsKey("ignite-lava")) { plot.getFlags().put("ignite-lava", fireVal); changed = true; }
-                    if (!plot.getFlags().containsKey("ignite-lightning")) { plot.getFlags().put("ignite-lightning", fireVal); changed = true; }
-                    plot.getFlags().remove("fire");
-                    if (changed) migrated++;
-                }
-            }
-
-            plots.put(key, plot);
-        }
-
-        if (migrated > 0) {
-            plugin.getLogger().info("[ProShield] Migrated fire flag → granular flags for " + migrated + " claim(s).");
-            saveAll();
-        }
-
-        plugin.getLogger().info("Loaded " + plots.size() + " claims.");
+        Plot plot = new Plot(owner, world, x, z, id, radius);
+        plots.put(id, plot);
+        saveAll();
+        return plot;
     }
 
-    private String key(Chunk chunk) {
-        return chunk.getWorld().getName() + "," + chunk.getX() + "," + chunk.getZ();
+    public Plot getPlot(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        String world = loc.getWorld().getName();
+        int x = loc.getChunk().getX();
+        int z = loc.getChunk().getZ();
+
+        for (Plot plot : plots.values()) {
+            if (plot.getWorld().equalsIgnoreCase(world)
+                    && plot.getX() == x
+                    && plot.getZ() == z) {
+                return plot;
+            }
+        }
+        return null;
+    }
+
+    public Collection<Plot> getAllPlots() {
+        return Collections.unmodifiableCollection(plots.values());
+    }
+
+    public void removePlot(UUID id) {
+        plots.remove(id);
+        saveAll();
     }
 }

@@ -13,10 +13,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * PlotManager (v1.2.5-clean)
+ * PlotManager (v1.2.5)
  * - Handles claim persistence (save/load to disk).
- * - Handles claim and unclaim logic.
- * - All mob protection logic moved to MobProtectionListener.
+ * - Claiming/unclaiming chunks, trust, and flags.
+ * - Migration for granular fire flags (fire-spread, ignite-*).
  */
 public class PlotManager {
 
@@ -47,13 +47,8 @@ public class PlotManager {
         }
 
         int radius = plugin.getConfig().getInt("claims.default-radius", 50);
-        Plot plot = new Plot(
-                chunk.getWorld().getName(),
-                chunk.getX(),
-                chunk.getZ(),
-                player.getUniqueId(),
-                radius
-        );
+        Plot plot = new Plot(chunk.getWorld().getName(), chunk.getX(), chunk.getZ(),
+                player.getUniqueId(), radius);
 
         plots.put(key, plot);
         saveAll();
@@ -134,11 +129,31 @@ public class PlotManager {
 
             Plot plot = new Plot(world, x, z, owner, radius);
 
+            // Load trusted
             if (cfg.isConfigurationSection("claims." + key + ".trusted")) {
-                plot.getTrusted().putAll((Map<String, String>) cfg.getConfigurationSection("claims." + key + ".trusted").getValues(false));
+                plot.getTrusted().putAll((Map<String, String>)
+                        cfg.getConfigurationSection("claims." + key + ".trusted").getValues(false));
             }
+
+            // Load flags
             if (cfg.isConfigurationSection("claims." + key + ".flags")) {
-                plot.getFlags().putAll((Map<String, Boolean>) cfg.getConfigurationSection("claims." + key + ".flags").getValues(false));
+                Map<String, Object> rawFlags = cfg.getConfigurationSection("claims." + key + ".flags").getValues(false);
+                for (Map.Entry<String, Object> e : rawFlags.entrySet()) {
+                    if (e.getValue() instanceof Boolean b) {
+                        plot.getFlags().put(e.getKey(), b);
+                    }
+                }
+
+                // 🔄 Migration: old "fire" flag -> new granular ones
+                if (plot.getFlags().containsKey("fire")) {
+                    boolean fireVal = plot.getFlags().get("fire");
+                    plot.getFlags().putIfAbsent("fire-spread", fireVal);
+                    plot.getFlags().putIfAbsent("ignite-flint", fireVal);
+                    plot.getFlags().putIfAbsent("ignite-lava", fireVal);
+                    plot.getFlags().putIfAbsent("ignite-lightning", fireVal);
+                    // Optionally remove old fire key
+                    plot.getFlags().remove("fire");
+                }
             }
 
             plots.put(key, plot);

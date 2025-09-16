@@ -384,14 +384,4 @@ public class GUIManager {
         }
     }
 
-    /* ============================
-     * EXPANSION REQUESTS
-     * ============================ */
-    public void openRequestMenu(Player player) {
-        plugin.getExpansionRequestManager().openPlayerRequestMenu(player);
-    }
 
-    public void openExpansionReview(Player admin) {
-        String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
-        int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
-        Inventory inv = Bukkit.createInventory(admin, size, messages

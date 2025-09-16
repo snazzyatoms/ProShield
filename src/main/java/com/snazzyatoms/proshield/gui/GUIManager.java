@@ -26,7 +26,7 @@ import java.util.*;
 
 public class GUIManager {
 
-    private static final String HIDDEN_UUID_TAG = "\u00A78#UUID:"; // §8#UUID:
+    private static final String HIDDEN_UUID_TAG = "§8#UUID:";
 
     private final ProShield plugin;
     private final PlotManager plotManager;
@@ -34,10 +34,13 @@ public class GUIManager {
     private final ExpansionRequestManager expansionManager;
     private final MessagesUtil messages;
 
-    // For deny submenu (admin -> target)
+    // State maps
     private final Map<UUID, UUID> pendingDenyTarget = new HashMap<>();
-    // For assigning roles
     private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
+    private final Map<UUID, Integer> historyPages = new HashMap<>();
+    private final Map<UUID, List<ExpansionRequest>> filteredHistory = new HashMap<>();
+
+    private static final int HISTORY_PER_PAGE = 18;
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -47,14 +50,9 @@ public class GUIManager {
         this.messages = plugin.getMessagesUtil();
     }
 
-    /* ---------- Buttons ---------- */
-    private ItemStack backButton() {
-        return simpleItem(Material.ARROW, "&eBack", "&7Return to previous menu");
-    }
-
-    private ItemStack exitButton() {
-        return simpleItem(Material.BARRIER, "&cExit", "&7Close this menu");
-    }
+    /* ---------- Utility Buttons ---------- */
+    private ItemStack backButton() { return simpleItem(Material.ARROW, "&eBack", "&7Return to previous menu"); }
+    private ItemStack exitButton() { return simpleItem(Material.BARRIER, "&cExit", "&7Close this menu"); }
 
     private void placeNavButtons(Inventory inv) {
         int size = inv.getSize();
@@ -78,15 +76,11 @@ public class GUIManager {
 
     private boolean isNamed(ItemStack item, String needle) {
         if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) return false;
-        String s = ChatColor.stripColor(item.getItemMeta().getDisplayName());
-        if (s == null) return false;
-        s = s.trim().toLowerCase(Locale.ROOT);
-        String n = needle.trim().toLowerCase(Locale.ROOT);
-        return s.equals(n);
+        return ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase(needle);
     }
 
-    private boolean isBack(ItemStack item) { return isNamed(item, "back"); }
-    private boolean isExit(ItemStack item) { return isNamed(item, "exit"); }
+    private boolean isBack(ItemStack item) { return isNamed(item, "Back"); }
+    private boolean isExit(ItemStack item) { return isNamed(item, "Exit"); }
 
     /* ============================
      * MAIN MENU
@@ -96,7 +90,7 @@ public class GUIManager {
         int size = plugin.getConfig().getInt("gui.menus.main.size", 45);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        inv.setItem(10, simpleItem(Material.GRASS_BLOCK, "&aClaim Land", "&7Claim the chunk you are standing in."));
+        inv.setItem(10, simpleItem(Material.GRASS_BLOCK, "&aClaim Land", "&7Claim the chunk you are in."));
         inv.setItem(12, buildClaimInfoItem(player));
         inv.setItem(14, simpleItem(Material.BARRIER, "&cUnclaim Land", "&7Remove your current claim."));
         inv.setItem(16, simpleItem(Material.PLAYER_HEAD, "&bTrusted Players", "&7Manage trusted players & roles."));
@@ -112,7 +106,6 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
-    /** Tooltip item for current claim (or wilderness) */
     private ItemStack buildClaimInfoItem(Player player) {
         Plot plot = plotManager.getPlotAt(player.getLocation());
         List<String> lore = new ArrayList<>();
@@ -125,27 +118,13 @@ public class GUIManager {
             lore.add("&7Chunk: &f" + plot.getX() + ", " + plot.getZ());
             lore.add("&7Owner: &f" + ownerName);
             lore.add("&7Radius: &f" + plot.getRadius() + " blocks");
-            lore.add("&7Y-range: &f" +
-                    plugin.getConfig().getInt("claims.min-y", 0) + " - " +
-                    plugin.getConfig().getInt("claims.max-y", 200));
-            lore.add("&7Flags:");
-            ConfigurationSection avail = plugin.getConfig().getConfigurationSection("flags.available");
-            if (avail != null) {
-                for (String key : avail.getKeys(false)) {
-                    boolean state = plot.getFlags().getOrDefault(
-                            key, plugin.getConfig().getBoolean("flags.available." + key + ".default", false));
-                    String nice = ChatColor.stripColor(messages.color(
-                            plugin.getConfig().getString("flags.available." + key + ".name", key)));
-                    lore.add((state ? "&a  ✔ " : "&c  ✖ ") + "&7" + nice);
-                }
-            }
-            lore.add("&8(Click disabled – info only)");
+            lore.add("&7Flags: &f" + plot.getFlags().size());
         }
         return simpleItem(Material.PAPER, "&eClaim Info", lore.toArray(new String[0]));
     }
 
     /* ============================
-     * TRUSTED PLAYERS MENU
+     * TRUSTED PLAYERS
      * ============================ */
     public void openTrusted(Player player) {
         String title = plugin.getConfig().getString("gui.menus.roles.title", "&bTrusted Players");
@@ -221,7 +200,7 @@ public class GUIManager {
     }
 
     /* ============================
-     * ASSIGN ROLE MENU
+     * ASSIGN ROLE
      * ============================ */
     private void openAssignRole(Player actor, UUID targetUuid) {
         String title = plugin.getConfig().getString("gui.menus.assign-role.title", "&bAssign Role");
@@ -274,7 +253,7 @@ public class GUIManager {
     }
 
     /* ============================
-     * CLAIM FLAGS MENU
+     * CLAIM FLAGS
      * ============================ */
     public void openFlags(Player player) {
         String title = plugin.getConfig().getString("gui.menus.flags.title", "&eClaim Flags");
@@ -357,6 +336,7 @@ public class GUIManager {
         inv.setItem(12, simpleItem(Material.ENDER_EYE, "&aToggle Debug", "&7Enable/disable debug logging."));
         inv.setItem(14, simpleItem(Material.BARRIER, "&cToggle Bypass", "&7Admin bypass for claims."));
         inv.setItem(16, simpleItem(Material.EMERALD, "&eExpansion Requests", "&7Review pending player requests."));
+        inv.setItem(28, simpleItem(Material.CLOCK, "&eExpansion History", "&7View past requests."));
 
         placeNavButtons(inv);
         player.openInventory(inv);
@@ -389,16 +369,14 @@ public class GUIManager {
             }
         } else if (name.equalsIgnoreCase("Expansion Requests")) {
             openExpansionReview(player);
+        } else if (name.equalsIgnoreCase("Expansion History")) {
+            openFilteredHistory(player, new ArrayList<>(expansionManager.getAllRequests()));
         }
     }
 
     /* ============================
-     * EXPANSION REQUESTS
+     * EXPANSION REVIEW + DENY REASONS
      * ============================ */
-    public void openRequestMenu(Player player) {
-        plugin.getExpansionRequestManager().openPlayerRequestMenu(player);
-    }
-
     public void openExpansionReview(Player admin) {
         String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
         int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
@@ -413,6 +391,53 @@ public class GUIManager {
             for (ExpansionRequest req : pending) {
                 UUID requester = req.getRequester();
                 OfflinePlayer p = Bukkit.getOfflinePlayer(requester);
-                String name = (p != null
+                String name = (p != null && p.getName() != null) ? p.getName() : requester.toString();
+
+                List<String> lore = new ArrayList<>();
+                lore.add("&7Blocks: &f" + req.getAmount());
+                lore.add("&7When: &f" + fmt.format(req.getTimestamp()));
+                lore.add("&aLeft-click to approve");
+                lore.add("&cRight-click to deny");
+                lore.add(HIDDEN_UUID_TAG + requester);
+
+                inv.setItem(slot++, simpleItem(Material.LIME_WOOL, "&aApprove: " + name, lore.toArray(new String[0])));
+                if (slot < size) {
+                    inv.setItem(slot++, simpleItem(Material.RED_WOOL, "&cDeny: " + name, lore.toArray(new String[0])));
+                }
+                if (slot >= size - 9) break;
+            }
+        }
+
+        placeNavButtons(inv);
+        admin.openInventory(inv);
+    }
+
+    public void openFilteredHistory(Player player, List<ExpansionRequest> requests) {
+        String title = plugin.getConfig().getString("gui.menus.expansion-history.title", "&eExpansion History");
+        int size = plugin.getConfig().getInt("gui.menus.expansion-history.size", 45);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        if (requests.isEmpty()) {
+            inv.setItem(22, simpleItem(Material.BARRIER, "&7No History", "&7There are no past requests."));
+        } else {
+            int slot = 0;
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
+            for (ExpansionRequest req : requests) {
+                UUID requester = req.getRequester();
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(requester);
+                String requesterName = (offlinePlayer != null && offlinePlayer.getName() != null) ? offlinePlayer.getName() : requester.toString();
+
+                List<String> lore = new ArrayList<>();
+                lore.add("&7Blocks: &f" + req.getAmount());
+                lore.add("&7When: &f" + fmt.format(req.getTimestamp()));
+                lore.add("&7Status: " + (req.isApproved() ? "&aApproved" : "&cDenied"));
+
+                inv.setItem(slot++, simpleItem(Material.PAPER, "&f" + requesterName, lore.toArray(new String[0])));
+                if (slot >= size - 9) break;
+            }
+        }
+
+        placeNavButtons(inv);
+        player.openInventory(inv);
     }
 }

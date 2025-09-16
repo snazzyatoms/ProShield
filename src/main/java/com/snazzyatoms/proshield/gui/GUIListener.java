@@ -1,6 +1,8 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.plots.Plot;
+import com.snazzyatoms.proshield.plots.PlotManager;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -79,13 +81,23 @@ public class GUIListener implements Listener {
                 .replace("§", "")
                 .toLowerCase();
 
+        PlotManager plotManager = plugin.getPlotManager();
+
         if (name.contains("claim land")) {
-            plugin.getPlotManager().claimPlot(player);
+            // Create a new claim for this player at their current location
+            plotManager.createPlot(player.getUniqueId(), player.getLocation());
+            plugin.getMessagesUtil().send(player, "&aClaim created successfully.");
             player.closeInventory();
         } else if (name.contains("claim info")) {
             // Tooltip only – ignore click
         } else if (name.contains("unclaim")) {
-            plugin.getPlotManager().unclaimPlot(player);
+            Plot plot = plotManager.getPlotAt(player.getLocation());
+            if (plot != null && plot.getOwner().equals(player.getUniqueId())) {
+                plotManager.deletePlot(plot.getId());
+                plugin.getMessagesUtil().send(player, "&cClaim unclaimed successfully.");
+            } else {
+                plugin.getMessagesUtil().send(player, "&cYou don’t own a claim here.");
+            }
             player.closeInventory();
         } else if (name.contains("trusted players")) {
             guiManager.openTrusted(player);

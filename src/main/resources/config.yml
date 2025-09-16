@@ -237,13 +237,13 @@ help:
   player:
     - "&3&lProShield &7— Player Guide"
     - "&aRight-click your ProShield Compass &7→ Open the main menu"
-    - "&bMain Menu &7→ Claim Land, Info, Unclaim, Trusted Players, Claim Flags"
+    - "&bMain Menu &7→ &fClaim Land, Claim Info, Unclaim, Trusted Players, Claim Flags"
     - "&bTrusted Players &7→ Manage roles & access"
-    - "&bClaim Flags &7→ Toggle protections"
+    - "&bClaim Flags &7→ Toggle protections (Safezone, PvP, Fire, Explosions, etc.)"
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
     - "&7Expansion requests have a cooldown of &f{cooldown-hours}h&7."
-    - "&7Note: All features are GUI-driven. Commands are not required."
-
+    - "&eNote: &7All player features are GUI-driven. &fNo commands are required."
+    
   admin:
     - "&c&lProShield — Admin Guide"
     - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"

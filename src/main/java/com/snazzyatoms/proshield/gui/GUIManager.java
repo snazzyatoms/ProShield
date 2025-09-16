@@ -114,7 +114,7 @@ public class GUIManager {
 
     /** Tooltip item for current claim (or wilderness) */
     private ItemStack buildClaimInfoItem(Player player) {
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plotManager.getPlotAt(player.getLocation());
         List<String> lore = new ArrayList<>();
         if (plot == null) {
             lore.add("&7No claim here.");
@@ -152,7 +152,7 @@ public class GUIManager {
         int size = plugin.getConfig().getInt("gui.menus.roles.size", 45);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) {
             inv.setItem(13, simpleItem(Material.BARRIER, "&cNo claim here", "&7Stand inside your claim to manage roles."));
             placeNavButtons(inv);
@@ -202,7 +202,7 @@ public class GUIManager {
         if (isExit(clicked)) { player.closeInventory(); return; }
         if (clicked == null || !clicked.hasItemMeta()) return;
 
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) return;
 
         UUID targetUuid = extractHiddenUuid(clicked);
@@ -264,8 +264,7 @@ public class GUIManager {
         String roleName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
         if (roleName == null) return;
 
-        // Persist role assignment into the claim’s trusted map
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot != null) {
             plot.getTrusted().put(targetUuid, roleName);
             plotManager.saveAll();
@@ -282,7 +281,7 @@ public class GUIManager {
         int size = plugin.getConfig().getInt("gui.menus.flags.size", 45);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) {
             inv.setItem(13, simpleItem(Material.BARRIER, "&cNo claim here", "&7Stand inside your claim to manage flags."));
             placeNavButtons(inv);
@@ -321,7 +320,7 @@ public class GUIManager {
         if (isBack(clicked)) { openMain(player); return; }
         if (isExit(clicked)) { player.closeInventory(); return; }
 
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) return;
         if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
 
@@ -414,131 +413,6 @@ public class GUIManager {
             for (ExpansionRequest req : pending) {
                 UUID requester = req.getRequester();
                 OfflinePlayer p = Bukkit.getOfflinePlayer(requester);
-                String name = (p != null && p.getName() != null) ? p.getName() : requester.toString();
-
-                int blocks = req.getAmount();
-                Instant ts = req.getTimestamp();
-
-                List<String> approveLore = new ArrayList<>();
-                approveLore.add(messages.color("&7Blocks: &f" + blocks));
-                if (ts != null) approveLore.add(messages.color("&7When: &f" + fmt.format(ts)));
-                approveLore.add(messages.color("&aLeft-click to approve"));
-                approveLore.add(HIDDEN_UUID_TAG + requester);
-
-                List<String> denyLore = new ArrayList<>();
-                denyLore.add(messages.color("&7Blocks: &f" + blocks));
-                denyLore.add(messages.color("&cRight-click to choose deny reason"));
-                denyLore.add(HIDDEN_UUID_TAG + requester);
-
-                inv.setItem(slot++, simpleItem(Material.LIME_WOOL, "&aApprove: " + name, approveLore.toArray(new String[0])));
-                if (slot < size) {
-                    inv.setItem(slot++, simpleItem(Material.RED_WOOL, "&cDeny: " + name, denyLore.toArray(new String[0])));
-                }
-                if (slot >= size - 9) break; // keep nav row free
-            }
-        }
-
-        placeNavButtons(inv);
-        admin.openInventory(inv);
-    }
-
-    public void handleExpansionReviewClick(Player admin, InventoryClickEvent event) {
-        ItemStack clicked = event.getCurrentItem();
-        if (isBack(clicked)) { openAdminTools(admin); return; }
-        if (isExit(clicked)) { admin.closeInventory(); return; }
-        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
-
-        String dn = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        if (dn == null || dn.equalsIgnoreCase("No Pending Requests")) return;
-
-        UUID target = extractHiddenUuid(clicked);
-        if (target == null) {
-            if (dn.startsWith("Approve: ")) {
-                target = resolveNameToUUID(dn.substring("Approve: ".length()));
-            } else if (dn.startsWith("Deny: ")) {
-                target = resolveNameToUUID(dn.substring("Deny: ".length()));
-            }
-            if (target == null) return;
-        }
-
-        if (dn.startsWith("Approve: ")) {
-            expansionManager.approveRequest(target);
-            messages.send(admin, "&aApproved expansion for &f" +
-                    Optional.ofNullable(Bukkit.getOfflinePlayer(target).getName()).orElse(target.toString().substring(0, 8)));
-            openExpansionReview(admin);
-            return;
-        }
-        if (dn.startsWith("Deny: ")) {
-            pendingDenyTarget.put(admin.getUniqueId(), target);
-            openDenyReasons(admin);
-        }
-    }
-
-    private UUID resolveNameToUUID(String nameOrUuid) {
-        try { return UUID.fromString(nameOrUuid); }
-        catch (IllegalArgumentException ignored) {}
-        OfflinePlayer op = Bukkit.getOfflinePlayer(nameOrUuid);
-        return op != null ? op.getUniqueId() : null;
-    }
-
-    /* ============================
-     * DENY REASONS (admin submenu)
-     * ============================ */
-    private void openDenyReasons(Player admin) {
-        String title = plugin.getConfig().getString("gui.menus.deny-reasons.title", "&cDeny Reasons");
-        int size = plugin.getConfig().getInt("gui.menus.deny-reasons.size", 27);
-        Inventory inv = Bukkit.createInventory(admin, size, messages.color(title));
-
-        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("messages.deny-reasons");
-        if (sec != null) {
-            int slot = 0;
-            for (String key : sec.getKeys(false)) {
-                String reason = plugin.getConfig().getString("messages.deny-reasons." + key, "&c" + key);
-                inv.setItem(slot++, simpleItem(
-                        Material.PAPER,
-                        "&fReason: " + key,
-                        "&7" + ChatColor.stripColor(messages.color(reason)),
-                        "&8key:" + key
-                ));
-                if (slot >= size - 9) break; // keep nav row
-            }
-        } else {
-            inv.setItem(13, simpleItem(Material.BARRIER, "&7No reasons configured",
-                    "&7Add messages.deny-reasons.* in config.yml"));
-        }
-
-        placeNavButtons(inv);
-        admin.openInventory(inv);
-    }
-
-    public void handleDenyReasonClick(Player admin, InventoryClickEvent event) {
-        ItemStack clicked = event.getCurrentItem();
-        if (isBack(clicked)) { openExpansionReview(admin); return; }
-        if (isExit(clicked)) { admin.closeInventory(); return; }
-        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
-
-        String dn = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        if (dn == null || !dn.startsWith("Reason: ")) return;
-
-        String key = null;
-        if (clicked.getItemMeta().getLore() != null) {
-            for (String line : clicked.getItemMeta().getLore()) {
-                String s = ChatColor.stripColor(line);
-                if (s != null && s.startsWith("key:")) {
-                    key = s.substring("key:".length()).trim();
-                    break;
-                }
-            }
-        }
-        if (key == null || key.isEmpty()) return;
-
-        UUID target = pendingDenyTarget.remove(admin.getUniqueId());
-        if (target == null) return;
-
-        expansionManager.denyRequest(target, key);
-        messages.send(admin, "&cDenied expansion for &f" +
-                Optional.ofNullable(Bukkit.getOfflinePlayer(target).getName()).orElse(target.toString().substring(0, 8)) +
-                " &7(" + key + ")");
-        openExpansionReview(admin);
+                String name = (p != null
     }
 }

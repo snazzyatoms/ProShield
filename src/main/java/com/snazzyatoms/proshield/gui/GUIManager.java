@@ -21,7 +21,7 @@ import java.util.*;
 /**
  * GUIManager
  * Central manager for all ProShield menus (main, flags, trusted, roles, admin, expansion).
- * Fully functional (v1.2.5).
+ * Fully functional (v1.2.5, patched).
  */
 public class GUIManager {
 
@@ -29,9 +29,6 @@ public class GUIManager {
     private final PlotManager plotManager;
     private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
-
-    // Track pending role assignments
-    private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -78,10 +75,9 @@ public class GUIManager {
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
         int slot = 0;
-        for (Map.Entry<UUID, String> entry : plot.getTrusted().entrySet()) {
-            UUID uuid = entry.getKey();
-            String role = entry.getValue();
+        for (UUID uuid : plot.getTrusted().keySet()) {
             OfflinePlayer trusted = plugin.getServer().getOfflinePlayer(uuid);
+            String role = plot.getTrusted().get(uuid);
 
             ItemStack head = new ItemStack(Material.PLAYER_HEAD);
             ItemMeta meta = head.getItemMeta();
@@ -110,21 +106,12 @@ public class GUIManager {
         String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
         if (name == null) return;
 
-        // Find the matching UUID from the claim instead of resolving name blindly
-        UUID targetUuid = null;
-        for (UUID uuid : plot.getTrusted().keySet()) {
-            OfflinePlayer op = plugin.getServer().getOfflinePlayer(uuid);
-            if (op.getName() != null && op.getName().equalsIgnoreCase(name)) {
-                targetUuid = uuid;
-                break;
-            }
-        }
-        if (targetUuid == null) return;
+        OfflinePlayer target = Bukkit.getOfflinePlayer(name);
 
         if (event.isLeftClick()) {
-            openAssignRole(player, targetUuid);
+            openAssignRole(player, target.getUniqueId());
         } else if (event.isRightClick()) {
-            plot.untrust(targetUuid);
+            plot.untrust(target.getUniqueId());
             messages.send(player, "&cUntrusted &f" + name);
             plotManager.saveAll();
             openTrusted(player);
@@ -162,7 +149,7 @@ public class GUIManager {
         }
 
         actor.openInventory(inv);
-        this.pendingRoleAssignments.put(actor.getUniqueId(), targetUuid);
+        pendingRoleAssignments.put(actor.getUniqueId(), targetUuid);
     }
 
     public void handleAssignRoleClick(Player player, InventoryClickEvent event) {
@@ -177,6 +164,8 @@ public class GUIManager {
         plotManager.saveAll();
         openTrusted(player);
     }
+
+    private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
 
     // ============================
     // CLAIM FLAGS MENU
@@ -242,21 +231,6 @@ public class GUIManager {
     }
 
     // ============================
-    // EXPANSION REQUESTS MENU
-    // ============================
-    public void openExpansionRequests(Player player) {
-        String title = plugin.getConfig().getString("gui.menus.expansion-requests.title", "&eExpansion Requests");
-        int size = plugin.getConfig().getInt("gui.menus.expansion-requests.size", 45);
-
-        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
-
-        // For now, just a placeholder button until ExpansionRequestManager fully implemented
-        setItem(inv, 10, Material.EMERALD_BLOCK, "&aRequest Expansion",
-                "&7Click to send an expansion request.");
-        player.openInventory(inv);
-    }
-
-    // ============================
     // ADMIN TOOLS MENU
     // ============================
     public void openAdminTools(Player player) {
@@ -296,6 +270,73 @@ public class GUIManager {
                 messages.send(player, "&aBypass enabled.");
             }
         }
+    }
+
+    // ============================
+    // EXPANSION REVIEW HANDLER
+    // ============================
+    public void handleExpansionReviewClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (name == null) return;
+
+        if (name.contains("Approve")) {
+            plugin.getExpansionRequestManager().approveRequest(player.getUniqueId());
+            messages.send(player, "&aExpansion request approved.");
+            player.closeInventory();
+        } else if (name.contains("Deny")) {
+            openDenyReasons(player);
+        }
+    }
+
+    // ============================
+    // DENY REASONS HANDLER
+    // ============================
+    public void handleDenyReasonClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (name == null) return;
+
+        for (String reasonKey : plugin.getConfig().getConfigurationSection("messages.deny-reasons").getKeys(false)) {
+            String reasonDisplay = plugin.getConfig().getString("messages.deny-reasons." + reasonKey, reasonKey);
+            if (ChatColor.stripColor(messages.color(reasonDisplay)).equalsIgnoreCase(name)) {
+                plugin.getExpansionRequestManager().denyRequest(player.getUniqueId(), reasonKey);
+                messages.send(player, "&cExpansion request denied: " + reasonDisplay);
+                player.closeInventory();
+                return;
+            }
+        }
+    }
+
+    // ============================
+    // DENY REASONS SUBMENU
+    // ============================
+    private void openDenyReasons(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.deny-reasons.title", "&cDeny Reasons");
+        int size = plugin.getConfig().getInt("gui.menus.deny-reasons.size", 27);
+
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        if (plugin.getConfig().isConfigurationSection("messages.deny-reasons")) {
+            int slot = 0;
+            for (String key : plugin.getConfig().getConfigurationSection("messages.deny-reasons").getKeys(false)) {
+                String display = plugin.getConfig().getString("messages.deny-reasons." + key, key);
+                ItemStack item = new ItemStack(Material.PAPER);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(messages.color(display));
+                    meta.setLore(Collections.singletonList(messages.color("&7Click to deny with this reason")));
+                    item.setItemMeta(meta);
+                }
+                inv.setItem(slot++, item);
+            }
+        }
+
+        player.openInventory(inv);
     }
 
     // ============================

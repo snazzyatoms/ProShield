@@ -8,8 +8,9 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 /**
  * ChatListener
- * Currently reserved for future chat-based inputs.
- * For now, it does not handle role assignment (GUI-based only).
+ * Placeholder for future chat-based inputs.
+ * Currently, all ProShield features (claims, roles, flags, expansions)
+ * are fully GUI-driven, so no chat capture is required.
  */
 public class ChatListener implements Listener {
 
@@ -25,8 +26,7 @@ public class ChatListener implements Listener {
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
 
-        // No chat-based inputs are in use anymore.
-        // All trust/roles/flags/expansion are fully GUI-driven.
-        // We keep this listener in case future features need chat capture.
+        // No chat-based inputs are active.
+        // This listener remains registered as a safe placeholder.
     }
 }

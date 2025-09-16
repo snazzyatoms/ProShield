@@ -264,3 +264,6 @@ gui:
     deny-reasons:
       title: "&cDeny Reasons"
       size: 27
+    expansion-request:
+      title: "&eExpansion Request"
+      size: 27

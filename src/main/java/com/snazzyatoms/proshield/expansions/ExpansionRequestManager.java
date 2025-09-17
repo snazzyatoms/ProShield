@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * ExpansionRequestManager
  * - Handles persistence, submission, and review of claim expansion requests
- * - Synchronized with GUIManager + MessagesUtil (v1.2.5)
+ * - Synchronized with GUIManager + messages.yml (v1.2.5)
  */
 public class ExpansionRequestManager {
 
@@ -61,9 +61,8 @@ public class ExpansionRequestManager {
         requests.computeIfAbsent(player, k -> new ArrayList<>()).add(request);
         save();
 
-        OfflinePlayer op = Bukkit.getOfflinePlayer(player);
-        String name = op != null && op.getName() != null ? op.getName() : player.toString();
-        messages.debug("New expansion request: " + name + " +" + amount + " blocks");
+        String who = getPlayerName(player);
+        messages.debug("New expansion request: " + who + " +" + amount + " blocks");
     }
 
     /**
@@ -79,26 +78,45 @@ public class ExpansionRequestManager {
 
         String who = getPlayerName(player);
         messages.debug("Approved expansion for " + who + " (" + request.getAmount() + " blocks)");
+
+        // Notify player
+        OfflinePlayer op = Bukkit.getOfflinePlayer(player);
+        if (op.isOnline()) {
+            messages.send(op.getPlayer(),
+                    messages.get("messages.expansion-approved")
+                            .replace("{blocks}", String.valueOf(request.getAmount())));
+        }
     }
 
     /**
-     * Deny a request by timestamp.
+     * Deny a request by timestamp with deny reason key from messages.yml
      */
-    public void deny(UUID player, Instant timestamp, UUID reviewedBy, String reason) {
+    public void deny(UUID player, Instant timestamp, UUID reviewedBy, String reasonKey) {
         ExpansionRequest request = getRequest(player, timestamp);
         if (request == null) return;
 
         request.setStatus(ExpansionRequest.Status.DENIED);
         request.setReviewedBy(reviewedBy);
-        request.setDenialReason(reason);
+
+        // Pull deny reason text from messages.yml
+        String reasonMsg = plugin.getConfig().getString("messages.deny-reasons." + reasonKey, reasonKey);
+        request.setDenialReason(reasonMsg);
         save();
 
         String who = getPlayerName(player);
-        messages.debug("Denied expansion for " + who + " (" + reason + ")");
+        messages.debug("Denied expansion for " + who + " (" + reasonMsg + ")");
+
+        // Notify player
+        OfflinePlayer op = Bukkit.getOfflinePlayer(player);
+        if (op.isOnline()) {
+            messages.send(op.getPlayer(),
+                    messages.get("messages.expansion-denied")
+                            .replace("{reason}", reasonMsg));
+        }
     }
 
     /**
-     * Convenience: Approve by UUID (latest request).
+     * Convenience: Approve latest request.
      */
     public void approveRequest(UUID player) {
         List<ExpansionRequest> list = getRequests(player);
@@ -108,13 +126,13 @@ public class ExpansionRequestManager {
     }
 
     /**
-     * Convenience: Deny by UUID (latest request).
+     * Convenience: Deny latest request.
      */
-    public void denyRequest(UUID player, String reason) {
+    public void denyRequest(UUID player, String reasonKey) {
         List<ExpansionRequest> list = getRequests(player);
         if (list.isEmpty()) return;
         ExpansionRequest latest = list.get(list.size() - 1);
-        deny(player, latest.getTimestamp(), null, reason);
+        deny(player, latest.getTimestamp(), null, reasonKey);
     }
 
     /**

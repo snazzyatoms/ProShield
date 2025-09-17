@@ -11,9 +11,12 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
  * ChatListener
  *
  * ✅ Currently a placeholder (no chat capture required).
- * ✅ Registered safely for potential future features (e.g., naming towns,
- *    entering custom deny reasons, etc).
- * ✅ Kept in sync with ProShield’s GUI-first design.
+ * ✅ Registered safely for potential future features:
+ *    - Naming towns (coming in 2.0 multiple claims)
+ *    - Entering custom deny reasons
+ *    - Other text-based inputs that don’t fit well in GUIs
+ *
+ * ✅ Synced with GUIManager so expansion is seamless.
  */
 public class ChatListener implements Listener {
 
@@ -29,13 +32,12 @@ public class ChatListener implements Listener {
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
 
-        // --- Future use case ---
-        // If we ever introduce chat-based inputs (e.g. player enters
-        // a custom expansion deny reason, or names a town), we can
-        // intercept here.
+        // --- Future-proof ---
+        // Currently, all ProShield features are GUI-driven.
+        // This listener stays as a hook for future features.
         //
-        // Example (future):
-        // if (guiManager.isAwaitingInput(player)) {
+        // Example for later (pseudo-code):
+        // if (guiManager.isAwaitingChatInput(player)) {
         //     event.setCancelled(true);
         //     guiManager.handleChatInput(player, event.getMessage());
         // }

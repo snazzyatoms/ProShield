@@ -15,7 +15,7 @@ import java.util.UUID;
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
-    private MessagesUtil messages;
+    private final MessagesUtil messages;
 
     public ProShieldCommand(ProShield plugin) {
         this.plugin = plugin;
@@ -48,7 +48,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 messages.sendList(sender, messages.getList("help.player"));
             } else if (sender.hasPermission("proshield.admin")) {
                 messages.sendList(sender, messages.getList("help.admin"));
-            } else if (sender.hasPermission("proshield.admin.worldcontrols") 
+            } else if (sender.hasPermission("proshield.admin.worldcontrols")
                     || sender.hasPermission("proshield.admin.expansions")) {
                 messages.sendList(sender, messages.getList("help.senior"));
             } else {
@@ -66,8 +66,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "reload" -> {
                 plugin.reloadConfig();
-                plugin.reloadMessagesConfig(); // ✅ Proper reload
-                this.messages = plugin.getMessagesUtil(); // ✅ Refresh reference
+                plugin.loadMessagesConfig(); // ✅ fixed (was reloadMessagesConfig)
                 messages.send(sender, messages.get("messages.reloaded"));
             }
 

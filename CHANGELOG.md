@@ -4,6 +4,69 @@ This file documents all notable changes to **ProShield**, starting from the firs
 
 ---
 
+## **1.2.5 — Expansions, World Controls & Safezone Mobs**
+Released: 2025-09-17
+
+### 🔑 New Features
+- **Expansion Requests (NEW)**  
+  - Players can request claim expansions through a dedicated GUI.  
+  - Requests are queued for admin review.  
+  - Configurable defaults in `config.yml`.  
+
+- **Admin Expansion Review (NEW)**  
+  - Admin GUI menu to **approve** or **deny** requests.  
+  - Deny reasons are fully configurable in `messages.yml`.  
+  - Uses hidden tags (UUID + timestamp) to ensure secure approval/denial.  
+
+- **Expansion History (NEW)**  
+  - Paginated GUI showing past requests (approved, denied, expired).  
+  - Includes reason details for denied requests.  
+  - Easy navigation with **Previous / Next page** buttons.  
+
+- **World Controls Menu (NEW)**  
+  - Admin-only GUI to toggle global protections such as:  
+    - Fire spread  
+    - TNT/explosions  
+    - Mob damage  
+  - Pulled dynamically from `config.yml` → synced with `messages.yml`.  
+
+- **Safezone Mob Protection (NEW)**  
+  - Monsters are repelled from safezone borders.  
+  - Hostile mobs inside safezones automatically despawn.  
+  - Prevents mobs from pathing/targeting players inside safezones.  
+  - Configurable under `protection.mobs.*`.  
+
+- **GUI Navigation Overhaul (IMPROVED)**  
+  - **Back** and **Exit** buttons now appear consistently across *all* GUIs.  
+  - Fully functional (no placeholders).  
+
+### 🛠 Fixes & Improvements
+- **Messages System Upgrade**  
+  - Added support for fallback values via `messages.getOrDefault`.  
+  - Admin and deny menus pull text dynamically from `messages.yml`.  
+  - More flexible configuration for server owners.  
+
+- **Admin Tools Polish**  
+  - Added reload of **configs**, **messages.yml**, and **expansions** via GUI.  
+  - Debug toggle and bypass toggle polished with clearer feedback.  
+
+- **GUI Functionality Restored**  
+  - All GUI menus (Trusted, Roles, Flags, Expansions, Admin) are now fully clickable and functional.  
+  - Previously placeholder-only menus now execute their intended actions.  
+
+- **Performance**  
+  - Reduced redundant lookups in expansion and role GUIs.  
+  - Smoothed event handling and inventory navigation.  
+
+- **Migration Note**  
+  ⚠️ On first upgrade to **1.2.5**, you **must regenerate your ProShield config and messages.yml**:  
+  1. Stop your server.  
+  2. Backup and delete `/plugins/ProShield/`.  
+  3. Restart → new configs & messages are generated.  
+  4. Reapply your custom edits.  
+
+---
+
 ## **1.2.4 — Stability, Admin Reload & Mob Repel**
 Released: 2025-09-09
 
@@ -131,4 +194,4 @@ Released: 2025-09-08
 - Fixed constructor mismatch between `ProShield.java` and `GUIManager.java`.  
 - General cleanup of listeners and event checks.  
 - Minor performance improvements when handling trusted players and role lookups.  
-- Compass distribution logic further hardened to prevent edge-case duplication.
+- Compass distribution logic further hardened to prevent edge-case duplication.  

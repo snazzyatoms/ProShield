@@ -27,15 +27,15 @@ permissions:
     description: Bypass claim limits (admin-level)
     default: op
 
-  # --- Admin Tools ---
+  # --- Admin Tools (Granular Access) ---
   proshield.admin:
-    description: Grants access to all admin tools, including reload/debug/bypass/admin GUI
+    description: Grants access to the base Admin Tools GUI and core commands (reload/debug/bypass)
     default: op
 
   proshield.admin.expansions:
-    description: Allows approval/denial of claim expansions via Admin GUI
+    description: Allows approval/denial of claim expansions via Admin Tools GUI
     default: op
 
   proshield.admin.worldcontrols:
-    description: Access to world-level protections and overrides in Admin Tools
+    description: Access to world-level protections and overrides in Admin Tools GUI
     default: op

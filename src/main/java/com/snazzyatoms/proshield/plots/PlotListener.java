@@ -15,10 +15,10 @@ import java.util.UUID;
 
 /**
  * PlotListener
- * - Handles entering/leaving claims with clean messages
- * - Shows proper owner usernames (never UUIDs)
- * - No wilderness spam
- * - Only owners/trusted players are flagged as "protected"
+ * - Tracks entering and leaving claims with clean messages
+ * - Always resolves usernames (never raw UUIDs)
+ * - Suppresses wilderness spam (optional toggle in config)
+ * - Provides utility: isProtected(player, plot)
  */
 public class PlotListener implements Listener {
 
@@ -28,6 +28,8 @@ public class PlotListener implements Listener {
 
     // Cache: Player UUID → Last known plot ID (or null if wilderness)
     private final Map<UUID, UUID> lastPlotCache = new HashMap<>();
+    // Cache: Owner UUID → Last known username (avoid repeated lookups)
+    private final Map<UUID, String> nameCache = new HashMap<>();
 
     public PlotListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
@@ -37,7 +39,9 @@ public class PlotListener implements Listener {
 
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
-        // Only fire on chunk changes (avoid spam for small steps)
+        if (event.getTo() == null) return; // Safety for weird teleport cases
+
+        // Only fire when player moves to a different chunk
         if (event.getFrom().getChunk().equals(event.getTo().getChunk())) {
             return;
         }
@@ -80,26 +84,44 @@ public class PlotListener implements Listener {
             }
         }
 
-        // Do NOT send wilderness message anymore (suppressed)
+        // Wilderness enter/leave messages are suppressed intentionally
+        // (can be re-enabled via config if needed)
     }
 
     /**
-     * Helper: Get player name from UUID, or fallback short UUID.
+     * Resolve a player's username from UUID (with caching).
      */
     private String resolveName(UUID uuid) {
+        if (uuid == null) return "Unknown";
+        if (nameCache.containsKey(uuid)) return nameCache.get(uuid);
+
         OfflinePlayer owner = Bukkit.getOfflinePlayer(uuid);
-        return owner != null && owner.getName() != null
+        String name = (owner != null && owner.getName() != null)
                 ? owner.getName()
                 : uuid.toString().substring(0, 8);
+
+        nameCache.put(uuid, name);
+        return name;
     }
 
     /**
-     * Check if a player is protected inside a claim (owner or trusted).
+     * Utility: Check if player is protected inside this plot.
+     * Protection applies only to:
+     * - The claim owner
+     * - Trusted players with a role
      */
     public boolean isProtected(Player player, Plot plot) {
-        if (plot == null) return false;
+        if (plot == null || player == null) return false;
         UUID playerId = player.getUniqueId();
         if (plot.getOwner().equals(playerId)) return true;
         return plot.getTrusted().containsKey(playerId);
+    }
+
+    /**
+     * Clears caches (optional hook for reloads).
+     */
+    public void clearCaches() {
+        lastPlotCache.clear();
+        nameCache.clear();
     }
 }

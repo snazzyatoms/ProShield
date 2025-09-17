@@ -27,15 +27,13 @@ public class MobProtectionListener implements Listener {
         Location loc = event.getLocation();
         Entity entity = event.getEntity();
 
-        // Optional: skip natural passive mob spawns
+        // Skip passive mobs (optional — adjust as needed)
         if (entity instanceof Animals || entity instanceof Ambient) return;
 
         Plot plot = plotManager.getPlotAt(loc);
         if (plot == null) return;
 
-        boolean allowed = plot.getFlag("mob-spawn");
-
-        if (!allowed) {
+        if (!plot.getFlag("mob-spawn")) {
             event.setCancelled(true);
             debug("Blocked spawn of " + entity.getType() + " at " + locToString(loc));
         }
@@ -44,14 +42,14 @@ public class MobProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onMobTarget(EntityTargetEvent event) {
         Entity target = event.getTarget();
-        if (target == null || !(target instanceof Player)) return;
+        if (!(target instanceof Player)) return;
 
         Plot plot = plotManager.getPlotAt(target.getLocation());
         if (plot == null) return;
 
         if (plot.getFlag("safezone") && event.getEntity() instanceof Monster) {
             event.setCancelled(true);
-            debug("Prevented mob targeting in safezone: " + event.getEntity().getType());
+            debug("Prevented " + event.getEntity().getType() + " targeting player in safezone at " + locToString(target.getLocation()));
         }
     }
 

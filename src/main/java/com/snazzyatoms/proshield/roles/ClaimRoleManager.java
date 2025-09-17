@@ -7,13 +7,12 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import java.util.Locale;
 import java.util.UUID;
 
 /**
  * ClaimRoleManager
  * - Central authority for handling player roles in claims
- * - Synchronized with ClaimRole enum (v1.2.5)
+ * - Fully synchronized with ClaimRole enum (v1.2.5)
  */
 public class ClaimRoleManager {
 
@@ -66,21 +65,29 @@ public class ClaimRoleManager {
     }
 
     /**
-     * Convenience: check if a player can build in a plot.
+     * Remove a trusted player's role from a claim.
      */
+    public void clearRole(Plot plot, UUID targetId) {
+        if (plot == null || targetId == null) return;
+        plot.getTrusted().remove(targetId);
+        plotManager.saveAll();
+    }
+
+    // ========================
+    // Permission Helpers
+    // ========================
+
     public boolean canBuild(Player player, Plot plot) {
-        ClaimRole role = getRole(player.getUniqueId(), plot);
-        return role.canBuild();
+        return getRole(player.getUniqueId(), plot).canBuild();
     }
 
     public boolean canInteract(Player player, Plot plot) {
-        ClaimRole role = getRole(player.getUniqueId(), plot);
-        return role.canInteract();
+        return getRole(player.getUniqueId(), plot).canInteract();
     }
 
     public boolean canManage(Player player, Plot plot) {
-        ClaimRole role = getRole(player.getUniqueId(), plot);
-        return role.canManageRoles() || role.canModifyFlags() || role.canTransferClaim();
+        // For now, simply defer to the role's "canManage" property
+        return getRole(player.getUniqueId(), plot).canManage();
     }
 
     // ========================
@@ -106,7 +113,7 @@ public class ClaimRoleManager {
         }
 
         ClaimRole role = ClaimRole.fromName(rawRole);
-        if (role == ClaimRole.NONE) role = ClaimRole.TRUSTED; // fallback
+        if (role == ClaimRole.NONE) role = ClaimRole.TRUSTED; // fallback default
 
         setRole(plot, targetUuid, role);
 

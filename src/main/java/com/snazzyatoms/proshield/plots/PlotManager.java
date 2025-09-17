@@ -27,14 +27,9 @@ public class PlotManager {
 
     public void load() {
         if (!plotsFile.exists()) {
-            try {
-                plotsFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            try { plotsFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
         }
         this.plotsConfig = YamlConfiguration.loadConfiguration(plotsFile);
-
         plots.clear();
 
         if (plotsConfig.contains("plots")) {
@@ -49,11 +44,28 @@ public class PlotManager {
 
                 Plot plot = new Plot(owner, world, x, z, id, radius);
 
-                // Restore flags
+                // Flags
                 if (plotsConfig.contains("plots." + key + ".flags")) {
                     Map<String, Object> flags = plotsConfig.getConfigurationSection("plots." + key + ".flags").getValues(false);
                     for (Map.Entry<String, Object> entry : flags.entrySet()) {
-                        plot.getFlags().put(entry.getKey(), Boolean.parseBoolean(entry.getValue().toString()));
+                        plot.setFlag(entry.getKey(), Boolean.parseBoolean(String.valueOf(entry.getValue())));
+                    }
+                }
+
+                // Trusted – migrate legacy Set<UUID> to Map<UUID,String> (role = config roles.default)
+                String base = "plots." + key + ".trusted";
+                if (plotsConfig.isList(base)) {
+                    // legacy list
+                    List<String> uuids = plotsConfig.getStringList(base);
+                    String defRole = plugin.getConfig().getString("roles.default", "member");
+                    for (String s : uuids) {
+                        try { plot.getTrusted().put(UUID.fromString(s), defRole); } catch (Exception ignored) {}
+                    }
+                } else if (plotsConfig.isConfigurationSection(base)) {
+                    // roles-aware map saved as key: roleName
+                    for (String u : plotsConfig.getConfigurationSection(base).getKeys(false)) {
+                        String role = plotsConfig.getString(base + "." + u, plugin.getConfig().getString("roles.default","member"));
+                        try { plot.getTrusted().put(UUID.fromString(u), role); } catch (Exception ignored) {}
                     }
                 }
 
@@ -63,8 +75,7 @@ public class PlotManager {
     }
 
     public void saveAll() {
-        plotsConfig.set("plots", null); // clear old
-
+        plotsConfig.set("plots", null);
         for (Map.Entry<UUID, Plot> entry : plots.entrySet()) {
             Plot plot = entry.getValue();
             String base = "plots." + entry.getKey();
@@ -75,37 +86,35 @@ public class PlotManager {
             plotsConfig.set(base + ".owner", plot.getOwner().toString());
             plotsConfig.set(base + ".radius", plot.getRadius());
 
-            // Save flags
-            Map<String, Boolean> flags = plot.getFlags();
-            for (Map.Entry<String, Boolean> flag : flags.entrySet()) {
+            // Flags
+            for (Map.Entry<String, Boolean> flag : plot.getFlags().entrySet()) {
                 plotsConfig.set(base + ".flags." + flag.getKey(), flag.getValue());
+            }
+
+            // Trusted roles map
+            for (Map.Entry<UUID, String> t : plot.getTrusted().entrySet()) {
+                plotsConfig.set(base + ".trusted." + t.getKey(), t.getValue());
             }
         }
 
-        try {
-            plotsConfig.save(plotsFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        try { plotsConfig.save(plotsFile); } catch (IOException e) { e.printStackTrace(); }
     }
 
-    public Plot getPlot(UUID id) {
-        return plots.get(id);
-    }
+    public Plot getPlot(UUID id) { return plots.get(id); }
 
+    // Preferred
     public Plot getPlotAt(Location loc) {
         if (loc == null) return null;
         for (Plot plot : plots.values()) {
-            if (plot.contains(loc)) { // ✅ updated to new method
-                return plot;
-            }
+            if (plot.isInPlot(loc)) return plot;
         }
         return null;
     }
 
-    public Collection<Plot> getPlots() {
-        return plots.values();
-    }
+    // Legacy alias to satisfy callers
+    public Plot getPlot(Location loc) { return getPlotAt(loc); }
+
+    public Collection<Plot> getPlots() { return plots.values(); }
 
     public Plot createPlot(UUID owner, Location center) {
         UUID id = UUID.randomUUID();
@@ -113,7 +122,6 @@ public class PlotManager {
         int x = center.getBlockX();
         int z = center.getBlockZ();
         int radius = plugin.getConfig().getInt("claims.default-radius", 50);
-
         Plot plot = new Plot(owner, world, x, z, id, radius);
         plots.put(id, plot);
         saveAll();
@@ -129,7 +137,7 @@ public class PlotManager {
     public void expandPlot(UUID id, int extraRadius) {
         Plot plot = plots.get(id);
         if (plot != null) {
-            plot.setRadius(plot.getRadius() + extraRadius); // ✅ still valid with int setter
+            plot.setRadius(plot.getRadius() + extraRadius);
             saveAll();
         }
     }
@@ -139,7 +147,5 @@ public class PlotManager {
         return plot != null && plot.getOwner().equals(owner);
     }
 
-    public World getWorld(String name) {
-        return Bukkit.getWorld(name);
-    }
+    public World getWorld(String name) { return Bukkit.getWorld(name); }
 }

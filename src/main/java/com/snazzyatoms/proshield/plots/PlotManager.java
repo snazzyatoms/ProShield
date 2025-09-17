@@ -125,7 +125,9 @@ public class PlotManager {
         }
     }
 
-    public Plot getPlot(UUID id) { return plots.get(id); }
+    public Plot getPlot(UUID id) {
+        return plots.get(id);
+    }
 
     public Plot getPlotAt(Location loc) {
         if (loc == null) return null;
@@ -135,9 +137,13 @@ public class PlotManager {
         return null;
     }
 
-    public Plot getPlot(Location loc) { return getPlotAt(loc); }
+    public Plot getPlot(Location loc) {
+        return getPlotAt(loc);
+    }
 
-    public Collection<Plot> getPlots() { return plots.values(); }
+    public Collection<Plot> getPlots() {
+        return plots.values();
+    }
 
     public Plot createPlot(UUID owner, Location center) {
         UUID id = UUID.randomUUID();
@@ -165,10 +171,22 @@ public class PlotManager {
         }
     }
 
+    /** ✅ New helper: find a player's claim (one claim per player for v1.2.5) */
+    public Plot getPlotByOwner(UUID owner) {
+        for (Plot plot : plots.values()) {
+            if (plot.getOwner().equals(owner)) {
+                return plot;
+            }
+        }
+        return null;
+    }
+
     public boolean isInClaim(Location loc, UUID owner) {
         Plot plot = getPlotAt(loc);
         return plot != null && plot.getOwner().equals(owner);
     }
 
-    public World getWorld(String name) { return Bukkit.getWorld(name); }
+    public World getWorld(String name) {
+        return Bukkit.getWorld(name);
+    }
 }

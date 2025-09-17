@@ -30,16 +30,15 @@ public class ExpansionRequestManager {
     private final MessagesUtil messages;
 
     private final Map<UUID, List<ExpansionRequest>> requests = new ConcurrentHashMap<>();
-
-    private final File file;
-    private FileConfiguration data;
+    private final File expansionFile;
 
     public ExpansionRequestManager(ProShield plugin) {
         this.plugin = plugin;
         this.plotManager = plugin.getPlotManager();
         this.messages = plugin.getMessagesUtil();
+        this.expansionFile = new File(plugin.getDataFolder(), "expansions.yml");
 
-        this.file = new File(plugin.getDataFolder(), "expansions.yml");
+        // ✅ Load saved requests
         reload();
 
         // ✅ Expire old requests every hour
@@ -48,53 +47,58 @@ public class ExpansionRequestManager {
     }
 
     /* ---------------------
-     * YAML Persistence
+     * Persistence
      * --------------------- */
     public void reload() {
-        if (!file.exists()) {
-            try { file.createNewFile(); } catch (IOException ignored) {}
-        }
-        data = YamlConfiguration.loadConfiguration(file);
-        loadRequests();
-    }
-
-    public void save() {
-        saveRequests();
-        try {
-            data.save(file);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save expansions.yml: " + e.getMessage());
-        }
-    }
-
-    private void loadRequests() {
         requests.clear();
-        if (!data.isConfigurationSection("requests")) return;
+        if (!expansionFile.exists()) {
+            save(); // create file if missing
+            return;
+        }
 
-        for (String uuidStr : data.getConfigurationSection("requests").getKeys(false)) {
-            UUID owner = UUID.fromString(uuidStr);
-            List<Map<?, ?>> rawList = data.getMapList("requests." + uuidStr);
+        FileConfiguration yaml = YamlConfiguration.loadConfiguration(expansionFile);
+        for (String ownerKey : yaml.getKeys(false)) {
+            UUID owner = UUID.fromString(ownerKey);
             List<ExpansionRequest> list = new ArrayList<>();
-            for (Map<?, ?> raw : rawList) {
+            for (String tsKey : yaml.getConfigurationSection(ownerKey).getKeys(false)) {
+                String base = ownerKey + "." + tsKey;
                 try {
-                    ExpansionRequest req = ExpansionRequest.fromMap((Map<String, Object>) raw);
-                    if (req != null) list.add(req);
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to load expansion request for " + uuidStr + ": " + e.getMessage());
-                }
+                    Instant ts = Instant.parse(tsKey);
+                    int amount = yaml.getInt(base + ".amount", 0);
+                    ExpansionRequest.Status status = ExpansionRequest.Status.valueOf(
+                            yaml.getString(base + ".status", "PENDING"));
+                    UUID reviewedBy = yaml.isSet(base + ".reviewedBy")
+                            ? UUID.fromString(yaml.getString(base + ".reviewedBy"))
+                            : null;
+                    String denialReason = yaml.getString(base + ".denialReason", null);
+
+                    list.add(new ExpansionRequest(owner, amount, ts, status, reviewedBy, denialReason));
+                } catch (Exception ignored) {}
             }
             requests.put(owner, list);
         }
     }
 
-    private void saveRequests() {
-        data.set("requests", null); // clear
+    public void save() {
+        FileConfiguration yaml = new YamlConfiguration();
         for (Map.Entry<UUID, List<ExpansionRequest>> entry : requests.entrySet()) {
-            List<Map<String, Object>> list = new ArrayList<>();
+            String ownerKey = entry.getKey().toString();
             for (ExpansionRequest req : entry.getValue()) {
-                list.add(req.toMap());
+                String base = ownerKey + "." + req.getTimestamp().toString();
+                yaml.set(base + ".amount", req.getAmount());
+                yaml.set(base + ".status", req.getStatus().name());
+                if (req.getReviewedBy() != null) {
+                    yaml.set(base + ".reviewedBy", req.getReviewedBy().toString());
+                }
+                if (req.getDenialReason() != null) {
+                    yaml.set(base + ".denialReason", req.getDenialReason());
+                }
             }
-            data.set("requests." + entry.getKey().toString(), list);
+        }
+        try {
+            yaml.save(expansionFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save expansions.yml: " + e.getMessage());
         }
     }
 
@@ -156,7 +160,8 @@ public class ExpansionRequestManager {
                 ExpansionRequest.Status.PENDING, null, null);
 
         requests.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>()).add(req);
-        save(); // ✅ Save immediately
+        save(); // ✅ persist request
+
         messages.send(player, messages.get("expansion.request-sent")
                 .replace("{blocks}", String.valueOf(amount)));
         player.closeInventory();
@@ -199,9 +204,10 @@ public class ExpansionRequestManager {
                     plotManager.expandPlot(plot.getId(), req.getAmount());
                 }
 
-                save(); // ✅ Persist change
                 notifyPlayer(target, messages.get("expansion.approved")
                         .replace("{blocks}", String.valueOf(req.getAmount())));
+
+                save();
                 break;
             }
         }
@@ -215,9 +221,10 @@ public class ExpansionRequestManager {
                 req.setReviewedBy(admin);
                 req.setDenyReason(reason);
 
-                save(); // ✅ Persist change
                 notifyPlayer(target, messages.get("expansion.denied")
                         .replace("{reason}", reason));
+
+                save();
                 break;
             }
         }
@@ -235,12 +242,14 @@ public class ExpansionRequestManager {
                 if (req.getStatus() == ExpansionRequest.Status.PENDING &&
                         req.getTimestamp().isBefore(cutoff)) {
                     req.setStatus(ExpansionRequest.Status.EXPIRED);
+
                     notifyPlayer(owner, messages.get("expansion.expired")
                             .replace("{days}", String.valueOf(expireDays)));
                 }
             }
         }
-        save(); // ✅ Persist expiry
+
+        save(); // ✅ persist expirations
     }
 
     /* ---------------------

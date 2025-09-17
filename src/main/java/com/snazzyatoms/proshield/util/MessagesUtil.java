@@ -93,20 +93,22 @@ public class MessagesUtil {
         return msgs.getString("messages.debug-prefix", "&8[Debug]&r ");
     }
 
+    /** Get a colored string from messages.yml (or "" if missing) */
     public String get(String path) {
         String v = msgs.getString(path, "");
         return color(v);
     }
 
-    /** Get a string with default fallback */
+    /** Get a string from messages.yml, or return default if not found */
     public String getOrDefault(String path, String def) {
-        String v = msgs.getString(path, def);
-        return color(v != null ? v : def);
+        String v = msgs.getString(path);
+        if (v == null || v.isEmpty()) return color(def);
+        return color(v);
     }
 
     /** Get a string list path from messages.yml */
     public List<String> getList(String path) {
         List<String> list = msgs.getStringList(path);
-        return list != null ? colorList(list) : Collections.emptyList();
+        return list != null ? list : Collections.emptyList();
     }
 }

@@ -11,6 +11,12 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 
+/**
+ * ClaimProtectionListener
+ * - Handles block interactions, buckets, and PvP inside claims
+ * - Only owners & trusted players can interact (per flags)
+ * - Provides clean denial messages and debug logs
+ */
 public class ClaimProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -25,95 +31,68 @@ public class ClaimProtectionListener implements Listener {
         this.messages = plugin.getMessagesUtil();
     }
 
+    /* -------------------------
+     * BLOCK INTERACTIONS
+     * ------------------------- */
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        Player player = event.getPlayer();
-        Plot plot = plotManager.getPlotAt(event.getBlock().getLocation());
-
-        if (plot != null) {
-            if (!plotListener.isProtected(player, plot)) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot break blocks here.");
-                return;
-            }
-
-            if (!plot.getFlag("block-break")) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot break blocks here.");
-            }
-        }
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "block-break",
+                "&cYou cannot break blocks here.", event);
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
-        Player player = event.getPlayer();
-        Plot plot = plotManager.getPlotAt(event.getBlock().getLocation());
-
-        if (plot != null) {
-            if (!plotListener.isProtected(player, plot)) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot place blocks here.");
-                return;
-            }
-
-            if (!plot.getFlag("block-place")) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot place blocks here.");
-            }
-        }
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "block-place",
+                "&cYou cannot place blocks here.", event);
     }
 
     @EventHandler
     public void onBucketEmpty(PlayerBucketEmptyEvent event) {
-        Player player = event.getPlayer();
-        Plot plot = plotManager.getPlotAt(event.getBlock().getLocation());
-
-        if (plot != null) {
-            if (!plotListener.isProtected(player, plot)) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot use buckets here.");
-                return;
-            }
-
-            if (!plot.getFlag("bucket-use")) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot use buckets here.");
-            }
-        }
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "bucket-use",
+                "&cYou cannot use buckets here.", event);
     }
 
     @EventHandler
     public void onBucketFill(PlayerBucketFillEvent event) {
-        Player player = event.getPlayer();
-        Plot plot = plotManager.getPlotAt(event.getBlock().getLocation());
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "bucket-use",
+                "&cYou cannot fill buckets here.", event);
+    }
 
-        if (plot != null) {
-            if (!plotListener.isProtected(player, plot)) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot fill buckets here.");
-                return;
-            }
+    private void handleBlockAction(Player player, org.bukkit.Location loc, String flag, String denyMessage, org.bukkit.event.Cancellable event) {
+        Plot plot = plotManager.getPlotAt(loc);
+        if (plot == null) return;
 
-            if (!plot.getFlag("bucket-use")) {
-                event.setCancelled(true);
-                messages.send(player, "&cYou cannot fill buckets here.");
-            }
+        if (!plotListener.isProtected(player, plot)) {
+            event.setCancelled(true);
+            messages.send(player, denyMessage);
+            messages.debug("Denied " + flag + " for non-trusted player " + player.getName() + " in plot " + plot.getId());
+            return;
+        }
+
+        if (!plot.getFlag(flag)) {
+            event.setCancelled(true);
+            messages.send(player, denyMessage);
+            messages.debug("Denied " + flag + " for player " + player.getName() + " in plot " + plot.getId());
         }
     }
 
+    /* -------------------------
+     * PVP HANDLING
+     * ------------------------- */
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player attacker)) return;
         if (!(event.getEntity() instanceof Player victim)) return;
 
         Plot plot = plotManager.getPlotAt(victim.getLocation());
-        if (plot != null) {
-            if (!plot.getFlag("pvp")) {
-                // Cancel PvP unless both players are trusted/owners
-                if (!plotListener.isProtected(attacker, plot) || !plotListener.isProtected(victim, plot)) {
-                    event.setCancelled(true);
-                    messages.send(attacker, "&cPvP is disabled in this claim.");
-                }
+        if (plot == null) return;
+
+        if (!plot.getFlag("pvp")) {
+            // Cancel PvP unless both attacker & victim are trusted/owner
+            if (!plotListener.isProtected(attacker, plot) || !plotListener.isProtected(victim, plot)) {
+                event.setCancelled(true);
+                messages.send(attacker, "&cPvP is disabled in this claim.");
+                messages.debug("Prevented PvP: " + attacker.getName() + " → " + victim.getName() + " in plot " + plot.getId());
             }
         }
     }

@@ -4,9 +4,17 @@ package com.snazzyatoms.proshield.expansions;
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+
+import org.bukkit.Material;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,8 +26,7 @@ import java.util.stream.Collectors;
  * ExpansionRequestManager
  * - Handles persistence, submission, and review of claim expansion requests
  * - Auto-expires pending requests older than config-defined days
- * - Sends notifications on approval, denial, and expiry
- * - Synchronized with GUIManager + config.yml (v1.2.6)
+ * - Synchronized with GUIManager + messages.yml (v1.2.5)
  */
 public class ExpansionRequestManager {
 
@@ -56,11 +63,83 @@ public class ExpansionRequestManager {
         load();
         expireOldRequests(expireDays);
 
-        // Re-check expiry every 12h
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
-                () -> expireOldRequests(expireDays),
-                20L * 60 * 60 * 12, // 12h in ticks
-                20L * 60 * 60 * 12);
+        // Run expiry every 12h in case server stays up long
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> expireOldRequests(expireDays),
+                20L * 60 * 60 * 12, 20L * 60 * 60 * 12);
+    }
+
+    /* ====================================
+     * Player-facing GUI (Request menu)
+     * ==================================== */
+    public void openPlayerRequestMenu(Player player) {
+        boolean enabled = plugin.getConfig().getBoolean("claims.expansion.enabled", true);
+        if (!enabled) {
+            messages.send(player, messages.get("messages.expansion-disabled"));
+            return;
+        }
+
+        String title = plugin.getConfig().getString("gui.menus.expansion-request.title", "&eExpansion Request");
+        int size = plugin.getConfig().getInt("gui.menus.expansion-request.size", 27);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        List<Integer> steps = plugin.getConfig().getIntegerList("claims.expansion.step-options");
+        if (steps == null || steps.isEmpty()) steps = Arrays.asList(10, 15, 20, 25);
+
+        int slot = 10;
+        for (int step : steps) {
+            ItemStack emerald = new ItemStack(Material.EMERALD);
+            ItemMeta meta = emerald.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(messages.color("&a+" + step + " blocks"));
+                meta.setLore(Arrays.asList(
+                        messages.color("&7Click to request"),
+                        messages.color("&7Cooldown applies if configured")
+                ));
+                emerald.setItemMeta(meta);
+            }
+            inv.setItem(slot++, emerald);
+        }
+
+        // Simple exit
+        ItemStack exit = new ItemStack(Material.BARRIER);
+        ItemMeta xmeta = exit.getItemMeta();
+        if (xmeta != null) {
+            xmeta.setDisplayName(messages.color("&cExit"));
+            exit.setItemMeta(xmeta);
+        }
+        inv.setItem(size - 1, exit);
+
+        player.openInventory(inv);
+    }
+
+    /** Click handler for the player request menu */
+    public void handlePlayerRequestClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
+
+        String dn = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (dn == null) return;
+
+        if (dn.equalsIgnoreCase("Exit")) {
+            player.closeInventory();
+            return;
+        }
+
+        if (dn.startsWith("+")) {
+            // Parse "+<num> blocks"
+            try {
+                String num = dn.replace("+", "").replace(" blocks", "").trim();
+                int amount = Integer.parseInt(num);
+
+                // (Optional) cooldown enforcement hint – if you have one
+                // int cooldownHrs = plugin.getConfig().getInt("claims.expansion.cooldown-hours", 6);
+
+                submitRequest(player.getUniqueId(), amount);
+                messages.send(player, messages.get("messages.expansion-request")
+                        .replace("{blocks}", String.valueOf(amount)));
+                player.closeInventory();
+            } catch (NumberFormatException ignored) { }
+        }
     }
 
     /* ====================================
@@ -131,26 +210,22 @@ public class ExpansionRequestManager {
         deny(player, latest.getTimestamp(), null, reasonKey);
     }
 
-    /**
-     * Expire pending requests older than given days.
-     * Notifies online players if their request expired.
-     */
     public void expireOldRequests(int days) {
         Instant cutoff = Instant.now().minusSeconds(days * 86400L);
         boolean changed = false;
 
-        for (Map.Entry<UUID, List<ExpansionRequest>> entry : requests.entrySet()) {
-            UUID player = entry.getKey();
-            for (ExpansionRequest r : entry.getValue()) {
+        for (List<ExpansionRequest> list : requests.values()) {
+            for (ExpansionRequest r : list) {
                 if (r.getStatus() == ExpansionRequest.Status.PENDING && r.getTimestamp().isBefore(cutoff)) {
                     r.setStatus(ExpansionRequest.Status.EXPIRED);
                     changed = true;
 
-                    OfflinePlayer op = Bukkit.getOfflinePlayer(player);
+                    OfflinePlayer op = Bukkit.getOfflinePlayer(r.getRequester());
                     if (op.isOnline()) {
-                        messages.send(op.getPlayer(),
-                                messages.get("messages.expansion-expired")
-                                        .replace("{days}", String.valueOf(days)));
+                        String line = plugin.getConfig().getString("messages.expansion-expired",
+                                "&eYour expansion request has expired after {days} days without review.")
+                                .replace("{days}", String.valueOf(days));
+                        messages.send(op.getPlayer(), line);
                     }
                 }
             }

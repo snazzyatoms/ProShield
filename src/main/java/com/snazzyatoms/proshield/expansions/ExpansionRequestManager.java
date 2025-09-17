@@ -60,6 +60,8 @@ public class ExpansionRequestManager {
     }
 
     public void handlePlayerRequestClick(Player player, InventoryClickEvent event) {
+        event.setCancelled(true); // ✅ Prevent dragging Back/Exit items
+
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
 
@@ -92,7 +94,7 @@ public class ExpansionRequestManager {
                 ExpansionRequest.Status.PENDING, null, null);
 
         requests.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>()).add(req);
-        messages.send(player, plugin.getMessagesUtil().get("messages.expansion-request")
+        messages.send(player, messages.get("expansion.request-sent")
                 .replace("{blocks}", String.valueOf(amount)));
         player.closeInventory();
     }
@@ -134,7 +136,7 @@ public class ExpansionRequestManager {
                     plotManager.expandPlot(plot.getId(), req.getAmount());
                 }
 
-                notifyPlayer(target, messages.get("messages.expansion-approved")
+                notifyPlayer(target, messages.get("expansion.approved")
                         .replace("{blocks}", String.valueOf(req.getAmount())));
                 break;
             }
@@ -149,7 +151,7 @@ public class ExpansionRequestManager {
                 req.setReviewedBy(admin);
                 req.setDenyReason(reason);
 
-                notifyPlayer(target, messages.get("messages.expansion-denied")
+                notifyPlayer(target, messages.get("expansion.denied")
                         .replace("{reason}", reason));
                 break;
             }
@@ -169,7 +171,7 @@ public class ExpansionRequestManager {
                         req.getTimestamp().isBefore(cutoff)) {
                     req.setStatus(ExpansionRequest.Status.EXPIRED);
 
-                    notifyPlayer(owner, messages.get("messages.expansion-expired")
+                    notifyPlayer(owner, messages.get("expansion.expired")
                             .replace("{days}", String.valueOf(expireDays)));
                 }
             }

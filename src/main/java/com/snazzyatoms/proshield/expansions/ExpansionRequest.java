@@ -17,17 +17,17 @@ public class ExpansionRequest {
     private final Instant timestamp;
 
     private Status status;
-    private String denialReason; // Optional reason if denied
-    private UUID reviewedBy;     // Admin who approved/denied (if applicable)
+    private String denialReason; // Reason for denial (optional)
+    private UUID reviewedBy;     // Admin who approved/denied
 
     public ExpansionRequest(UUID requester, int amount, Instant timestamp, Status status) {
-        this.requester = Objects.requireNonNull(requester, "Requester UUID cannot be null");
+        this.requester = Objects.requireNonNull(requester, "Requester cannot be null");
         this.amount = Math.max(1, amount);
         this.timestamp = timestamp != null ? timestamp : Instant.now();
         this.status = status != null ? status : Status.PENDING;
     }
 
-    // Lightweight constructor (defaults)
+    // Quick constructor for pending requests
     public ExpansionRequest(UUID requester, int amount) {
         this(requester, amount, Instant.now(), Status.PENDING);
     }
@@ -40,7 +40,7 @@ public class ExpansionRequest {
     public String getDenialReason() { return denialReason; }
     public UUID getReviewedBy() { return reviewedBy; }
 
-    // Status Setters
+    // Status transitions
     public void approve(UUID admin) {
         this.status = Status.APPROVED;
         this.reviewedBy = admin;
@@ -56,14 +56,23 @@ public class ExpansionRequest {
         this.status = Status.EXPIRED;
     }
 
-    // Status Checkers
+    public void setStatus(Status status) {
+        this.status = status != null ? status : Status.PENDING;
+    }
+
+    // Status checks
     public boolean isPending() { return status == Status.PENDING; }
     public boolean isApproved() { return status == Status.APPROVED; }
     public boolean isDenied() { return status == Status.DENIED; }
     public boolean isExpired() { return status == Status.EXPIRED; }
 
-    public String getFormattedDate() {
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    // Legacy compatibility
+    /** @deprecated Use isApproved() instead */
+    @Deprecated
+    public boolean approved() { return status == Status.APPROVED; }
+
+    public String getFormattedTimestamp() {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
                 .withZone(ZoneId.systemDefault());
         return fmt.format(timestamp);
     }

@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -115,10 +116,29 @@ public class GUIManager {
         String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName()).toLowerCase(Locale.ROOT);
 
         if (name.contains("claim land")) {
+            // Prevent claiming if the location is already inside ANY claim
+            Plot existingHere = plotManager.getPlotAt(player.getLocation());
+            if (existingHere != null) {
+                messages.send(player, "&cThis land is already claimed.");
+                player.closeInventory();
+                return;
+            }
+
+            // Enforce ONE claim per player (until v2.0)
+            boolean alreadyOwner = plotManager.getPlots().stream()
+                    .anyMatch(p -> p.getOwner().equals(player.getUniqueId()));
+            if (alreadyOwner && !player.hasPermission("proshield.admin.multiple")) {
+                messages.send(player, "&cYou already own a claim.");
+                player.closeInventory();
+                return;
+            }
+
             plotManager.createPlot(player.getUniqueId(), player.getLocation());
+            messages.send(player, "&aClaim created successfully!");
             player.closeInventory();
+
         } else if (name.contains("claim info")) {
-            // static info item — ignore
+            // Tooltip only – do nothing
         } else if (name.contains("unclaim")) {
             Plot plot = plotManager.getPlotAt(player.getLocation());
             if (plot != null && (plot.getOwner().equals(player.getUniqueId()) || player.hasPermission("proshield.admin"))) {
@@ -154,7 +174,7 @@ public class GUIManager {
             lore.add("&7No claim here.");
         } else {
             OfflinePlayer owner = plugin.getServer().getOfflinePlayer(plot.getOwner());
-            String ownerName = owner.getName() != null ? owner.getName() : owner.getUniqueId().toString();
+            String ownerName = owner != null && owner.getName() != null ? owner.getName() : plot.getOwner().toString().substring(0, 8);
             lore.add("&7World: &f" + plot.getWorld());
             lore.add("&7Chunk: &f" + plot.getX() + ", " + plot.getZ());
             lore.add("&7Owner: &f" + ownerName);

@@ -5,6 +5,7 @@ import com.snazzyatoms.proshield.expansions.ExpansionRequest;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
@@ -115,7 +116,7 @@ public class GUIManager {
             plotManager.createPlot(player.getUniqueId(), player.getLocation());
             player.closeInventory();
         } else if (name.contains("claim info")) {
-            // Tooltip only – ignore
+            // Tooltip only
         } else if (name.contains("unclaim")) {
             Plot plot = plotManager.getPlotAt(player.getLocation());
             if (plot != null && (plot.getOwner().equals(player.getUniqueId()) || player.hasPermission("proshield.admin"))) {
@@ -187,8 +188,9 @@ public class GUIManager {
                     ? trusted.getName()
                     : uuid.toString().substring(0, 8);
 
+            ClaimRole role = ClaimRole.fromName(e.getValue());
             List<String> lore = new ArrayList<>();
-            lore.add(messages.color("&7Role: &b" + e.getValue()));
+            lore.add(messages.color("&7Role: &b" + role.getDisplayName()));
             lore.add(messages.color("&aLeft-click: Assign new role"));
             lore.add(messages.color("&cRight-click: Untrust"));
             lore.add(HIDDEN_UUID_TAG + uuid);
@@ -228,7 +230,7 @@ public class GUIManager {
         if (event.isLeftClick()) {
             openAssignRole(player, targetUuid);
         } else if (event.isRightClick()) {
-            plot.getTrusted().remove(targetUuid);
+            roleManager.clearRole(plot, targetUuid);
             String name = Optional.ofNullable(Bukkit.getOfflinePlayer(targetUuid).getName())
                     .orElse(targetUuid.toString().substring(0, 8));
             messages.send(player, "&cUntrusted &f" + name);
@@ -242,19 +244,13 @@ public class GUIManager {
         int size = plugin.getConfig().getInt("gui.menus.assign-role.size", 45);
         Inventory inv = Bukkit.createInventory(actor, size, messages.color(title));
 
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection("roles.available");
-        if (section != null) {
-            int slot = 0;
-            for (String roleKey : section.getKeys(false)) {
-                String name = section.getString(roleKey + ".name", roleKey);
-                List<String> lore = section.getStringList(roleKey + ".lore");
-                List<String> coloredLore = new ArrayList<>();
-                for (String line : lore) coloredLore.add(messages.color(line));
-                coloredLore.add(messages.color("&7Click to assign this role"));
-
-                ItemStack item = simpleItem(Material.BOOK, name, coloredLore.toArray(new String[0]));
-                inv.setItem(slot++, item);
-            }
+        int slot = 0;
+        for (ClaimRole role : ClaimRole.values()) {
+            if (role == ClaimRole.NONE || role == ClaimRole.OWNER) continue;
+            List<String> lore = new ArrayList<>();
+            lore.add(messages.color("&7Click to assign this role"));
+            ItemStack item = simpleItem(Material.BOOK, role.getDisplayName(), lore.toArray(new String[0]));
+            inv.setItem(slot++, item);
         }
 
         placeNavButtons(inv);
@@ -266,10 +262,6 @@ public class GUIManager {
         pendingRoleAssignments.remove(actor);
     }
 
-    /**
-     * Clear a pending deny target for an admin if they close the deny reasons menu
-     * without making a selection.
-     */
     public void clearPendingDenyTarget(UUID admin) {
         pendingDenyTarget.remove(admin);
     }
@@ -284,13 +276,17 @@ public class GUIManager {
 
         if (clicked == null || !clicked.hasItemMeta()) return;
         String roleName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
-        if (roleName == null) return;
+        ClaimRole role = ClaimRole.fromName(roleName);
+        if (role == ClaimRole.NONE) {
+            messages.send(player, "&cInvalid role selected.");
+            openTrusted(player);
+            return;
+        }
 
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot != null) {
-            plot.getTrusted().put(targetUuid, roleName);
-            plotManager.saveAll();
-            messages.send(player, "&aAssigned role &f" + roleName + " &ato target.");
+            roleManager.setRole(plot, targetUuid, role);
+            messages.send(player, "&aAssigned role &f" + role.getDisplayName() + " &ato target.");
         }
         openTrusted(player);
     }
@@ -447,7 +443,7 @@ public class GUIManager {
                 if (slot < size - 9) {
                     inv.setItem(slot++, simpleItem(Material.RED_WOOL, "&cDeny: " + name, lore.toArray(new String[0])));
                 }
-                if (slot >= size - 9) break; // keep nav row free
+                if (slot >= size - 9) break;
             }
         }
 
@@ -500,7 +496,7 @@ public class GUIManager {
                         "&fReason: " + key,
                         "&7" + ChatColor.stripColor(messages.color(reason))
                 ));
-                if (slot >= size - 9) break; // keep nav row
+                if (slot >= size - 9) break;
             }
         } else {
             inv.setItem(13, simpleItem(Material.BARRIER, "&7No reasons configured",
@@ -542,7 +538,7 @@ public class GUIManager {
     }
 
     /* ============================
-     * EXPANSION HISTORY (with pagination)
+     * EXPANSION HISTORY
      * ============================ */
     public void openFilteredHistory(Player admin, List<ExpansionRequest> list) {
         filteredHistory.put(admin.getUniqueId(), list);
@@ -569,7 +565,6 @@ public class GUIManager {
             List<String> lore = new ArrayList<>();
             lore.add("&7Blocks: &f" + req.getAmount());
             lore.add("&7When: &f" + fmt.format(req.getTimestamp()));
-
             String status = req.isApproved() ? "APPROVED" : req.getStatus().name();
             lore.add("&7Status: &f" + status);
 

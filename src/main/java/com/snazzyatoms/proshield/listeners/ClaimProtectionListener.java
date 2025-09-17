@@ -1,6 +1,8 @@
+// src/main/java/com/snazzyatoms/proshield/plots/ClaimProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.entity.Player;
@@ -70,21 +72,21 @@ public class ClaimProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot == null) return;
 
-        boolean allowed = requiresBuild
-                ? roleManager.canBuild(player, plot)
-                : roleManager.canInteract(player, plot);
+        ClaimRole role = roleManager.getRole(player.getUniqueId(), plot);
+        boolean allowed = requiresBuild ? role.canBuild() : role.canInteract();
 
         if (!allowed) {
             event.setCancelled(true);
             messages.send(player, denyMessage);
-            messages.debug("Denied " + flag + " for " + player.getName() + " (role=" + roleManager.getRole(player.getUniqueId(), plot) + ")");
+            messages.debug("Denied " + flag + " for " + player.getName() + " (role=" + role + ")");
             return;
         }
 
         if (!plot.getFlag(flag)) {
             event.setCancelled(true);
             messages.send(player, denyMessage);
-            messages.debug("Denied " + flag + " for " + player.getName() + " (flag disabled) in plot " + plot.getId());
+            messages.debug("Denied " + flag + " for " + player.getName()
+                    + " (flag disabled, role=" + role + ", plot=" + plot.getId() + ")");
         }
     }
 
@@ -101,15 +103,19 @@ public class ClaimProtectionListener implements Listener {
 
         // Respect PvP flag
         if (!plot.getFlag("pvp")) {
-            boolean attackerAllowed = roleManager.canInteract(attacker, plot);
-            boolean victimAllowed = roleManager.canInteract(victim, plot);
+            ClaimRole attackerRole = roleManager.getRole(attacker.getUniqueId(), plot);
+            ClaimRole victimRole = roleManager.getRole(victim.getUniqueId(), plot);
 
-            // Cancel if either isn't trusted
+            boolean attackerAllowed = attackerRole.canInteract();
+            boolean victimAllowed = victimRole.canInteract();
+
+            // Cancel if either isn't trusted enough
             if (!attackerAllowed || !victimAllowed) {
                 event.setCancelled(true);
                 messages.send(attacker, "&cPvP is disabled in this claim.");
                 messages.debug("Prevented PvP: " + attacker.getName() + " → " + victim.getName()
-                        + " (flag=pvp=false, plot=" + plot.getId() + ")");
+                        + " (flag=pvp=false, attacker=" + attackerRole + ", victim=" + victimRole
+                        + ", plot=" + plot.getId() + ")");
             }
         }
     }

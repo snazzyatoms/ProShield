@@ -10,6 +10,11 @@ import org.bukkit.entity.Player;
 import java.util.Locale;
 import java.util.UUID;
 
+/**
+ * ClaimRoleManager
+ * - Central authority for handling player roles in claims
+ * - Synchronized with ClaimRole enum (v1.2.5)
+ */
 public class ClaimRoleManager {
 
     private final ProShield plugin;
@@ -23,19 +28,67 @@ public class ClaimRoleManager {
     }
 
     public void loadAll() {
-        // load roles from disk if you persist them separately
+        // TODO: load roles from disk if you persist them separately
     }
 
     public void saveAll() {
-        // persist roles if applicable
+        // TODO: persist roles if applicable
+    }
+
+    // ========================
+    // Core Role Utilities
+    // ========================
+
+    /**
+     * Get a player's role inside a plot.
+     * Defaults to VISITOR if not trusted/owner.
+     */
+    public ClaimRole getRole(UUID playerId, Plot plot) {
+        if (plot == null || playerId == null) return ClaimRole.NONE;
+        if (plot.getOwner().equals(playerId)) return ClaimRole.OWNER;
+
+        String raw = plot.getTrusted().get(playerId);
+        return raw != null ? ClaimRole.fromName(raw) : ClaimRole.VISITOR;
     }
 
     /**
-     * Assign a role to a nearby target (invoked from chat after GUI click).
-     *
-     * @param actor      owner/co-owner who is assigning
-     * @param targetUuid player to assign a role to
-     * @param rawRole    role name typed in chat
+     * Assign a role to a target inside a claim.
+     */
+    public void setRole(Plot plot, UUID targetId, ClaimRole role) {
+        if (plot == null || targetId == null || role == null) return;
+
+        if (role == ClaimRole.NONE || role == ClaimRole.VISITOR) {
+            plot.getTrusted().remove(targetId);
+        } else {
+            plot.getTrusted().put(targetId, role.name());
+        }
+        plotManager.saveAll();
+    }
+
+    /**
+     * Convenience: check if a player can build in a plot.
+     */
+    public boolean canBuild(Player player, Plot plot) {
+        ClaimRole role = getRole(player.getUniqueId(), plot);
+        return role.canBuild();
+    }
+
+    public boolean canInteract(Player player, Plot plot) {
+        ClaimRole role = getRole(player.getUniqueId(), plot);
+        return role.canInteract();
+    }
+
+    public boolean canManage(Player player, Plot plot) {
+        ClaimRole role = getRole(player.getUniqueId(), plot);
+        return role.canManageRoles() || role.canModifyFlags() || role.canTransferClaim();
+    }
+
+    // ========================
+    // Chat-based Role Assignment (legacy support)
+    // ========================
+
+    /**
+     * Assign a role via chat input (fallback if GUI not used).
      */
     public void assignRoleViaChat(Player actor, UUID targetUuid, String rawRole) {
         if (actor == null || targetUuid == null || rawRole == null) return;
@@ -46,27 +99,22 @@ public class ClaimRoleManager {
             return;
         }
 
-        // Permission check: only owner or admin can assign
+        // Only owner or admin can assign roles
         if (!plot.getOwner().equals(actor.getUniqueId()) && !actor.hasPermission("proshield.admin")) {
             messages.send(actor, "&cOnly the owner (or admin) can assign roles in this claim.");
             return;
         }
 
-        // Normalize role
-        String role = rawRole.trim().toLowerCase(Locale.ROOT);
-        if (!(role.equals("member") || role.equals("builder") || role.equals("trusted") || role.equals("co-owner"))) {
-            role = "trusted"; // fallback
-        }
+        ClaimRole role = ClaimRole.fromName(rawRole);
+        if (role == ClaimRole.NONE) role = ClaimRole.TRUSTED; // fallback
 
-        // ✅ Update trusted map
-        plot.getTrusted().put(targetUuid, role);
+        setRole(plot, targetUuid, role);
 
         OfflinePlayer target = plugin.getServer().getOfflinePlayer(targetUuid);
         String targetName = (target != null && target.getName() != null)
                 ? target.getName()
-                : targetUuid.toString();
+                : targetUuid.toString().substring(0, 8);
 
-        messages.send(actor, "&aAssigned &f" + targetName + " &ato role &f" + role + " &ain this claim.");
-        plotManager.saveAll(); // persist update
+        messages.send(actor, "&aAssigned &f" + targetName + " &ato role &f" + role.getDisplayName() + " &ain this claim.");
     }
 }

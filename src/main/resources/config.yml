@@ -1,12 +1,12 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 (Enhanced)
+# Version: 1.2.6 (Enhanced with Expiry System)
 # ----------------------------------------------------------
 # This configuration powers all of ProShield’s features:
 #  - Claim creation & trust system
 #  - Role-based permissions (owners & trusted players)
 #  - GUI-driven flag management
-#  - Expansion requests (with review/deny reasons/history)
+#  - Expansion requests (with review/deny reasons/history/expiry)
 #  - Mob, explosion, fire & world protections
 # ==========================================================
 
@@ -30,6 +30,7 @@ claims:
     max-increase: 100
     step-options: [10, 15, 20, 25]
     cooldown-hours: 6
+    expire-days: 30   # ✅ Requests older than N days will expire automatically
 
 protection:
   fire:
@@ -217,6 +218,7 @@ messages:
   expansion-disabled: "&cExpansion requests are disabled by the server."
   expansion-cooldown-title: "&cCooldown Active"
   expansion-cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
+  expansion-expired: "&eYour expansion request has expired after {days} days without review." # ✅ New message
 
   deny-reasons:
     too-large: "&cRequested expansion is too large."

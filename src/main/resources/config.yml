@@ -259,12 +259,12 @@ gui:
     deny-reasons:
       title: "&cDeny Reasons"
       size: 27
-    expansion-request:
-      title: "&eExpansion Request"
+    player-expansion:      # ✅ Fixed to match GUIManager
+      title: "&aRequest Expansion"
       size: 27
-    expansion-history:       # ✅ Renamed for consistency
+    expansion-history:
       title: "&7Expansion History"
       size: 54
-    world-controls:          # ✅ Added for admin GUI
+    world-controls:
       title: "&cWorld Controls"
       size: 45

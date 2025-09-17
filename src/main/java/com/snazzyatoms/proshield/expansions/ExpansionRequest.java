@@ -14,7 +14,14 @@ public class ExpansionRequest {
     private UUID reviewedBy;
     private String denialReason;
 
-    public ExpansionRequest(UUID requester, int amount, Instant timestamp, Status status, UUID reviewedBy, String denialReason) {
+    // Convenience constructor (fresh request, defaults to PENDING)
+    public ExpansionRequest(UUID requester, int amount) {
+        this(requester, amount, Instant.now(), Status.PENDING, null, null);
+    }
+
+    // Full constructor
+    public ExpansionRequest(UUID requester, int amount, Instant timestamp, Status status,
+                            UUID reviewedBy, String denialReason) {
         this.requester = requester;
         this.amount = amount;
         this.timestamp = timestamp;
@@ -34,7 +41,7 @@ public class ExpansionRequest {
     public void setReviewedBy(UUID reviewedBy) { this.reviewedBy = reviewedBy; }
 
     public String getDenialReason() { return denialReason; }
-    public void setDenyReason(String denialReason) { this.denialReason = denialReason; }
+    public void setDenialReason(String denialReason) { this.denialReason = denialReason; }
 
     public boolean isApproved() { return status == Status.APPROVED; }
 }

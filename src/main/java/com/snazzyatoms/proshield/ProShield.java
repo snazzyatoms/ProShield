@@ -14,8 +14,12 @@ import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -34,6 +38,9 @@ public class ProShield extends JavaPlugin {
     private final Set<UUID> debugging = new HashSet<>();
     private boolean debugEnabled = false;
 
+    private File messagesFile;
+    private FileConfiguration messagesConfig;
+
     public static ProShield getInstance() {
         return instance;
     }
@@ -43,9 +50,9 @@ public class ProShield extends JavaPlugin {
         instance = this;
 
         saveDefaultConfig();
-        loadMessagesConfig();
+        reloadMessagesConfig(); // ✅ load messages.yml properly
 
-        this.messages = new MessagesUtil(this);
+        this.messages = new MessagesUtil(messagesConfig);
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
         this.expansionRequestManager = new ExpansionRequestManager(this, plotManager);
@@ -83,7 +90,9 @@ public class ProShield extends JavaPlugin {
         getLogger().info("🛑 ProShield disabled.");
     }
 
+    // =====================================================
     // Accessors
+    // =====================================================
     public MessagesUtil getMessagesUtil() { return messages; }
     public GUIManager getGuiManager() { return guiManager; }
     public ClaimRoleManager getRoleManager() { return roleManager; }
@@ -100,8 +109,32 @@ public class ProShield extends JavaPlugin {
     public void disableDebug(UUID uuid) { debugging.remove(uuid); }
     public boolean isDebugging(UUID uuid) { return debugging.contains(uuid); }
 
-    public void loadMessagesConfig() {
-        if (!getDataFolder().exists()) getDataFolder().mkdirs();
-        saveResource("messages.yml", false);
+    // =====================================================
+    // Messages Config Handling
+    // =====================================================
+    public void reloadMessagesConfig() {
+        if (messagesFile == null) {
+            messagesFile = new File(getDataFolder(), "messages.yml");
+        }
+
+        if (!messagesFile.exists()) {
+            saveResource("messages.yml", false);
+        }
+
+        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+
+        // If MessagesUtil already exists, refresh it
+        if (messages != null) {
+            messages = new MessagesUtil(messagesConfig);
+        }
+    }
+
+    public void saveMessagesConfig() {
+        if (messagesFile == null || messagesConfig == null) return;
+        try {
+            messagesConfig.save(messagesFile);
+        } catch (IOException e) {
+            getLogger().severe("Failed to save messages.yml: " + e.getMessage());
+        }
     }
 }

@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Messages
-# Version: 1.2.5
+# Version: 1.2.5 (Enhanced)
 # Synced with GUIManager + config.yml
 # ==========================================================
 
@@ -17,6 +17,9 @@ messages:
   compass:
     command-success: "&aA ProShield Compass has been given to you."
     already-have: "&eYou already have a ProShield Compass."
+    lore:
+      - "&7Right-click to open the ProShield menu"
+      - "&7Manage your claims, flags & trusted players"
 
   # --- Admin / System ---
   reloaded: "&aProShield configuration reloaded."
@@ -36,23 +39,23 @@ messages:
   leave-other: "&cYou left {owner}'s claim."
   wilderness: "&7You entered the wilderness."
 
-  # --- Expansion Requests ---
-  expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
-  expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
-  expansion-denied: "&cYour expansion request was denied: {reason}"
+  # --- Expansion Requests (Player) ---
+  expansion:
+    request-sent: "&eYour expansion request for +{blocks} blocks has been sent to admins."
+    approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
+    denied: "&cYour expansion request was denied: {reason}"
+    disabled: "&cExpansion requests are disabled by the server."
+    cooldown-title: "&cCooldown Active"
+    cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
 
-  # Modular expansion control messages
-  expansion-disabled: "&cExpansion requests are disabled by the server."
-  expansion-cooldown-title: "&cCooldown Active"
-  expansion-cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
+  # --- Expansion Review (Admin GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&aLeft-click: Approve this expansion"
+      deny: "&cRight-click: Deny and choose a reason"
+      info: "&7Use the deny reasons menu for detailed denial messages."
 
-  # Admin review GUI tooltips
-  expansion-admin-lore:
-    approve: "&aLeft-click: Approve this expansion"
-    deny: "&cRight-click: Deny and choose a reason"
-    info: "&7Use the deny reasons menu for detailed denial messages."
-
-  # Deny reasons (used in Admin GUI → Deny menu)
+  # --- Deny reasons (Admin GUI → Deny menu) ---
   deny-reasons:
     too-large: "&cRequested expansion is too large."
     abusive: "&cExpansion request denied due to abuse."
@@ -60,12 +63,9 @@ messages:
     custom-1: "&cNot enough playtime yet for this expansion."
     custom-2: "&cYour claim already reached the maximum size."
 
-# -----------------------------
-# Help (GUI-first style)
-# -----------------------------
-# -----------------------------
-# Help (GUI-first style)
-# -----------------------------
+# ==========================================================
+# Help Pages (GUI-first style)
+# ==========================================================
 help:
   player:
     - "&3&lProShield &7— Player Guide"

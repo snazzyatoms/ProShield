@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/expansions/ExpansionRequestManager.java
 package com.snazzyatoms.proshield.expansions;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -6,6 +7,8 @@ import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -13,6 +16,8 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -26,14 +31,71 @@ public class ExpansionRequestManager {
 
     private final Map<UUID, List<ExpansionRequest>> requests = new ConcurrentHashMap<>();
 
+    private final File file;
+    private FileConfiguration data;
+
     public ExpansionRequestManager(ProShield plugin) {
         this.plugin = plugin;
         this.plotManager = plugin.getPlotManager();
         this.messages = plugin.getMessagesUtil();
 
+        this.file = new File(plugin.getDataFolder(), "expansions.yml");
+        reload();
+
         // ✅ Expire old requests every hour
         long ticksPerHour = 20L * 60 * 60;
         Bukkit.getScheduler().runTaskTimer(plugin, this::expireOldRequests, ticksPerHour, ticksPerHour);
+    }
+
+    /* ---------------------
+     * YAML Persistence
+     * --------------------- */
+    public void reload() {
+        if (!file.exists()) {
+            try { file.createNewFile(); } catch (IOException ignored) {}
+        }
+        data = YamlConfiguration.loadConfiguration(file);
+        loadRequests();
+    }
+
+    public void save() {
+        saveRequests();
+        try {
+            data.save(file);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save expansions.yml: " + e.getMessage());
+        }
+    }
+
+    private void loadRequests() {
+        requests.clear();
+        if (!data.isConfigurationSection("requests")) return;
+
+        for (String uuidStr : data.getConfigurationSection("requests").getKeys(false)) {
+            UUID owner = UUID.fromString(uuidStr);
+            List<Map<?, ?>> rawList = data.getMapList("requests." + uuidStr);
+            List<ExpansionRequest> list = new ArrayList<>();
+            for (Map<?, ?> raw : rawList) {
+                try {
+                    ExpansionRequest req = ExpansionRequest.fromMap((Map<String, Object>) raw);
+                    if (req != null) list.add(req);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to load expansion request for " + uuidStr + ": " + e.getMessage());
+                }
+            }
+            requests.put(owner, list);
+        }
+    }
+
+    private void saveRequests() {
+        data.set("requests", null); // clear
+        for (Map.Entry<UUID, List<ExpansionRequest>> entry : requests.entrySet()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (ExpansionRequest req : entry.getValue()) {
+                list.add(req.toMap());
+            }
+            data.set("requests." + entry.getKey().toString(), list);
+        }
     }
 
     /* ---------------------
@@ -94,6 +156,7 @@ public class ExpansionRequestManager {
                 ExpansionRequest.Status.PENDING, null, null);
 
         requests.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>()).add(req);
+        save(); // ✅ Save immediately
         messages.send(player, messages.get("expansion.request-sent")
                 .replace("{blocks}", String.valueOf(amount)));
         player.closeInventory();
@@ -136,6 +199,7 @@ public class ExpansionRequestManager {
                     plotManager.expandPlot(plot.getId(), req.getAmount());
                 }
 
+                save(); // ✅ Persist change
                 notifyPlayer(target, messages.get("expansion.approved")
                         .replace("{blocks}", String.valueOf(req.getAmount())));
                 break;
@@ -151,6 +215,7 @@ public class ExpansionRequestManager {
                 req.setReviewedBy(admin);
                 req.setDenyReason(reason);
 
+                save(); // ✅ Persist change
                 notifyPlayer(target, messages.get("expansion.denied")
                         .replace("{reason}", reason));
                 break;
@@ -170,12 +235,12 @@ public class ExpansionRequestManager {
                 if (req.getStatus() == ExpansionRequest.Status.PENDING &&
                         req.getTimestamp().isBefore(cutoff)) {
                     req.setStatus(ExpansionRequest.Status.EXPIRED);
-
                     notifyPlayer(owner, messages.get("expansion.expired")
                             .replace("{days}", String.valueOf(expireDays)));
                 }
             }
         }
+        save(); // ✅ Persist expiry
     }
 
     /* ---------------------

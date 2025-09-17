@@ -1,127 +1,103 @@
-package com.snazzyatoms.proshield.expansions;
+package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.expansions.ExpansionRequest;
+import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.UUID;
 
-/**
- * ExpansionRequestManager
- * Handles storage, approval/denial, and retrieval of ExpansionRequests.
- */
-public class ExpansionRequestManager {
+public class AdminPendingRequestsGUI {
 
     private final ProShield plugin;
-    private final Map<UUID, List<ExpansionRequest>> requests = new ConcurrentHashMap<>();
+    private final ExpansionRequestManager requestManager;
 
-    public ExpansionRequestManager(ProShield plugin) {
+    public AdminPendingRequestsGUI(ProShield plugin) {
         this.plugin = plugin;
+        this.requestManager = plugin.getExpansionRequestManager();
     }
 
-    /* -------------------
-     * Request Lifecycle
-     * ------------------- */
+    /**
+     * Open the GUI for an admin, showing all pending requests.
+     */
+    public void open(Player admin) {
+        List<ExpansionRequest> pending = requestManager.getPendingRequests();
 
-    public ExpansionRequest createRequest(UUID requester, int amount) {
-        ExpansionRequest req = new ExpansionRequest(requester, amount);
-        requests.computeIfAbsent(requester, k -> new ArrayList<>()).add(req);
-        return req;
+        int size = ((pending.size() / 9) + 1) * 9;
+        if (size > 54) size = 54; // limit to 6 rows
+
+        Inventory gui = Bukkit.createInventory(null, size, ChatColor.DARK_GREEN + "Pending Expansion Requests");
+
+        int slot = 0;
+        for (ExpansionRequest req : pending) {
+            if (slot >= size) break;
+
+            OfflinePlayer requester = requestManager.getOfflinePlayer(req.getRequester());
+
+            ItemStack paper = new ItemStack(Material.PAPER);
+            ItemMeta meta = paper.getItemMeta();
+            meta.setDisplayName(ChatColor.YELLOW + requester.getName() + ChatColor.GRAY + " → " + req.getAmount());
+            meta.setLore(List.of(
+                    ChatColor.GRAY + "Requested: " + req.getAmount(),
+                    ChatColor.GRAY + "At: " + req.getTimestamp(),
+                    ChatColor.GRAY + "Status: " + req.getStatus(),
+                    ChatColor.GREEN + "Left-click: Approve",
+                    ChatColor.RED + "Right-click: Deny"
+            ));
+            paper.setItemMeta(meta);
+
+            gui.setItem(slot, paper);
+            slot++;
+        }
+
+        admin.openInventory(gui);
     }
 
-    public List<ExpansionRequest> getRequests(UUID requester) {
-        return requests.getOrDefault(requester, Collections.emptyList());
-    }
+    /**
+     * Handle clicks inside the GUI.
+     */
+    public void handleClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (event.getCurrentItem() == null) return;
 
-    public List<ExpansionRequest> getAllRequests() {
-        return requests.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
-    }
+        Inventory inv = event.getInventory();
+        if (!ChatColor.stripColor(inv.getTitle()).equalsIgnoreCase("Pending Expansion Requests")) return;
 
-    public List<ExpansionRequest> getPendingRequests() {
-        return getAllRequests().stream()
-                .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
-                .collect(Collectors.toList());
-    }
+        event.setCancelled(true);
 
-    /** ✅ New: Get only the pending requests for a specific player */
-    public List<ExpansionRequest> getPendingRequestsFor(UUID requester) {
-        return getRequests(requester).stream()
-                .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
-                .collect(Collectors.toList());
-    }
+        ItemStack clicked = event.getCurrentItem();
+        if (!clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
 
-    public void approveRequest(ExpansionRequest req, UUID reviewer) {
-        req.setStatus(ExpansionRequest.Status.APPROVED);
-        req.setReviewedBy(reviewer);
-        plugin.getLogger().info("Approved expansion request from " + req.getRequester() + " for " + req.getAmount());
-    }
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName()).split(" ")[0];
+        OfflinePlayer target = Bukkit.getOfflinePlayer(name);
+        List<ExpansionRequest> pending = requestManager.getPendingRequestsFor(target.getUniqueId());
+        if (pending.isEmpty()) {
+            player.sendMessage(ChatColor.RED + "No pending requests found for " + name);
+            return;
+        }
 
-    public void denyRequest(ExpansionRequest req, UUID reviewer, String reason) {
-        req.setStatus(ExpansionRequest.Status.DENIED);
-        req.setReviewedBy(reviewer);
-        req.setDenialReason(reason); // ✅ Corrected method
-        plugin.getLogger().info("Denied expansion request from " + req.getRequester() + " (" + reason + ")");
-    }
+        ExpansionRequest req = pending.get(0); // pick the first pending one
 
-    public void expireOldRequests() {
-        Instant cutoff = Instant.now().minusSeconds(7 * 24 * 3600); // 7 days
-        for (List<ExpansionRequest> list : requests.values()) {
-            for (ExpansionRequest req : list) {
-                if (req.getStatus() == ExpansionRequest.Status.PENDING &&
-                        req.getTimestamp().isBefore(cutoff)) {
-                    req.setStatus(ExpansionRequest.Status.EXPIRED);
-                    plugin.getLogger().info("Expired expansion request from " + req.getRequester());
-                }
+        switch (event.getClick()) {
+            case LEFT -> {
+                requestManager.approveRequest(req, player.getUniqueId());
+                player.sendMessage(ChatColor.GREEN + "Approved request for " + name);
+                player.closeInventory();
+            }
+            case RIGHT -> {
+                requestManager.denyRequest(req, player.getUniqueId(), "Denied by admin");
+                player.sendMessage(ChatColor.RED + "Denied request for " + name);
+                player.closeInventory();
             }
         }
-    }
-
-    /* -------------------
-     * Persistence
-     * ------------------- */
-
-    public Map<String, Object> serialize() {
-        Map<String, Object> data = new HashMap<>();
-        for (Map.Entry<UUID, List<ExpansionRequest>> e : requests.entrySet()) {
-            List<Map<String, Object>> serialized = e.getValue().stream()
-                    .map(ExpansionRequest::toMap)
-                    .collect(Collectors.toList());
-            data.put(e.getKey().toString(), serialized);
-        }
-        return data;
-    }
-
-    @SuppressWarnings("unchecked")
-    public void deserialize(Map<String, Object> data) {
-        requests.clear();
-        for (Map.Entry<String, Object> e : data.entrySet()) {
-            try {
-                UUID playerId = UUID.fromString(e.getKey());
-                List<Map<String, Object>> list = (List<Map<String, Object>>) e.getValue();
-                List<ExpansionRequest> rebuilt = new ArrayList<>();
-                for (Map<String, Object> m : list) {
-                    ExpansionRequest req = ExpansionRequest.fromMap(m);
-                    if (req != null) rebuilt.add(req);
-                }
-                requests.put(playerId, rebuilt);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    /* -------------------
-     * Utility
-     * ------------------- */
-
-    public OfflinePlayer getOfflinePlayer(UUID uuid) {
-        return Bukkit.getOfflinePlayer(uuid);
-    }
-
-    public void clear() {
-        requests.clear();
     }
 }

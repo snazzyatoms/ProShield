@@ -23,7 +23,7 @@ public class GUIListener implements Listener {
         this.guiManager = plugin.getGuiManager();
     }
 
-    // Legacy fallback (still safe)
+    // Legacy fallback (safe)
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
         this.guiManager = guiManager != null ? guiManager : plugin.getGuiManager();
@@ -79,6 +79,7 @@ public class GUIListener implements Listener {
             guiManager.handleHistoryClick(player, event);
 
         } else if (lowerTitle.contains("request expansion")) {
+            // ✅ Player expansion requests menu (with working back/exit)
             plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
 
         } else if (lowerTitle.contains("deny reasons")) {

@@ -1,90 +1,106 @@
-// src/main/java/com/snazzyatoms/proshield/util/MessagesUtil.java
 package com.snazzyatoms.proshield.util;
 
-import org.bukkit.Bukkit;
+import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-/**
- * MessagesUtil
- * - Unified message + debug system
- * - Supports nested keys in config.yml/messages.yml (e.g., messages.error.no-permission)
- * - Colorizes & codes and applies prefixes
- *
- * v1.2.5 Features:
- *   ✅ Config-driven messages (synced with messages.yml)
- *   ✅ Dynamic nested key lookups
- *   ✅ Prefix + Debug prefix
- *   ✅ Debug logging (to console and optionally admins)
- *   ✅ Null-safe and fallback-friendly
- */
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
 public class MessagesUtil {
 
-    private final FileConfiguration config;
-    private final String prefix;
-    private final String debugPrefix;
+    private final ProShield plugin;
+    private FileConfiguration msgs;
+    private final File messagesFile;
 
-    public MessagesUtil(FileConfiguration config) {
-        this.config = config;
-
-        this.prefix = color(config.getString("messages.prefix", "&3[ProShield]&r "));
-        this.debugPrefix = color(config.getString("messages.debug-prefix", "&8[Debug]&r "));
+    public MessagesUtil(ProShield plugin) {
+        this.plugin = plugin;
+        this.messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+        reload();
     }
 
-    /** Translate & color codes */
-    public String color(String msg) {
-        return (msg == null) ? "" : ChatColor.translateAlternateColorCodes('&', msg);
-    }
-
-    /**
-     * Look up a message from config.yml/messages.yml
-     * e.g. get("messages.error.no-permission")
-     */
-    public String get(String path) {
-        String raw = config.getString(path);
-        return raw != null ? color(raw) : "§c<Missing: " + path + ">";
-    }
-
-    /** Send message with plugin prefix */
-    public void send(CommandSender sender, String msg) {
-        if (sender == null || msg == null || msg.isEmpty()) return;
-        sender.sendMessage(prefix + color(msg));
-    }
-
-    /** Send config-defined message by key (with prefix) */
-    public void sendKey(CommandSender sender, String path) {
-        if (sender == null) return;
-        sender.sendMessage(prefix + get(path));
-    }
-
-    /** Send without prefix */
-    public void sendRaw(CommandSender sender, String msg) {
-        if (sender == null || msg == null || msg.isEmpty()) return;
-        sender.sendMessage(color(msg));
-    }
-
-    /** Debug message to a player or console */
-    public void debug(CommandSender sender, String msg) {
-        if (sender == null || msg == null || msg.isEmpty()) return;
-        sender.sendMessage(debugPrefix + color(msg));
-    }
-
-    /** Debug message to console */
-    public void debug(String msg) {
-        if (msg == null || msg.isEmpty()) return;
-        Bukkit.getConsoleSender().sendMessage(debugPrefix + color(msg));
-    }
-
-    /** Broadcast message to all online operators */
-    public void broadcastToOps(String msg) {
-        if (msg == null || msg.isEmpty()) return;
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.isOp()) {
-                send(player, msg);
-            }
+    /** Reloads messages.yml */
+    public void reload() {
+        if (!messagesFile.exists()) {
+            plugin.saveResource("messages.yml", false);
         }
-        debug(msg);
+        this.msgs = YamlConfiguration.loadConfiguration(messagesFile);
+
+        // Defaults from jar
+        InputStream defStream = plugin.getResource("messages.yml");
+        if (defStream != null) {
+            YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream));
+            this.msgs.setDefaults(defConfig);
+        }
+    }
+
+    public FileConfiguration getConfig() {
+        return msgs;
+    }
+
+    public void send(Player player, String message) {
+        if (player == null || message == null) return;
+        player.sendMessage(color(prefix() + message));
+    }
+
+    public void send(CommandSender sender, String message) {
+        if (sender == null || message == null) return;
+        sender.sendMessage(color(prefix() + message));
+    }
+
+    /** For pre-colored lines (strings coming from config help lists, etc.) */
+    public void sendRaw(CommandSender sender, String coloredLine) {
+        if (sender == null || coloredLine == null) return;
+        sender.sendMessage(color(coloredLine));
+    }
+
+    /** Send a list of lines (e.g., help pages) */
+    public void sendList(CommandSender sender, List<String> lines) {
+        if (sender == null || lines == null) return;
+        for (String line : colorList(lines)) {
+            sender.sendMessage(line);
+        }
+    }
+
+    /** Colorize every string in a list */
+    public List<String> colorList(List<String> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream().map(this::color).toList();
+    }
+
+    public void debug(String message) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info(color(debugPrefix() + message));
+        }
+    }
+
+    public String color(String input) {
+        return ChatColor.translateAlternateColorCodes('&', Objects.requireNonNullElse(input, ""));
+    }
+
+    private String prefix() {
+        return msgs.getString("messages.prefix", "&3[ProShield]&r ");
+    }
+
+    private String debugPrefix() {
+        return msgs.getString("messages.debug-prefix", "&8[Debug]&r ");
+    }
+
+    public String get(String path) {
+        String v = msgs.getString(path, "");
+        return color(v);
+    }
+
+    /** Get a string list path from messages.yml */
+    public List<String> getList(String path) {
+        List<String> list = msgs.getStringList(path);
+        return list != null ? list : Collections.emptyList();
     }
 }

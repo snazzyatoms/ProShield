@@ -1,124 +1,144 @@
 # 🛡️ ProShield 2.0 Roadmap
 
-> **Note:** Several roadmap features have already been **introduced in 1.2.x**:  
-> - ✅ Claim Roles (Visitor, Member, Container, Builder, Co-Owner)  
-> - ✅ GUI trust management (slots, back button, role assignment polish)  
-> - ✅ Claim Item Protection (toggle for keeping dropped items inside claims)  
-> - ✅ Claim Preview & Ownership Transfer tools  
-> - ✅ Admin Compass (auto-given to OPs)  
-> - ✅ Spawn Guard radius (configurable)  
-> - ✅ Mob Border Repel (hostiles bounce off claim edges)  
-> - ✅ Config reload via command **and GUI button**  
->
-> ProShield 2.0 will **expand and refine** these systems and introduce **Towns, Shops, Claim Flags, Entry/Exit Messages, and Economy integration**.
+## 🌟 Highlights
+
+**Already in 1.2.5:**  
+- ✅ Claim Roles (Visitor → Co-Owner)  
+- ✅ GUI Trust Management (roles, back/exit buttons)  
+- ✅ Item Protection (toggle keep-drops in claims)  
+- ✅ Claim Transfer & Preview Tools  
+- ✅ Admin Compass (auto-given to OPs)  
+- ✅ Spawn Guard Radius (anti-claim near spawn)  
+- ✅ Mob Border Repel + Safezone Controls (repel, despawn, path-block)  
+- ✅ Expansion Requests (player GUI → admin review/deny/history)  
+- ✅ World Controls GUI (fire, explosions, mobs, etc.)  
+- ✅ Safezones (full protection zones)  
+- ✅ Admin GUI (reload, debug, bypass, purge expired claims)  
+
+**Coming in 2.0:**  
+- 🏘️ Towns & Communities (mayor, assistants, residents)  
+- 💰 Economy Integration (Vault support, upkeep, town banks)  
+- 🏷️ Advanced Claim Flags (per-world defaults, custom toggles)  
+- 📢 Entry/Exit Messages & Claim Map (/proshield map)  
+- 🔐 Custom Role Editor (define unique roles per claim/town)  
+- ⚙️ Admin Audit Logs (track claim/expansion actions)  
+- 🔮 Developer API + Long-Term Features (shops, quests, web dashboard)  
+
+---
+
+> **Note:** ProShield 1.2.x already introduced **roles, flags, expansion requests, safezones, mob repel, and admin tools**.  
+> ProShield 2.0 builds on these foundations to deliver **Towns, Shops, Economy, Custom Roles, and Global Controls**.
 
 ---
 
 ## ✨ Vision
-- Lightweight and performance-friendly.
-- Simple for new players, powerful for admins.
-- Flexible enough to integrate with towns, shops, and server economies.
-- Modular: server owners enable only what they need.
+- **Lightweight & performance-friendly** — perfect for survival SMPs.  
+- **Simple for players**, yet **powerful for admins**.  
+- **Modular & flexible** — enable only what your server needs.  
+- Build towards **community features** (towns, shops, economies).  
 
 ---
 
 ## 🌍 Multi-World & Global Controls
-- Per-world configuration files (different rules per world).
-- Server-wide global claim defaults.
-- Protected "no-claim" zones (e.g., spawn or hub).
-- **Next:** Dynamic per-world overrides through GUI (not only YAML).
+- ✅ Per-world safezones and global claim defaults.  
+- ✅ World Controls GUI for toggling protections live.  
+- Per-world YAML overrides for advanced configs.  
+- **Next:** GUI-based per-world editors (editable defaults per world).  
 
 ---
 
 ## 🏘️ Towns & Communities
-- **Merge claims** into Towns/Communities.
-- Town ranks:
-  - Mayor (founder/owner)
-  - Assistants (manage claims, trust players)
-  - Residents (trusted members)
-- Town-wide permissions and flags.
-- Commands:
-  - `/proshield town create <name>`
-  - `/proshield town invite <player>`
-  - `/proshield town promote <player>`
-- **Next:** Town GUI dashboard for managing claims, members, and flags.
+- **Merge individual claims** into larger **Towns**.  
+- Town ranks:  
+  - Mayor (founder/owner)  
+  - Assistants (manage claims, invite/trust players)  
+  - Residents (trusted members)  
+- Town-wide permissions and shared flags.  
+- Commands:  
+  - `/proshield town create <name>`  
+  - `/proshield town invite <player>`  
+  - `/proshield town promote <player>`  
+- **Next:** Full **Town GUI dashboard** for managing members, claims, and finances.  
 
 ---
 
 ## 💰 Economy Integration
-- Optional claim purchase cost (Vault or economy plugin required).
-- Upkeep/maintenance system: inactive or unpaid claims auto-expire.
-- Integration with shop plugins:
-  - Auto-protect shops inside claims.
-  - Role-based shop management.
-- **Next:** Town bank & upkeep system tied into Vault.
+- Optional **claim purchase costs** (Vault-compatible).  
+- Claim/town **upkeep system**: unpaid claims/towns expire.  
+- Shop plugins integration:  
+  - Auto-protect shops within claims.  
+  - Role-based shop access.  
+- **Next:** Town banks & shared upkeep tied into Vault.  
 
 ---
 
 ## 🏷️ Claim Flags (Per-Claim Toggles)
-- Flags configurable per claim:
-  - PvP (on/off)
-  - Explosions
-  - Fire spread
-  - Animal interactions
-  - Redstone mechanics
-- GUI-based flag editor.
-- Configurable server-wide defaults.
-- **Next:** Editable defaults per world.
+- ✅ Player-level **Claim Flags GUI** (since 1.2.5).  
+- Configurable per-claim toggles:  
+  - PvP  
+  - Explosions  
+  - Fire spread  
+  - Animal interactions  
+  - Redstone mechanics  
+- Server-wide defaults in `config.yml`.  
+- **Next:** **Editable defaults per world** with inheritance.  
 
 ---
 
 ## 📢 Player Experience & QoL
-- Claim entry/exit messages (customizable per claim).
-- `/proshield map` → show nearby claims (text-grid or minimap-style).
-- Visualization mode:
-  - Temporary glowing borders
-  - Particle outlines when claiming land
-- **Next:** Compass integration with teleport shortcuts.
+- ✅ **Back & Exit buttons** across all GUIs (since 1.2.5).  
+- ✅ **Expansion Requests menu** for players.  
+- ✅ **Expansion History with pagination** for admins.  
+- Claim entry/exit messages (planned in 2.0).  
+- `/proshield map` → show nearby claims (grid or minimap-style).  
+- Visualization mode: glowing borders & particles.  
+- **Next:** Compass teleport integration + quick-travel tools.  
 
 ---
 
 ## 🔐 Advanced Roles & Access
-- Expand roles from 1.2:
-  - Visitor (no interaction)
-  - Member (basic interaction/build)
-  - Container (chests/furnaces only)
-  - Manager (invite/trust others, toggle flags)
-  - Co-Owner (full control)
-- Editable roles per claim or town.
-- GUI role manager for ease of use.
-- **Next:** Per-claim **custom role editor** for advanced servers.
+- Expanded roles beyond 1.2.x:  
+  - Visitor → walk only  
+  - Member → basic interaction  
+  - Container → chest/furnace use  
+  - Builder → full build/break  
+  - Manager → invite/trust others, toggle flags  
+  - Co-Owner → near full access  
+- Editable roles per-claim or per-town.  
+- GUI-driven role editor.  
+- **Next:** **Custom role editor** for servers needing fine-grained access control.  
 
 ---
 
 ## ⚙️ Admin Tools & Maintenance
-- Expired claim auto-cleanup:
-  - **Preview mode** before deletion.
-- `/proshield stats` → claim statistics and summaries.
-- Force-merge or force-claim abandoned areas.
-- Optional "read-only mode" for maintenance.
-- **Next:** In-game **admin audit log** for claim actions.
+- ✅ **Admin Tools GUI** with reload/debug/bypass (1.2.4+)  
+- ✅ **Expansion Review GUI** with deny reasons (1.2.5)  
+- ✅ **Expansion History GUI** with pagination (1.2.5)  
+- ✅ **World Controls GUI** to toggle global protections (1.2.5)  
+- Expired claim auto-cleanup (configurable, with purge tools).  
+- `/proshield stats` → claim statistics & summaries.  
+- Force-merge or unclaim abandoned areas.  
+- **Next:** In-game **admin audit log** (track actions/approvals).  
 
 ---
 
 ## 🔮 Future-Proofing
-- Plugin API hooks for developers:
-  - Shop protection
-  - Quests
-  - Events
-- Modular architecture:
-  - Towns, economy, claims → toggleable in config.
-- Exploration of **web dashboard** integration (long-term).
-- Potential cache-based optimizations for **large-scale SMPs**.
+- Plugin API hooks for devs:  
+  - Shop protection  
+  - Quest/event integration  
+- Modular architecture:  
+  - Towns, shops, economy, claims → all toggleable.  
+- Potential **web dashboard** integration (long-term).  
+- Optimizations for **large SMPs** (caching, async tasks).  
 
 ---
 
 ## ✅ Goals for 2.0
-- Make ProShield the **go-to lightweight protection plugin** for survival servers.
-- Offer **community and economy integration** without sacrificing performance.
-- Deliver a polished, stable release that sets the foundation for long-term growth.
+- Establish ProShield as the **go-to lightweight protection plugin**.  
+- Deliver **community + economy integration** while keeping performance first.  
+- Provide a **stable foundation** for long-term SMP servers.  
 
 ---
 
 💡 **Want to contribute ideas?**  
-Open a [GitHub Issue](https://github.com/snazzyatoms/ProShield/issues) or join the Spigot discussion thread!
+Open a [GitHub Issue](https://github.com/snazzyatoms/ProShield/issues) or join the **Spigot discussion thread**!

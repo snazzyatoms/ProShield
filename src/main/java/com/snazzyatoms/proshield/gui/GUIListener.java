@@ -73,23 +73,22 @@ public class GUIListener implements Listener {
         } else if (lowerTitle.contains("admin tools")) {
             guiManager.handleAdminClick(player, event);
 
-        } else if (lowerTitle.contains("expansion requests")) {
-            // ✅ Admin’s review panel
-            guiManager.handleExpansionReviewClick(player, event);
-
         } else if (lowerTitle.contains("expansion history")) {
             guiManager.handleHistoryClick(player, event);
-
-        } else if (lowerTitle.contains("request expansion")) {
-            // ✅ Player’s request panel (GUIManager now owns this logic)
-            guiManager.handlePlayerExpansionRequestClick(player, event);
 
         } else if (lowerTitle.contains("deny reasons")) {
             guiManager.handleDenyReasonClick(player, event);
 
         } else if (lowerTitle.contains("world controls")) {
-            // ✅ Admin’s World Controls panel
             guiManager.handleWorldControlsClick(player, event);
+
+        } else if (lowerTitle.contains("request expansion")) {
+            // ✅ Player’s Request Expansion menu
+            guiManager.handlePlayerExpansionRequestClick(player, event);
+
+        } else if (lowerTitle.contains("expansion requests")) {
+            // ✅ Admin’s Expansion Review menu
+            guiManager.handleExpansionReviewClick(player, event);
         }
     }
 

@@ -1,37 +1,23 @@
-# ==========================================================
-# ProShield Configuration
-# Version: 1.2.5
-# Synced with GUIManager, Messages, Persistence & Mob Handling
-# ==========================================================
-
 settings:
   give-compass-on-join: true
   compass-despawn-delay: 600
   compass-auto-replace: false
-
-  # Operators: full control and bypass by default (can toggle bypass in GUI)
   ops-have-full-access: true
 
 claims:
-  # Horizontal protection radius (blocks) from claim center
   default-radius: 50
-  # Vertical protection range
   min-y: 0
   max-y: 200
-  # Default: claims are safe zones (no hostile damage/targeting)
   safezone-enabled: true
-  # Admins may edit/assist player claims via GUI
   allow-admin-edit-claims: true
-  # Claim owners can always edit their flags in GUI
   allow-owner-claim-flags: true
 
-  # Expansion request system
   expansion:
-    enabled: true                      # Toggle expansion system on/off
-    show-in-gui: true                  # Show Request Expansion button in player GUI
-    max-increase: 100                  # Max blocks a single request can add
-    step-options: [10, 15, 20, 25]     # Allowed increments for players to choose in GUI
-    cooldown-hours: 6                  # Default cooldown between requests
+    enabled: true
+    show-in-gui: true
+    max-increase: 100
+    step-options: [10, 15, 20, 25]
+    cooldown-hours: 6
 
 protection:
   fire:
@@ -55,7 +41,7 @@ protection:
     lava: false
     water: false
 
-    mobs:
+  mobs:
     border-repel:
       enabled: true
       radius: 15.0
@@ -63,19 +49,12 @@ protection:
       vertical-push: 0.25
       play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
-
     despawn-inside: true
     despawn-interval-seconds: 30
-
-    pathing:
-      enabled: true
-      interval-ticks: 40
-
     prevent-damage: true
     prevent-targeting: true
     protect-pets: true
     protect-passive: true
-
 
   entities:
     wilderness:
@@ -101,9 +80,6 @@ protection:
       safezone: true
     worlds: {}
 
-# -----------------------------
-# Claim Roles (GUI-driven)
-# -----------------------------
 roles:
   default: member
   available:
@@ -138,9 +114,6 @@ roles:
         containers: true
         toggle-flags: true
 
-# -----------------------------
-# Per-Claim Flags (toggle in GUI)
-# -----------------------------
 flags:
   available:
     safezone:
@@ -204,13 +177,9 @@ flags:
         - "&7Allow lightning to ignite blocks"
       default: false
 
-# -----------------------------
-# Messages (synced with MessagesUtil & GUI tooltips)
-# -----------------------------
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
-
   show-wilderness: true
   admin-flag-chat: true
 
@@ -234,9 +203,6 @@ messages:
     custom-1: "&cNot enough playtime yet for this expansion."
     custom-2: "&cYour claim already reached the maximum size."
 
-# -----------------------------
-# Help Pages
-# -----------------------------
 help:
   player:
     - "&3&lProShield &7— Player Guide"
@@ -245,15 +211,12 @@ help:
     - "&bTrusted Players &7→ Manage roles & access"
     - "&bClaim Flags &7→ Toggle protections (Safezone, PvP, Fire, Explosions, etc.)"
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
-    - "&7Expansion requests have a cooldown of &f{cooldown-hours}h&7."
     - "&eNote: &7All player features are GUI-driven. &fNo commands are required."
-    
+
   admin:
     - "&c&lProShield — Admin Guide"
     - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"
     - "&7Requires: &fproshield.admin"
-    - "&7Expansion Requests and World Controls require higher permissions."
-    - "&7Available Commands (for admins only):"
     - "&f/proshield reload &7→ Reload configs"
     - "&f/proshield debug &7→ Toggle debug mode"
     - "&f/proshield bypass &7→ Toggle admin bypass"
@@ -264,9 +227,6 @@ help:
     - "&4Expansion Requests &7– Requires &fproshield.admin.expansions"
     - "&4World Controls &7– Requires &fproshield.admin.worldcontrols"
 
-# -----------------------------
-# GUI Definitions
-# -----------------------------
 gui:
   menus:
     main:

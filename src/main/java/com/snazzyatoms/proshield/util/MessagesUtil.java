@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class MessagesUtil {
 
@@ -110,5 +111,13 @@ public class MessagesUtil {
     public List<String> getList(String path) {
         List<String> list = msgs.getStringList(path);
         return list != null ? list : Collections.emptyList();
+    }
+
+    /** Get all keys under a section path (e.g. "messages.deny-reasons") */
+    public Set<String> getKeys(String path) {
+        if (msgs.isConfigurationSection(path)) {
+            return msgs.getConfigurationSection(path).getKeys(false);
+        }
+        return null;
     }
 }

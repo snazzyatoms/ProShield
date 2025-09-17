@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/listeners/MobControlTasks.java
 package com.snazzyatoms.proshield.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -104,16 +105,11 @@ public class MobControlTasks {
                     List<Entity> nearby = player.getNearbyEntities(20, 10, 20);
                     for (Entity e : nearby) {
                         if (e instanceof Monster mob) {
-                            Player target = mob.getTarget();
-                            if (target != null) {
+                            if (mob.getTarget() instanceof Player) {
+                                Player target = (Player) mob.getTarget();
                                 Plot targetPlot = plots.getPlot(target.getLocation());
                                 if (targetPlot != null && targetPlot.getFlag("safezone", cfg)) {
-                                    // ✅ Safe: clears target without deprecated call issues
-                                    try {
-                                        mob.setTarget(null); // Deprecated, but still the official API
-                                    } catch (Throwable ignored) {
-                                        // Future-proof: if method disappears, just ignore
-                                    }
+                                    mob.setTarget(null);
                                 }
                             }
                         }

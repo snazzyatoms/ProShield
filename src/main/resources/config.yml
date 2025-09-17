@@ -55,8 +55,7 @@ protection:
     lava: false
     water: false
 
-  mobs:
-    # Hostiles are repelled near players inside their claims
+    mobs:
     border-repel:
       enabled: true
       radius: 15.0
@@ -64,14 +63,19 @@ protection:
       vertical-push: 0.25
       play-sound: false
       sound-type: "ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR"
-    # Periodically despawn hostiles inside claims
+
     despawn-inside: true
     despawn-interval-seconds: 30
-    # Core protections
+
+    pathing:
+      enabled: true
+      interval-ticks: 40
+
     prevent-damage: true
     prevent-targeting: true
     protect-pets: true
     protect-passive: true
+
 
   entities:
     wilderness:

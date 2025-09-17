@@ -1,12 +1,16 @@
+// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Collections;
 import java.util.List;
@@ -57,6 +61,53 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // Compass command (player only)
+        if (sub.equals("compass")) {
+            if (!(sender instanceof Player player)) {
+                messages.send(sender, messages.get("messages.error.player-only"));
+                return true;
+            }
+            if (!player.hasPermission("proshield.player.access")) {
+                messages.send(player, messages.get("messages.error.no-permission"));
+                return true;
+            }
+
+            // Check if player already has a compass
+            boolean alreadyHas = false;
+            for (ItemStack item : player.getInventory().getContents()) {
+                if (item != null && item.getType() == Material.COMPASS) {
+                    ItemMeta meta = item.getItemMeta();
+                    if (meta != null && meta.hasDisplayName()
+                            && meta.getDisplayName().contains("ProShield Compass")) {
+                        alreadyHas = true;
+                        break;
+                    }
+                }
+            }
+
+            if (alreadyHas) {
+                messages.send(player, messages.get("messages.compass.already-have"));
+                return true;
+            }
+
+            // Check inventory space
+            if (player.getInventory().firstEmpty() == -1) {
+                messages.send(player, "&cYour inventory is full. Clear a slot first.");
+                return true;
+            }
+
+            // Give compass
+            ItemStack compass = new ItemStack(Material.COMPASS);
+            ItemMeta meta = compass.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(messages.color("&bProShield Compass"));
+                compass.setItemMeta(meta);
+            }
+            player.getInventory().addItem(compass);
+            messages.send(player, messages.get("messages.compass.command-success"));
+            return true;
+        }
+
         // Admin-only commands
         if (!sender.hasPermission("proshield.admin")) {
             messages.send(sender, messages.get("messages.error.no-permission"));
@@ -66,7 +117,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "reload" -> {
                 plugin.reloadConfig();
-                plugin.loadMessagesConfig(); // ✅ fixed (was reloadMessagesConfig)
+                plugin.loadMessagesConfig(); // ✅ fixed
                 messages.send(sender, messages.get("messages.reloaded"));
             }
 
@@ -104,7 +155,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
             default -> {
                 messages.send(sender, "&cUnknown subcommand.");
-                messages.send(sender, "&7Try: &f/proshield help, admin, reload, debug, bypass");
+                messages.send(sender, "&7Try: &f/proshield help, compass, admin, reload, debug, bypass");
             }
         }
 
@@ -115,9 +166,9 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             if (sender.hasPermission("proshield.admin")) {
-                return List.of("help", "admin", "reload", "debug", "bypass");
+                return List.of("help", "compass", "admin", "reload", "debug", "bypass");
             } else if (sender.hasPermission("proshield.player.access")) {
-                return List.of("help");
+                return List.of("help", "compass");
             }
         }
         return Collections.emptyList();

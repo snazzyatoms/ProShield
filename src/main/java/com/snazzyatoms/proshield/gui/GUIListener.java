@@ -50,7 +50,8 @@ public class GUIListener implements Listener {
                 || lowerTitle.contains("expansion requests")
                 || lowerTitle.contains("expansion history")
                 || lowerTitle.contains("request expansion")
-                || lowerTitle.contains("deny reasons"))) {
+                || lowerTitle.contains("deny reasons")
+                || lowerTitle.contains("world controls"))) { // ✅ Added World Controls
             return;
         }
 
@@ -85,6 +86,10 @@ public class GUIListener implements Listener {
 
         } else if (lowerTitle.contains("deny reasons")) {
             guiManager.handleDenyReasonClick(player, event);
+
+        } else if (lowerTitle.contains("world controls")) {
+            // ✅ Admin’s World Controls menu
+            guiManager.handleWorldControlsClick(player, event);
         }
     }
 

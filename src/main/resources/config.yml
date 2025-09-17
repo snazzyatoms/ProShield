@@ -1,17 +1,33 @@
+# ==========================================================
+# 💠 ProShield Configuration File
+# 🛡️ Version: 1.2.5
+# 📁 Location: plugins/ProShield/config.yml
+# 🧰 Description: Unified protection, GUI roles, claim security, and mob control
+# ==========================================================
+
 settings:
   give-compass-on-join: true
   compass-despawn-delay: 600
   compass-auto-replace: false
+
+  # 🔑 Operators: full control and bypass by default
   ops-have-full-access: true
 
 claims:
+  # 📏 Horizontal protection radius (blocks)
   default-radius: 50
+  # 🧱 Vertical Y-range (height)
   min-y: 0
   max-y: 200
+
+  # 🛡️ Claims are safe zones by default
   safezone-enabled: true
+
+  # ⚙️ Admin/Owner controls
   allow-admin-edit-claims: true
   allow-owner-claim-flags: true
 
+  # ➕ Expansion requests
   expansion:
     enabled: true
     show-in-gui: true
@@ -180,6 +196,7 @@ flags:
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
+
   show-wilderness: true
   admin-flag-chat: true
 
@@ -217,6 +234,8 @@ help:
     - "&c&lProShield — Admin Guide"
     - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"
     - "&7Requires: &fproshield.admin"
+    - "&7Expansion Requests and World Controls require higher permissions."
+    - "&7Available Commands:"
     - "&f/proshield reload &7→ Reload configs"
     - "&f/proshield debug &7→ Toggle debug mode"
     - "&f/proshield bypass &7→ Toggle admin bypass"

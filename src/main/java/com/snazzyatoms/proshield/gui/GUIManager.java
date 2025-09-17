@@ -266,6 +266,14 @@ public class GUIManager {
         pendingRoleAssignments.remove(actor);
     }
 
+    /**
+     * Clear a pending deny target for an admin if they close the deny reasons menu
+     * without making a selection.
+     */
+    public void clearPendingDenyTarget(UUID admin) {
+        pendingDenyTarget.remove(admin);
+    }
+
     public void handleAssignRoleClick(Player player, InventoryClickEvent event) {
         ItemStack clicked = event.getCurrentItem();
         if (isBack(clicked)) { clearPendingRoleAssignment(player.getUniqueId()); openTrusted(player); return; }
@@ -561,31 +569,17 @@ public class GUIManager {
             List<String> lore = new ArrayList<>();
             lore.add("&7Blocks: &f" + req.getAmount());
             lore.add("&7When: &f" + fmt.format(req.getTimestamp()));
-            lore.add("&7Status: &f" + req.getStatus().name());
 
-            if (req.getReviewedBy() != null) {
-                OfflinePlayer reviewer = Bukkit.getOfflinePlayer(req.getReviewedBy());
-                String reviewerName = (reviewer != null && reviewer.getName() != null)
-                        ? reviewer.getName()
-                        : req.getReviewedBy().toString();
-                lore.add("&7Reviewed By: &f" + reviewerName);
-            }
+            String status = req.isApproved() ? "APPROVED" : req.getStatus().name();
+            lore.add("&7Status: &f" + status);
 
-            if (req.getDenialReason() != null) {
-                lore.add("&cReason: &f" + req.getDenialReason());
-            }
-
-            Material icon = switch (req.getStatus()) {
-                case APPROVED -> Material.LIME_DYE;
-                case DENIED -> Material.RED_DYE;
-                case EXPIRED -> Material.GRAY_DYE;
-                default -> Material.YELLOW_DYE;
-            };
+            Material icon = status.equalsIgnoreCase("APPROVED") ? Material.LIME_DYE
+                    : status.equalsIgnoreCase("DENIED") ? Material.RED_DYE
+                    : Material.YELLOW_DYE;
 
             inv.setItem(i - start, simpleItem(icon, "&f" + name, lore.toArray(new String[0])));
         }
 
-        // Pagination buttons
         if (page > 0) inv.setItem(size - 6, simpleItem(Material.ARROW, "&aPrevious Page"));
         if ((page + 1) * HISTORY_PER_PAGE < history.size())
             inv.setItem(size - 4, simpleItem(Material.ARROW, "&aNext Page"));

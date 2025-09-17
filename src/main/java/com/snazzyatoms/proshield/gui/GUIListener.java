@@ -81,8 +81,8 @@ public class GUIListener implements Listener {
             guiManager.handleHistoryClick(player, event);
 
         } else if (lowerTitle.contains("request expansion")) {
-            // ✅ Player’s request panel (Back/Exit supported in ExpansionRequestManager)
-            plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
+            // ✅ Player’s request panel (GUIManager now owns this logic)
+            guiManager.handlePlayerExpansionRequestClick(player, event);
 
         } else if (lowerTitle.contains("deny reasons")) {
             guiManager.handleDenyReasonClick(player, event);

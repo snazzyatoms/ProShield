@@ -1,32 +1,23 @@
 # ==========================================================
-# 💠 ProShield Configuration File
-# 🛡️ Version: 1.2.5
-# 🧰 Description: Unified protection, GUI roles, claim security, and mob control
+#               ProShield Configuration File
+#                     Version: 1.2.5
+#     Enhanced & Synchronized with GUI, Expansions, Flags
 # ==========================================================
 
 settings:
   give-compass-on-join: true
   compass-despawn-delay: 600
   compass-auto-replace: false
-
-  # 🔑 Operators: full control and bypass by default
   ops-have-full-access: true
 
 claims:
-  # 📏 Horizontal protection radius (blocks)
   default-radius: 50
-  # 🧱 Vertical Y-range (height)
   min-y: 0
   max-y: 200
-
-  # 🛡️ Claims are safe zones by default
   safezone-enabled: true
-
-  # ⚙️ Admin/Owner controls
   allow-admin-edit-claims: true
   allow-owner-claim-flags: true
 
-  # ➕ Expansion requests
   expansion:
     enabled: true
     show-in-gui: true
@@ -227,6 +218,7 @@ help:
     - "&bTrusted Players &7→ Manage roles & access"
     - "&bClaim Flags &7→ Toggle protections (Safezone, PvP, Fire, Explosions, etc.)"
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
+    - "&7Expansion requests have a cooldown of &f{cooldown-hours}h&7."
     - "&eNote: &7All player features are GUI-driven. &fNo commands are required."
 
   admin:
@@ -234,7 +226,7 @@ help:
     - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"
     - "&7Requires: &fproshield.admin"
     - "&7Expansion Requests and World Controls require higher permissions."
-    - "&7Available Commands:"
+    - "&7Available Commands (for admins only):"
     - "&f/proshield reload &7→ Reload configs"
     - "&f/proshield debug &7→ Toggle debug mode"
     - "&f/proshield bypass &7→ Toggle admin bypass"

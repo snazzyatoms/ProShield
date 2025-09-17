@@ -172,6 +172,83 @@ public class GUIManager {
         return simpleItem(Material.PAPER, "&eClaim Info", lore.toArray(new String[0]));
     }
 
-    // (rest of the file stays the same: Trusted Players, Assign Role, Flags, Admin Tools, Expansion Review, Deny Reasons, Expansion History)
-    // ✅ No features lost, all enhancements intact.
+    /* ============================
+     * EXPANSION HISTORY (pagination)
+     * ============================ */
+    public void openFilteredHistory(Player admin, List<ExpansionRequest> list) {
+        filteredHistory.put(admin.getUniqueId(), list);
+        historyPages.put(admin.getUniqueId(), 0);
+        openFilteredHistoryPage(admin);
+    }
+
+    private void openFilteredHistoryPage(Player admin) {
+        List<ExpansionRequest> history = filteredHistory.getOrDefault(admin.getUniqueId(), List.of());
+        int page = historyPages.getOrDefault(admin.getUniqueId(), 0);
+        int size = 54;
+        String title = messages.color("&7Expansion History (Page " + (page + 1) + ")");
+        Inventory inv = Bukkit.createInventory(admin, size, title);
+
+        int start = page * HISTORY_PER_PAGE;
+        int end = Math.min(start + HISTORY_PER_PAGE, history.size());
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
+
+        for (int i = start; i < end; i++) {
+            ExpansionRequest req = history.get(i);
+            OfflinePlayer p = Bukkit.getOfflinePlayer(req.getRequester());
+            String name = (p != null && p.getName() != null) ? p.getName() : req.getRequester().toString();
+
+            List<String> lore = new ArrayList<>();
+            lore.add("&7Blocks: &f" + req.getAmount());
+            lore.add("&7When: &f" + fmt.format(req.getTimestamp()));
+
+            String status;
+            Material icon;
+
+            if (req.isApproved()) {
+                status = "APPROVED";
+                icon = Material.LIME_DYE;
+            } else if (req.getStatus() == ExpansionRequest.Status.DENIED) {
+                status = "DENIED (" + req.getDenyReason() + ")";
+                icon = Material.RED_DYE;
+            } else if (req.getStatus() == ExpansionRequest.Status.EXPIRED) {
+                status = "EXPIRED";
+                icon = Material.YELLOW_DYE;
+            } else {
+                status = "PENDING";
+                icon = Material.ORANGE_DYE;
+            }
+
+            lore.add("&7Status: &f" + status);
+
+            inv.setItem(i - start, simpleItem(icon, "&f" + name, lore.toArray(new String[0])));
+        }
+
+        if (page > 0) inv.setItem(size - 6, simpleItem(Material.ARROW, "&aPrevious Page"));
+        if ((page + 1) * HISTORY_PER_PAGE < history.size())
+            inv.setItem(size - 4, simpleItem(Material.ARROW, "&aNext Page"));
+
+        placeNavButtons(inv);
+        admin.openInventory(inv);
+    }
+
+    public void handleHistoryClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        UUID uuid = player.getUniqueId();
+
+        if ("Previous Page".equalsIgnoreCase(name)) {
+            historyPages.put(uuid, Math.max(0, historyPages.getOrDefault(uuid, 0) - 1));
+            openFilteredHistoryPage(player);
+        } else if ("Next Page".equalsIgnoreCase(name)) {
+            historyPages.put(uuid, historyPages.getOrDefault(uuid, 0) + 1);
+            openFilteredHistoryPage(player);
+        } else if (isBack(clicked)) {
+            openAdminTools(player);
+        } else if (isExit(clicked)) {
+            player.closeInventory();
+        }
+    }
+
+    // ... (rest of GUIManager: Trusted Players, Assign Role, Flags, Admin Tools, Expansion Review, Deny Reasons)
 }

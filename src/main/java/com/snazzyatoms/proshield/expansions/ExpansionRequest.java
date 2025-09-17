@@ -1,11 +1,12 @@
 package com.snazzyatoms.proshield.expansions;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Represents a single expansion request made by a player.
+ * Includes requester UUID, amount requested, timestamp, status, reason for denial, and reviewer UUID.
+ */
 public class ExpansionRequest {
 
     public enum Status {
@@ -15,66 +16,73 @@ public class ExpansionRequest {
     private final UUID requester;
     private final int amount;
     private final Instant timestamp;
-
     private Status status;
-    private String denialReason; // Reason for denial (optional)
-    private UUID reviewedBy;     // Admin who approved/denied
+    private String denialReason;         // Optional reason for denial
+    private UUID reviewedBy;             // UUID of admin who reviewed the request
 
     public ExpansionRequest(UUID requester, int amount, Instant timestamp, Status status) {
-        this.requester = Objects.requireNonNull(requester, "Requester cannot be null");
-        this.amount = Math.max(1, amount);
+        this.requester = requester;
+        this.amount = amount;
         this.timestamp = timestamp != null ? timestamp : Instant.now();
         this.status = status != null ? status : Status.PENDING;
     }
 
-    // Quick constructor for pending requests
-    public ExpansionRequest(UUID requester, int amount) {
-        this(requester, amount, Instant.now(), Status.PENDING);
+    public UUID getRequester() {
+        return requester;
     }
 
-    // Getters
-    public UUID getRequester() { return requester; }
-    public int getAmount() { return amount; }
-    public Instant getTimestamp() { return timestamp; }
-    public Status getStatus() { return status; }
-    public String getDenialReason() { return denialReason; }
-    public UUID getReviewedBy() { return reviewedBy; }
-
-    // Status transitions
-    public void approve(UUID admin) {
-        this.status = Status.APPROVED;
-        this.reviewedBy = admin;
+    public int getAmount() {
+        return amount;
     }
 
-    public void deny(UUID admin, String reason) {
-        this.status = Status.DENIED;
-        this.reviewedBy = admin;
-        this.denialReason = reason != null ? reason : "No reason provided.";
+    public Instant getTimestamp() {
+        return timestamp;
     }
 
-    public void expire() {
-        this.status = Status.EXPIRED;
+    public Status getStatus() {
+        return status;
     }
 
     public void setStatus(Status status) {
-        this.status = status != null ? status : Status.PENDING;
+        this.status = status;
     }
 
-    // Status checks
-    public boolean isPending() { return status == Status.PENDING; }
-    public boolean isApproved() { return status == Status.APPROVED; }
-    public boolean isDenied() { return status == Status.DENIED; }
-    public boolean isExpired() { return status == Status.EXPIRED; }
+    public String getDenialReason() {
+        return denialReason;
+    }
 
-    // Legacy compatibility
-    /** @deprecated Use isApproved() instead */
+    public void setDenialReason(String denialReason) {
+        this.denialReason = denialReason;
+    }
+
+    public UUID getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public void setReviewedBy(UUID reviewedBy) {
+        this.reviewedBy = reviewedBy;
+    }
+
+    // Backward compatibility
     @Deprecated
-    public boolean approved() { return status == Status.APPROVED; }
+    public boolean isApproved() {
+        return status == Status.APPROVED;
+    }
 
-    public String getFormattedTimestamp() {
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                .withZone(ZoneId.systemDefault());
-        return fmt.format(timestamp);
+    public boolean isPending() {
+        return status == Status.PENDING;
+    }
+
+    public boolean isDenied() {
+        return status == Status.DENIED;
+    }
+
+    public boolean isExpired() {
+        return status == Status.EXPIRED;
+    }
+
+    public boolean isFinalized() {
+        return status == Status.APPROVED || status == Status.DENIED || status == Status.EXPIRED;
     }
 
     @Override

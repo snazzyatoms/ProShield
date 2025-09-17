@@ -2,9 +2,12 @@ package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Explosive;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -12,6 +15,12 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 
+/**
+ * MobProtectionListener
+ * - Handles mob spawning, targeting, explosions, griefing
+ * - Safezones protect only owners + trusted players
+ * - Explosions & grief respect claim flags
+ */
 public class MobProtectionListener implements Listener {
 
     private final ProShield plugin;
@@ -28,9 +37,13 @@ public class MobProtectionListener implements Listener {
 
     @EventHandler
     public void onMobSpawn(CreatureSpawnEvent event) {
-        Plot plot = plotManager.getPlotAt(event.getLocation());
+        Location loc = event.getLocation();
+        if (loc == null) return;
+
+        Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("mob-spawn")) {
             event.setCancelled(true);
+            messages.debug("Blocked mob spawn at " + loc + " (Plot: " + plot.getId() + ")");
         }
     }
 
@@ -42,35 +55,49 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot != null && plot.getFlag("safezone")) {
             // Only protect owners/trusted players
-            if (plotListener.isProtected(player, plot)) {
-                if (event.getEntity() instanceof Monster) {
-                    event.setCancelled(true);
-                }
+            if (plotListener.isProtected(player, plot) && event.getEntity() instanceof Monster) {
+                event.setCancelled(true);
+                messages.debug("Prevented " + event.getEntity().getType() + " from targeting " + player.getName());
             }
         }
     }
 
     @EventHandler
-    public void onCreeperExplosion(EntityExplodeEvent event) {
-        Plot plot = plotManager.getPlotAt(event.getLocation());
+    public void onExplosion(EntityExplodeEvent event) {
+        Location loc = event.getLocation();
+        if (loc == null) return;
+
+        Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("explosions")) {
             event.blockList().clear(); // Prevent block damage
-        }
-    }
-
-    @EventHandler
-    public void onTntExplosion(EntityExplodeEvent event) {
-        Plot plot = plotManager.getPlotAt(event.getLocation());
-        if (plot != null && !plot.getFlag("explosions")) {
-            event.blockList().clear();
+            messages.debug("Blocked explosion block damage at " + loc);
         }
     }
 
     @EventHandler
     public void onEndermanMoveBlock(EntityChangeBlockEvent event) {
-        Plot plot = plotManager.getPlotAt(event.getBlock().getLocation());
+        Location loc = event.getBlock().getLocation();
+        if (loc == null) return;
+
+        Plot plot = plotManager.getPlotAt(loc);
+        // Currently tied to mob-spawn flag (could be separated into 'enderman-grief')
         if (plot != null && !plot.getFlag("mob-spawn")) {
             event.setCancelled(true);
+            messages.debug("Prevented Enderman block move at " + loc);
+        }
+    }
+
+    // --- Extra: Catch fireball & TNT entities if needed ---
+    @EventHandler
+    public void onProjectileExplosion(EntityExplodeEvent event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof Projectile || entity instanceof Explosive)) return;
+
+        Location loc = entity.getLocation();
+        Plot plot = plotManager.getPlotAt(loc);
+        if (plot != null && !plot.getFlag("explosions")) {
+            event.blockList().clear();
+            messages.debug("Prevented projectile/explosive damage at " + loc);
         }
     }
 }

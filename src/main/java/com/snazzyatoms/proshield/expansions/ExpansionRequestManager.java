@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 /**
  * ExpansionRequestManager
  * - Handles persistence, submission, and review of claim expansion requests
+ * - Auto-expires pending requests older than config-defined days
  * - Synchronized with GUIManager + messages.yml (v1.2.5)
  */
 public class ExpansionRequestManager {
@@ -29,6 +30,9 @@ public class ExpansionRequestManager {
 
     // Cache: Player UUID → List of requests
     private final Map<UUID, List<ExpansionRequest>> requests = new HashMap<>();
+
+    // Configurable expiry (days)
+    private final int expireDays;
 
     public ExpansionRequestManager(ProShield plugin) {
         this.plugin = plugin;
@@ -46,16 +50,20 @@ public class ExpansionRequestManager {
         }
 
         this.data = YamlConfiguration.loadConfiguration(file);
+        this.expireDays = plugin.getConfig().getInt("claims.expansion.expire-days", 30);
+
         load();
+        expireOldRequests(expireDays);
+
+        // Run expiry every 12h in case server stays up long
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> expireOldRequests(expireDays),
+                20L * 60 * 60 * 12, 20L * 60 * 60 * 12);
     }
 
     /* ====================================
      * Public API
      * ==================================== */
 
-    /**
-     * Player submits a new request.
-     */
     public void submitRequest(UUID player, int amount) {
         ExpansionRequest request = new ExpansionRequest(player, amount, Instant.now(), ExpansionRequest.Status.PENDING);
         requests.computeIfAbsent(player, k -> new ArrayList<>()).add(request);
@@ -65,9 +73,6 @@ public class ExpansionRequestManager {
         messages.debug("New expansion request: " + who + " +" + amount + " blocks");
     }
 
-    /**
-     * Approve a request by timestamp.
-     */
     public void approve(UUID player, Instant timestamp, UUID reviewedBy) {
         ExpansionRequest request = getRequest(player, timestamp);
         if (request == null) return;
@@ -79,7 +84,6 @@ public class ExpansionRequestManager {
         String who = getPlayerName(player);
         messages.debug("Approved expansion for " + who + " (" + request.getAmount() + " blocks)");
 
-        // Notify player
         OfflinePlayer op = Bukkit.getOfflinePlayer(player);
         if (op.isOnline()) {
             messages.send(op.getPlayer(),
@@ -88,9 +92,6 @@ public class ExpansionRequestManager {
         }
     }
 
-    /**
-     * Deny a request by timestamp with deny reason key from messages.yml
-     */
     public void deny(UUID player, Instant timestamp, UUID reviewedBy, String reasonKey) {
         ExpansionRequest request = getRequest(player, timestamp);
         if (request == null) return;
@@ -98,7 +99,6 @@ public class ExpansionRequestManager {
         request.setStatus(ExpansionRequest.Status.DENIED);
         request.setReviewedBy(reviewedBy);
 
-        // Pull deny reason text from messages.yml
         String reasonMsg = plugin.getConfig().getString("messages.deny-reasons." + reasonKey, reasonKey);
         request.setDenialReason(reasonMsg);
         save();
@@ -106,7 +106,6 @@ public class ExpansionRequestManager {
         String who = getPlayerName(player);
         messages.debug("Denied expansion for " + who + " (" + reasonMsg + ")");
 
-        // Notify player
         OfflinePlayer op = Bukkit.getOfflinePlayer(player);
         if (op.isOnline()) {
             messages.send(op.getPlayer(),
@@ -115,9 +114,6 @@ public class ExpansionRequestManager {
         }
     }
 
-    /**
-     * Convenience: Approve latest request.
-     */
     public void approveRequest(UUID player) {
         List<ExpansionRequest> list = getRequests(player);
         if (list.isEmpty()) return;
@@ -125,9 +121,6 @@ public class ExpansionRequestManager {
         approve(player, latest.getTimestamp(), null);
     }
 
-    /**
-     * Convenience: Deny latest request.
-     */
     public void denyRequest(UUID player, String reasonKey) {
         List<ExpansionRequest> list = getRequests(player);
         if (list.isEmpty()) return;
@@ -135,19 +128,22 @@ public class ExpansionRequestManager {
         deny(player, latest.getTimestamp(), null, reasonKey);
     }
 
-    /**
-     * Expire pending requests older than N days.
-     */
     public void expireOldRequests(int days) {
         Instant cutoff = Instant.now().minusSeconds(days * 86400L);
+        boolean changed = false;
+
         for (List<ExpansionRequest> list : requests.values()) {
             for (ExpansionRequest r : list) {
                 if (r.getStatus() == ExpansionRequest.Status.PENDING && r.getTimestamp().isBefore(cutoff)) {
                     r.setStatus(ExpansionRequest.Status.EXPIRED);
+                    changed = true;
                 }
             }
         }
-        save();
+        if (changed) {
+            save();
+            messages.debug("Expired old expansion requests older than " + days + " days.");
+        }
     }
 
     public List<ExpansionRequest> getAllRequests() {

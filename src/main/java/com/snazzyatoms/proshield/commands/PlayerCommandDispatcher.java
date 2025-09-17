@@ -36,10 +36,11 @@ public class PlayerCommandDispatcher implements Listener {
 
     @EventHandler
     public void onCompassClick(PlayerInteractEvent event) {
-        // Only listen for main hand interactions
         if (event.getHand() != EquipmentSlot.HAND) return;
-
         Player player = event.getPlayer();
+
+        if (!player.hasPermission("ProShield.access")) return;
+
         ItemStack item = event.getItem();
         if (item == null || item.getType() != Material.COMPASS) return;
 
@@ -49,13 +50,43 @@ public class PlayerCommandDispatcher implements Listener {
         String displayName = meta.getDisplayName();
         if (!displayName.contains("ProShield")) return;
 
-        // Cancel default compass behavior
         event.setCancelled(true);
-
-        // Open main GUI
         plugin.getGuiManager().openMain(player);
     }
 
+    /**
+     * Give a ProShield compass, only if player doesn't have one.
+     */
+    public void giveCompass(Player player) {
+        if (!plugin.getConfig().getBoolean("settings.give-compass-on-join", true)) return;
+
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == Material.COMPASS && item.hasItemMeta()) {
+                ItemMeta meta = item.getItemMeta();
+                if (meta.hasDisplayName() && meta.getDisplayName().contains("ProShield")) {
+                    return; // Already has one
+                }
+            }
+        }
+
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta meta = compass.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(messages.color(COMPASS_NAME));
+            List<String> lore = Arrays.asList(
+                    "&7Right-click to open the ProShield menu",
+                    "&7Manage your claims, flags & trusted players"
+            );
+            meta.setLore(messages.colorList(lore));
+            compass.setItemMeta(meta);
+        }
+
+        player.getInventory().addItem(compass);
+    }
+
+    /**
+     * Optional: Show claim info in chat (debug or fallback)
+     */
     public void sendClaimInfo(Player player) {
         Plot plot = plotManager.getPlot(player.getLocation());
 
@@ -78,31 +109,5 @@ public class PlayerCommandDispatcher implements Listener {
             messages.send(player, "  &8- &f" + entry.getKey() + ": " + (entry.getValue() ? "&aON" : "&cOFF"));
         }
         messages.send(player, "&8&m--------------------------------------------------");
-    }
-
-    public void giveCompass(Player player) {
-        // Prevent giving duplicates
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == Material.COMPASS && item.hasItemMeta()) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null && meta.hasDisplayName() && meta.getDisplayName().contains("ProShield")) {
-                    return; // Already has compass
-                }
-            }
-        }
-
-        ItemStack compass = new ItemStack(Material.COMPASS);
-        ItemMeta meta = compass.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(messages.color(COMPASS_NAME));
-            List<String> lore = Arrays.asList(
-                    "&7Right-click to open the ProShield menu",
-                    "&7Manage your claims, flags & trusted players"
-            );
-            meta.setLore(messages.colorList(lore));
-            compass.setItemMeta(meta);
-        }
-
-        player.getInventory().addItem(compass);
     }
 }

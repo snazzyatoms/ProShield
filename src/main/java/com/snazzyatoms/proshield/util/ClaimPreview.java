@@ -1,87 +1,71 @@
-// src/main/java/com/snazzyatoms/proshield/util/ClaimPreview.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.plots.Plot;
-import org.bukkit.*;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.scheduler.BukkitTask;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * ClaimPreview
- *
- * - Visual particle boundary preview for a claim
- * - Repeats for a short configurable duration
- * - Integrated with ClaimPreviewTask (v1.2.5)
+ * - Shows border particles around a claim temporarily
+ * - Fixed: inner class now uses final locals
  */
 public class ClaimPreview {
 
-    /**
-     * Show a preview of a claim boundary to a player.
-     *
-     * @param plugin ProShield instance
-     * @param player Player to preview for
-     * @param plot   The claim/plot to preview
-     */
-    public static void show(ProShield plugin, Player player, Plot plot) {
-        if (plugin == null || player == null || plot == null) return;
-        World world = Bukkit.getWorld(plot.getWorld());
-        if (world == null) return;
+    private final ProShield plugin;
+    private final UUID playerId;
+    private final World world;
+    private final int x;
+    private final int z;
+    private final int radius;
 
-        // Configurable settings
-        int durationTicks = plugin.getConfig().getInt("claims.preview.duration-ticks", 100); // ~5s
-        int intervalTicks = plugin.getConfig().getInt("claims.preview.interval-ticks", 20); // 1s
-        String particleName = plugin.getConfig().getString("claims.preview.particle", "VILLAGER_HAPPY");
+    private BukkitTask task;
 
-        Particle particle;
-        try {
-            particle = Particle.valueOf(particleName.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            particle = Particle.VILLAGER_HAPPY; // fallback
-        }
+    public ClaimPreview(ProShield plugin, UUID playerId, World world, int x, int z, int radius) {
+        this.plugin = plugin;
+        this.playerId = playerId;
+        this.world = world;
+        this.x = x;
+        this.z = z;
+        this.radius = radius;
+    }
 
-        int cx = plot.getX();
-        int cz = plot.getZ();
-        int minX = (cx << 4);
-        int minZ = (cz << 4);
-        int maxX = minX + 15;
-        int maxZ = minZ + 15;
+    public void start() {
+        final UUID uuid = playerId;
+        final World w = world;
+        final int cx = x;
+        final int cz = z;
+        final int r = radius;
 
-        // Cancel any existing preview for this player
-        ClaimPreviewTask.cancel(player);
+        this.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            Location center = new Location(w, cx << 4, w.getHighestBlockYAt(cx << 4, cz << 4), cz << 4);
 
-        // Start a repeating task for the preview
-        BukkitTask task = new BukkitRunnable() {
-            int ticks = 0;
-
-            @Override
-            public void run() {
-                if (!player.isOnline()) {
-                    cancel();
-                    return;
-                }
-
-                int y = player.getLocation().getBlockY() + 1;
-
-                for (int x = minX; x <= maxX; x++) {
-                    world.spawnParticle(particle, x + 0.5, y, minZ + 0.5, 1, 0, 0, 0, 0);
-                    world.spawnParticle(particle, x + 0.5, y, maxZ + 0.5, 1, 0, 0, 0, 0);
-                }
-                for (int z = minZ; z <= maxZ; z++) {
-                    world.spawnParticle(particle, minX + 0.5, y, z + 0.5, 1, 0, 0, 0, 0);
-                    world.spawnParticle(particle, maxX + 0.5, y, z + 0.5, 1, 0, 0, 0, 0);
-                }
-
-                ticks += intervalTicks;
-                if (ticks >= durationTicks) {
-                    cancel();
-                    ClaimPreviewTask.cancel(player);
-                }
+            Set<Location> border = new HashSet<>();
+            for (int dx = -r; dx <= r; dx++) {
+                border.add(center.clone().add(dx, 0, -r));
+                border.add(center.clone().add(dx, 0, r));
             }
-        }.runTaskTimer(plugin, 0L, intervalTicks);
+            for (int dz = -r; dz <= r; dz++) {
+                border.add(center.clone().add(-r, 0, dz));
+                border.add(center.clone().add(r, 0, dz));
+            }
 
-        // Track this preview
-        ClaimPreviewTask.track(player, task);
+            for (Location loc : border) {
+                w.spawnParticle(Particle.VILLAGER_HAPPY, loc.add(0.5, 1, 0.5), 1);
+            }
+
+        }, 0L, 20L); // run every second
+    }
+
+    public void stop() {
+        if (task != null) {
+            task.cancel();
+        }
     }
 }

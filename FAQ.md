@@ -1,4 +1,4 @@
-# ❓ ProShield FAQ (v1.2.4)
+# ❓ ProShield FAQ (v1.2.5)
 
 This FAQ covers the most common questions, problems, and solutions for running ProShield.  
 If your issue isn’t listed here, please [open a GitHub issue](https://github.com/snazzyatoms/ProShield/issues).
@@ -27,8 +27,10 @@ A: Players can claim in **two ways**:
 - Slot 11 → Claim current chunk  
 - Slot 13 → Claim info (owner + trusted players)  
 - Slot 15 → Unclaim  
+- Slot 28 → Claim Flags menu  
+- Slot 30 → Expansion Requests (NEW in v1.2.5)  
 - Slot 31 → Help (shows commands based on your permissions)  
-- Slot 33 → Admin menu (if you have admin perms)  
+- Slot 32 → Admin Tools (if you have admin perms)  
 
 🔹 **Commands**  
 - `/proshield claim` → Claim your current chunk  
@@ -47,8 +49,9 @@ A: Check these points:
 
 **Q: Can I reload configs without restarting?**  
 A: Yes! Run `/proshield reload`.  
-This refreshes **config.yml**, protections, claim expiry, and **role settings** without restarting the server.  
-🔹 New in **1.2.4**: A **Reload button** is available in the **Admin GUI**.
+This refreshes **config.yml**, **messages.yml**, protections, claims, expiry, and expansions.  
+🔹 Since **1.2.4**, a **Reload button** is available in the **Admin GUI**.  
+🔹 Expanded in **1.2.5** to also reload expansions.yml.  
 
 ---
 
@@ -93,11 +96,39 @@ A: Spawn Guard prevents claims too close to the **world spawn**:
 
 ---
 
-**Q: How does Mob Repel work? (NEW in 1.2.4)**  
-A: Hostile mobs are **pushed back** at claim borders:  
+**Q: How does Mob Repel work? (IMPROVED in 1.2.5)**  
+A: Hostile mobs are **pushed back** at claim or safezone borders:  
 - Configurable in `protection.mobs.border-repel`.  
 - Radius, push force, and tick interval can be changed.  
-- Prevents mobs from entering claims at all.  
+- Since **1.2.5**, mobs inside safezones are also despawned automatically.  
+- Pathfinding/targeting into safezones is blocked.  
+
+---
+
+**Q: What are Expansion Requests? (NEW in 1.2.5)**  
+A: Players can request more claim blocks through a GUI:  
+- Increase/decrease expansion size (+16/+32/+64, -16/-32/-64).  
+- Submit to admins for review.  
+- Configurable defaults in `config.yml`.  
+
+---
+
+**Q: How do admins handle Expansion Requests? (NEW in 1.2.5)**  
+A: Through the **Admin GUI**:  
+- **Expansion Requests menu** → approve or deny.  
+- Denial reasons are pulled from `messages.yml`.  
+- History is tracked with pagination for audit.  
+
+---
+
+**Q: What are World Controls? (NEW in 1.2.5)**  
+A: A dedicated **Admin-only GUI** to toggle global protections:  
+- Fire spread  
+- Explosions (TNT/creeper)  
+- Mob damage  
+- Other environmental flags  
+
+All synced with `config.yml` and applied globally.
 
 ---
 
@@ -109,12 +140,12 @@ A: Claims and trust data are stored in:
 
 ---
 
-**Q: Do I need to delete my config for 1.2.4?**  
-A: ⚠️ Yes, in some cases.  
-Because of major **config restructuring** in 1.2.4, you may need to:  
+**Q: Do I need to delete my config for 1.2.5?**  
+A: ⚠️ Yes.  
+Because of major **config and messages.yml restructuring** in 1.2.5, you may need to:  
 1. Stop the server.  
 2. Delete `/plugins/ProShield/`.  
-3. Restart to regenerate fresh configs.  
+3. Restart to regenerate fresh configs and messages.  
 4. Reapply your custom edits.
 
 ---
@@ -149,11 +180,34 @@ A: Use the [GitHub Issues page](https://github.com/snazzyatoms/ProShield/issues)
 
 ---
 
+**Problem:** Expansion Requests aren’t working  
+✅ Fix:  
+- Ensure `claims.expansion.enabled: true` in `config.yml`.  
+- Check that admins have `proshield.admin.expansions`.  
+- Review `messages.yml` for missing deny reasons.  
+
+---
+
+**Problem:** Safezones not protecting from mobs  
+✅ Fix:  
+- Ensure `protection.mobs.*` settings are enabled.  
+- Reload after edits.  
+- Check that claims marked with `safezone: true` are active.  
+
+---
+
 **Problem:** Claims aren’t saving after restart  
 ✅ Fix:  
 - Ensure the server can **write to** `plugins/ProShield/config.yml`.  
 - Avoid YAML syntax errors when editing manually.  
 - Run `/proshield reload` after manual edits.
+
+---
+
+**Problem:** GUI buttons don’t do anything  
+✅ Fix:  
+- Make sure you are running **v1.2.5** or newer (GUI fixes applied).  
+- Check for permission nodes like `proshield.player.access` or `proshield.admin`.  
 
 ---
 
@@ -173,18 +227,11 @@ A: Use the [GitHub Issues page](https://github.com/snazzyatoms/ProShield/issues)
 
 ---
 
-**Problem:** Mobs still walk into claims  
-✅ Fix:  
-- Ensure `protection.mobs.border-repel.enabled: true`.  
-- Adjust `radius` and push strength in config.  
-- Reload after edits.
-
----
-
 **Problem:** GUI feels tedious (need to exit to return)  
 ✅ Fix:  
 - v1.2.3 added a **Back button** in all menus.  
-- v1.2.4 fixed **Back button bugs** in Player & Admin GUIs.  
+- v1.2.4 fixed **Back button bugs**.  
+- v1.2.5 made Back/Exit consistent and functional across *all* GUIs.  
 
 ---
 
@@ -206,6 +253,6 @@ A: Use the [GitHub Issues page](https://github.com/snazzyatoms/ProShield/issues)
 ## 📌 Notes
 
 - Always back up `/plugins/ProShield/` before updating.  
-- For **1.2.4 only**, you may need to **delete and regenerate configs**.  
+- For **1.2.5**, you must **delete and regenerate configs + messages.yml**.  
 - Test updates on a dev/test server before going live.  
-- Join the **Spigot discussion thread** for help & tips.
+- Join the **Spigot discussion thread** for help & tips.  

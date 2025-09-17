@@ -80,4 +80,13 @@ public class ExpansionRequestManager {
     public void clear() {
         requests.clear();
     }
+
+    /**
+     * Reload the expansion request manager.
+     * Currently just clears requests (future: load from disk if persistence is added).
+     */
+    public void reload() {
+        clear();
+        plugin.getLogger().info("[ProShield] ExpansionRequestManager reloaded.");
+    }
 }

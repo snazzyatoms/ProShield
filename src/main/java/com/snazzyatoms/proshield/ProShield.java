@@ -14,12 +14,8 @@ import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -38,9 +34,6 @@ public class ProShield extends JavaPlugin {
     private final Set<UUID> debugging = new HashSet<>();
     private boolean debugEnabled = false;
 
-    private File messagesFile;
-    private FileConfiguration messagesConfig;
-
     public static ProShield getInstance() {
         return instance;
     }
@@ -50,24 +43,26 @@ public class ProShield extends JavaPlugin {
         instance = this;
 
         saveDefaultConfig();
-        reloadMessagesConfig(); // ✅ load messages.yml properly
+        loadMessagesConfig();
 
-        this.messages = new MessagesUtil(messagesConfig);
+        this.messages = new MessagesUtil(this);
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
-        this.expansionRequestManager = new ExpansionRequestManager(this, plotManager);
+        // ✅ matches the current ExpansionRequestManager constructor
+        this.expansionRequestManager = new ExpansionRequestManager(this);
         this.guiManager = new GUIManager(this);
 
-        // Core plot listener for claim enter/leave + trusted protection logic
+        // Core plot listener for enter/leave + trust awareness
         PlotListener plotListener = new PlotListener(this, plotManager);
 
         // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(plotListener, this);
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager, plotListener), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager, plotListener), this);
+        // ✅ matches the 2-arg constructor version
+        Bukkit.getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager), this);
 
-        // Tasks (hostile repel & despawn)
+        // Tasks (repel + despawn)
         new MobControlTasks(this);
 
         // Commands
@@ -90,9 +85,7 @@ public class ProShield extends JavaPlugin {
         getLogger().info("🛑 ProShield disabled.");
     }
 
-    // =====================================================
     // Accessors
-    // =====================================================
     public MessagesUtil getMessagesUtil() { return messages; }
     public GUIManager getGuiManager() { return guiManager; }
     public ClaimRoleManager getRoleManager() { return roleManager; }
@@ -109,32 +102,8 @@ public class ProShield extends JavaPlugin {
     public void disableDebug(UUID uuid) { debugging.remove(uuid); }
     public boolean isDebugging(UUID uuid) { return debugging.contains(uuid); }
 
-    // =====================================================
-    // Messages Config Handling
-    // =====================================================
-    public void reloadMessagesConfig() {
-        if (messagesFile == null) {
-            messagesFile = new File(getDataFolder(), "messages.yml");
-        }
-
-        if (!messagesFile.exists()) {
-            saveResource("messages.yml", false);
-        }
-
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-
-        // If MessagesUtil already exists, refresh it
-        if (messages != null) {
-            messages = new MessagesUtil(messagesConfig);
-        }
-    }
-
-    public void saveMessagesConfig() {
-        if (messagesFile == null || messagesConfig == null) return;
-        try {
-            messagesConfig.save(messagesFile);
-        } catch (IOException e) {
-            getLogger().severe("Failed to save messages.yml: " + e.getMessage());
-        }
+    public void loadMessagesConfig() {
+        if (!getDataFolder().exists()) getDataFolder().mkdirs();
+        saveResource("messages.yml", false);
     }
 }

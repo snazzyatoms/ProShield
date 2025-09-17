@@ -5,8 +5,10 @@ import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.listeners.ClaimProtectionListener;
 import com.snazzyatoms.proshield.listeners.MobControlTasks;
+import com.snazzyatoms.proshield.plots.ClaimProtectionListener;
+import com.snazzyatoms.proshield.plots.MobProtectionListener;
+import com.snazzyatoms.proshield.plots.PlotListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -49,12 +51,17 @@ public class ProShield extends JavaPlugin {
         this.expansionRequestManager = new ExpansionRequestManager(this, plotManager);
         this.guiManager = new GUIManager(this);
 
+        // Core plot listener for claim enter/leave + trusted protection logic
+        PlotListener plotListener = new PlotListener(this, plotManager);
+
         // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new ClaimProtectionListener(this), this);
+        Bukkit.getPluginManager().registerEvents(plotListener, this);
+        Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager, plotListener), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager, plotListener), this);
 
-        // Tasks
-        new MobControlTasks(this); // Starts repel & despawn tasks
+        // Tasks (hostile repel & despawn)
+        new MobControlTasks(this);
 
         // Commands
         PluginCommand cmd = getCommand("proshield");
@@ -64,7 +71,7 @@ public class ProShield extends JavaPlugin {
             cmd.setTabCompleter(executor);
         }
 
-        // GUI dispatchers
+        // GUI/compass dispatcher
         new PlayerCommandDispatcher(this);
 
         getLogger().info("✅ ProShield enabled. Running version " + getDescription().getVersion());

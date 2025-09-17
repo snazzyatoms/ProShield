@@ -1,42 +1,32 @@
 package com.snazzyatoms.proshield.expansions;
 
+import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Represents a pending claim expansion request.
- * Stores requester, target claim, requested increase, and timestamp.
- */
 public class ExpansionRequest {
 
-    private final UUID requester;      // Player UUID
-    private final UUID plotId;         // Claim/Plot ID
-    private final int amount;          // How many blocks to expand radius
-    private final long timestamp;      // When the request was made
+    public enum Status { PENDING, APPROVED, DENIED, EXPIRED }
 
-    public ExpansionRequest(UUID requester, UUID plotId, int amount, long timestamp) {
+    private final UUID requester;
+    private final int amount;
+    private final Instant timestamp;
+    private Status status;
+
+    public ExpansionRequest(UUID requester, int amount, Instant timestamp, Status status) {
         this.requester = requester;
-        this.plotId = plotId;
         this.amount = amount;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp != null ? timestamp : Instant.now();
+        this.status = status != null ? status : Status.PENDING;
     }
 
-    /** Player UUID who made the request */
-    public UUID getRequester() {
-        return requester;
-    }
+    public UUID getRequester() { return requester; }
+    public int getAmount() { return amount; }
+    public Instant getTimestamp() { return timestamp; }
+    public Status getStatus() { return status; }
+    public void setStatus(Status status) { this.status = status; }
 
-    /** Target plot/claim ID */
-    public UUID getPlotId() {
-        return plotId;
-    }
-
-    /** Amount of blocks to expand */
-    public int getAmount() {
-        return amount;
-    }
-
-    /** When request was created (ms since epoch) */
-    public long getTimestamp() {
-        return timestamp;
-    }
+    // Legacy shim for older code paths
+    /** @deprecated Use getStatus() == Status.APPROVED */
+    @Deprecated
+    public boolean isApproved() { return status == Status.APPROVED; }
 }

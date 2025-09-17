@@ -27,14 +27,11 @@ import java.util.*;
 
 /**
  * GUIManager
- * - Main menu (Claim/Info/Unclaim/Trusted/Flags/Request Expansion/Admin Tools*)
- * - Trusted players & role assignment
- * - Claim flags
- * - Admin tools (*only for users with "proshield.admin")
- * - Expansion review (approve/deny + deny reasons)
- * - Expansion history (paginated)
- * - Back/Exit buttons are present & functional in every menu
- * - Enforces one-claim-per-player (multi-claim planned for v2.0)
+ * - Main menu, Trusted/Role assignment, Flags, Admin tools,
+ *   Expansion review (approve/deny), History (pagination).
+ * - Admin Tools are only visible to players with "proshield.admin".
+ * - One-claim-per-player enforced.
+ * - Back/Exit buttons present & functional in all menus.
  */
 public class GUIManager {
 
@@ -47,7 +44,7 @@ public class GUIManager {
     private final ExpansionRequestManager expansionManager;
     private final MessagesUtil messages;
 
-    // Transient GUI state
+    // State maps
     private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
     private final Map<UUID, Integer> historyPages = new HashMap<>();
     private final Map<UUID, List<ExpansionRequest>> filteredHistory = new HashMap<>();
@@ -63,7 +60,7 @@ public class GUIManager {
         this.messages = plugin.getMessagesUtil();
     }
 
-    /* ---------- Item helpers ---------- */
+    /* ---------- Utilities ---------- */
     private ItemStack backButton() { return simpleItem(Material.ARROW, "&eBack", "&7Return to previous menu"); }
     private ItemStack exitButton() { return simpleItem(Material.BARRIER, "&cExit", "&7Close this menu"); }
 
@@ -78,11 +75,9 @@ public class GUIManager {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(messages.color(name));
-            if (lore != null && lore.length > 0) {
-                List<String> colored = new ArrayList<>(lore.length);
-                for (String l : lore) colored.add(messages.color(l));
-                meta.setLore(colored);
-            }
+            List<String> colored = new ArrayList<>();
+            for (String l : lore) colored.add(messages.color(l));
+            meta.setLore(colored);
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
             item.setItemMeta(meta);
         }
@@ -139,7 +134,7 @@ public class GUIManager {
             inv.setItem(30, simpleItem(Material.EMERALD, "&aRequest Expansion", "&7Request to expand your claim."));
         }
 
-        // Admin tools only for admins
+        // ✅ Admin Tools only visible for admins
         if (player.hasPermission("proshield.admin")) {
             inv.setItem(32, simpleItem(Material.COMMAND_BLOCK, "&cAdmin Tools", "&7Admin-only controls."));
         }
@@ -155,7 +150,7 @@ public class GUIManager {
         String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName()).toLowerCase(Locale.ROOT);
 
         if (name.contains("claim land")) {
-            // one-claim-per-player (v1.x)
+            // ✅ Restrict one claim per player
             if (plotManager.getPlotByOwner(player.getUniqueId()) != null) {
                 messages.send(player, "&cYou already own a claim. Multiple claims are not allowed.");
                 return;
@@ -191,7 +186,6 @@ public class GUIManager {
 
         } else if (isBack(clicked)) {
             openMain(player);
-
         } else if (isExit(clicked)) {
             player.closeInventory();
         }
@@ -310,7 +304,7 @@ public class GUIManager {
         String roleName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
         ClaimRole role = ClaimRole.fromName(roleName);
 
-        if (role == ClaimRole.NONE || role == ClaimRole.OWNER || role == null) {
+        if (role == ClaimRole.NONE || role == ClaimRole.OWNER) {
             messages.send(player, "&cInvalid role selected.");
             openTrusted(player);
             return;
@@ -588,8 +582,8 @@ public class GUIManager {
         List<ExpansionRequest> history = filteredHistory.getOrDefault(admin.getUniqueId(), List.of());
         int page = historyPages.getOrDefault(admin.getUniqueId(), 0);
         int size = 54;
-        String title = plugin.getConfig().getString("gui.menus.history.title", "&7Expansion History");
-        Inventory inv = Bukkit.createInventory(admin, size, messages.color(title) + messages.color(" &7(Page " + (page + 1) + ")"));
+        String title = messages.color("&7Expansion History (Page " + (page + 1) + ")");
+        Inventory inv = Bukkit.createInventory(admin, size, title);
 
         int start = page * HISTORY_PER_PAGE;
         int end = Math.min(start + HISTORY_PER_PAGE, history.size());
@@ -612,7 +606,7 @@ public class GUIManager {
                 icon = Material.LIME_DYE;
             } else if (req.getStatus() == ExpansionRequest.Status.DENIED) {
                 String reason = req.getDenialReason();
-                status = (reason != null && !reason.isEmpty()) ? "DENIED (" + reason + ")" : "DENIED";
+                status = reason != null && !reason.isEmpty() ? "DENIED (" + reason + ")" : "DENIED";
                 icon = Material.RED_DYE;
             } else if (req.getStatus() == ExpansionRequest.Status.EXPIRED) {
                 status = "EXPIRED";
@@ -623,6 +617,7 @@ public class GUIManager {
             }
 
             lore.add("&7Status: &f" + status);
+
             inv.setItem(i - start, simpleItem(icon, "&f" + name, lore.toArray(new String[0])));
         }
 

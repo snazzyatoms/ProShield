@@ -2,6 +2,7 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -35,11 +36,13 @@ public class GUIListener implements Listener {
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        String title = event.getView().getTitle();
-        if (title == null) return;
+        String rawTitle = event.getView().getTitle();
+        if (rawTitle == null) return;
 
-        // Normalize for easier checks
-        String lowerTitle = title.toLowerCase(Locale.ROOT);
+        // Strip color codes and normalize
+        String cleanTitle = ChatColor.stripColor(rawTitle);
+        if (cleanTitle == null) return;
+        String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
 
         // Only handle our plugin menus
         if (!(lowerTitle.contains("proshield")
@@ -58,38 +61,35 @@ public class GUIListener implements Listener {
         // Prevent vanilla item movement inside GUIs
         event.setCancelled(true);
 
-        // === Menu routing ===
-        if (lowerTitle.startsWith("proshield menu")) {
+        // === Menu routing (color-safe, resilient) ===
+        if (lowerTitle.contains("proshield menu")) {
             guiManager.handleMainClick(player, event);
 
-        } else if (lowerTitle.startsWith("trusted players")) {
+        } else if (lowerTitle.contains("trusted players")) {
             guiManager.handleTrustedClick(player, event);
 
-        } else if (lowerTitle.startsWith("assign role")) {
+        } else if (lowerTitle.contains("assign role")) {
             guiManager.handleAssignRoleClick(player, event);
 
-        } else if (lowerTitle.startsWith("claim flags")) {
+        } else if (lowerTitle.contains("claim flags")) {
             guiManager.handleFlagsClick(player, event);
 
-        } else if (lowerTitle.startsWith("admin tools")) {
+        } else if (lowerTitle.contains("admin tools")) {
             guiManager.handleAdminClick(player, event);
 
-        } else if (lowerTitle.startsWith("world controls")) {
+        } else if (lowerTitle.contains("world controls")) {
             guiManager.handleWorldControlsClick(player, event);
 
-        } else if (lowerTitle.startsWith("deny reasons")) {
+        } else if (lowerTitle.contains("deny reasons")) {
             guiManager.handleDenyReasonClick(player, event);
 
-        } else if (lowerTitle.startsWith("request expansion")) {
-            // ✅ Player’s Request Expansion menu
+        } else if (lowerTitle.contains("request expansion")) {
             guiManager.handlePlayerExpansionRequestClick(player, event);
 
-        } else if (lowerTitle.startsWith("expansion requests")) {
-            // ✅ Admin’s Expansion Review menu
+        } else if (lowerTitle.contains("expansion requests")) {
             guiManager.handleExpansionReviewClick(player, event);
 
-        } else if (lowerTitle.startsWith("expansion history")) {
-            // ✅ Pagination titles like "Expansion History (Page 1)"
+        } else if (lowerTitle.contains("expansion history")) {
             guiManager.handleHistoryClick(player, event);
         }
     }
@@ -97,16 +97,19 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
-        String title = event.getView().getTitle();
-        if (title == null) return;
 
-        String lowerTitle = title.toLowerCase(Locale.ROOT);
+        String rawTitle = event.getView().getTitle();
+        if (rawTitle == null) return;
+        String cleanTitle = ChatColor.stripColor(rawTitle);
+        if (cleanTitle == null) return;
+
+        String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
 
         // Clean up pending state when menus close
-        if (lowerTitle.startsWith("assign role")) {
+        if (lowerTitle.contains("assign role")) {
             guiManager.clearPendingRoleAssignment(player.getUniqueId());
 
-        } else if (lowerTitle.startsWith("deny reasons")) {
+        } else if (lowerTitle.contains("deny reasons")) {
             guiManager.clearPendingDenyTarget(player.getUniqueId());
         }
     }

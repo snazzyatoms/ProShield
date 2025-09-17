@@ -77,16 +77,12 @@ public class ExpansionRequestManager {
         return Bukkit.getOfflinePlayer(uuid);
     }
 
-    public void clear() {
-        requests.clear();
+    /** No-op reload hook to satisfy command usage; keep for future persistence. */
+    public void reload() {
+        // If you later add disk persistence, load here.
     }
 
-    /**
-     * Reload the expansion request manager.
-     * Currently just clears requests (future: load from disk if persistence is added).
-     */
-    public void reload() {
-        clear();
-        plugin.getLogger().info("[ProShield] ExpansionRequestManager reloaded.");
+    public void clear() {
+        requests.clear();
     }
 }

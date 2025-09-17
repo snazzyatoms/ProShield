@@ -81,14 +81,14 @@ public class GUIListener implements Listener {
             guiManager.handleHistoryClick(player, event);
 
         } else if (lowerTitle.contains("request expansion")) {
-            // ✅ Player’s request panel (with working Back/Exit buttons)
+            // ✅ Player’s request panel (Back/Exit supported)
             plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
 
         } else if (lowerTitle.contains("deny reasons")) {
             guiManager.handleDenyReasonClick(player, event);
 
         } else if (lowerTitle.contains("world controls")) {
-            // ✅ Admin’s World Controls menu
+            // ✅ Admin’s World Controls panel
             guiManager.handleWorldControlsClick(player, event);
         }
     }

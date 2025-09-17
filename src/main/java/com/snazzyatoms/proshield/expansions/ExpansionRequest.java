@@ -46,7 +46,7 @@ public class ExpansionRequest {
     public void setReviewedBy(UUID reviewedBy) { this.reviewedBy = reviewedBy; }
 
     public String getDenialReason() { return denialReason; }
-    public void setDenialReason(String denialReason) { this.denialReason = denialReason; }
+    public void setDenialReason(String denialReason) { this.denialReason = denialReason; } // ✅ Correct name
 
     public boolean isApproved() { return status == Status.APPROVED; }
 

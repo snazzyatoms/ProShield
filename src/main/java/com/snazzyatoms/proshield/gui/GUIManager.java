@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * GUIManager
@@ -41,7 +42,7 @@ import java.util.*;
  * NOTE:
  *  - Back/Exit are functional in every menu
  *  - Claim Info shows enabled-flag count (Option A)
- *  - Hidden tags in lore (#UUID:, #TS:) are used to carry context across menus
+ *  - Hidden tags in lore (#UUID:, #TS:) carry context across menus
  */
 public class GUIManager {
 
@@ -59,6 +60,7 @@ public class GUIManager {
     private final Map<UUID, Integer> historyPages = new HashMap<>();
     private final Map<UUID, List<ExpansionRequest>> filteredHistory = new HashMap<>();
     private final Map<UUID, UUID> pendingDenyTarget = new HashMap<>();
+    private final Map<UUID, Integer> pendingPlayerExpansionAmount = new HashMap<>();
 
     private static final int HISTORY_PER_PAGE = 18;
 
@@ -187,7 +189,8 @@ public class GUIManager {
             openFlags(player);
 
         } else if (name.contains("request expansion")) {
-            expansionManager.openPlayerRequestMenu(player);
+            // Use built-in mini menu to avoid dependence on external GUI
+            openPlayerExpansionRequest(player);
 
         } else if (name.contains("admin tools")) {
             openAdminTools(player);
@@ -219,6 +222,58 @@ public class GUIManager {
             lore.add("&7Flags Enabled: &f" + enabledFlags);
         }
         return simpleItem(Material.PAPER, "&eClaim Info", lore.toArray(new String[0]));
+    }
+
+    /* ============================
+     * PLAYER EXPANSION REQUEST (mini-menu)
+     * ============================ */
+    public void openPlayerExpansionRequest(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.player-expansion.title", "&aRequest Expansion");
+        int size = plugin.getConfig().getInt("gui.menus.player-expansion.size", 27);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        int current = pendingPlayerExpansionAmount.getOrDefault(player.getUniqueId(), 16);
+        inv.setItem(10, simpleItem(Material.LIME_DYE, "&f+16", "&7Increase by 16 blocks"));
+        inv.setItem(11, simpleItem(Material.LIME_DYE, "&f+32", "&7Increase by 32 blocks"));
+        inv.setItem(12, simpleItem(Material.LIME_DYE, "&f+64", "&7Increase by 64 blocks"));
+        inv.setItem(13, simpleItem(Material.EMERALD_BLOCK, "&aSubmit Request",
+                "&7Current amount: &f" + current,
+                "&7Click to submit"));
+        inv.setItem(14, simpleItem(Material.RED_DYE, "&f-16", "&7Decrease by 16 blocks"));
+        inv.setItem(15, simpleItem(Material.RED_DYE, "&f-32", "&7Decrease by 32 blocks"));
+        inv.setItem(16, simpleItem(Material.RED_DYE, "&f-64", "&7Decrease by 64 blocks"));
+
+        placeNavButtons(inv);
+        player.openInventory(inv);
+    }
+
+    public void handlePlayerExpansionRequestClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (isBack(clicked)) { openMain(player); return; }
+        if (isExit(clicked)) { player.closeInventory(); return; }
+        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
+
+        String dn = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        int current = pendingPlayerExpansionAmount.getOrDefault(player.getUniqueId(), 16);
+
+        switch (dn) {
+            case "+16" -> current += 16;
+            case "+32" -> current += 32;
+            case "+64" -> current += 64;
+            case "-16" -> current = Math.max(1, current - 16);
+            case "-32" -> current = Math.max(1, current - 32);
+            case "-64" -> current = Math.max(1, current - 64);
+            case "Submit Request" -> {
+                expansionManager.createRequest(player.getUniqueId(), Math.max(1, current));
+                messages.send(player, "&aExpansion request submitted for &f" + Math.max(1, current) + " &ablocks.");
+                pendingPlayerExpansionAmount.remove(player.getUniqueId());
+                openMain(player);
+                return;
+            }
+            default -> { /* ignore */ }
+        }
+        pendingPlayerExpansionAmount.put(player.getUniqueId(), current);
+        openPlayerExpansionRequest(player);
     }
 
     /* ============================
@@ -482,7 +537,6 @@ public class GUIManager {
         int size = plugin.getConfig().getInt("gui.menus.world-controls.size", 45);
         Inventory inv = Bukkit.createInventory(admin, size, messages.color(title));
 
-        // Use protection.world-controls.defaults for dynamic keys
         ConfigurationSection sec = plugin.getConfig().getConfigurationSection("protection.world-controls.defaults");
         if (sec != null) {
             int slot = 0;
@@ -549,8 +603,8 @@ public class GUIManager {
                 OfflinePlayer p = Bukkit.getOfflinePlayer(requester);
                 String name = (p != null && p.getName() != null) ? p.getName() : requester.toString();
 
-                String approveInfo = messages.getOrDefault("messages.expansion-admin.lore.approve", "&aLeft-click: Approve this expansion");
-                String denyInfo    = messages.getOrDefault("messages.expansion-admin.lore.deny", "&cRight-click: Deny and choose a reason");
+                String approveInfo = plugin.getConfig().getString("messages.expansion-admin.lore.approve", "&aLeft-click: Approve this expansion");
+                String denyInfo    = plugin.getConfig().getString("messages.expansion-admin.lore.deny", "&cRight-click: Deny and choose a reason");
 
                 List<String> lore = new ArrayList<>();
                 lore.add("&7Blocks: &f" + req.getAmount());
@@ -586,15 +640,47 @@ public class GUIManager {
         if (target == null || ts == null) return;
 
         if (dn.startsWith("Approve: ")) {
-            expansionManager.approve(target, ts, admin.getUniqueId());
+            boolean ok = approveByKey(target, ts, admin.getUniqueId());
             String who = Optional.ofNullable(Bukkit.getOfflinePlayer(target).getName())
                     .orElse(target.toString().substring(0, 8));
-            messages.send(admin, "&aApproved expansion for &f" + who);
+            if (ok) {
+                messages.send(admin, "&aApproved expansion for &f" + who);
+            } else {
+                messages.send(admin, "&cUnable to locate pending request for &f" + who);
+            }
             openExpansionReview(admin);
 
         } else if (dn.startsWith("Deny: ")) {
             openDenyReasons(admin, target, ts);
         }
+    }
+
+    private boolean approveByKey(UUID requester, Instant ts, UUID reviewer) {
+        ExpansionRequest req = findRequest(requester, ts);
+        if (req == null) return false;
+        expansionManager.approveRequest(req, reviewer);
+        return true;
+    }
+
+    private boolean denyByKey(UUID requester, Instant ts, UUID reviewer, String reason) {
+        ExpansionRequest req = findRequest(requester, ts);
+        if (req == null) return false;
+        expansionManager.denyRequest(req, reviewer, reason);
+        return true;
+    }
+
+    private ExpansionRequest findRequest(UUID requester, Instant ts) {
+        // Search pending first (fast path), then all
+        List<ExpansionRequest> list = expansionManager.getPendingRequestsFor(requester);
+        ExpansionRequest match = list.stream()
+                .filter(r -> r.getTimestamp().equals(ts))
+                .findFirst().orElse(null);
+        if (match != null) return match;
+
+        // Fallback over all requests for robustness
+        return expansionManager.getRequests(requester).stream()
+                .filter(r -> r.getTimestamp().equals(ts))
+                .findFirst().orElse(null);
     }
 
     public void openDenyReasons(Player admin, UUID target, Instant ts) {
@@ -606,7 +692,7 @@ public class GUIManager {
         if (sec != null) {
             int slot = 0;
             for (String key : sec.getKeys(false)) {
-                String reason = plugin.getConfig().getString("messages.deny-reasons." + key, "&c" + key);
+                String reason = plugin.getConfig().getString("messages.deny-reasons." + key, key);
                 inv.setItem(slot++, simpleItem(
                         Material.PAPER,
                         "&fReason: " + key,
@@ -642,13 +728,16 @@ public class GUIManager {
         Instant ts = extractHiddenTimestamp(clicked);
         if (target == null || ts == null) return;
 
-        // convert reason key -> final message
         String reasonMsg = plugin.getConfig().getString("messages.deny-reasons." + key, key);
 
-        expansionManager.deny(target, ts, admin.getUniqueId(), reasonMsg);
+        boolean ok = denyByKey(target, ts, admin.getUniqueId(), reasonMsg);
         String who = Optional.ofNullable(Bukkit.getOfflinePlayer(target).getName())
                 .orElse(target.toString().substring(0, 8));
-        messages.send(admin, "&cDenied expansion for &f" + who + " &7(" + key + ")");
+        if (ok) {
+            messages.send(admin, "&cDenied expansion for &f" + who + " &7(" + key + ")");
+        } else {
+            messages.send(admin, "&cUnable to locate pending request for &f" + who);
+        }
         openExpansionReview(admin);
     }
 

@@ -4,6 +4,7 @@ version: 1.2.5
 api-version: 1.20
 author: snazzyatoms
 website: https://github.com/snazzyatoms/ProShield
+
 description: >
   ProShield is a lightweight yet powerful land & plot protection plugin 
   for Spigot and Paper servers. Secure claims, manage trust & roles, 
@@ -11,32 +12,30 @@ description: >
 
 commands:
   proshield:
-    description: Root ProShield command (help, claims, admin tools)
-    usage: /<command> [help|compass|reload|debug|bypass|admin]
+    description: Root ProShield command (opens GUI or Admin Tools)
+    usage: /<command> [admin|reload|debug|bypass]
     aliases: [ps, shield]
     permission: proshield.player.access
 
 permissions:
-  # --- Player Core ---
+  # --- Player Core Access ---
   proshield.player.access:
-    description: Full access to all standard player features 
-      (GUI, claim, unclaim, info, flags, roles, trust/untrust, transfer, compass)
+    description: Allows players to access all standard ProShield GUI features
     default: true
 
   proshield.unlimited:
-    description: Ignore max-claims limit
+    description: Bypass claim limits (admin-level)
     default: op
 
-  # --- Admin Core ---
+  # --- Admin Tools ---
   proshield.admin:
-    description: Access all Admin Tools (reload, debug, bypass, admin GUI)
+    description: Grants access to all admin tools, including reload/debug/bypass/admin GUI
     default: op
 
-  # --- Senior Admin (High Control) ---
   proshield.admin.expansions:
-    description: Approve/Deny expansion requests in Admin Tools GUI
+    description: Allows approval/denial of claim expansions via Admin GUI
     default: op
 
   proshield.admin.worldcontrols:
-    description: Manage per-world controls in Admin Tools GUI
+    description: Access to world-level protections and overrides in Admin Tools
     default: op

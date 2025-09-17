@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,20 +15,21 @@ import org.bukkit.event.player.PlayerBucketFillEvent;
 /**
  * ClaimProtectionListener
  * - Handles block interactions, buckets, and PvP inside claims
- * - Only owners & trusted players can interact (per flags)
+ * - Uses ClaimRoleManager for role-based permissions
+ * - Respects claim flags (block-break, block-place, bucket-use, pvp)
  * - Provides clean denial messages and debug logs
  */
 public class ClaimProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final PlotListener plotListener;
+    private final ClaimRoleManager roleManager;
     private final MessagesUtil messages;
 
-    public ClaimProtectionListener(ProShield plugin, PlotManager plotManager, PlotListener plotListener) {
+    public ClaimProtectionListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        this.plotListener = plotListener;
+        this.roleManager = plugin.getRoleManager();
         this.messages = plugin.getMessagesUtil();
     }
 
@@ -37,42 +39,52 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "block-break",
-                "&cYou cannot break blocks here.", event);
+                "&cYou cannot break blocks here.", event, true);
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "block-place",
-                "&cYou cannot place blocks here.", event);
+                "&cYou cannot place blocks here.", event, true);
     }
 
     @EventHandler
     public void onBucketEmpty(PlayerBucketEmptyEvent event) {
         handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "bucket-use",
-                "&cYou cannot use buckets here.", event);
+                "&cYou cannot use buckets here.", event, false);
     }
 
     @EventHandler
     public void onBucketFill(PlayerBucketFillEvent event) {
         handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "bucket-use",
-                "&cYou cannot fill buckets here.", event);
+                "&cYou cannot fill buckets here.", event, false);
     }
 
-    private void handleBlockAction(Player player, org.bukkit.Location loc, String flag, String denyMessage, org.bukkit.event.Cancellable event) {
+    /**
+     * Unified block + bucket handling.
+     *
+     * @param requiresBuild true if the action needs build permission (break/place), false if only interaction (buckets)
+     */
+    private void handleBlockAction(Player player, org.bukkit.Location loc, String flag,
+                                   String denyMessage, org.bukkit.event.Cancellable event, boolean requiresBuild) {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot == null) return;
 
-        if (!plotListener.isProtected(player, plot)) {
+        boolean allowed = requiresBuild
+                ? roleManager.canBuild(player, plot)
+                : roleManager.canInteract(player, plot);
+
+        if (!allowed) {
             event.setCancelled(true);
             messages.send(player, denyMessage);
-            messages.debug("Denied " + flag + " for non-trusted player " + player.getName() + " in plot " + plot.getId());
+            messages.debug("Denied " + flag + " for " + player.getName() + " (role=" + roleManager.getRole(player.getUniqueId(), plot) + ")");
             return;
         }
 
         if (!plot.getFlag(flag)) {
             event.setCancelled(true);
             messages.send(player, denyMessage);
-            messages.debug("Denied " + flag + " for player " + player.getName() + " in plot " + plot.getId());
+            messages.debug("Denied " + flag + " for " + player.getName() + " (flag disabled) in plot " + plot.getId());
         }
     }
 
@@ -87,12 +99,17 @@ public class ClaimProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(victim.getLocation());
         if (plot == null) return;
 
+        // Respect PvP flag
         if (!plot.getFlag("pvp")) {
-            // Cancel PvP unless both attacker & victim are trusted/owner
-            if (!plotListener.isProtected(attacker, plot) || !plotListener.isProtected(victim, plot)) {
+            boolean attackerAllowed = roleManager.canInteract(attacker, plot);
+            boolean victimAllowed = roleManager.canInteract(victim, plot);
+
+            // Cancel if either isn't trusted
+            if (!attackerAllowed || !victimAllowed) {
                 event.setCancelled(true);
                 messages.send(attacker, "&cPvP is disabled in this claim.");
-                messages.debug("Prevented PvP: " + attacker.getName() + " → " + victim.getName() + " in plot " + plot.getId());
+                messages.debug("Prevented PvP: " + attacker.getName() + " → " + victim.getName()
+                        + " (flag=pvp=false, plot=" + plot.getId() + ")");
             }
         }
     }

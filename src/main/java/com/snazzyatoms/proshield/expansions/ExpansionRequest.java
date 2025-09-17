@@ -37,10 +37,25 @@ public class ExpansionRequest {
     public Instant getTimestamp() { return timestamp; }
     public Status getStatus() { return status; }
     public void setStatus(Status status) { this.status = status; }
+
     public String getDenialReason() { return denialReason; }
     public void setDenialReason(String denialReason) { this.denialReason = denialReason; }
+
     public UUID getReviewedBy() { return reviewedBy; }
     public void setReviewedBy(UUID reviewedBy) { this.reviewedBy = reviewedBy; }
 
     public boolean isApproved() { return status == Status.APPROVED; }
+
+    /* =====================
+     * ✅ Compatibility aliases
+     * ===================== */
+    // Some classes expect this getter name
+    public String getDenyReason() { 
+        return getDenialReason(); 
+    }
+
+    // Some classes expect this setter name
+    public void setReviewer(UUID reviewer) { 
+        setReviewedBy(reviewer); 
+    }
 }

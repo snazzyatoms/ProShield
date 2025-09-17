@@ -58,37 +58,39 @@ public class GUIListener implements Listener {
         // Prevent vanilla item movement inside GUIs
         event.setCancelled(true);
 
-        if (lowerTitle.contains("proshield menu")) {
+        // === Menu routing ===
+        if (lowerTitle.startsWith("proshield menu")) {
             guiManager.handleMainClick(player, event);
 
-        } else if (lowerTitle.contains("trusted players")) {
+        } else if (lowerTitle.startsWith("trusted players")) {
             guiManager.handleTrustedClick(player, event);
 
-        } else if (lowerTitle.contains("assign role")) {
+        } else if (lowerTitle.startsWith("assign role")) {
             guiManager.handleAssignRoleClick(player, event);
 
-        } else if (lowerTitle.contains("claim flags")) {
+        } else if (lowerTitle.startsWith("claim flags")) {
             guiManager.handleFlagsClick(player, event);
 
-        } else if (lowerTitle.contains("admin tools")) {
+        } else if (lowerTitle.startsWith("admin tools")) {
             guiManager.handleAdminClick(player, event);
 
-        } else if (lowerTitle.contains("expansion history")) {
-            guiManager.handleHistoryClick(player, event);
-
-        } else if (lowerTitle.contains("deny reasons")) {
-            guiManager.handleDenyReasonClick(player, event);
-
-        } else if (lowerTitle.contains("world controls")) {
+        } else if (lowerTitle.startsWith("world controls")) {
             guiManager.handleWorldControlsClick(player, event);
 
-        } else if (lowerTitle.contains("request expansion")) {
+        } else if (lowerTitle.startsWith("deny reasons")) {
+            guiManager.handleDenyReasonClick(player, event);
+
+        } else if (lowerTitle.startsWith("request expansion")) {
             // ✅ Player’s Request Expansion menu
             guiManager.handlePlayerExpansionRequestClick(player, event);
 
-        } else if (lowerTitle.contains("expansion requests")) {
+        } else if (lowerTitle.startsWith("expansion requests")) {
             // ✅ Admin’s Expansion Review menu
             guiManager.handleExpansionReviewClick(player, event);
+
+        } else if (lowerTitle.startsWith("expansion history")) {
+            // ✅ Pagination titles like "Expansion History (Page 1)"
+            guiManager.handleHistoryClick(player, event);
         }
     }
 
@@ -101,10 +103,10 @@ public class GUIListener implements Listener {
         String lowerTitle = title.toLowerCase(Locale.ROOT);
 
         // Clean up pending state when menus close
-        if (lowerTitle.contains("assign role")) {
+        if (lowerTitle.startsWith("assign role")) {
             guiManager.clearPendingRoleAssignment(player.getUniqueId());
 
-        } else if (lowerTitle.contains("deny reasons")) {
+        } else if (lowerTitle.startsWith("deny reasons")) {
             guiManager.clearPendingDenyTarget(player.getUniqueId());
         }
     }

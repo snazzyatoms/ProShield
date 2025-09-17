@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield.util;
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -10,10 +11,7 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public class MessagesUtil {
 
@@ -73,7 +71,9 @@ public class MessagesUtil {
     /** Colorize every string in a list */
     public List<String> colorList(List<String> list) {
         if (list == null) return Collections.emptyList();
-        return list.stream().map(this::color).toList();
+        List<String> out = new ArrayList<>(list.size());
+        for (String s : list) out.add(color(s));
+        return out;
     }
 
     public void debug(String message) {
@@ -100,11 +100,16 @@ public class MessagesUtil {
         return color(v);
     }
 
-    /** Get a string from messages.yml, or return default if not found */
+    /** Overload: get with default fallback (colored). */
+    public String get(String path, String def) {
+        String v = msgs.getString(path);
+        return color(v != null ? v : def);
+    }
+
+    /** Preferred: fallback helper. */
     public String getOrDefault(String path, String def) {
         String v = msgs.getString(path);
-        if (v == null || v.isEmpty()) return color(def);
-        return color(v);
+        return color(v == null || v.isEmpty() ? def : v);
     }
 
     /** Get a string list path from messages.yml */
@@ -113,11 +118,10 @@ public class MessagesUtil {
         return list != null ? list : Collections.emptyList();
     }
 
-    /** Get all keys under a section path (e.g. "messages.deny-reasons") */
+    /** Get child keys (non-recursive) at a section path (used for deny reasons). */
     public Set<String> getKeys(String path) {
-        if (msgs.isConfigurationSection(path)) {
-            return msgs.getConfigurationSection(path).getKeys(false);
-        }
-        return null;
+        ConfigurationSection sec = msgs.getConfigurationSection(path);
+        if (sec == null) return Collections.emptySet();
+        return sec.getKeys(false);
     }
 }

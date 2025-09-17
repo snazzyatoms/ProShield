@@ -41,13 +41,13 @@ messages:
 
   # --- Expansion Requests (Player) ---
   expansion:
-    request-sent: "&eYour expansion request for +{blocks} blocks has been sent to admins."
+    request-sent: "&eYour expansion request for +{blocks} blocks has been sent to admins." # (⚠ not yet pulled from config, hardcoded in GUIManager)
     approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
     denied: "&cYour expansion request was denied: {reason}"
-    disabled: "&cExpansion requests are disabled by the server."
-    cooldown-title: "&cCooldown Active"
-    cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
-    expired: "&eYour expansion request has expired after {days} days without review."
+    disabled: "&cExpansion requests are disabled by the server." # (⚠ not yet wired into GUIManager)
+    cooldown-title: "&cCooldown Active" # (⚠ not yet wired)
+    cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7." # (⚠ not yet wired)
+    expired: "&eYour expansion request has expired after {days} days without review." # ✅ handled in expiry logic
 
   # --- Expansion Review (Admin GUI) ---
   expansion-admin:

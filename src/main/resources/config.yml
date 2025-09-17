@@ -8,6 +8,7 @@
 #  - GUI-driven flag management
 #  - Expansion requests (with review/deny reasons/history/expiry)
 #  - Mob, explosion, fire & world protections
+#  - Claim preview particles
 # ==========================================================
 
 settings:
@@ -23,6 +24,11 @@ claims:
   safezone-enabled: true
   allow-admin-edit-claims: true
   allow-owner-claim-flags: true
+
+  preview:                      # ✅ New section
+    duration-ticks: 100         # How long previews last (~5 seconds)
+    interval-ticks: 20          # How often particles spawn (20 = once per second)
+    particle: "VILLAGER_HAPPY"  # Default particle type (Bukkit Particle enum)
 
   expansion:
     enabled: true

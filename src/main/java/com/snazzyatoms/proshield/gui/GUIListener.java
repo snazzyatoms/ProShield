@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -58,20 +59,28 @@ public class GUIListener implements Listener {
 
         if (lowerTitle.contains("proshield menu")) {
             guiManager.handleMainClick(player, event);
+
         } else if (lowerTitle.contains("trusted players")) {
             guiManager.handleTrustedClick(player, event);
+
         } else if (lowerTitle.contains("assign role")) {
             guiManager.handleAssignRoleClick(player, event);
+
         } else if (lowerTitle.contains("claim flags")) {
             guiManager.handleFlagsClick(player, event);
+
         } else if (lowerTitle.contains("admin tools")) {
             guiManager.handleAdminClick(player, event);
+
         } else if (lowerTitle.contains("expansion requests")) {
             guiManager.handleExpansionReviewClick(player, event);
+
         } else if (lowerTitle.contains("expansion history")) {
             guiManager.handleHistoryClick(player, event);
+
         } else if (lowerTitle.contains("request expansion")) {
             plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
+
         } else if (lowerTitle.contains("deny reasons")) {
             guiManager.handleDenyReasonClick(player, event);
         }
@@ -88,8 +97,8 @@ public class GUIListener implements Listener {
         // Clean up pending state when menus close
         if (lowerTitle.contains("assign role")) {
             guiManager.clearPendingRoleAssignment(player.getUniqueId());
+
         } else if (lowerTitle.contains("deny reasons")) {
-            // Optional: clear deny target when menu closes without selection
             guiManager.clearPendingDenyTarget(player.getUniqueId());
         }
     }

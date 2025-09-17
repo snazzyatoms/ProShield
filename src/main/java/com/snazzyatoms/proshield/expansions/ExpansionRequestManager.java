@@ -14,6 +14,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,18 +30,22 @@ public class ExpansionRequestManager {
         this.plugin = plugin;
         this.plotManager = plugin.getPlotManager();
         this.messages = plugin.getMessagesUtil();
+
+        // ✅ Schedule expiry task (runs once per hour)
+        long ticksPerHour = 20L * 60 * 60;
+        Bukkit.getScheduler().runTaskTimer(plugin, this::expireOldRequests, ticksPerHour, ticksPerHour);
     }
 
     /* ---------------------
      * PLAYER REQUEST MENU
      * --------------------- */
     public void openPlayerRequestMenu(Player player) {
-        String title = plugin.getConfig().getString("gui.menus.request-expansion.title", "&aRequest Expansion");
-        int size = plugin.getConfig().getInt("gui.menus.request-expansion.size", 45);
+        String title = plugin.getConfig().getString("gui.menus.expansion-request.title", "&aRequest Expansion");
+        int size = plugin.getConfig().getInt("gui.menus.expansion-request.size", 45);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        // Example increments from config
-        List<Integer> amounts = plugin.getConfig().getIntegerList("claims.expansion.amounts");
+        // Pull amounts from config
+        List<Integer> amounts = plugin.getConfig().getIntegerList("claims.expansion.step-options");
         if (amounts.isEmpty()) amounts = Arrays.asList(10, 15, 20, 25);
 
         int slot = 0;
@@ -83,6 +88,7 @@ public class ExpansionRequestManager {
             return;
         }
 
+        // ✅ Get player’s claim (only one claim supported for now)
         Plot plot = plotManager.getPlotByOwner(player.getUniqueId());
         if (plot == null) {
             messages.send(player, "&cYou don’t own a claim to expand.");
@@ -93,7 +99,8 @@ public class ExpansionRequestManager {
                 ExpansionRequest.Status.PENDING, null, null);
 
         requests.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>()).add(req);
-        messages.send(player, "&aExpansion request submitted for &f" + amount + " &ablocks.");
+        messages.send(player, plugin.getMessagesUtil().get("messages.expansion-request")
+                .replace("{blocks}", String.valueOf(amount)));
         player.closeInventory();
     }
 
@@ -101,6 +108,7 @@ public class ExpansionRequestManager {
      * REQUEST STORAGE
      * --------------------- */
     public Collection<ExpansionRequest> getPendingRequests() {
+        expireOldRequests();
         List<ExpansionRequest> all = new ArrayList<>();
         for (List<ExpansionRequest> list : requests.values()) {
             for (ExpansionRequest req : list) {
@@ -113,6 +121,7 @@ public class ExpansionRequestManager {
     }
 
     public Collection<ExpansionRequest> getAllRequests() {
+        expireOldRequests();
         List<ExpansionRequest> all = new ArrayList<>();
         for (List<ExpansionRequest> list : requests.values()) {
             all.addAll(list);
@@ -126,8 +135,14 @@ public class ExpansionRequestManager {
             if (req.getTimestamp().equals(ts) && req.getStatus() == ExpansionRequest.Status.PENDING) {
                 req.setStatus(ExpansionRequest.Status.APPROVED);
                 req.setReviewer(admin);
-                plotManager.expandPlot(target, req.getAmount());
-                notifyPlayer(target, "&aYour expansion request was approved!");
+
+                Plot plot = plotManager.getPlotByOwner(target);
+                if (plot != null) {
+                    plotManager.expandPlot(plot.getId(), req.getAmount());
+                }
+
+                notifyPlayer(target, messages.get("messages.expansion-approved")
+                        .replace("{blocks}", String.valueOf(req.getAmount())));
                 break;
             }
         }
@@ -140,8 +155,29 @@ public class ExpansionRequestManager {
                 req.setStatus(ExpansionRequest.Status.DENIED);
                 req.setReviewer(admin);
                 req.setDenyReason(reason);
-                notifyPlayer(target, "&cYour expansion request was denied. Reason: &f" + reason);
+                notifyPlayer(target, messages.get("messages.expansion-denied")
+                        .replace("{reason}", reason));
                 break;
+            }
+        }
+    }
+
+    /* ---------------------
+     * EXPIRY SYSTEM
+     * --------------------- */
+    private void expireOldRequests() {
+        int expireDays = plugin.getConfig().getInt("claims.expansion.expire-days", 30);
+        Instant cutoff = Instant.now().minus(expireDays, ChronoUnit.DAYS);
+
+        for (UUID owner : requests.keySet()) {
+            for (ExpansionRequest req : requests.get(owner)) {
+                if (req.getStatus() == ExpansionRequest.Status.PENDING &&
+                        req.getTimestamp().isBefore(cutoff)) {
+                    req.setStatus(ExpansionRequest.Status.EXPIRED);
+
+                    notifyPlayer(owner, messages.get("messages.expansion-expired")
+                            .replace("{days}", String.valueOf(expireDays)));
+                }
             }
         }
     }

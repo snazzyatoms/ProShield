@@ -15,30 +15,35 @@ Perfect for survival or SMP communities, it provides simple claiming, intuitive 
 - ✅ **Keep Items in Claims (1.2.2+)** – Optional toggle to prevent items dropped in claims from despawning (configurable, off by default).  
 - ✅ **Claim Ownership Transfer (NEW in 1.2.3)** – Owners can hand over claims to another player.  
 - ✅ **Claim Borders Preview (NEW in 1.2.3)** – Visualize claim boundaries before confirming.  
-- ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, unclaiming, help, and admin.  
-- ✅ **Back Button in GUIs (NEW in 1.2.3)** – Navigate menus without closing them.  
+- ✅ **GUI Menu** – Clean and simple inventory menu for claiming, info, unclaiming, flags, roles, expansions, and admin tools.  
+- ✅ **Back & Exit Buttons in GUIs (IMPROVED in 1.2.5)** – Every GUI now supports consistent navigation.  
 - ✅ **Admin Compass** – Special compass item that opens the ProShield GUI. Auto-given to ops (configurable).  
 - ✅ **Claim Expiry** – Automatically removes claims of inactive players (optional, fully configurable).  
 - ✅ **Configurable Protections** – Containers, doors, buttons, buckets, fire, mobs, explosions, Enderman teleport, and more.  
 - ✅ **Spawn Guard (NEW in 1.2.4)** – Block claiming within a configurable radius around world spawn.  
-- ✅ **Mob Border Repel (NEW in 1.2.4)** – Push hostile mobs back when they approach a claim border.  
-- ✅ **Admin Reload & Purge Tools (NEW in 1.2.4)** – Reload configs and purge expired claims directly from the Admin GUI.  
+- ✅ **Mob Control (ENHANCED in 1.2.5)** – Repel mobs from claim borders, despawn hostile mobs inside claims, and block mob pathing/targeting in safezones.  
+- ✅ **Expansion Requests (NEW in 1.2.5)** – Players can request claim expansions, admins approve/deny via GUI.  
+- ✅ **Admin Expansion Review (NEW in 1.2.5)** – Approve or deny with configurable deny reasons.  
+- ✅ **Expansion History (NEW in 1.2.5)** – Paginated GUI to view past requests and decisions.  
+- ✅ **World Controls (NEW in 1.2.5)** – Admin GUI to toggle global protections like fire, explosions, or mob damage.  
+- ✅ **Admin Reload & Debug Tools (IMPROVED in 1.2.5)** – Reload configs, messages, and expansions via GUI or commands.  
 - ✅ **Lightweight** – Built for performance and ease of use.  
 
 ---
 
-## ⚠️ Migration Note (v1.2.4)
+## ⚠️ Migration Note (v1.2.5)
 
-If you are upgrading from **v1.2.3 or earlier**, you **must regenerate your ProShield config folder**.  
-This is required to load the new settings for:
-- Spawn guard radius  
-- Mob border repel system  
-- Admin GUI reload button  
+If you are upgrading from **v1.2.4 or earlier**, you **must regenerate your ProShield config and messages files**.  
+This is required to load the new settings for:  
+- Expansion requests & deny reasons  
+- World controls menu  
+- Safezone mob controls  
+- Back & Exit buttons  
 
 ### Steps:
 1. Stop your server.  
-2. Delete the `/plugins/ProShield/` folder.  
-3. Restart the server → new configs will be generated.  
+2. Backup and delete the `/plugins/ProShield/` folder.  
+3. Restart the server → new configs & messages.yml will be generated.  
 4. Reapply any custom changes you had made.
 
 ---
@@ -52,10 +57,12 @@ Players can claim land in two ways:
 - Players with permissions can get one via `/proshield compass`.  
 - Right-click to open the menu:  
   - Slot 11 → Claim current chunk  
-  - Slot 13 → View claim info  
+  - Slot 13 → View claim info (owner, coords, radius, flags)  
   - Slot 15 → Unclaim chunk  
-  - Slot 31 → Help (shows commands relevant to your role/permissions)  
-  - Slot 33 → Admin menu (for players with admin perms)  
+  - Slot 16 → Trusted Players (manage roles)  
+  - Slot 28 → Claim Flags  
+  - Slot 30 → Request Expansion (if enabled)  
+  - Slot 32 → Admin Tools (for players with admin perms)  
 
 ### 🔹 Option 2: Commands
 - `/proshield claim` – Claim your current chunk  
@@ -79,12 +86,10 @@ Players can claim land in two ways:
 - `/proshield untrust <player>` – Remove trust  
 - `/proshield trusted` – List trusted players  
 - `/proshield compass` – Give yourself the ProShield compass  
-- `/proshield bypass <on|off|toggle>` – Toggle admin bypass  
-- `/proshield reload` – Reload configuration  
-- `/proshield purgeexpired <days> [dryrun]` – Force claim expiry cleanup (admins)  
-- `/proshield transfer <player>` – Transfer claim ownership (1.2.3+)  
-- `/proshield preview` – Show claim borders before confirming (1.2.3+)  
-- `/proshield debug <on|off>` – Toggle debug logging  
+- `/proshield bypass` – Toggle admin bypass  
+- `/proshield reload` – Reload configuration + messages + expansions  
+- `/proshield debug` – Toggle debug logging  
+- `/proshield admin` – Open Admin Tools GUI (reload, debug, bypass, expansions, world controls)  
 
 ---
 
@@ -92,17 +97,15 @@ Players can claim land in two ways:
 
 | Node                             | Description                                                | Default |
 |----------------------------------|------------------------------------------------------------|---------|
-| `proshield.use`                  | Use ProShield commands and GUI                             | ✅ true |
+| `proshield.player.access`        | Access player features (claims, compass, GUI)              | ✅ true |
 | `proshield.admin`                | Access admin tools (compass, bypass, force unclaim, purge) | ❌ op   |
-| `proshield.compass`              | Receive/use ProShield compass                              | ❌ op   |
+| `proshield.compass`              | Receive/use ProShield compass                              | ✅ true |
 | `proshield.bypass`               | Toggle bypass protection                                   | ❌ op   |
 | `proshield.unlimited`            | Ignore max-claims limit                                    | ❌ op   |
-| `proshield.admin.tp`             | Teleport to claims from admin menu                         | ❌ op   |
 | `proshield.admin.reload`         | Use `/proshield reload`                                    | ❌ op   |
-| `proshield.admin.expired.purge`  | Manage expired claims                                      | ❌ op   |
-| `proshield.admin.keepdrops`      | Toggle item-keep inside claims (1.2.2+)                    | ❌ op   |
-| `proshield.admin.transfer`       | Transfer ownership of claims (1.2.3+)                      | ❌ op   |
-| `proshield.admin.debug`          | Toggle debug logging (1.2.3+)                              | ❌ op   |
+| `proshield.admin.debug`          | Toggle debug logging                                       | ❌ op   |
+| `proshield.admin.expansions`     | Review/approve/deny expansion requests                     | ❌ op   |
+| `proshield.admin.worldcontrols`  | Manage world control toggles (fire, explosions, mobs)      | ❌ op   |
 
 ---
 

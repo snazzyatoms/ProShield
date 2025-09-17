@@ -46,6 +46,13 @@ public class ExpansionRequestManager {
                 .collect(Collectors.toList());
     }
 
+    /** ✅ New: Get only the pending requests for a specific player */
+    public List<ExpansionRequest> getPendingRequestsFor(UUID requester) {
+        return getRequests(requester).stream()
+                .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
+                .collect(Collectors.toList());
+    }
+
     public void approveRequest(ExpansionRequest req, UUID reviewer) {
         req.setStatus(ExpansionRequest.Status.APPROVED);
         req.setReviewedBy(reviewer);

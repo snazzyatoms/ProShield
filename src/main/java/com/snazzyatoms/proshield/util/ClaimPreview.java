@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/util/ClaimPreview.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -5,63 +6,82 @@ import com.snazzyatoms.proshield.plots.Plot;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 /**
  * ClaimPreview
- * - Visual boundary preview for claims (radius-based)
- * - Configurable particle type, duration, and spacing
- * - Supports both chunk-based and radius-based claims
+ *
+ * - Visual particle boundary preview for a claim
+ * - Repeats for a short configurable duration
+ * - Integrated with ClaimPreviewTask (v1.2.5)
  */
 public class ClaimPreview {
 
+    /**
+     * Show a preview of a claim boundary to a player.
+     *
+     * @param plugin ProShield instance
+     * @param player Player to preview for
+     * @param plot   The claim/plot to preview
+     */
     public static void show(ProShield plugin, Player player, Plot plot) {
         if (plugin == null || player == null || plot == null) return;
         World world = Bukkit.getWorld(plot.getWorld());
         if (world == null) return;
 
-        // Configurable particle
-        String particleName = plugin.getConfig().getString("settings.claim-preview.particle", "VILLAGER_HAPPY");
+        // Configurable settings
+        int durationTicks = plugin.getConfig().getInt("claims.preview.duration-ticks", 100); // ~5s
+        int intervalTicks = plugin.getConfig().getInt("claims.preview.interval-ticks", 20); // 1s
+        String particleName = plugin.getConfig().getString("claims.preview.particle", "VILLAGER_HAPPY");
+
         Particle particle;
         try {
             particle = Particle.valueOf(particleName.toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            particle = Particle.VILLAGER_HAPPY;
+        } catch (IllegalArgumentException e) {
+            particle = Particle.VILLAGER_HAPPY; // fallback
         }
 
-        int spacing = plugin.getConfig().getInt("settings.claim-preview.spacing", 2); // every N blocks
-        int duration = plugin.getConfig().getInt("settings.claim-preview.duration-seconds", 5); // seconds
+        int cx = plot.getX();
+        int cz = plot.getZ();
+        int minX = (cx << 4);
+        int minZ = (cz << 4);
+        int maxX = minX + 15;
+        int maxZ = minZ + 15;
 
-        int cx = plot.getX() << 4;
-        int cz = plot.getZ() << 4;
-        int radius = plot.getRadius();
+        // Cancel any existing preview for this player
+        ClaimPreviewTask.cancel(player);
 
-        // Calculate square bounds around the plot center
-        int minX = cx - radius;
-        int maxX = cx + radius;
-        int minZ = cz - radius;
-        int maxZ = cz + radius;
-
-        int y = player.getLocation().getBlockY() + 1;
-
-        new BukkitRunnable() {
+        // Start a repeating task for the preview
+        BukkitTask task = new BukkitRunnable() {
             int ticks = 0;
+
             @Override
             public void run() {
-                if (ticks++ > duration * 20 || !player.isOnline()) {
+                if (!player.isOnline()) {
                     cancel();
                     return;
                 }
 
-                // Draw borders
-                for (int x = minX; x <= maxX; x += spacing) {
+                int y = player.getLocation().getBlockY() + 1;
+
+                for (int x = minX; x <= maxX; x++) {
                     world.spawnParticle(particle, x + 0.5, y, minZ + 0.5, 1, 0, 0, 0, 0);
                     world.spawnParticle(particle, x + 0.5, y, maxZ + 0.5, 1, 0, 0, 0, 0);
                 }
-                for (int z = minZ; z <= maxZ; z += spacing) {
+                for (int z = minZ; z <= maxZ; z++) {
                     world.spawnParticle(particle, minX + 0.5, y, z + 0.5, 1, 0, 0, 0, 0);
                     world.spawnParticle(particle, maxX + 0.5, y, z + 0.5, 1, 0, 0, 0, 0);
                 }
+
+                ticks += intervalTicks;
+                if (ticks >= durationTicks) {
+                    cancel();
+                    ClaimPreviewTask.cancel(player);
+                }
             }
-        }.runTaskTimer(plugin, 0L, 10L); // update every 0.5s
+        }.runTaskTimer(plugin, 0L, intervalTicks);
+
+        // Track this preview
+        ClaimPreviewTask.track(player, task);
     }
 }

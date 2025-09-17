@@ -1,85 +1,82 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager gui;
-    private final MessagesUtil messages;
+    private final GUIManager guiManager;
 
+    // New style (recommended): only plugin, fetch manager from plugin
     public GUIListener(ProShield plugin) {
         this.plugin = plugin;
-        this.gui = plugin.getGuiManager();
-        this.messages = plugin.getMessagesUtil();
+        this.guiManager = plugin.getGuiManager();
+    }
+
+    // Legacy style (to satisfy existing call sites)
+    public GUIListener(ProShield plugin, GUIManager guiManager) {
+        this.plugin = plugin;
+        this.guiManager = guiManager != null ? guiManager : plugin.getGuiManager();
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (event.getCurrentItem() == null) return;
-
-        String title = ChatColor.stripColor(event.getView().getTitle());
         ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        // Cancel all clicks inside GUIs
-        if (title != null && title.contains("ProShield")) {
-            event.setCancelled(true);
-        }
+        String title = event.getView().getTitle();
+        if (title == null) return;
 
-        // --- Main Menu ---
-        if (title.equalsIgnoreCase("ProShield Menu")) {
-            gui.handleMainClick(player, event);
+        // Only handle our menus
+        if (!(title.contains("ProShield")
+                || title.contains("Trusted Players")
+                || title.contains("Assign Role")
+                || title.contains("Claim Flags")
+                || title.contains("Admin Tools")
+                || title.contains("Expansion Requests")
+                || title.contains("Expansion History")
+                || title.contains("Request Expansion")
+                || title.contains("Deny Reasons"))) {
             return;
         }
 
-        // --- Trusted Players ---
-        if (title.equalsIgnoreCase("Trusted Players")) {
-            gui.handleTrustedClick(player, event);
-            return;
-        }
+        event.setCancelled(true); // prevent vanilla slot movement
 
-        // --- Assign Role ---
-        if (title.equalsIgnoreCase("Assign Role")) {
-            gui.handleAssignRoleClick(player, event);
-            return;
+        if (title.contains("ProShield Menu")) {
+            guiManager.handleMainClick(player, event);
+        } else if (title.contains("Trusted Players")) {
+            guiManager.handleTrustedClick(player, event);
+        } else if (title.contains("Assign Role")) {
+            guiManager.handleAssignRoleClick(player, event);
+        } else if (title.contains("Claim Flags")) {
+            guiManager.handleFlagsClick(player, event);
+        } else if (title.contains("Admin Tools")) {
+            guiManager.handleAdminClick(player, event);
+        } else if (title.contains("Expansion Requests")) {
+            guiManager.handleExpansionReviewClick(player, event);
+        } else if (title.contains("Expansion History")) {
+            guiManager.handleHistoryClick(player, event);
+        } else if (title.contains("Request Expansion")) {
+            plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
+        } else if (title.contains("Deny Reasons")) {
+            guiManager.handleDenyReasonClick(player, event);
         }
+    }
 
-        // --- Claim Flags ---
-        if (title.equalsIgnoreCase("Claim Flags")) {
-            gui.handleFlagsClick(player, event);
-            return;
-        }
-
-        // --- Admin Tools ---
-        if (title.equalsIgnoreCase("Admin Tools")) {
-            gui.handleAdminClick(player, event);
-            return;
-        }
-
-        // --- Expansion Requests ---
-        if (title.equalsIgnoreCase("Expansion Requests")) {
-            gui.handleExpansionReviewClick(player, event);
-            return;
-        }
-
-        // --- Deny Reasons ---
-        if (title.equalsIgnoreCase("Deny Reasons")) {
-            gui.handleDenyReasonClick(player, event);
-            return;
-        }
-
-        // --- Expansion History (pagination) ---
-        if (title.startsWith("Expansion History")) {
-            gui.handleHistoryClick(player, event);
-            return;
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) return;
+        String title = event.getView().getTitle();
+        if (title != null && title.contains("Assign Role")) {
+            guiManager.clearPendingRoleAssignment(player.getUniqueId());
         }
     }
 }

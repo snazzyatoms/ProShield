@@ -1,6 +1,10 @@
+// src/main/java/com/snazzyatoms/proshield/expansions/ExpansionRequestManager.java
 package com.snazzyatoms.proshield.expansions;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -10,16 +14,25 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * ExpansionRequestManager
+ * - Handles persistence, submission, and review of claim expansion requests
+ * - Synchronized with GUIManager + MessagesUtil (v1.2.5)
+ */
 public class ExpansionRequestManager {
 
     private final ProShield plugin;
+    private final MessagesUtil messages;
+
     private final File file;
     private YamlConfiguration data;
 
+    // Cache: Player UUID → List of requests
     private final Map<UUID, List<ExpansionRequest>> requests = new HashMap<>();
 
     public ExpansionRequestManager(ProShield plugin) {
         this.plugin = plugin;
+        this.messages = plugin.getMessagesUtil();
         this.file = new File(plugin.getDataFolder(), "expansions.yml");
 
         if (!file.exists()) {
@@ -40,29 +53,73 @@ public class ExpansionRequestManager {
      * Public API
      * ==================================== */
 
+    /**
+     * Player submits a new request.
+     */
     public void submitRequest(UUID player, int amount) {
         ExpansionRequest request = new ExpansionRequest(player, amount, Instant.now(), ExpansionRequest.Status.PENDING);
         requests.computeIfAbsent(player, k -> new ArrayList<>()).add(request);
         save();
+
+        OfflinePlayer op = Bukkit.getOfflinePlayer(player);
+        String name = op != null && op.getName() != null ? op.getName() : player.toString();
+        messages.debug("New expansion request: " + name + " +" + amount + " blocks");
     }
 
+    /**
+     * Approve a request by timestamp.
+     */
     public void approve(UUID player, Instant timestamp, UUID reviewedBy) {
         ExpansionRequest request = getRequest(player, timestamp);
         if (request == null) return;
+
         request.setStatus(ExpansionRequest.Status.APPROVED);
         request.setReviewedBy(reviewedBy);
         save();
+
+        String who = getPlayerName(player);
+        messages.debug("Approved expansion for " + who + " (" + request.getAmount() + " blocks)");
     }
 
+    /**
+     * Deny a request by timestamp.
+     */
     public void deny(UUID player, Instant timestamp, UUID reviewedBy, String reason) {
         ExpansionRequest request = getRequest(player, timestamp);
         if (request == null) return;
+
         request.setStatus(ExpansionRequest.Status.DENIED);
         request.setReviewedBy(reviewedBy);
         request.setDenialReason(reason);
         save();
+
+        String who = getPlayerName(player);
+        messages.debug("Denied expansion for " + who + " (" + reason + ")");
     }
 
+    /**
+     * Convenience: Approve by UUID (latest request).
+     */
+    public void approveRequest(UUID player) {
+        List<ExpansionRequest> list = getRequests(player);
+        if (list.isEmpty()) return;
+        ExpansionRequest latest = list.get(list.size() - 1);
+        approve(player, latest.getTimestamp(), null);
+    }
+
+    /**
+     * Convenience: Deny by UUID (latest request).
+     */
+    public void denyRequest(UUID player, String reason) {
+        List<ExpansionRequest> list = getRequests(player);
+        if (list.isEmpty()) return;
+        ExpansionRequest latest = list.get(list.size() - 1);
+        deny(player, latest.getTimestamp(), null, reason);
+    }
+
+    /**
+     * Expire pending requests older than N days.
+     */
     public void expireOldRequests(int days) {
         Instant cutoff = Instant.now().minusSeconds(days * 86400L);
         for (List<ExpansionRequest> list : requests.values()) {
@@ -159,5 +216,16 @@ public class ExpansionRequestManager {
                 plugin.getLogger().warning("Invalid UUID in expansions.yml: " + key);
             }
         }
+    }
+
+    /* ====================================
+     * Helpers
+     * ==================================== */
+
+    private String getPlayerName(UUID uuid) {
+        OfflinePlayer owner = Bukkit.getOfflinePlayer(uuid);
+        return owner != null && owner.getName() != null
+                ? owner.getName()
+                : uuid.toString().substring(0, 8);
     }
 }

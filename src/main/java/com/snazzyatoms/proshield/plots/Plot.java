@@ -1,112 +1,71 @@
 package com.snazzyatoms.proshield.plots;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import org.bukkit.Location;
 
-/**
- * Represents a claimed plot in ProShield.
- * Stores owner, world, coordinates, flags, trusted players, and role assignments.
- */
+import java.util.*;
+
 public class Plot {
 
-    private final UUID id;           // Unique ID of this plot
-    private final String world;      // World name
-    private final int x;             // Chunk X
-    private final int z;             // Chunk Z
-    private final UUID owner;        // Owner UUID
-    private final int radius;        // Claim radius (blocks)
+    private final UUID id;
+    private final UUID owner;
+    private final String world;
+    private final int x;
+    private final int z;
 
-    private boolean adminClaim;      // Is this claim owned/admin-managed
-
-    // Per-claim flags (PvP, explosions, safezone, etc.)
+    private int radius;
     private final Map<String, Boolean> flags = new HashMap<>();
 
-    // Trusted players + roles
-    private final Set<UUID> trusted = new HashSet<>();
-    private final Map<UUID, String> roles = new HashMap<>();
+    // NEW: roles-aware trusted map
+    private final Map<UUID, String> trusted = new HashMap<>();
 
-    public Plot(UUID id, String world, int x, int z, UUID owner, int radius) {
-        this.id = id;
+    public Plot(UUID owner, String world, int x, int z, UUID id, int radius) {
+        this.owner = owner;
         this.world = world;
         this.x = x;
         this.z = z;
-        this.owner = owner;
+        this.id = id;
         this.radius = radius;
-        this.adminClaim = false;
     }
 
-    // -------------------
-    // Core Getters
-    // -------------------
     public UUID getId() { return id; }
+    public UUID getOwner() { return owner; }
     public String getWorld() { return world; }
     public int getX() { return x; }
     public int getZ() { return z; }
-    public UUID getOwner() { return owner; }
+
     public int getRadius() { return radius; }
+    public void setRadius(int radius) { this.radius = Math.max(1, radius); }
 
-    // -------------------
-    // Flags
-    // -------------------
-    public boolean getFlag(String key) {
-        return flags.getOrDefault(key, false);
+    public Map<String, Boolean> getFlags() { return flags; }
+
+    // Roles-aware map (preferred)
+    public Map<UUID, String> getTrusted() { return trusted; }
+
+    // Legacy shim: some old code might expect a Set<UUID>
+    /** @deprecated Use getTrusted() which returns Map<UUID,String> */
+    @Deprecated
+    public Set<UUID> getTrustedPlayers() { return trusted.keySet(); }
+
+    // Containment check used by PlotManager
+    public boolean isInPlot(Location loc) {
+        if (loc == null || loc.getWorld() == null) return false;
+        if (!loc.getWorld().getName().equalsIgnoreCase(world)) return false;
+        int dx = loc.getBlockX() - x;
+        int dz = loc.getBlockZ() - z;
+        return (dx*dx + dz*dz) <= (radius * radius);
     }
 
-    public void setFlag(String key, boolean value) {
-        flags.put(key, value);
-    }
+    // Legacy shim: some callers used contains(Location)
+    /** @deprecated Use isInPlot(Location) */
+    @Deprecated
+    public boolean contains(Location loc) { return isInPlot(loc); }
 
-    public Map<String, Boolean> getFlags() {
-        return flags;
-    }
+    // Flag API (simple booleans)
+    public boolean getFlag(String key) { return flags.getOrDefault(key, false); }
+    public void setFlag(String key, boolean value) { flags.put(key, value); }
 
-    // -------------------
-    // Admin Claim
-    // -------------------
-    public boolean isAdminClaim() {
-        return adminClaim;
-    }
-
-    public void setAdminClaim(boolean adminClaim) {
-        this.adminClaim = adminClaim;
-    }
-
-    // -------------------
-    // Trusted Players
-    // -------------------
-    public void addTrusted(UUID uuid) {
-        trusted.add(uuid);
-    }
-
-    public void removeTrusted(UUID uuid) {
-        trusted.remove(uuid);
-        roles.remove(uuid);
-    }
-
-    public boolean isTrusted(UUID uuid) {
-        return trusted.contains(uuid);
-    }
-
-    public Set<UUID> getTrusted() {
-        return trusted;
-    }
-
-    // -------------------
-    // Roles
-    // -------------------
-    public void setRole(UUID uuid, String role) {
-        trusted.add(uuid);
-        roles.put(uuid, role);
-    }
-
-    public String getRole(UUID uuid) {
-        return roles.getOrDefault(uuid, "member");
-    }
-
-    public Map<UUID, String> getRoles() {
-        return roles;
-    }
+    // Legacy shim to satisfy callers passing a config second arg
+    /** @deprecated Second argument ignored; use getFlag(String) */
+    @Deprecated
+    public boolean getFlag(String key, Object ignoredConfig) { return getFlag(key); }
 }

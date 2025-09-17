@@ -1,14 +1,20 @@
 # ==========================================================
-#               ProShield Configuration File
-#                     Version: 1.2.5
-#     Enhanced & Synchronized with GUI, Expansions, Flags
+#                  ProShield Configuration
+# ----------------------------------------------------------
+# Version: 1.2.5
+# Author: snazzyatoms
+# Description:
+#   ProShield is the ultimate land & claim protection plugin.
+#   Everything is GUI-driven for both players and admins.
+#   Includes role-based trust, flags, expansions, mob & fire
+#   protection, history, and more.
 # ==========================================================
 
 settings:
   give-compass-on-join: true
   compass-despawn-delay: 600
   compass-auto-replace: false
-  ops-have-full-access: true
+  ops-have-full-access: true   # Operators bypass protections by default
 
 claims:
   default-radius: 50
@@ -86,6 +92,9 @@ protection:
       safezone: true
     worlds: {}
 
+# -----------------------------
+# Claim Roles (GUI-driven)
+# -----------------------------
 roles:
   default: member
   available:
@@ -120,6 +129,9 @@ roles:
         containers: true
         toggle-flags: true
 
+# -----------------------------
+# Per-Claim Flags (toggle in GUI)
+# -----------------------------
 flags:
   available:
     safezone:
@@ -183,6 +195,9 @@ flags:
         - "&7Allow lightning to ignite blocks"
       default: false
 
+# -----------------------------
+# Messages
+# -----------------------------
 messages:
   prefix: "&3[ProShield]&r "
   debug-prefix: "&8[Debug]&r "
@@ -210,6 +225,9 @@ messages:
     custom-1: "&cNot enough playtime yet for this expansion."
     custom-2: "&cYour claim already reached the maximum size."
 
+# -----------------------------
+# Help Pages
+# -----------------------------
 help:
   player:
     - "&3&lProShield &7— Player Guide"
@@ -220,7 +238,7 @@ help:
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
     - "&7Expansion requests have a cooldown of &f{cooldown-hours}h&7."
     - "&eNote: &7All player features are GUI-driven. &fNo commands are required."
-
+    
   admin:
     - "&c&lProShield — Admin Guide"
     - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"
@@ -237,6 +255,9 @@ help:
     - "&4Expansion Requests &7– Requires &fproshield.admin.expansions"
     - "&4World Controls &7– Requires &fproshield.admin.worldcontrols"
 
+# -----------------------------
+# GUI Definitions
+# -----------------------------
 gui:
   menus:
     main:

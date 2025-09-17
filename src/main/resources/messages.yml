@@ -47,6 +47,7 @@ messages:
     disabled: "&cExpansion requests are disabled by the server."
     cooldown-title: "&cCooldown Active"
     cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
+    expired: "&eYour expansion request has expired after {days} days without review."
 
   # --- Expansion Review (Admin GUI) ---
   expansion-admin:
@@ -62,6 +63,12 @@ messages:
     overlap: "&cRequested area overlaps an existing claim."
     custom-1: "&cNot enough playtime yet for this expansion."
     custom-2: "&cYour claim already reached the maximum size."
+
+  # --- World Controls (Admin GUI) ---
+  world-controls:
+    toggle: "&eWorld control &f{flag} &eis now {state}."
+    enabled: "&aENABLED"
+    disabled: "&cDISABLED"
 
 # ==========================================================
 # Help Pages (GUI-first style)

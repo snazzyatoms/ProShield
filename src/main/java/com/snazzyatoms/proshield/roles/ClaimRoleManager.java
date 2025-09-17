@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -11,8 +12,9 @@ import java.util.UUID;
 
 /**
  * ClaimRoleManager
- * - Central authority for handling player roles in claims
- * - Fully synchronized with ClaimRole enum (v1.2.5)
+ * - Central authority for handling claim roles and permissions
+ * - Fully synchronized with ClaimRole (v1.2.5)
+ * - Provides fine-grained helpers for GUI, listeners, and protection checks
  */
 public class ClaimRoleManager {
 
@@ -27,7 +29,7 @@ public class ClaimRoleManager {
     }
 
     public void loadAll() {
-        // TODO: load roles from disk if you persist them separately
+        // TODO: load roles from disk if persisted separately
     }
 
     public void saveAll() {
@@ -51,7 +53,7 @@ public class ClaimRoleManager {
     }
 
     /**
-     * Assign a role to a target inside a claim.
+     * Assign or remove a role in a plot.
      */
     public void setRole(Plot plot, UUID targetId, ClaimRole role) {
         if (plot == null || targetId == null || role == null) return;
@@ -64,38 +66,48 @@ public class ClaimRoleManager {
         plotManager.saveAll();
     }
 
-    /**
-     * Remove a trusted player's role from a claim.
-     */
-    public void clearRole(Plot plot, UUID targetId) {
-        if (plot == null || targetId == null) return;
-        plot.getTrusted().remove(targetId);
-        plotManager.saveAll();
-    }
-
     // ========================
     // Permission Helpers
     // ========================
+    public boolean canInteract(Player player, Plot plot) {
+        return getRole(player.getUniqueId(), plot).canInteract();
+    }
 
     public boolean canBuild(Player player, Plot plot) {
         return getRole(player.getUniqueId(), plot).canBuild();
     }
 
-    public boolean canInteract(Player player, Plot plot) {
-        return getRole(player.getUniqueId(), plot).canInteract();
+    public boolean canOpenContainers(Player player, Plot plot) {
+        return getRole(player.getUniqueId(), plot).canOpenContainers();
     }
 
-    public boolean canManage(Player player, Plot plot) {
-        // For now, simply defer to the role's "canManage" property
-        return getRole(player.getUniqueId(), plot).canManage();
+    public boolean canModifyFlags(Player player, Plot plot) {
+        return getRole(player.getUniqueId(), plot).canModifyFlags();
+    }
+
+    public boolean canManageRoles(Player player, Plot plot) {
+        return getRole(player.getUniqueId(), plot).canManageRoles();
+    }
+
+    public boolean canTransferClaim(Player player, Plot plot) {
+        return getRole(player.getUniqueId(), plot).canTransferClaim();
     }
 
     // ========================
-    // Chat-based Role Assignment (legacy support)
+    // Utility
     // ========================
 
     /**
-     * Assign a role via chat input (fallback if GUI not used).
+     * Compare two players' hierarchy inside a plot.
+     */
+    public boolean hasHigherOrEqualRole(Player actor, UUID target, Plot plot) {
+        ClaimRole actorRole = getRole(actor.getUniqueId(), plot);
+        ClaimRole targetRole = getRole(target, plot);
+        return actorRole.isAtLeast(targetRole);
+    }
+
+    /**
+     * Assign a role via chat input (legacy support).
      */
     public void assignRoleViaChat(Player actor, UUID targetUuid, String rawRole) {
         if (actor == null || targetUuid == null || rawRole == null) return;
@@ -113,7 +125,7 @@ public class ClaimRoleManager {
         }
 
         ClaimRole role = ClaimRole.fromName(rawRole);
-        if (role == ClaimRole.NONE) role = ClaimRole.TRUSTED; // fallback default
+        if (role == ClaimRole.NONE) role = ClaimRole.TRUSTED; // fallback
 
         setRole(plot, targetUuid, role);
 

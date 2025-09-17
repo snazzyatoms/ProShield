@@ -5,7 +5,8 @@ import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.plots.MobProtectionListener;
+import com.snazzyatoms.proshield.listeners.ClaimProtectionListener;
+import com.snazzyatoms.proshield.listeners.MobControlTasks;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -28,6 +29,7 @@ public class ProShield extends JavaPlugin {
     private ExpansionRequestManager expansionRequestManager;
 
     private final Set<UUID> bypassing = new HashSet<>();
+    private final Set<UUID> debugging = new HashSet<>();
     private boolean debugEnabled = false;
 
     public static ProShield getInstance() {
@@ -49,7 +51,10 @@ public class ProShield extends JavaPlugin {
 
         // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
-        Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimProtectionListener(this), this);
+
+        // Tasks
+        new MobControlTasks(this); // Starts repel & despawn tasks
 
         // Commands
         PluginCommand cmd = getCommand("proshield");
@@ -59,7 +64,7 @@ public class ProShield extends JavaPlugin {
             cmd.setTabCompleter(executor);
         }
 
-        // Player dispatcher (opens GUI, compass, etc.)
+        // GUI dispatchers
         new PlayerCommandDispatcher(this);
 
         getLogger().info("✅ ProShield enabled. Running version " + getDescription().getVersion());
@@ -84,5 +89,12 @@ public class ProShield extends JavaPlugin {
     public void toggleDebug() { debugEnabled = !debugEnabled; }
     public boolean isDebugEnabled() { return debugEnabled; }
 
-    public void loadMessagesConfig() { saveResource("messages.yml", false); }
+    public void enableDebug(UUID uuid) { debugging.add(uuid); }
+    public void disableDebug(UUID uuid) { debugging.remove(uuid); }
+    public boolean isDebugging(UUID uuid) { return debugging.contains(uuid); }
+
+    public void loadMessagesConfig() {
+        if (!getDataFolder().exists()) getDataFolder().mkdirs();
+        saveResource("messages.yml", false);
+    }
 }

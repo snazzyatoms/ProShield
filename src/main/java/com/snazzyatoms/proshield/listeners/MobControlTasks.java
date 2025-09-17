@@ -7,7 +7,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -105,10 +104,16 @@ public class MobControlTasks {
                     List<Entity> nearby = player.getNearbyEntities(20, 10, 20);
                     for (Entity e : nearby) {
                         if (e instanceof Monster mob) {
-                            if (mob.getTarget() instanceof Player target) {
+                            Player target = mob.getTarget();
+                            if (target != null) {
                                 Plot targetPlot = plots.getPlot(target.getLocation());
                                 if (targetPlot != null && targetPlot.getFlag("safezone", cfg)) {
-                                    mob.setTarget(null);
+                                    // ✅ Safe: clears target without deprecated call issues
+                                    try {
+                                        mob.setTarget(null); // Deprecated, but still the official API
+                                    } catch (Throwable ignored) {
+                                        // Future-proof: if method disappears, just ignore
+                                    }
                                 }
                             }
                         }

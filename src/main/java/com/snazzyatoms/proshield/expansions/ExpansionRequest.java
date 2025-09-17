@@ -1,6 +1,8 @@
 package com.snazzyatoms.proshield.expansions;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class ExpansionRequest {
@@ -30,6 +32,9 @@ public class ExpansionRequest {
         this.denialReason = denialReason;
     }
 
+    /* -------------------
+     * Getters / Setters
+     * ------------------- */
     public UUID getRequester() { return requester; }
     public int getAmount() { return amount; }
     public Instant getTimestamp() { return timestamp; }
@@ -44,4 +49,40 @@ public class ExpansionRequest {
     public void setDenialReason(String denialReason) { this.denialReason = denialReason; }
 
     public boolean isApproved() { return status == Status.APPROVED; }
+
+    /* -------------------
+     * Serialization
+     * ------------------- */
+
+    /** Convert to a map for saving into YAML/JSON configs */
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("requester", requester.toString());
+        map.put("amount", amount);
+        map.put("timestamp", timestamp.toString());
+        map.put("status", status.name());
+        if (reviewedBy != null) map.put("reviewedBy", reviewedBy.toString());
+        if (denialReason != null) map.put("denialReason", denialReason);
+        return map;
+    }
+
+    /** Rebuild from a saved map */
+    public static ExpansionRequest fromMap(Map<String, Object> map) {
+        try {
+            UUID requester = UUID.fromString((String) map.get("requester"));
+            int amount = (int) map.get("amount");
+            Instant ts = Instant.parse((String) map.get("timestamp"));
+            Status status = Status.valueOf((String) map.get("status"));
+
+            UUID reviewedBy = map.containsKey("reviewedBy")
+                    ? UUID.fromString((String) map.get("reviewedBy"))
+                    : null;
+            String denialReason = (String) map.getOrDefault("denialReason", null);
+
+            return new ExpansionRequest(requester, amount, ts, status, reviewedBy, denialReason);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

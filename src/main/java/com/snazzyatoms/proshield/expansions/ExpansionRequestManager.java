@@ -134,7 +134,7 @@ public class ExpansionRequestManager {
         for (ExpansionRequest req : list) {
             if (req.getTimestamp().equals(ts) && req.getStatus() == ExpansionRequest.Status.PENDING) {
                 req.setStatus(ExpansionRequest.Status.APPROVED);
-                req.setReviewer(admin);
+                req.setReviewedBy(admin); // ✅ FIXED
 
                 Plot plot = plotManager.getPlotByOwner(target);
                 if (plot != null) {
@@ -153,8 +153,8 @@ public class ExpansionRequestManager {
         for (ExpansionRequest req : list) {
             if (req.getTimestamp().equals(ts) && req.getStatus() == ExpansionRequest.Status.PENDING) {
                 req.setStatus(ExpansionRequest.Status.DENIED);
-                req.setReviewer(admin);
-                req.setDenyReason(reason);
+                req.setReviewedBy(admin);   // ✅ FIXED
+                req.setDenyReason(reason);  // ✅ FIXED
                 notifyPlayer(target, messages.get("messages.expansion-denied")
                         .replace("{reason}", reason));
                 break;

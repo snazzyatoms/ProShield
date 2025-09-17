@@ -117,7 +117,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "reload" -> {
                 plugin.reloadConfig();
-                plugin.loadMessagesConfig(); // ✅ fixed
+                plugin.loadMessagesConfig(); // ✅ reload messages.yml too
                 messages.send(sender, messages.get("messages.reloaded"));
             }
 
@@ -147,7 +147,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
             case "admin" -> {
                 if (sender instanceof Player player) {
-                    plugin.getGuiManager().openAdminTools(player);
+                    plugin.getGuiManager().openAdminTools(player); // ✅ now exists in GUIManager
                 } else {
                     messages.send(sender, messages.get("messages.error.player-only"));
                 }

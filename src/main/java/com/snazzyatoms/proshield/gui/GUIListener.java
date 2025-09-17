@@ -9,18 +9,20 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Locale;
+
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
 
-    // New style (recommended): only plugin, fetch manager from plugin
+    // Recommended constructor: plugin only
     public GUIListener(ProShield plugin) {
         this.plugin = plugin;
         this.guiManager = plugin.getGuiManager();
     }
 
-    // Legacy style (to satisfy existing call sites)
+    // Legacy fallback (still safe)
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
         this.guiManager = guiManager != null ? guiManager : plugin.getGuiManager();
@@ -35,38 +37,42 @@ public class GUIListener implements Listener {
         String title = event.getView().getTitle();
         if (title == null) return;
 
-        // Only handle our menus
-        if (!(title.contains("ProShield")
-                || title.contains("Trusted Players")
-                || title.contains("Assign Role")
-                || title.contains("Claim Flags")
-                || title.contains("Admin Tools")
-                || title.contains("Expansion Requests")
-                || title.contains("Expansion History")
-                || title.contains("Request Expansion")
-                || title.contains("Deny Reasons"))) {
+        // Normalize for easier checks
+        String lowerTitle = title.toLowerCase(Locale.ROOT);
+
+        // Only handle our plugin menus
+        if (!(lowerTitle.contains("proshield")
+                || lowerTitle.contains("trusted players")
+                || lowerTitle.contains("assign role")
+                || lowerTitle.contains("claim flags")
+                || lowerTitle.contains("admin tools")
+                || lowerTitle.contains("expansion requests")
+                || lowerTitle.contains("expansion history")
+                || lowerTitle.contains("request expansion")
+                || lowerTitle.contains("deny reasons"))) {
             return;
         }
 
-        event.setCancelled(true); // prevent vanilla slot movement
+        // Prevent vanilla item movement inside GUIs
+        event.setCancelled(true);
 
-        if (title.contains("ProShield Menu")) {
+        if (lowerTitle.contains("proshield menu")) {
             guiManager.handleMainClick(player, event);
-        } else if (title.contains("Trusted Players")) {
+        } else if (lowerTitle.contains("trusted players")) {
             guiManager.handleTrustedClick(player, event);
-        } else if (title.contains("Assign Role")) {
+        } else if (lowerTitle.contains("assign role")) {
             guiManager.handleAssignRoleClick(player, event);
-        } else if (title.contains("Claim Flags")) {
+        } else if (lowerTitle.contains("claim flags")) {
             guiManager.handleFlagsClick(player, event);
-        } else if (title.contains("Admin Tools")) {
+        } else if (lowerTitle.contains("admin tools")) {
             guiManager.handleAdminClick(player, event);
-        } else if (title.contains("Expansion Requests")) {
+        } else if (lowerTitle.contains("expansion requests")) {
             guiManager.handleExpansionReviewClick(player, event);
-        } else if (title.contains("Expansion History")) {
+        } else if (lowerTitle.contains("expansion history")) {
             guiManager.handleHistoryClick(player, event);
-        } else if (title.contains("Request Expansion")) {
+        } else if (lowerTitle.contains("request expansion")) {
             plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
-        } else if (title.contains("Deny Reasons")) {
+        } else if (lowerTitle.contains("deny reasons")) {
             guiManager.handleDenyReasonClick(player, event);
         }
     }
@@ -75,8 +81,16 @@ public class GUIListener implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
         String title = event.getView().getTitle();
-        if (title != null && title.contains("Assign Role")) {
+        if (title == null) return;
+
+        String lowerTitle = title.toLowerCase(Locale.ROOT);
+
+        // Clean up pending state when menus close
+        if (lowerTitle.contains("assign role")) {
             guiManager.clearPendingRoleAssignment(player.getUniqueId());
+        } else if (lowerTitle.contains("deny reasons")) {
+            // Optional: clear deny target when menu closes without selection
+            guiManager.clearPendingDenyTarget(player.getUniqueId());
         }
     }
 }

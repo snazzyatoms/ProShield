@@ -262,6 +262,9 @@ gui:
     expansion-request:
       title: "&eExpansion Request"
       size: 27
-    history:
+    expansion-history:       # ✅ Renamed for consistency
       title: "&7Expansion History"
       size: 54
+    world-controls:          # ✅ Added for admin GUI
+      title: "&cWorld Controls"
+      size: 45

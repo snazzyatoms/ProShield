@@ -20,71 +20,76 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        // If no args → open GUI main menu
+
+        // Default: open GUI for player
         if (args.length == 0) {
             if (sender instanceof Player player) {
-                plugin.getGuiManager().openMain(player);
+                if (player.hasPermission("ProShield.access")) {
+                    plugin.getGuiManager().openMain(player);
+                } else {
+                    player.sendMessage("§cYou do not have permission to use ProShield.");
+                }
             } else {
                 sender.sendMessage("§cOnly players can use this command.");
             }
             return true;
         }
 
-        // Admin commands
-        switch (args[0].toLowerCase()) {
+        // Admin-only commands
+        String sub = args[0].toLowerCase();
+        if (!sender.hasPermission("proshield.admin")) {
+            sender.sendMessage("§cYou don’t have permission to use admin commands.");
+            return true;
+        }
+
+        switch (sub) {
             case "reload" -> {
-                if (!sender.hasPermission("proshield.admin")) {
-                    sender.sendMessage("§cYou don’t have permission.");
-                    return true;
-                }
                 plugin.reloadConfig();
                 plugin.loadMessagesConfig();
                 sender.sendMessage("§aProShield configs reloaded.");
             }
+
             case "debug" -> {
-                if (!sender.hasPermission("proshield.admin")) {
-                    sender.sendMessage("§cYou don’t have permission.");
-                    return true;
-                }
                 plugin.toggleDebug();
                 sender.sendMessage("§eDebug mode: " + (plugin.isDebugEnabled() ? "§aENABLED" : "§cDISABLED"));
             }
+
             case "bypass" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("§cOnly players can use this command.");
                     return true;
                 }
-                if (!player.hasPermission("proshield.admin")) {
-                    player.sendMessage("§cYou don’t have permission.");
-                    return true;
-                }
-                if (plugin.isBypassing(player.getUniqueId())) {
-                    plugin.getBypassing().remove(player.getUniqueId());
+                UUID uuid = player.getUniqueId();
+                boolean enabled = plugin.getBypassing().contains(uuid);
+                if (enabled) {
+                    plugin.getBypassing().remove(uuid);
                     player.sendMessage("§cBypass disabled.");
                 } else {
-                    plugin.getBypassing().add(player.getUniqueId());
+                    plugin.getBypassing().add(uuid);
                     player.sendMessage("§aBypass enabled.");
                 }
             }
+
             case "admin" -> {
-                if (!(sender instanceof Player player)) {
+                if (sender instanceof Player player) {
+                    plugin.getGuiManager().openAdminTools(player);
+                } else {
                     sender.sendMessage("§cOnly players can use this command.");
-                    return true;
                 }
-                if (!player.hasPermission("proshield.admin")) {
-                    player.sendMessage("§cYou don’t have permission.");
-                    return true;
-                }
-                plugin.getGuiManager().openAdminTools(player);
             }
-            default -> sender.sendMessage("§cUnknown subcommand. Use /proshield admin, reload, debug, or bypass.");
+
+            default -> {
+                sender.sendMessage("§cUnknown subcommand.");
+                sender.sendMessage("§7Try: §f/proshield admin, reload, debug, bypass");
+            }
         }
+
         return true;
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
+        if (args.length == 1 && sender.hasPermission("proshield.admin")) {
             return List.of("admin", "reload", "debug", "bypass");
         }
         return Collections.emptyList();

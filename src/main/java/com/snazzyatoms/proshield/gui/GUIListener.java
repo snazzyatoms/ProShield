@@ -51,7 +51,7 @@ public class GUIListener implements Listener {
                 || lowerTitle.contains("expansion history")
                 || lowerTitle.contains("request expansion")
                 || lowerTitle.contains("deny reasons")
-                || lowerTitle.contains("world controls"))) { // ✅ Added World Controls
+                || lowerTitle.contains("world controls"))) {
             return;
         }
 
@@ -74,14 +74,14 @@ public class GUIListener implements Listener {
             guiManager.handleAdminClick(player, event);
 
         } else if (lowerTitle.contains("expansion requests")) {
-            // Admin’s review panel
+            // ✅ Admin’s review panel
             guiManager.handleExpansionReviewClick(player, event);
 
         } else if (lowerTitle.contains("expansion history")) {
             guiManager.handleHistoryClick(player, event);
 
         } else if (lowerTitle.contains("request expansion")) {
-            // ✅ Player’s request panel (Back/Exit supported)
+            // ✅ Player’s request panel (Back/Exit supported in ExpansionRequestManager)
             plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
 
         } else if (lowerTitle.contains("deny reasons")) {

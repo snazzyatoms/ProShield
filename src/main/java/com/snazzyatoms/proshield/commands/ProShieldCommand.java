@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -9,13 +10,16 @@ import org.bukkit.entity.Player;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     private final ProShield plugin;
+    private final MessagesUtil messages;
 
     public ProShieldCommand(ProShield plugin) {
         this.plugin = plugin;
+        this.messages = plugin.getMessagesUtil();
     }
 
     @Override
@@ -24,21 +28,38 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         // Default: open GUI for player
         if (args.length == 0) {
             if (sender instanceof Player player) {
-                if (player.hasPermission("ProShield.access")) {
+                if (player.hasPermission("proshield.player.access")) {
                     plugin.getGuiManager().openMain(player);
                 } else {
-                    player.sendMessage("§cYou do not have permission to use ProShield.");
+                    messages.send(player, messages.get("messages.error.no-permission"));
                 }
             } else {
-                sender.sendMessage("§cOnly players can use this command.");
+                messages.send(sender, messages.get("messages.error.player-only"));
+            }
+            return true;
+        }
+
+        // Subcommands
+        String sub = args[0].toLowerCase();
+
+        // Player help
+        if (sub.equals("help")) {
+            if (sender instanceof Player && sender.hasPermission("proshield.player.access")) {
+                messages.sendList(sender, messages.getList("help.player"));
+            } else if (sender.hasPermission("proshield.admin")) {
+                messages.sendList(sender, messages.getList("help.admin"));
+            } else if (sender.hasPermission("proshield.admin.worldcontrols") 
+                       || sender.hasPermission("proshield.admin.expansions")) {
+                messages.sendList(sender, messages.getList("help.senior"));
+            } else {
+                messages.send(sender, messages.get("messages.error.no-permission"));
             }
             return true;
         }
 
         // Admin-only commands
-        String sub = args[0].toLowerCase();
         if (!sender.hasPermission("proshield.admin")) {
-            sender.sendMessage("§cYou don’t have permission to use admin commands.");
+            messages.send(sender, messages.get("messages.error.no-permission"));
             return true;
         }
 
@@ -46,27 +67,30 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             case "reload" -> {
                 plugin.reloadConfig();
                 plugin.loadMessagesConfig();
-                sender.sendMessage("§aProShield configs reloaded.");
+                messages.send(sender, messages.get("messages.reloaded"));
             }
 
             case "debug" -> {
                 plugin.toggleDebug();
-                sender.sendMessage("§eDebug mode: " + (plugin.isDebugEnabled() ? "§aENABLED" : "§cDISABLED"));
+                if (plugin.isDebugEnabled()) {
+                    messages.send(sender, messages.get("messages.admin.debug-on"));
+                } else {
+                    messages.send(sender, messages.get("messages.admin.debug-off"));
+                }
             }
 
             case "bypass" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage("§cOnly players can use this command.");
+                    messages.send(sender, messages.get("messages.error.player-only"));
                     return true;
                 }
                 UUID uuid = player.getUniqueId();
-                boolean enabled = plugin.getBypassing().contains(uuid);
-                if (enabled) {
+                if (plugin.getBypassing().contains(uuid)) {
                     plugin.getBypassing().remove(uuid);
-                    player.sendMessage("§cBypass disabled.");
+                    messages.send(player, messages.get("messages.admin.bypass-off"));
                 } else {
                     plugin.getBypassing().add(uuid);
-                    player.sendMessage("§aBypass enabled.");
+                    messages.send(player, messages.get("messages.admin.bypass-on"));
                 }
             }
 
@@ -74,13 +98,13 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 if (sender instanceof Player player) {
                     plugin.getGuiManager().openAdminTools(player);
                 } else {
-                    sender.sendMessage("§cOnly players can use this command.");
+                    messages.send(sender, messages.get("messages.error.player-only"));
                 }
             }
 
             default -> {
-                sender.sendMessage("§cUnknown subcommand.");
-                sender.sendMessage("§7Try: §f/proshield admin, reload, debug, bypass");
+                messages.send(sender, "&cUnknown subcommand.");
+                messages.send(sender, "&7Try: &f/proshield help, admin, reload, debug, bypass");
             }
         }
 
@@ -89,8 +113,12 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1 && sender.hasPermission("proshield.admin")) {
-            return List.of("admin", "reload", "debug", "bypass");
+        if (args.length == 1) {
+            if (sender.hasPermission("proshield.admin")) {
+                return List.of("help", "admin", "reload", "debug", "bypass");
+            } else if (sender.hasPermission("proshield.player.access")) {
+                return List.of("help");
+            }
         }
         return Collections.emptyList();
     }

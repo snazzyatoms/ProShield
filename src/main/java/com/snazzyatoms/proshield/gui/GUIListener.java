@@ -73,13 +73,14 @@ public class GUIListener implements Listener {
             guiManager.handleAdminClick(player, event);
 
         } else if (lowerTitle.contains("expansion requests")) {
+            // Admin’s review panel
             guiManager.handleExpansionReviewClick(player, event);
 
         } else if (lowerTitle.contains("expansion history")) {
             guiManager.handleHistoryClick(player, event);
 
         } else if (lowerTitle.contains("request expansion")) {
-            // ✅ Player expansion requests menu (with working back/exit)
+            // ✅ Player’s request panel (with working Back/Exit buttons)
             plugin.getExpansionRequestManager().handlePlayerRequestClick(player, event);
 
         } else if (lowerTitle.contains("deny reasons")) {

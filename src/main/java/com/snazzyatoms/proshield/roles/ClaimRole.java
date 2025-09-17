@@ -1,48 +1,69 @@
-// src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
 import java.util.Locale;
 
 /**
- * Defines claim roles with permissions and hierarchy.
- * Consolidated and polished (v1.2.0 → v1.2.5).
+ * ClaimRole
+ * - Defines claim roles, hierarchy, and permissions
+ * - Used across ClaimProtection, GUIManager, and Plot management
  *
- * Fixed for v1.2.5:
- *   • Added consistent NONE fallback
- *   • Added safe display name formatting
+ * v1.2.5 Enhancements:
+ *  • Added rank system for hierarchy comparisons
+ *  • Added fine-grained permissions (build, containers, flags, roles)
+ *  • Unified display name handling
  */
 public enum ClaimRole {
 
-    NONE(false, false, false),
-    VISITOR(false, false, false),
-    MEMBER(true, false, false),
-    TRUSTED(true, true, false),
-    BUILDER(true, true, true),
-    CONTAINER(true, true, false),
-    MODERATOR(true, true, true),
-    MANAGER(true, true, true),
-    OWNER(true, true, true);
+    NONE(0, false, false, false, false, false, false),
+    VISITOR(1, true, false, false, false, false, false),
+    MEMBER(2, true, true, false, false, false, false),
+    TRUSTED(3, true, true, true, true, false, false),
+    BUILDER(4, true, true, true, false, false, false),
+    CONTAINER(4, true, false, true, false, false, false),
+    MODERATOR(5, true, true, true, true, true, false),
+    MANAGER(6, true, true, true, true, true, true),
+    OWNER(7, true, true, true, true, true, true);
 
+    private final int rank;
     private final boolean canInteract;
     private final boolean canBuild;
-    private final boolean canManage;
+    private final boolean canOpenContainers;
+    private final boolean canModifyFlags;
+    private final boolean canManageRoles;
+    private final boolean canTransferClaim;
 
-    ClaimRole(boolean canInteract, boolean canBuild, boolean canManage) {
+    ClaimRole(int rank, boolean canInteract, boolean canBuild,
+              boolean canOpenContainers, boolean canModifyFlags,
+              boolean canManageRoles, boolean canTransferClaim) {
+        this.rank = rank;
         this.canInteract = canInteract;
         this.canBuild = canBuild;
-        this.canManage = canManage;
+        this.canOpenContainers = canOpenContainers;
+        this.canModifyFlags = canModifyFlags;
+        this.canManageRoles = canManageRoles;
+        this.canTransferClaim = canTransferClaim;
     }
 
-    public boolean canInteract() {
-        return canInteract;
-    }
+    // ========================
+    // Permissions
+    // ========================
+    public boolean canInteract() { return canInteract; }
+    public boolean canBuild() { return canBuild; }
+    public boolean canOpenContainers() { return canOpenContainers; }
+    public boolean canModifyFlags() { return canModifyFlags; }
+    public boolean canManageRoles() { return canManageRoles; }
+    public boolean canTransferClaim() { return canTransferClaim; }
 
-    public boolean canBuild() {
-        return canBuild;
-    }
+    // ========================
+    // Utility
+    // ========================
+    public int getRank() { return rank; }
 
-    public boolean canManage() {
-        return canManage;
+    /**
+     * Compare hierarchy (higher rank = more powerful).
+     */
+    public boolean isAtLeast(ClaimRole other) {
+        return this.rank >= other.rank;
     }
 
     /**
@@ -58,7 +79,7 @@ public enum ClaimRole {
     }
 
     /**
-     * Get display-friendly name (capitalized).
+     * Get display-friendly name (title-cased).
      */
     public String getDisplayName() {
         String raw = name().toLowerCase(Locale.ROOT).replace("_", " ");

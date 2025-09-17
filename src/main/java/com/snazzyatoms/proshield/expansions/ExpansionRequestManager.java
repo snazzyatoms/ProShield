@@ -18,7 +18,8 @@ import java.util.stream.Collectors;
  * ExpansionRequestManager
  * - Handles persistence, submission, and review of claim expansion requests
  * - Auto-expires pending requests older than config-defined days
- * - Synchronized with GUIManager + messages.yml (v1.2.5)
+ * - Sends notifications on approval, denial, and expiry
+ * - Synchronized with GUIManager + config.yml (v1.2.6)
  */
 public class ExpansionRequestManager {
 
@@ -55,9 +56,11 @@ public class ExpansionRequestManager {
         load();
         expireOldRequests(expireDays);
 
-        // Run expiry every 12h in case server stays up long
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> expireOldRequests(expireDays),
-                20L * 60 * 60 * 12, 20L * 60 * 60 * 12);
+        // Re-check expiry every 12h
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
+                () -> expireOldRequests(expireDays),
+                20L * 60 * 60 * 12, // 12h in ticks
+                20L * 60 * 60 * 12);
     }
 
     /* ====================================
@@ -128,15 +131,27 @@ public class ExpansionRequestManager {
         deny(player, latest.getTimestamp(), null, reasonKey);
     }
 
+    /**
+     * Expire pending requests older than given days.
+     * Notifies online players if their request expired.
+     */
     public void expireOldRequests(int days) {
         Instant cutoff = Instant.now().minusSeconds(days * 86400L);
         boolean changed = false;
 
-        for (List<ExpansionRequest> list : requests.values()) {
-            for (ExpansionRequest r : list) {
+        for (Map.Entry<UUID, List<ExpansionRequest>> entry : requests.entrySet()) {
+            UUID player = entry.getKey();
+            for (ExpansionRequest r : entry.getValue()) {
                 if (r.getStatus() == ExpansionRequest.Status.PENDING && r.getTimestamp().isBefore(cutoff)) {
                     r.setStatus(ExpansionRequest.Status.EXPIRED);
                     changed = true;
+
+                    OfflinePlayer op = Bukkit.getOfflinePlayer(player);
+                    if (op.isOnline()) {
+                        messages.send(op.getPlayer(),
+                                messages.get("messages.expansion-expired")
+                                        .replace("{days}", String.valueOf(days)));
+                    }
                 }
             }
         }

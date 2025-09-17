@@ -12,8 +12,8 @@ description: >
 
 commands:
   proshield:
-    description: Root ProShield command (opens GUI or Admin Tools)
-    usage: /<command> [admin|reload|debug|bypass]
+    description: Main ProShield command (opens GUI, help, or Admin Tools)
+    usage: /<command> [help|admin|reload|debug|bypass]
     aliases: [ps, shield]
     permission: proshield.player.access
 

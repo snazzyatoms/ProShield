@@ -5,6 +5,7 @@ import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,11 +16,11 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 
 /**
- * ClaimProtectionListener
- * - Handles block interactions, buckets, and PvP inside claims
+ * ClaimProtectionListener (v1.2.6)
+ * - Handles block break/place, bucket use, and PvP inside claims
  * - Uses ClaimRoleManager for role-based permissions
- * - Respects claim flags (block-break, block-place, bucket-use, pvp)
- * - Provides clean denial messages and debug logs
+ * - Respects claim flags and world-control defaults
+ * - Denial messages + PvP rules pulled from messages.yml
  */
 public class ClaimProtectionListener implements Listener {
 
@@ -40,37 +41,41 @@ public class ClaimProtectionListener implements Listener {
      * ------------------------- */
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "block-break",
-                "&cYou cannot break blocks here.", event, true);
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(),
+                "block-break", messages.getOrDefault("messages.error.block-break", "&cYou cannot break blocks here."),
+                event, true);
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
-        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "block-place",
-                "&cYou cannot place blocks here.", event, true);
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(),
+                "block-place", messages.getOrDefault("messages.error.block-place", "&cYou cannot place blocks here."),
+                event, true);
     }
 
     @EventHandler
     public void onBucketEmpty(PlayerBucketEmptyEvent event) {
-        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "bucket-use",
-                "&cYou cannot use buckets here.", event, false);
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(),
+                "bucket-use", messages.getOrDefault("messages.error.bucket-empty", "&cYou cannot empty buckets here."),
+                event, false);
     }
 
     @EventHandler
     public void onBucketFill(PlayerBucketFillEvent event) {
-        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(), "bucket-use",
-                "&cYou cannot fill buckets here.", event, false);
+        handleBlockAction(event.getPlayer(), event.getBlock().getLocation(),
+                "bucket-use", messages.getOrDefault("messages.error.bucket-fill", "&cYou cannot fill buckets here."),
+                event, false);
     }
 
     /**
      * Unified block + bucket handling.
      *
-     * @param requiresBuild true if the action needs build permission (break/place), false if only interaction (buckets)
+     * @param requiresBuild true if action needs build perms, false if interaction-only
      */
-    private void handleBlockAction(Player player, org.bukkit.Location loc, String flag,
+    private void handleBlockAction(Player player, Location loc, String flag,
                                    String denyMessage, org.bukkit.event.Cancellable event, boolean requiresBuild) {
         Plot plot = plotManager.getPlotAt(loc);
-        if (plot == null) return;
+        if (plot == null) return; // wilderness = vanilla rules
 
         ClaimRole role = roleManager.getRole(player.getUniqueId(), plot);
         boolean allowed = requiresBuild ? role.canBuild() : role.canInteract();
@@ -78,15 +83,15 @@ public class ClaimProtectionListener implements Listener {
         if (!allowed) {
             event.setCancelled(true);
             messages.send(player, denyMessage);
-            messages.debug("Denied " + flag + " for " + player.getName() + " (role=" + role + ")");
+            debug("Denied " + flag + " for " + player.getName() + " (role=" + role + ")");
             return;
         }
 
         if (!plot.getFlag(flag)) {
             event.setCancelled(true);
             messages.send(player, denyMessage);
-            messages.debug("Denied " + flag + " for " + player.getName()
-                    + " (flag disabled, role=" + role + ", plot=" + plot.getId() + ")");
+            debug("Denied " + flag + " for " + player.getName()
+                    + " (flag=" + flag + " disabled, role=" + role + ", plot=" + plot.getId() + ")");
         }
     }
 
@@ -99,24 +104,20 @@ public class ClaimProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player victim)) return;
 
         Plot plot = plotManager.getPlotAt(victim.getLocation());
-        if (plot == null) return;
+        if (plot == null) return; // wilderness = PvP allowed
 
-        // Respect PvP flag
+        // Inside claim → respect PvP flag (default false → safezone)
         if (!plot.getFlag("pvp")) {
-            ClaimRole attackerRole = roleManager.getRole(attacker.getUniqueId(), plot);
-            ClaimRole victimRole = roleManager.getRole(victim.getUniqueId(), plot);
+            event.setCancelled(true);
+            messages.send(attacker, messages.getOrDefault("messages.error.pvp", "&cPvP is disabled in this claim."));
+            debug("Prevented PvP: " + attacker.getName() + " → " + victim.getName()
+                    + " (flag=pvp=false, plot=" + plot.getId() + ")");
+        }
+    }
 
-            boolean attackerAllowed = attackerRole.canInteract();
-            boolean victimAllowed = victimRole.canInteract();
-
-            // Cancel if either isn't trusted enough
-            if (!attackerAllowed || !victimAllowed) {
-                event.setCancelled(true);
-                messages.send(attacker, "&cPvP is disabled in this claim.");
-                messages.debug("Prevented PvP: " + attacker.getName() + " → " + victim.getName()
-                        + " (flag=pvp=false, attacker=" + attackerRole + ", victim=" + victimRole
-                        + ", plot=" + plot.getId() + ")");
-            }
+    private void debug(String msg) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[ClaimProtection] " + msg);
         }
     }
 }

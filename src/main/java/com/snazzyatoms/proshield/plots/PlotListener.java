@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -14,11 +15,14 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * PlotListener
- * - Tracks entering and leaving claims with clean messages
- * - Always resolves usernames (never raw UUIDs)
- * - Suppresses wilderness spam (optional toggle in config)
- * - Provides utility: isProtected(player, plot)
+ * PlotListener (v1.2.6)
+ * - Tracks entering/leaving claims and wilderness
+ * - Syncs with messages.yml for all transitions
+ * - Respects config toggles (show-wilderness, admin-flag-chat)
+ * - Enforces safezone vs. wilderness logic:
+ *      Claims → Safezone (PvP off, protected)
+ *      Wilderness → Vanilla (PvP on, unprotected)
+ * - Uses caching to avoid spam
  */
 public class PlotListener implements Listener {
 
@@ -26,9 +30,9 @@ public class PlotListener implements Listener {
     private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    // Cache: Player UUID → Last known plot ID (or null if wilderness)
+    // Cache: Player UUID → Last known plot ID (null if wilderness)
     private final Map<UUID, UUID> lastPlotCache = new HashMap<>();
-    // Cache: Owner UUID → Last known username (avoid repeated lookups)
+    // Cache: Owner UUID → Last known username
     private final Map<UUID, String> nameCache = new HashMap<>();
 
     public PlotListener(ProShield plugin, PlotManager plotManager) {
@@ -39,18 +43,16 @@ public class PlotListener implements Listener {
 
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
-        if (event.getTo() == null) return; // Safety for weird teleport cases
+        if (event.getTo() == null) return;
 
         // Only fire when player moves to a different chunk
-        if (event.getFrom().getChunk().equals(event.getTo().getChunk())) {
-            return;
-        }
+        if (event.getFrom().getChunk().equals(event.getTo().getChunk())) return;
 
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
 
-        Plot to = plotManager.getPlotAt(event.getTo());
         Plot from = plotManager.getPlotAt(event.getFrom());
+        Plot to = plotManager.getPlotAt(event.getTo());
 
         UUID lastPlotId = lastPlotCache.get(playerId);
         UUID newPlotId = (to != null ? to.getId() : null);
@@ -64,28 +66,37 @@ public class PlotListener implements Listener {
         // Update cache
         lastPlotCache.put(playerId, newPlotId);
 
-        // Handle leaving old plot
+        // Leaving old plot
         if (from != null && (to == null || !from.equals(to))) {
             String ownerName = resolveName(from.getOwner());
             if (from.getOwner().equals(playerId)) {
-                messages.send(player, "&cYou left your claim.");
+                messages.send(player, messages.get("messages.leave-own"));
             } else {
-                messages.send(player, "&cYou left " + ownerName + "'s claim.");
+                messages.send(player, messages.get("messages.leave-other").replace("{owner}", ownerName));
             }
+        } else if (from == null && plugin.getConfig().getBoolean("messages.show-wilderness", true)) {
+            // Leaving wilderness into claim handled below, so here only wilderness exit
+            messages.send(player, messages.get("messages.wilderness"));
         }
 
-        // Handle entering new plot
+        // Entering new plot
         if (to != null && (from == null || !from.equals(to))) {
             String ownerName = resolveName(to.getOwner());
             if (to.getOwner().equals(playerId)) {
-                messages.send(player, "&aYou entered your claim.");
+                messages.send(player, messages.get("messages.enter-own"));
             } else {
-                messages.send(player, "&aYou entered " + ownerName + "'s claim.");
+                messages.send(player, messages.get("messages.enter-other").replace("{owner}", ownerName));
             }
+        } else if (to == null && plugin.getConfig().getBoolean("messages.show-wilderness", true)) {
+            // Entering wilderness
+            messages.send(player, messages.get("messages.wilderness"));
         }
 
-        // Wilderness enter/leave messages are suppressed intentionally
-        // (can be re-enabled via config if needed)
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[PlotListener] " + player.getName() +
+                    " moved from " + (from != null ? "claim " + from.getId() : "wilderness") +
+                    " → " + (to != null ? "claim " + to.getId() : "wilderness"));
+        }
     }
 
     /**
@@ -106,9 +117,8 @@ public class PlotListener implements Listener {
 
     /**
      * Utility: Check if player is protected inside this plot.
-     * Protection applies only to:
-     * - The claim owner
-     * - Trusted players with a role
+     * - True for claim owner
+     * - True for trusted roles
      */
     public boolean isProtected(Player player, Plot plot) {
         if (plot == null || player == null) return false;

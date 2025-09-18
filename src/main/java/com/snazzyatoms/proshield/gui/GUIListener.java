@@ -11,23 +11,44 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.BiConsumer;
 
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
 
-    // Recommended constructor: plugin only
+    // Routing table for GUIs
+    private final Map<String, BiConsumer<Player, InventoryClickEvent>> clickHandlers = new HashMap<>();
+
     public GUIListener(ProShield plugin) {
         this.plugin = plugin;
         this.guiManager = plugin.getGuiManager();
+        registerHandlers();
     }
 
-    // Legacy fallback (safe)
+    // Optional legacy constructor
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.guiManager = guiManager != null ? guiManager : plugin.getGuiManager();
+        this.guiManager = (guiManager != null ? guiManager : plugin.getGuiManager());
+        registerHandlers();
+    }
+
+    private void registerHandlers() {
+        clickHandlers.put("proshield menu", guiManager::handleMainClick);
+        clickHandlers.put("trusted players", guiManager::handleTrustedClick);
+        clickHandlers.put("assign role", guiManager::handleAssignRoleClick);
+        clickHandlers.put("claim flags", guiManager::handleFlagsClick);
+        clickHandlers.put("admin tools", guiManager::handleAdminClick);
+        clickHandlers.put("world controls", guiManager::handleWorldControlsClick);
+        clickHandlers.put("deny reasons", guiManager::handleDenyReasonClick);
+        clickHandlers.put("request expansion", guiManager::handlePlayerExpansionRequestClick);
+        clickHandlers.put("expansion requests", guiManager::handleExpansionReviewClick);
+        clickHandlers.put("expansion history", guiManager::handleHistoryClick);
     }
 
     @EventHandler
@@ -39,58 +60,25 @@ public class GUIListener implements Listener {
         String rawTitle = event.getView().getTitle();
         if (rawTitle == null) return;
 
-        // Strip color codes and normalize
         String cleanTitle = ChatColor.stripColor(rawTitle);
         if (cleanTitle == null) return;
+
         String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
 
-        // Only handle our plugin menus
-        if (!(lowerTitle.contains("proshield")
-                || lowerTitle.contains("trusted players")
-                || lowerTitle.contains("assign role")
-                || lowerTitle.contains("claim flags")
-                || lowerTitle.contains("admin tools")
-                || lowerTitle.contains("expansion requests")
-                || lowerTitle.contains("expansion history")
-                || lowerTitle.contains("request expansion")
-                || lowerTitle.contains("deny reasons")
-                || lowerTitle.contains("world controls"))) {
-            return;
-        }
+        // Route clicks only if title matches our handlers
+        for (Map.Entry<String, BiConsumer<Player, InventoryClickEvent>> entry : clickHandlers.entrySet()) {
+            if (lowerTitle.contains(entry.getKey())) {
+                event.setCancelled(true); // block vanilla behavior
 
-        // Prevent vanilla item movement inside GUIs
-        event.setCancelled(true);
+                if (plugin.isDebugEnabled()) {
+                    plugin.getLogger().info("[GUIListener] " + player.getName()
+                            + " clicked in " + cleanTitle
+                            + " (slot " + event.getSlot() + ")");
+                }
 
-        // === Menu routing (color-safe, resilient) ===
-        if (lowerTitle.contains("proshield menu")) {
-            guiManager.handleMainClick(player, event);
-
-        } else if (lowerTitle.contains("trusted players")) {
-            guiManager.handleTrustedClick(player, event);
-
-        } else if (lowerTitle.contains("assign role")) {
-            guiManager.handleAssignRoleClick(player, event);
-
-        } else if (lowerTitle.contains("claim flags")) {
-            guiManager.handleFlagsClick(player, event);
-
-        } else if (lowerTitle.contains("admin tools")) {
-            guiManager.handleAdminClick(player, event);
-
-        } else if (lowerTitle.contains("world controls")) {
-            guiManager.handleWorldControlsClick(player, event);
-
-        } else if (lowerTitle.contains("deny reasons")) {
-            guiManager.handleDenyReasonClick(player, event);
-
-        } else if (lowerTitle.contains("request expansion")) {
-            guiManager.handlePlayerExpansionRequestClick(player, event);
-
-        } else if (lowerTitle.contains("expansion requests")) {
-            guiManager.handleExpansionReviewClick(player, event);
-
-        } else if (lowerTitle.contains("expansion history")) {
-            guiManager.handleHistoryClick(player, event);
+                entry.getValue().accept(player, event);
+                return;
+            }
         }
     }
 
@@ -104,13 +92,18 @@ public class GUIListener implements Listener {
         if (cleanTitle == null) return;
 
         String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
+        UUID uuid = player.getUniqueId();
 
-        // Clean up pending state when menus close
         if (lowerTitle.contains("assign role")) {
-            guiManager.clearPendingRoleAssignment(player.getUniqueId());
-
+            guiManager.clearPendingRoleAssignment(uuid);
+            if (plugin.isDebugEnabled()) {
+                plugin.getLogger().info("[GUIListener] Cleared pending role assignment for " + player.getName());
+            }
         } else if (lowerTitle.contains("deny reasons")) {
-            guiManager.clearPendingDenyTarget(player.getUniqueId());
+            guiManager.clearPendingDenyTarget(uuid);
+            if (plugin.isDebugEnabled()) {
+                plugin.getLogger().info("[GUIListener] Cleared pending deny target for " + player.getName());
+            }
         }
     }
 }

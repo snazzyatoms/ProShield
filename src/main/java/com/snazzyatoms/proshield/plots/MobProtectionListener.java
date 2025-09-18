@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/MobProtectionListener.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -18,23 +19,25 @@ import org.bukkit.event.entity.EntityTargetEvent;
 /**
  * MobProtectionListener
  * - Handles mob spawning, targeting, explosions, griefing
- * - Safezones protect only owners + trusted players
+ * - Safezones (claims) protect all players from hostile mobs
+ * - Wilderness follows vanilla unless world-controls override
  * - Explosions & grief respect claim flags
  */
 public class MobProtectionListener implements Listener {
 
     private final ProShield plugin;
     private final PlotManager plotManager;
-    private final PlotListener plotListener;
     private final MessagesUtil messages;
 
     public MobProtectionListener(ProShield plugin, PlotManager plotManager, PlotListener plotListener) {
         this.plugin = plugin;
         this.plotManager = plotManager;
-        this.plotListener = plotListener;
         this.messages = plugin.getMessagesUtil();
     }
 
+    /* -------------------------
+     * MOB SPAWNING
+     * ------------------------- */
     @EventHandler
     public void onMobSpawn(CreatureSpawnEvent event) {
         Location loc = event.getLocation();
@@ -43,25 +46,29 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("mob-spawn")) {
             event.setCancelled(true);
-            messages.debug("Blocked mob spawn at " + loc + " (Plot: " + plot.getId() + ")");
+            messages.debug("Blocked mob spawn at " + loc + " (Plot=" + plot.getId() + ")");
         }
     }
 
+    /* -------------------------
+     * MOB TARGETING (Safezones)
+     * ------------------------- */
     @EventHandler
     public void onMobTarget(EntityTargetEvent event) {
-        Entity target = event.getTarget();
-        if (!(target instanceof Player player)) return;
+        if (!(event.getTarget() instanceof Player player)) return;
 
         Plot plot = plotManager.getPlotAt(player.getLocation());
-        if (plot != null && plot.getFlag("safezone")) {
-            // Only protect owners/trusted players
-            if (plotListener.isProtected(player, plot) && event.getEntity() instanceof Monster) {
-                event.setCancelled(true);
-                messages.debug("Prevented " + event.getEntity().getType() + " from targeting " + player.getName());
-            }
+        if (plot != null && plot.getFlag("safezone") && event.getEntity() instanceof Monster) {
+            event.setCancelled(true);
+            messages.debug("Prevented " + event.getEntity().getType()
+                    + " from targeting " + player.getName()
+                    + " inside safezone (Plot=" + plot.getId() + ")");
         }
     }
 
+    /* -------------------------
+     * EXPLOSIONS (Creeper/TNT/etc.)
+     * ------------------------- */
     @EventHandler
     public void onExplosion(EntityExplodeEvent event) {
         Location loc = event.getLocation();
@@ -70,24 +77,31 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("explosions")) {
             event.blockList().clear(); // Prevent block damage
-            messages.debug("Blocked explosion block damage at " + loc);
+            messages.debug("Blocked explosion block damage at " + loc
+                    + " (Entity=" + event.getEntityType() + ", Plot=" + plot.getId() + ")");
         }
     }
 
+    /* -------------------------
+     * ENDERMAN GRIEFING
+     * ------------------------- */
     @EventHandler
     public void onEndermanMoveBlock(EntityChangeBlockEvent event) {
         Location loc = event.getBlock().getLocation();
         if (loc == null) return;
 
         Plot plot = plotManager.getPlotAt(loc);
-        // Currently tied to mob-spawn flag (could be separated into 'enderman-grief')
+        // For now tied to mob-spawn flag (could add enderman-grief flag later)
         if (plot != null && !plot.getFlag("mob-spawn")) {
             event.setCancelled(true);
-            messages.debug("Prevented Enderman block move at " + loc);
+            messages.debug("Prevented Enderman block move at " + loc
+                    + " (Plot=" + plot.getId() + ")");
         }
     }
 
-    // --- Extra: Catch fireball & TNT entities if needed ---
+    /* -------------------------
+     * PROJECTILE / EXPLOSIVE ENTITIES
+     * ------------------------- */
     @EventHandler
     public void onProjectileExplosion(EntityExplodeEvent event) {
         Entity entity = event.getEntity();
@@ -97,7 +111,8 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("explosions")) {
             event.blockList().clear();
-            messages.debug("Prevented projectile/explosive damage at " + loc);
+            messages.debug("Prevented projectile/explosive damage at " + loc
+                    + " (Entity=" + entity.getType() + ", Plot=" + plot.getId() + ")");
         }
     }
 }

@@ -1,6 +1,6 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.5 
+# Version: 1.2.6 (Draft)
 # ----------------------------------------------------------
 # This configuration powers all of ProShield’s features:
 #  - Claim creation & trust system
@@ -21,14 +21,14 @@ claims:
   default-radius: 50
   min-y: 0
   max-y: 200
-  safezone-enabled: true
+  safezone-enabled: false         # ⚠️ Default changed: no automatic safezone
   allow-admin-edit-claims: true
   allow-owner-claim-flags: true
 
-  preview:                      # ✅ New section
-    duration-ticks: 100         # How long previews last (~5 seconds)
-    interval-ticks: 20          # How often particles spawn (20 = once per second)
-    particle: "VILLAGER_HAPPY"  # Default particle type (Bukkit Particle enum)
+  preview:
+    duration-ticks: 100
+    interval-ticks: 20
+    particle: "VILLAGER_HAPPY"
 
   expansion:
     enabled: true
@@ -36,7 +36,7 @@ claims:
     max-increase: 100
     step-options: [10, 15, 20, 25]
     cooldown-hours: 6
-    expire-days: 30   # ✅ Requests older than N days will expire automatically
+    expire-days: 30
 
 protection:
   fire:
@@ -84,19 +84,20 @@ protection:
   world-controls:
     enabled: true
     defaults:
-      block-break: true
-      block-place: true
-      bucket-use: true
-      explosions: true
-      mob-spawn: true
-      mob-damage: true
-      fire-burn: true
-      fire-spread: true
-      ignite-flint: true
-      ignite-lava: true
-      ignite-lightning: true
-      pvp: true
-      safezone: true
+      # ⚠️ OFF baseline (vanilla wilderness). Players can fight, mobs can grief, fire spreads, explosions occur.
+      block-break: false
+      block-place: false
+      bucket-use: false
+      explosions: false
+      mob-spawn: false
+      mob-damage: false
+      fire-burn: false
+      fire-spread: false
+      ignite-flint: false
+      ignite-lava: false
+      ignite-lightning: false
+      pvp: false
+      safezone: false
     worlds: {}
 
 # -----------------------------
@@ -146,13 +147,13 @@ flags:
       description:
         - "&7Prevents hostile targeting and damage"
         - "&7Repels & despawns hostiles (if enabled)"
-      default: true
+      default: false   # ⚠️ Changed: no auto-safezone inside claims
 
     pvp:
       name: "&cPvP Allowed"
       description:
         - "&7Toggle whether players can PvP in this claim"
-      default: false
+      default: true    # ⚠️ Default: PvP is ON unless disabled
 
     block-break:
       name: "&fBlock Break"
@@ -176,31 +177,31 @@ flags:
       name: "&4Explosions"
       description:
         - "&7Allow TNT/Creeper/Ghast damage in claim"
-      default: false
+      default: true    # ⚠️ Default: explosions allowed unless turned off
 
     fire-spread:
       name: "&6Fire Spread"
       description:
         - "&7Allow fire to spread between blocks"
-      default: false
+      default: true    # ⚠️ Default: fire spreads unless turned off
 
     ignite-flint:
       name: "&6Ignite (Flint & Steel)"
       description:
         - "&7Allow players to ignite blocks with flint & steel"
-      default: false
+      default: true
 
     ignite-lava:
       name: "&6Ignite (Lava)"
       description:
         - "&7Allow lava to ignite blocks"
-      default: false
+      default: true
 
     ignite-lightning:
       name: "&6Ignite (Lightning)"
       description:
         - "&7Allow lightning to ignite blocks"
-      default: false
+      default: true
 
 # -----------------------------
 # Messages
@@ -224,7 +225,7 @@ messages:
   expansion-disabled: "&cExpansion requests are disabled by the server."
   expansion-cooldown-title: "&cCooldown Active"
   expansion-cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
-  expansion-expired: "&eYour expansion request has expired after {days} days without review." # ✅ New message
+  expansion-expired: "&eYour expansion request has expired after {days} days without review."
 
   deny-reasons:
     too-large: "&cRequested expansion is too large."
@@ -259,7 +260,7 @@ gui:
     deny-reasons:
       title: "&cDeny Reasons"
       size: 27
-    player-expansion:      # ✅ Fixed to match GUIManager
+    player-expansion:
       title: "&aRequest Expansion"
       size: 27
     expansion-history:

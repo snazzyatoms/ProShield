@@ -2,10 +2,9 @@
 # ProShield Messages
 # Version: 1.2.6 (Polished & Synced)
 # ----------------------------------------------------------
-# - Synced with GUIManager + config.yml (1.2.6)
-# - Removed notes about "not yet wired" (all wired now)
-# - Added missing lore/tooltips for Back/Exit buttons
-# - Unified expansion/admin/world-controls messages
+# - Synced with GUIManager + GUIListener + config.yml (1.2.6)
+# - GUI titles centralized here for routing + consistency
+# - Added lore/tooltips for Back/Exit
 # - Cleaner, safer defaults
 # ==========================================================
 
@@ -84,6 +83,19 @@ messages:
     exit-button: "&cExit"
     exit-lore:
       - "&7Close this menu safely"
+
+    # GUI Titles (used by GUIListener + GUIManager)
+    titles:
+      main: "&6ProShield Menu"
+      trusted: "&bTrusted Players"
+      assign-role: "&bAssign Role"
+      flags: "&eClaim Flags"
+      admin: "&cAdmin Tools"
+      world-controls: "&cWorld Controls"
+      deny-reasons: "&cDeny Reasons"
+      request-expansion: "&aRequest Expansion"
+      expansion-requests: "&eExpansion Requests"
+      expansion-history: "&7Expansion History"
 
 # ==========================================================
 # Help Pages (GUI-first style)

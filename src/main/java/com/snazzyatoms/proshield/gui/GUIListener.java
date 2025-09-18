@@ -39,6 +39,7 @@ public class GUIListener implements Listener {
     }
 
     private void registerHandlers() {
+        // Lowercase keys for normalized matching
         clickHandlers.put("proshield menu", guiManager::handleMainClick);
         clickHandlers.put("trusted players", guiManager::handleTrustedClick);
         clickHandlers.put("assign role", guiManager::handleAssignRoleClick);
@@ -54,14 +55,16 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (guiManager == null) return; // safety guard
+
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
         String rawTitle = event.getView().getTitle();
-        if (rawTitle == null) return;
+        if (rawTitle == null || rawTitle.isBlank()) return;
 
         String cleanTitle = ChatColor.stripColor(rawTitle);
-        if (cleanTitle == null) return;
+        if (cleanTitle == null || cleanTitle.isBlank()) return;
 
         String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
 
@@ -76,7 +79,12 @@ public class GUIListener implements Listener {
                             + " (slot " + event.getSlot() + ")");
                 }
 
-                entry.getValue().accept(player, event);
+                try {
+                    entry.getValue().accept(player, event);
+                } catch (Exception ex) {
+                    plugin.getLogger().warning("[GUIListener] Error handling click in " + cleanTitle + ": " + ex.getMessage());
+                    ex.printStackTrace();
+                }
                 return;
             }
         }
@@ -85,11 +93,13 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
+        if (guiManager == null) return; // safety guard
 
         String rawTitle = event.getView().getTitle();
-        if (rawTitle == null) return;
+        if (rawTitle == null || rawTitle.isBlank()) return;
+
         String cleanTitle = ChatColor.stripColor(rawTitle);
-        if (cleanTitle == null) return;
+        if (cleanTitle == null || cleanTitle.isBlank()) return;
 
         String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
         UUID uuid = player.getUniqueId();

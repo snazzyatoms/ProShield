@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -44,9 +45,9 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase();
 
-        // Help
+        // --- HELP ---
         if (sub.equals("help")) {
-            if (sender instanceof Player && sender.hasPermission("proshield.player.access")) {
+            if (sender instanceof Player player && player.hasPermission("proshield.player.access")) {
                 messages.sendList(sender, messages.getList("help.player"));
             } else if (sender.hasPermission("proshield.admin")) {
                 messages.sendList(sender, messages.getList("help.admin"));
@@ -59,7 +60,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Compass
+        // --- COMPASS ---
         if (sub.equals("compass")) {
             if (!(sender instanceof Player player)) {
                 messages.send(sender, messages.get("messages.error.player-only"));
@@ -70,14 +71,25 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            // Already has compass?
-            boolean alreadyHas = player.getInventory().contains(Material.COMPASS);
+            // Check if player already has a compass
+            boolean alreadyHas = false;
+            for (ItemStack item : player.getInventory().getContents()) {
+                if (item != null && item.getType() == Material.COMPASS) {
+                    ItemMeta meta = item.getItemMeta();
+                    if (meta != null && meta.hasDisplayName()
+                            && meta.getDisplayName().contains("ProShield Compass")) {
+                        alreadyHas = true;
+                        break;
+                    }
+                }
+            }
+
             if (alreadyHas) {
                 messages.send(player, messages.get("messages.compass.already-have"));
                 return true;
             }
 
-            // Space check
+            // Check inventory space
             if (player.getInventory().firstEmpty() == -1) {
                 messages.send(player, messages.get("messages.error.inventory-full"));
                 return true;
@@ -95,7 +107,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Admin-only commands
+        // --- ADMIN COMMANDS ---
         if (!sender.hasPermission("proshield.admin")) {
             messages.send(sender, messages.get("messages.error.no-permission"));
             return true;
@@ -103,8 +115,9 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
         switch (sub) {
             case "reload" -> {
-                plugin.reloadAllConfigs();                // ✅ central reload
-                plugin.getExpansionRequestManager().reload(); // ✅ expansion reload
+                plugin.reloadConfig();
+                plugin.loadMessagesConfig(); // reload messages.yml
+                plugin.getExpansionRequestManager().reload(); // reload expansions.yml
                 messages.send(sender, messages.get("messages.reloaded"));
             }
 
@@ -142,9 +155,10 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
             default -> {
                 messages.send(sender, "&cUnknown subcommand.");
-                messages.send(sender, "&7Try: &f/proshield help, compass, admin, reload, debug, bypass");
+                messages.sendList(sender, messages.getList("help.admin")); // fallback to admin help
             }
         }
+
         return true;
     }
 

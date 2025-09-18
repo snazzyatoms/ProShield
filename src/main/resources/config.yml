@@ -21,7 +21,7 @@ claims:
   default-radius: 50
   min-y: 0
   max-y: 200
-  safezone-enabled: false         # ⚠️ Default changed: no automatic safezone
+  safezone-enabled: true         # ⚠️ Default changed: no automatic safezone
   allow-admin-edit-claims: true
   allow-owner-claim-flags: true
 

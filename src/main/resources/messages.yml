@@ -6,6 +6,7 @@
 # - GUI titles centralized here for routing + consistency
 # - Added lore/tooltips for Back/Exit
 # - Refined help pages: GUI-first, commands as fallback only
+# - Added block/bucket/PvP error messages (ClaimProtectionListener)
 # ==========================================================
 
 messages:
@@ -17,6 +18,13 @@ messages:
     player-only: "&cOnly players can use this action."
     no-permission: "&cYou do not have permission to do this."
     inventory-full: "&cYour inventory is full. Clear a slot first."
+
+    # Protection-specific denials
+    block-break: "&cYou cannot break blocks here."
+    block-place: "&cYou cannot place blocks here."
+    bucket-empty: "&cYou cannot empty buckets here."
+    bucket-fill: "&cYou cannot fill buckets here."
+    pvp: "&cPvP is disabled in this claim."
 
   # --- Compass ---
   compass:

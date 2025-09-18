@@ -1,14 +1,11 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (Draft)
+# Version: 1.2.6 (Synced)
 # ----------------------------------------------------------
-# This configuration powers all of ProShield’s features:
-#  - Claim creation & trust system
-#  - Role-based permissions (owners & trusted players)
-#  - GUI-driven flag management
-#  - Expansion requests (with review/deny reasons/history/expiry)
-#  - Mob, explosion, fire & world protections
-#  - Claim preview particles
+# - Claims are safe zones by default (PvP disabled inside)
+# - Wilderness = vanilla baseline (PvP enabled, no safezone)
+# - Expansion request steps synced with GUI (16/32/64)
+# - Messages moved to messages.yml for clean localization
 # ==========================================================
 
 settings:
@@ -21,7 +18,7 @@ claims:
   default-radius: 50
   min-y: 0
   max-y: 200
-  safezone-enabled: true         # ⚠️ Default changed: no automatic safezone
+  safezone-enabled: true
   allow-admin-edit-claims: true
   allow-owner-claim-flags: true
 
@@ -34,7 +31,7 @@ claims:
     enabled: true
     show-in-gui: true
     max-increase: 100
-    step-options: [10, 15, 20, 25]
+    step-options: [16, 32, 64]  # synced with GUIManager
     cooldown-hours: 6
     expire-days: 30
 
@@ -84,7 +81,6 @@ protection:
   world-controls:
     enabled: true
     defaults:
-      # ⚠️ OFF baseline (vanilla wilderness). Players can fight, mobs can grief, fire spreads, explosions occur.
       block-break: false
       block-place: false
       bucket-use: false
@@ -96,13 +92,9 @@ protection:
       ignite-flint: false
       ignite-lava: false
       ignite-lightning: false
-      pvp: false
-      safezone: false
-    worlds: {}
+      pvp: true         # ✅ PvP allowed in wilderness
+      safezone: false   # ✅ wilderness not safe
 
-# -----------------------------
-# Claim Roles
-# -----------------------------
 roles:
   default: member
   available:
@@ -137,9 +129,6 @@ roles:
         containers: true
         toggle-flags: true
 
-# -----------------------------
-# Claim Flags
-# -----------------------------
 flags:
   available:
     safezone:
@@ -147,13 +136,13 @@ flags:
       description:
         - "&7Prevents hostile targeting and damage"
         - "&7Repels & despawns hostiles (if enabled)"
-      default: false   # ⚠️ Changed: no auto-safezone inside claims
+      default: true     # ✅ claims auto-safezone
 
     pvp:
       name: "&cPvP Allowed"
       description:
         - "&7Toggle whether players can PvP in this claim"
-      default: true    # ⚠️ Default: PvP is ON unless disabled
+      default: false    # ✅ PvP disabled in claims
 
     block-break:
       name: "&fBlock Break"
@@ -177,13 +166,13 @@ flags:
       name: "&4Explosions"
       description:
         - "&7Allow TNT/Creeper/Ghast damage in claim"
-      default: true    # ⚠️ Default: explosions allowed unless turned off
+      default: true
 
     fire-spread:
       name: "&6Fire Spread"
       description:
         - "&7Allow fire to spread between blocks"
-      default: true    # ⚠️ Default: fire spreads unless turned off
+      default: true
 
     ignite-flint:
       name: "&6Ignite (Flint & Steel)"
@@ -203,40 +192,6 @@ flags:
         - "&7Allow lightning to ignite blocks"
       default: true
 
-# -----------------------------
-# Messages
-# -----------------------------
-messages:
-  prefix: "&3[ProShield]&r "
-  debug-prefix: "&8[Debug]&r "
-
-  show-wilderness: true
-  admin-flag-chat: true
-
-  enter-own: "&aYou entered your claim."
-  enter-other: "&aYou entered {owner}'s claim."
-  leave-own: "&cYou left your claim."
-  leave-other: "&cYou left {owner}'s claim."
-  wilderness: "&7You entered the wilderness."
-
-  expansion-request: "&eYour expansion request for +{blocks} blocks has been sent to admins."
-  expansion-approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
-  expansion-denied: "&cYour expansion request was denied: {reason}"
-  expansion-disabled: "&cExpansion requests are disabled by the server."
-  expansion-cooldown-title: "&cCooldown Active"
-  expansion-cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
-  expansion-expired: "&eYour expansion request has expired after {days} days without review."
-
-  deny-reasons:
-    too-large: "&cRequested expansion is too large."
-    abusive: "&cExpansion request denied due to abuse."
-    overlap: "&cRequested area overlaps an existing claim."
-    custom-1: "&cNot enough playtime yet for this expansion."
-    custom-2: "&cYour claim already reached the maximum size."
-
-# -----------------------------
-# GUI Titles
-# -----------------------------
 gui:
   menus:
     main:

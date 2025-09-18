@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -12,6 +13,13 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * PlotManager
+ * - Handles persistent storage of plots (plots.yml)
+ * - Applies default flags from config.yml when missing
+ * - Ensures new plots are safezones with PvP disabled (v1.2.6 default)
+ * - Provides CRUD methods for plots and trusted roles
+ */
 public class PlotManager {
 
     private final ProShield plugin;
@@ -25,12 +33,15 @@ public class PlotManager {
         load();
     }
 
+    /* -------------------------
+     * LOAD / SAVE
+     * ------------------------- */
     public void load() {
         if (!plotsFile.exists()) {
             try {
                 plotsFile.createNewFile();
             } catch (IOException e) {
-                e.printStackTrace();
+                plugin.getLogger().severe("Failed to create plots.yml: " + e.getMessage());
             }
         }
         this.plotsConfig = YamlConfiguration.loadConfiguration(plotsFile);
@@ -47,7 +58,6 @@ public class PlotManager {
                 String world = plotsConfig.getString("plots." + key + ".world");
                 String ownerStr = plotsConfig.getString("plots." + key + ".owner");
 
-                // Skip if missing required data
                 if (world == null || ownerStr == null) {
                     plugin.getLogger().warning("Skipping invalid plot entry: " + key);
                     continue;
@@ -61,28 +71,33 @@ public class PlotManager {
 
                 Plot plot = new Plot(owner, world, x, z, id, radius);
 
-                // Flags
-                if (plotsConfig.contains("plots." + key + ".flags")) {
-                    Map<String, Object> flags = plotsConfig.getConfigurationSection("plots." + key + ".flags").getValues(false);
-                    for (Map.Entry<String, Object> entry : flags.entrySet()) {
-                        plot.setFlag(entry.getKey(), Boolean.parseBoolean(String.valueOf(entry.getValue())));
-                    }
+                // --- Flags ---
+                Map<String, Object> flags = plotsConfig.getConfigurationSection("plots." + key + ".flags") != null
+                        ? plotsConfig.getConfigurationSection("plots." + key + ".flags").getValues(false)
+                        : Collections.emptyMap();
+
+                // Ensure defaults are applied
+                for (String flag : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
+                    boolean def = plugin.getConfig().getBoolean("flags.available." + flag + ".default", false);
+                    boolean value = flags.containsKey(flag)
+                            ? Boolean.parseBoolean(String.valueOf(flags.get(flag)))
+                            : def;
+                    plot.setFlag(flag, value);
                 }
 
-                // Trusted
+                // --- Trusted players ---
                 String base = "plots." + key + ".trusted";
+                String defRole = plugin.getConfig().getString("roles.default", "member");
+
                 if (plotsConfig.isList(base)) {
-                    List<String> uuids = plotsConfig.getStringList(base);
-                    String defRole = plugin.getConfig().getString("roles.default", "member");
-                    for (String s : uuids) {
+                    for (String s : plotsConfig.getStringList(base)) {
                         try {
                             plot.getTrusted().put(UUID.fromString(s), defRole);
                         } catch (Exception ignored) {}
                     }
                 } else if (plotsConfig.isConfigurationSection(base)) {
                     for (String u : plotsConfig.getConfigurationSection(base).getKeys(false)) {
-                        String role = plotsConfig.getString(base + "." + u,
-                                plugin.getConfig().getString("roles.default", "member"));
+                        String role = plotsConfig.getString(base + "." + u, defRole);
                         try {
                             plot.getTrusted().put(UUID.fromString(u), role);
                         } catch (Exception ignored) {}
@@ -92,7 +107,7 @@ public class PlotManager {
                 plots.put(id, plot);
 
             } catch (Exception ex) {
-                plugin.getLogger().warning("Failed to load plot: " + key + " (" + ex.getMessage() + ")");
+                plugin.getLogger().warning("Failed to load plot " + key + ": " + ex.getMessage());
             }
         }
     }
@@ -121,10 +136,13 @@ public class PlotManager {
         try {
             plotsConfig.save(plotsFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            plugin.getLogger().severe("Failed to save plots.yml: " + e.getMessage());
         }
     }
 
+    /* -------------------------
+     * CRUD
+     * ------------------------- */
     public Plot getPlot(UUID id) {
         return plots.get(id);
     }
@@ -137,10 +155,6 @@ public class PlotManager {
         return null;
     }
 
-    public Plot getPlot(Location loc) {
-        return getPlotAt(loc);
-    }
-
     public Collection<Plot> getPlots() {
         return plots.values();
     }
@@ -151,9 +165,23 @@ public class PlotManager {
         int x = center.getBlockX();
         int z = center.getBlockZ();
         int radius = plugin.getConfig().getInt("claims.default-radius", 50);
+
         Plot plot = new Plot(owner, world, x, z, id, radius);
+
+        // Apply default flags from config
+        for (String flag : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
+            boolean def = plugin.getConfig().getBoolean("flags.available." + flag + ".default", false);
+            plot.setFlag(flag, def);
+        }
+
         plots.put(id, plot);
         saveAll();
+
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[PlotManager] Created new plot for " + owner + " at "
+                    + x + "," + z + " (radius=" + radius + ", id=" + id + ")");
+        }
+
         return plot;
     }
 
@@ -161,6 +189,10 @@ public class PlotManager {
         plots.remove(id);
         plotsConfig.set("plots." + id, null);
         saveAll();
+
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[PlotManager] Deleted plot " + id);
+        }
     }
 
     public void expandPlot(UUID id, int extraRadius) {
@@ -168,10 +200,14 @@ public class PlotManager {
         if (plot != null) {
             plot.setRadius(plot.getRadius() + extraRadius);
             saveAll();
+
+            if (plugin.isDebugEnabled()) {
+                plugin.getLogger().info("[PlotManager] Expanded plot " + id
+                        + " by +" + extraRadius + " (new radius=" + plot.getRadius() + ")");
+            }
         }
     }
 
-    /** ✅ New helper: find a player's claim (one claim per player for v1.2.5) */
     public Plot getPlotByOwner(UUID owner) {
         for (Plot plot : plots.values()) {
             if (plot.getOwner().equals(owner)) {

@@ -2,7 +2,9 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * - Represents a single protected claim
  * - Stores owner, radius, flags, and trusted players (role-aware)
  * - Contains containment checks and flag API
+ * - Provides easy access to claim info for GUIs & commands
  */
 public class Plot {
 
@@ -105,6 +108,51 @@ public class Plot {
         int dx = loc.getBlockX() - x;
         int dz = loc.getBlockZ() - z;
         return (dx * dx + dz * dz) <= (radius * radius);
+    }
+
+    /* -------------------------
+     * INFO HELPERS
+     * ------------------------- */
+    /**
+     * @return Map<String, String> of claim info (safe for GUI & debug use)
+     */
+    public Map<String, String> getInfo() {
+        Map<String, String> info = new LinkedHashMap<>();
+
+        OfflinePlayer ownerPlayer = Bukkit.getOfflinePlayer(owner);
+        String ownerName = (ownerPlayer != null && ownerPlayer.getName() != null)
+                ? ownerPlayer.getName()
+                : owner.toString().substring(0, 8);
+
+        info.put("ID", id.toString());
+        info.put("Owner", ownerName + " (" + owner + ")");
+        info.put("World", world);
+        info.put("Center", x + ", " + z);
+        info.put("Radius", String.valueOf(radius));
+
+        // Trusted players
+        if (trusted.isEmpty()) {
+            info.put("Trusted", "None");
+        } else {
+            List<String> trustList = new ArrayList<>();
+            for (Map.Entry<UUID, String> entry : trusted.entrySet()) {
+                OfflinePlayer t = Bukkit.getOfflinePlayer(entry.getKey());
+                String name = (t != null && t.getName() != null)
+                        ? t.getName()
+                        : entry.getKey().toString().substring(0, 8);
+                trustList.add(name + " (" + entry.getValue() + ")");
+            }
+            info.put("Trusted", String.join(", ", trustList));
+        }
+
+        // Flags (sorted for readability)
+        List<String> flagList = new ArrayList<>();
+        for (Map.Entry<String, Boolean> entry : new TreeMap<>(flags).entrySet()) {
+            flagList.add(entry.getKey() + "=" + entry.getValue());
+        }
+        info.put("Flags", String.join(", ", flagList));
+
+        return info;
     }
 
     /* -------------------------

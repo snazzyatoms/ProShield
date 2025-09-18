@@ -5,7 +5,7 @@
 # - Synced with GUIManager + GUIListener + config.yml (1.2.6)
 # - GUI titles centralized here for routing + consistency
 # - Added lore/tooltips for Back/Exit
-# - Cleaner, safer defaults
+# - Refined help pages: GUI-first, commands as fallback only
 # ==========================================================
 
 messages:
@@ -109,20 +109,21 @@ help:
     - "&bClaim Flags &7→ Toggle protections"
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
     - "&7Expansion requests have a cooldown of &f{cooldown-hours}h &7(default)."
-    - "&7Note: All features are GUI-driven. Commands are not required."
+    - "&7All features are GUI-driven. Commands are only needed if something breaks."
 
   admin:
     - "&c&lProShield — Admin Guide"
     - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, World Controls"
-    - "&7Requires: &fproshield.admin"
     - "&7Expansion Requests and World Controls require higher permissions."
-    - "&7Available Commands (for admins only):"
+    - "&7Note: All actions are GUI-driven. Use commands only if GUI is unavailable."
+    - "&7Fallback commands (admins only):"
     - "&f/proshield reload &7→ Reload configs"
     - "&f/proshield debug &7→ Toggle debug mode"
     - "&f/proshield bypass &7→ Toggle admin bypass"
-    - "&f/proshield admin &7→ Open Admin Tools GUI"
+    - "&f/proshield admin &7→ Open Admin Tools GUI (same as compass)"
 
   senior:
     - "&4&lSenior Admin Tools"
     - "&4Expansion Requests &7– Requires &fproshield.admin.expansions"
     - "&4World Controls &7– Requires &fproshield.admin.worldcontrols"
+    - "&7Both features are GUI-driven. Commands are unnecessary."

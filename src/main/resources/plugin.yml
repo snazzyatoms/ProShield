@@ -1,6 +1,6 @@
 name: ProShield
 main: com.snazzyatoms.proshield.ProShield
-version: 1.2.5
+version: 1.2.6
 api-version: 1.20
 author: snazzyatoms
 website: https://github.com/snazzyatoms/ProShield
@@ -13,14 +13,14 @@ description: >
 commands:
   proshield:
     description: Main ProShield command (opens GUI, help, or Admin Tools)
-    usage: /<command> [help|admin|reload|debug|bypass]
+    usage: /<command> [help|claim|unclaim|info|trust|untrust|trusted|reload|debug|bypass|compass|transfer|preview]
     aliases: [ps, shield]
     permission: proshield.player.access
 
 permissions:
   # --- Player Core Access ---
   proshield.player.access:
-    description: Allows players to access all standard ProShield GUI features
+    description: Allows players to access all standard ProShield GUI features and commands
     default: true
 
   proshield.unlimited:
@@ -39,3 +39,41 @@ permissions:
   proshield.admin.worldcontrols:
     description: Access to world-level protections and overrides in Admin Tools GUI
     default: op
+
+  # --- Specific Toggles (optional granularity) ---
+  proshield.admin.reload:
+    description: Use /proshield reload or reload via Admin Tools GUI
+    default: op
+
+  proshield.admin.debug:
+    description: Toggle debug logging (/proshield debug)
+    default: op
+
+  proshield.admin.bypass:
+    description: Toggle bypass protection (/proshield bypass or via GUI)
+    default: op
+
+  proshield.admin.keepitems:
+    description: Toggle claim item-drop protection (GUI toggle if enabled)
+    default: op
+
+  proshield.admin.spawn:
+    description: Bypass spawn-guard restrictions (when enabled in config)
+    default: op
+
+  proshield.admin.mobrepel:
+    description: Toggle mob repel borders in Admin Tools GUI
+    default: op
+
+  # --- Quality-of-Life Permissions ---
+  proshield.compass:
+    description: Allow receiving/using the ProShield compass manually (/proshield compass)
+    default: op
+
+  proshield.transfer:
+    description: Allow transferring claim ownership (/proshield transfer)
+    default: true
+
+  proshield.preview:
+    description: Allow using claim preview particles (/proshield preview)
+    default: true

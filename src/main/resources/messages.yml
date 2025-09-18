@@ -1,7 +1,12 @@
 # ==========================================================
 # ProShield Messages
-# Version: 1.2.5 (Enhanced)
-# Synced with GUIManager + config.yml
+# Version: 1.2.6 (Polished & Synced)
+# ----------------------------------------------------------
+# - Synced with GUIManager + config.yml (1.2.6)
+# - Removed notes about "not yet wired" (all wired now)
+# - Added missing lore/tooltips for Back/Exit buttons
+# - Unified expansion/admin/world-controls messages
+# - Cleaner, safer defaults
 # ==========================================================
 
 messages:
@@ -12,6 +17,7 @@ messages:
   error:
     player-only: "&cOnly players can use this action."
     no-permission: "&cYou do not have permission to do this."
+    inventory-full: "&cYour inventory is full. Clear a slot first."
 
   # --- Compass ---
   compass:
@@ -41,13 +47,13 @@ messages:
 
   # --- Expansion Requests (Player) ---
   expansion:
-    request-sent: "&eYour expansion request for +{blocks} blocks has been sent to admins." # (⚠ not yet pulled from config, hardcoded in GUIManager)
+    request-sent: "&eYour expansion request for +{blocks} blocks has been sent to admins."
     approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
     denied: "&cYour expansion request was denied: {reason}"
-    disabled: "&cExpansion requests are disabled by the server." # (⚠ not yet wired into GUIManager)
-    cooldown-title: "&cCooldown Active" # (⚠ not yet wired)
-    cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7." # (⚠ not yet wired)
-    expired: "&eYour expansion request has expired after {days} days without review." # ✅ handled in expiry logic
+    disabled: "&cExpansion requests are disabled by the server."
+    cooldown-title: "&cCooldown Active"
+    cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
+    expired: "&eYour expansion request has expired after {days} days without review."
 
   # --- Expansion Review (Admin GUI) ---
   expansion-admin:
@@ -70,6 +76,15 @@ messages:
     enabled: "&aENABLED"
     disabled: "&cDISABLED"
 
+  # --- GUI Navigation (Back / Exit) ---
+  gui:
+    back-button: "&eBack"
+    back-lore:
+      - "&7Return to the previous menu"
+    exit-button: "&cExit"
+    exit-lore:
+      - "&7Close this menu safely"
+
 # ==========================================================
 # Help Pages (GUI-first style)
 # ==========================================================
@@ -86,7 +101,7 @@ help:
 
   admin:
     - "&c&lProShield — Admin Guide"
-    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass"
+    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, World Controls"
     - "&7Requires: &fproshield.admin"
     - "&7Expansion Requests and World Controls require higher permissions."
     - "&7Available Commands (for admins only):"

@@ -38,18 +38,26 @@ public class GUIListener implements Listener {
         registerHandlers();
     }
 
+    /**
+     * Fetches normalized GUI title from messages.yml (with fallback).
+     */
+    private String getGuiTitle(String key, String fallback) {
+        String raw = plugin.getMessagesUtil().getOrDefault("messages.gui.titles." + key, fallback);
+        if (raw == null || raw.isBlank()) raw = fallback;
+        return ChatColor.stripColor(raw).toLowerCase(Locale.ROOT).trim();
+    }
+
     private void registerHandlers() {
-        // Lowercase keys for normalized matching
-        clickHandlers.put("proshield menu", guiManager::handleMainClick);
-        clickHandlers.put("trusted players", guiManager::handleTrustedClick);
-        clickHandlers.put("assign role", guiManager::handleAssignRoleClick);
-        clickHandlers.put("claim flags", guiManager::handleFlagsClick);
-        clickHandlers.put("admin tools", guiManager::handleAdminClick);
-        clickHandlers.put("world controls", guiManager::handleWorldControlsClick);
-        clickHandlers.put("deny reasons", guiManager::handleDenyReasonClick);
-        clickHandlers.put("request expansion", guiManager::handlePlayerExpansionRequestClick);
-        clickHandlers.put("expansion requests", guiManager::handleExpansionReviewClick);
-        clickHandlers.put("expansion history", guiManager::handleHistoryClick);
+        clickHandlers.put(getGuiTitle("main", "proshield menu"), guiManager::handleMainClick);
+        clickHandlers.put(getGuiTitle("trusted", "trusted players"), guiManager::handleTrustedClick);
+        clickHandlers.put(getGuiTitle("assign-role", "assign role"), guiManager::handleAssignRoleClick);
+        clickHandlers.put(getGuiTitle("flags", "claim flags"), guiManager::handleFlagsClick);
+        clickHandlers.put(getGuiTitle("admin", "admin tools"), guiManager::handleAdminClick);
+        clickHandlers.put(getGuiTitle("world-controls", "world controls"), guiManager::handleWorldControlsClick);
+        clickHandlers.put(getGuiTitle("deny-reasons", "deny reasons"), guiManager::handleDenyReasonClick);
+        clickHandlers.put(getGuiTitle("request-expansion", "request expansion"), guiManager::handlePlayerExpansionRequestClick);
+        clickHandlers.put(getGuiTitle("expansion-requests", "expansion requests"), guiManager::handleExpansionReviewClick);
+        clickHandlers.put(getGuiTitle("expansion-history", "expansion history"), guiManager::handleHistoryClick);
     }
 
     @EventHandler
@@ -104,12 +112,12 @@ public class GUIListener implements Listener {
         String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
         UUID uuid = player.getUniqueId();
 
-        if (lowerTitle.contains("assign role")) {
+        if (lowerTitle.contains(getGuiTitle("assign-role", "assign role"))) {
             guiManager.clearPendingRoleAssignment(uuid);
             if (plugin.isDebugEnabled()) {
                 plugin.getLogger().info("[GUIListener] Cleared pending role assignment for " + player.getName());
             }
-        } else if (lowerTitle.contains("deny reasons")) {
+        } else if (lowerTitle.contains(getGuiTitle("deny-reasons", "deny reasons"))) {
             guiManager.clearPendingDenyTarget(uuid);
             if (plugin.isDebugEnabled()) {
                 plugin.getLogger().info("[GUIListener] Cleared pending deny target for " + player.getName());

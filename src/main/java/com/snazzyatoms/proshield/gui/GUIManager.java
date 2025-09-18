@@ -27,32 +27,32 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * GUIManager (ProShield v1.2.6 draft)
+ * GUIManager (ProShield v1.2.6 polished & synced)
  *
  * Menus:
- *  - Main (claim, info, unclaim, trusted, flags, expansion (player), admin)
- *  - Trusted Players (role assign / untrust)
- *  - Assign Role
- *  - Claim Flags (per-claim toggles from config flags.available.*)
- *  - Admin Tools (reload/debug/bypass/expansion review/history/world controls)
- *  - Expansion Requests (review/approve/deny + deny reasons)
- *  - Expansion History (paged)
- *  - World Controls (global defaults; OFF baseline for vanilla wilderness)
+ *  - Main
+ *  - Claim Info
+ *  - Trusted Players / Assign Role
+ *  - Claim Flags
+ *  - Player Expansion Request
+ *  - Admin Tools
+ *  - Expansion Review / Deny Reasons
+ *  - Expansion History
+ *  - World Controls
  *
- * Enhancements:
- *  - Claim Info now resolves correct values; no more "zeros" when claim exists
- *  - Hidden lore tags for reliable identification:
- *      #UUID:, #TS:, #CFLAG:, #WCTRL:
- *  - Color-safe/rename-safe routing and toggles
- *  - Back/Exit present and functional in every menu
- *  - MessagesUtil.getOrDefault() used for robust fallbacks
+ * Sync (messages.yml):
+ *  - Back/Exit buttons
+ *  - Admin Tools buttons
+ *  - Expansion admin lore
+ *  - World Controls toggles
+ *  - Notifications (reload/debug/bypass/etc.)
  */
 public class GUIManager {
 
     private static final String TAG_UUID   = "#UUID:";
     private static final String TAG_TS     = "#TS:";
-    private static final String TAG_CFLAG  = "#CFLAG:";   // claim flag key
-    private static final String TAG_WCTRL  = "#WCTRL:";   // world-control key
+    private static final String TAG_CFLAG  = "#CFLAG:";
+    private static final String TAG_WCTRL  = "#WCTRL:";
 
     private final ProShield plugin;
     private final PlotManager plotManager;
@@ -60,7 +60,6 @@ public class GUIManager {
     private final ExpansionRequestManager expansionManager;
     private final MessagesUtil messages;
 
-    // State maps
     private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();
     private final Map<UUID, Integer> historyPages = new HashMap<>();
     private final Map<UUID, List<ExpansionRequest>> filteredHistory = new HashMap<>();
@@ -79,8 +78,17 @@ public class GUIManager {
 
     /* ---------- Utilities ---------- */
 
-    private ItemStack backButton() { return simpleItem(Material.ARROW, "&eBack", "&7Return to previous menu"); }
-    private ItemStack exitButton() { return simpleItem(Material.BARRIER, "&cExit", "&7Close this menu"); }
+    private ItemStack backButton() {
+        return simpleItem(Material.ARROW,
+                messages.getOrDefault("messages.gui.back-button", "&eBack"),
+                messages.getListOrDefault("messages.gui.back-lore", List.of("&7Return to previous menu")));
+    }
+
+    private ItemStack exitButton() {
+        return simpleItem(Material.BARRIER,
+                messages.getOrDefault("messages.gui.exit-button", "&cExit"),
+                messages.getListOrDefault("messages.gui.exit-lore", List.of("&7Close this menu safely")));
+    }
 
     private void placeNavButtons(Inventory inv) {
         int size = inv.getSize();
@@ -89,12 +97,16 @@ public class GUIManager {
     }
 
     private ItemStack simpleItem(Material mat, String name, String... lore) {
+        return simpleItem(mat, name, Arrays.asList(lore));
+    }
+
+    private ItemStack simpleItem(Material mat, String name, List<String> lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(messages.color(name));
-            if (lore != null && lore.length > 0) {
-                List<String> colored = new ArrayList<>(lore.length);
+            if (lore != null && !lore.isEmpty()) {
+                List<String> colored = new ArrayList<>();
                 for (String l : lore) colored.add(messages.color(l));
                 meta.setLore(colored);
             }
@@ -109,8 +121,12 @@ public class GUIManager {
         return ChatColor.stripColor(item.getItemMeta().getDisplayName()).equalsIgnoreCase(needle);
     }
 
-    public boolean isBack(ItemStack item) { return isNamed(item, "Back"); }
-    public boolean isExit(ItemStack item) { return isNamed(item, "Exit"); }
+    public boolean isBack(ItemStack item) {
+        return isNamed(item, ChatColor.stripColor(messages.getOrDefault("messages.gui.back-button", "Back")));
+    }
+    public boolean isExit(ItemStack item) {
+        return isNamed(item, ChatColor.stripColor(messages.getOrDefault("messages.gui.exit-button", "Exit")));
+    }
 
     private UUID extractHiddenUuid(ItemStack item) {
         List<String> lore = (item != null && item.hasItemMeta()) ? item.getItemMeta().getLore() : null;
@@ -118,9 +134,8 @@ public class GUIManager {
         for (String line : lore) {
             String raw = ChatColor.stripColor(line);
             if (raw != null && raw.startsWith(TAG_UUID)) {
-                try {
-                    return UUID.fromString(raw.substring(TAG_UUID.length()).trim());
-                } catch (Exception ignored) {}
+                try { return UUID.fromString(raw.substring(TAG_UUID.length()).trim()); }
+                catch (Exception ignored) {}
             }
         }
         return null;
@@ -132,9 +147,8 @@ public class GUIManager {
         for (String line : lore) {
             String raw = ChatColor.stripColor(line);
             if (raw != null && raw.startsWith(TAG_TS)) {
-                try {
-                    return Instant.parse(raw.substring(TAG_TS.length()).trim());
-                } catch (Exception ignored) {}
+                try { return Instant.parse(raw.substring(TAG_TS.length()).trim()); }
+                catch (Exception ignored) {}
             }
         }
         return null;
@@ -153,9 +167,8 @@ public class GUIManager {
     }
 
     private void clickTone(Player p) {
-        try {
-            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.6f, 1.4f);
-        } catch (Throwable ignored) {}
+        try { p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.6f, 1.4f); }
+        catch (Throwable ignored) {}
     }
 
     /* ============================
@@ -239,7 +252,7 @@ public class GUIManager {
         }
     }
 
-    /** Build Claim Info with correct effective values (no "zeros" bug). */
+    /** Claim Info */
     private ItemStack buildClaimInfoItem(Player player) {
         Plot plot = plotManager.getPlotAt(player.getLocation());
         List<String> lore = new ArrayList<>();
@@ -249,7 +262,6 @@ public class GUIManager {
             OfflinePlayer owner = plugin.getServer().getOfflinePlayer(plot.getOwner());
             String ownerName = (owner != null && owner.getName() != null) ? owner.getName() : plot.getOwner().toString();
 
-            // Count enabled flags using effective values (plot flag OR default from config)
             long enabledFlags = 0;
             ConfigurationSection avail = plugin.getConfig().getConfigurationSection("flags.available");
             if (avail != null) {
@@ -265,10 +277,9 @@ public class GUIManager {
             lore.add("&7Radius: &f" + plot.getRadius() + " blocks");
             lore.add("&7Flags Enabled: &f" + enabledFlags);
         }
-        return simpleItem(Material.PAPER, "&eClaim Info", lore.toArray(new String[0]));
+        return simpleItem(Material.PAPER, "&eClaim Info", lore);
     }
 
-    /** Effective flag = plot value OR default from config if absent. */
     private boolean getEffectiveClaimFlag(Plot plot, String key) {
         Boolean v = plot.getFlags().get(key);
         if (v != null) return v;
@@ -276,7 +287,7 @@ public class GUIManager {
     }
 
     /* ============================
-     * PLAYER EXPANSION REQUEST (mini-menu)
+     * PLAYER EXPANSION REQUEST
      * ============================ */
     public void openPlayerExpansionRequest(Player player) {
         String title = plugin.getConfig().getString("gui.menus.expansion-request.title", "&aRequest Expansion");
@@ -353,9 +364,7 @@ public class GUIManager {
             if (uuid.equals(plot.getOwner()) || uuid.equals(player.getUniqueId())) continue;
 
             OfflinePlayer trusted = plugin.getServer().getOfflinePlayer(uuid);
-            String display = (trusted != null && trusted.getName() != null)
-                    ? trusted.getName()
-                    : uuid.toString().substring(0, 8);
+            String display = (trusted != null && trusted.getName() != null) ? trusted.getName() : uuid.toString().substring(0, 8);
 
             ClaimRole role = roleManager.getRole(uuid, plot);
             List<String> lore = new ArrayList<>();
@@ -364,7 +373,7 @@ public class GUIManager {
             lore.add(messages.color("&cRight-click: Untrust"));
             lore.add(TAG_UUID + uuid);
 
-            ItemStack head = simpleItem(Material.PLAYER_HEAD, "&f" + display, lore.toArray(new String[0]));
+            ItemStack head = simpleItem(Material.PLAYER_HEAD, "&f" + display, lore);
             inv.setItem(slot++, head);
             if (slot >= size - 9) break;
         }
@@ -523,16 +532,28 @@ public class GUIManager {
 
         int slot = 10;
         if (player.hasPermission("proshield.admin")) {
-            inv.setItem(slot++, simpleItem(Material.REPEATER, "&eReload Configs", "&7Reload ProShield configs."));
-            inv.setItem(slot++, simpleItem(Material.ENDER_EYE, "&aToggle Debug", "&7Enable/disable debug logging."));
-            inv.setItem(slot++, simpleItem(Material.BARRIER, "&cToggle Bypass", "&7Admin bypass for claims."));
+            inv.setItem(slot++, simpleItem(Material.REPEATER,
+                    messages.getOrDefault("messages.admin.reload", "&eReload Configs"),
+                    List.of("&7Reload ProShield configs.")));
+            inv.setItem(slot++, simpleItem(Material.ENDER_EYE,
+                    messages.getOrDefault("messages.admin.debug-toggle", "&aToggle Debug"),
+                    List.of("&7Enable/disable debug logging.")));
+            inv.setItem(slot++, simpleItem(Material.BARRIER,
+                    messages.getOrDefault("messages.admin.bypass-toggle", "&cToggle Bypass"),
+                    List.of("&7Admin bypass for claims.")));
         }
         if (player.hasPermission("proshield.admin.expansions")) {
-            inv.setItem(slot++, simpleItem(Material.EMERALD, "&eExpansion Requests", "&7Review pending player requests."));
-            inv.setItem(slot++, simpleItem(Material.CLOCK, "&eExpansion History", "&7View past requests."));
+            inv.setItem(slot++, simpleItem(Material.EMERALD,
+                    messages.getOrDefault("messages.admin.expansion-requests", "&eExpansion Requests"),
+                    List.of("&7Review pending player requests.")));
+            inv.setItem(slot++, simpleItem(Material.CLOCK,
+                    messages.getOrDefault("messages.admin.expansion-history", "&eExpansion History"),
+                    List.of("&7View past requests.")));
         }
         if (player.hasPermission("proshield.admin.worldcontrols")) {
-            inv.setItem(slot++, simpleItem(Material.BEDROCK, "&cWorld Controls", "&7Toggle world-level protections."));
+            inv.setItem(slot++, simpleItem(Material.BEDROCK,
+                    messages.getOrDefault("messages.admin.world-controls", "&cWorld Controls"),
+                    List.of("&7Toggle world-level protections.")));
         }
 
         placeNavButtons(inv);
@@ -588,8 +609,7 @@ public class GUIManager {
     }
 
     /* ============================
-     * WORLD CONTROLS (Dynamic)
-     * Baseline: OFF (vanilla). Admins can enable protections.
+     * WORLD CONTROLS
      * ============================ */
     public void openWorldControls(Player admin) {
         String title = plugin.getConfig().getString("gui.menus.world-controls.title", "&cWorld Controls");
@@ -676,9 +696,9 @@ public class GUIManager {
                 lore.add(TAG_UUID + requester);
                 lore.add(TAG_TS + req.getTimestamp());
 
-                inv.setItem(slot++, simpleItem(Material.LIME_WOOL, "&aApprove: " + name, lore.toArray(new String[0])));
+                inv.setItem(slot++, simpleItem(Material.LIME_WOOL, "&aApprove: " + name, lore));
                 if (slot < size - 9) {
-                    inv.setItem(slot++, simpleItem(Material.RED_WOOL, "&cDeny: " + name, lore.toArray(new String[0])));
+                    inv.setItem(slot++, simpleItem(Material.RED_WOOL, "&cDeny: " + name, lore));
                 }
                 if (slot >= size - 9) break;
             }
@@ -735,14 +755,9 @@ public class GUIManager {
 
     private ExpansionRequest findRequest(UUID requester, Instant ts) {
         List<ExpansionRequest> list = expansionManager.getPendingRequestsFor(requester);
-        ExpansionRequest match = list.stream()
-                .filter(r -> r.getTimestamp().equals(ts))
-                .findFirst().orElse(null);
+        ExpansionRequest match = list.stream().filter(r -> r.getTimestamp().equals(ts)).findFirst().orElse(null);
         if (match != null) return match;
-
-        return expansionManager.getRequests(requester).stream()
-                .filter(r -> r.getTimestamp().equals(ts))
-                .findFirst().orElse(null);
+        return expansionManager.getRequests(requester).stream().filter(r -> r.getTimestamp().equals(ts)).findFirst().orElse(null);
     }
 
     public void openDenyReasons(Player admin, UUID target, Instant ts) {
@@ -755,13 +770,11 @@ public class GUIManager {
             int slot = 0;
             for (String key : keys) {
                 String reason = messages.getOrDefault("messages.deny-reasons." + key, key);
-                inv.setItem(slot++, simpleItem(
-                        Material.PAPER,
+                inv.setItem(slot++, simpleItem(Material.PAPER,
                         "&fReason: " + key,
                         "&7" + ChatColor.stripColor(messages.color(reason)),
                         TAG_UUID + target,
-                        TAG_TS + ts
-                ));
+                        TAG_TS + ts));
                 if (slot >= size - 9) break;
             }
         } else {
@@ -809,7 +822,7 @@ public class GUIManager {
     }
 
     /* ============================
-     * EXPANSION HISTORY (pagination)
+     * EXPANSION HISTORY
      * ============================ */
     public void openFilteredHistory(Player admin, List<ExpansionRequest> list) {
         filteredHistory.put(admin.getUniqueId(), list);
@@ -852,7 +865,7 @@ public class GUIManager {
             lore.add("&7When: &f" + fmt.format(req.getTimestamp()));
             lore.add("&7Status: &f" + status);
 
-            inv.setItem(i - start, simpleItem(icon, "&f" + name, lore.toArray(new String[0])));
+            inv.setItem(i - start, simpleItem(icon, "&f" + name, lore));
         }
 
         if (page > 0) inv.setItem(size - 6, simpleItem(Material.ARROW, "&aPrevious Page"));

@@ -16,6 +16,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -42,27 +43,25 @@ public class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        // Configs
         saveDefaultConfig();
         loadMessagesConfig();
 
+        // Core managers
         this.messages = new MessagesUtil(this);
         this.plotManager = new PlotManager(this);
         this.roleManager = new ClaimRoleManager(this);
-        // ✅ matches the current ExpansionRequestManager constructor
         this.expansionRequestManager = new ExpansionRequestManager(this);
         this.guiManager = new GUIManager(this);
 
-        // Core plot listener for enter/leave + trust awareness
+        // Core listeners
         PlotListener plotListener = new PlotListener(this, plotManager);
-
-        // Listeners
         Bukkit.getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         Bukkit.getPluginManager().registerEvents(plotListener, this);
         Bukkit.getPluginManager().registerEvents(new MobProtectionListener(this, plotManager, plotListener), this);
-        // ✅ matches the 2-arg constructor version
         Bukkit.getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager), this);
 
-        // Tasks (repel + despawn)
+        // Repeating tasks (mob repel + despawn)
         new MobControlTasks(this);
 
         // Commands
@@ -73,7 +72,7 @@ public class ProShield extends JavaPlugin {
             cmd.setTabCompleter(executor);
         }
 
-        // GUI/compass dispatcher
+        // Compass dispatcher (player QoL)
         new PlayerCommandDispatcher(this);
 
         getLogger().info("✅ ProShield enabled. Running version " + getDescription().getVersion());
@@ -81,7 +80,13 @@ public class ProShield extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        plotManager.saveAll();
+        // Save state before shutdown
+        if (plotManager != null) {
+            plotManager.saveAll();
+        }
+        if (expansionRequestManager != null) {
+            expansionRequestManager.saveAll();
+        }
         getLogger().info("🛑 ProShield disabled.");
     }
 
@@ -92,9 +97,11 @@ public class ProShield extends JavaPlugin {
     public PlotManager getPlotManager() { return plotManager; }
     public ExpansionRequestManager getExpansionRequestManager() { return expansionRequestManager; }
 
+    // Admin bypass
     public Set<UUID> getBypassing() { return bypassing; }
     public boolean isBypassing(UUID uuid) { return bypassing.contains(uuid); }
 
+    // Debug toggle
     public void toggleDebug() { debugEnabled = !debugEnabled; }
     public boolean isDebugEnabled() { return debugEnabled; }
 
@@ -102,8 +109,23 @@ public class ProShield extends JavaPlugin {
     public void disableDebug(UUID uuid) { debugging.remove(uuid); }
     public boolean isDebugging(UUID uuid) { return debugging.contains(uuid); }
 
+    // Config / messages loader
     public void loadMessagesConfig() {
-        if (!getDataFolder().exists()) getDataFolder().mkdirs();
-        saveResource("messages.yml", false);
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
+        }
+        File file = new File(getDataFolder(), "messages.yml");
+        if (!file.exists()) {
+            saveResource("messages.yml", false);
+        }
+    }
+
+    /** Reload both config.yml and messages.yml safely */
+    public void reloadAllConfigs() {
+        reloadConfig();
+        loadMessagesConfig();
+        if (messages != null) {
+            messages.reload();
+        }
     }
 }

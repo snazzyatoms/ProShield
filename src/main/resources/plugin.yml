@@ -21,6 +21,33 @@ commands:
     permission: proshield.player.access
 
 permissions:
+  # --- Player Umbrella ---
+  proshield.player.*:
+    description: Grants all standard player-level permissions
+    default: true
+    children:
+      proshield.player.access: true
+      proshield.player.claim: true
+      proshield.compass: true
+      proshield.transfer: true
+      proshield.preview: true
+
+  # --- Admin Umbrella ---
+  proshield.admin.*:
+    description: Grants all admin-level permissions (includes expansions/world controls)
+    default: op
+    children:
+      proshield.admin: true
+      proshield.admin.expansions: true
+      proshield.admin.worldcontrols: true
+      proshield.admin.reload: true
+      proshield.admin.debug: true
+      proshield.admin.bypass: true
+      proshield.admin.keepitems: true
+      proshield.admin.spawn: true
+      proshield.admin.mobrepel: true
+      proshield.unlimited: true
+
   # --- Player Core Access ---
   proshield.player.access:
     description: Allows players to open the GUI and use all standard ProShield features

@@ -1,21 +1,12 @@
 package com.snazzyatoms.proshield.roles;
 
+import com.snazzyatoms.proshield.ProShield;
 import java.util.Locale;
 
 /**
- * ClaimRole (ProShield v1.2.6)
- * -----------------------------
- * - Defines all roles available in claims
- * - Each role has a hierarchy rank and fine-grained permissions
- * - Used across:
- *   • ClaimProtectionListener (block/place/buckets/PvP)
- *   • ClaimRoleManager (assignment, GUIs, chat)
- *   • GUIManager (role menus)
- *
- * Notes:
- * - Rank: higher = more powerful (OWNER=7, NONE=0)
- * - Display name: can be overridden via messages.yml
- * - Sync: roles also appear in config.yml (for lore/permissions text)
+ * ClaimRole
+ * - Defines claim roles, hierarchy, and permissions
+ * - v1.2.6: Display names now check messages.yml first
  */
 public enum ClaimRole {
 
@@ -37,13 +28,9 @@ public enum ClaimRole {
     private final boolean canManageRoles;
     private final boolean canTransferClaim;
 
-    ClaimRole(int rank,
-              boolean canInteract,
-              boolean canBuild,
-              boolean canOpenContainers,
-              boolean canModifyFlags,
-              boolean canManageRoles,
-              boolean canTransferClaim) {
+    ClaimRole(int rank, boolean canInteract, boolean canBuild,
+              boolean canOpenContainers, boolean canModifyFlags,
+              boolean canManageRoles, boolean canTransferClaim) {
         this.rank = rank;
         this.canInteract = canInteract;
         this.canBuild = canBuild;
@@ -53,9 +40,7 @@ public enum ClaimRole {
         this.canTransferClaim = canTransferClaim;
     }
 
-    // ========================
     // Permissions
-    // ========================
     public boolean canInteract() { return canInteract; }
     public boolean canBuild() { return canBuild; }
     public boolean canOpenContainers() { return canOpenContainers; }
@@ -63,22 +48,14 @@ public enum ClaimRole {
     public boolean canManageRoles() { return canManageRoles; }
     public boolean canTransferClaim() { return canTransferClaim; }
 
-    // ========================
-    // Utility
-    // ========================
     public int getRank() { return rank; }
 
-    /**
-     * Compare hierarchy (higher rank = more powerful).
-     */
+    // Compare hierarchy
     public boolean isAtLeast(ClaimRole other) {
         return this.rank >= other.rank;
     }
 
-    /**
-     * Resolve role by name (case-insensitive).
-     * Falls back to NONE if invalid.
-     */
+    // Resolve role by name
     public static ClaimRole fromName(String name) {
         if (name == null || name.isBlank()) return NONE;
         try {
@@ -89,10 +66,19 @@ public enum ClaimRole {
     }
 
     /**
-     * Get display-friendly name (title-cased).
-     * Note: can be overridden in messages.yml if needed.
+     * Get display-friendly name.
+     * Checks messages.yml (messages.roles.display.<role>) first.
+     * Falls back to title-cased enum name if not found.
      */
     public String getDisplayName() {
+        ProShield plugin = ProShield.getInstance();
+        String key = "messages.roles.display." + this.name().toLowerCase(Locale.ROOT);
+        String custom = plugin.getMessagesUtil().getOrNull(key);
+        if (custom != null && !custom.isBlank()) {
+            return plugin.getMessagesUtil().color(custom);
+        }
+
+        // Fallback: Title-case enum name
         String raw = name().toLowerCase(Locale.ROOT).replace("_", " ");
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }

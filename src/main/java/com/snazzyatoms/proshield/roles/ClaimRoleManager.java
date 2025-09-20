@@ -17,6 +17,7 @@ import java.util.UUID;
  * - Pulls default role name from config.yml
  * - Provides helpers for GUI, listeners, and protection checks
  * - Uses messages.yml for player-facing feedback
+ * - Fully synced with ClaimRole.getDisplayName() (customizable/localizable)
  */
 public class ClaimRoleManager {
 
@@ -145,6 +146,7 @@ public class ClaimRoleManager {
                 ? target.getName()
                 : targetUuid.toString().substring(0, 8);
 
+        // ✅ Always use ClaimRole.getDisplayName() (messages.yml aware)
         messages.send(actor, messages.getOrDefault("messages.roles.assigned",
                 "&aAssigned &f{player} &ato role &f{role} &ain this claim.")
                 .replace("{player}", targetName)

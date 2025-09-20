@@ -6,7 +6,7 @@ import java.util.Locale;
 /**
  * ClaimRole
  * - Defines claim roles, hierarchy, and permissions
- * - v1.2.6: Display names now check messages.yml first
+ * - v1.2.6: Display names + lore now check messages.yml first
  */
 public enum ClaimRole {
 
@@ -76,6 +76,12 @@ public enum ClaimRole {
         String custom = plugin.getMessagesUtil().getOrNull(key);
         if (custom != null && !custom.isBlank()) {
             return plugin.getMessagesUtil().color(custom);
+        }
+
+        // Debug log for missing key (only if debug enabled)
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[ProShield] No display name found for role: "
+                    + this.name() + " (using fallback)");
         }
 
         // Fallback: Title-case enum name

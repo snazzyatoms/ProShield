@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -13,7 +14,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -22,8 +22,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -404,7 +402,18 @@ public class GUIManager {
         int slot = 0;
         for (ClaimRole role : ClaimRole.values()) {
             if (role == ClaimRole.NONE || role == ClaimRole.OWNER) continue;
-            ItemStack item = simpleItem(Material.BOOK, role.getDisplayName(), "&7Click to assign this role");
+
+            // Display name from messages.yml
+            String displayName = role.getDisplayName();
+
+            // Lore from messages.yml
+            List<String> lore = messages.getListOrNull("messages.roles.lore." + role.name().toLowerCase(Locale.ROOT));
+            if (lore == null || lore.isEmpty()) {
+                lore = new ArrayList<>();
+                lore.add("&7Click to assign this role");
+            }
+
+            ItemStack item = simpleItem(Material.BOOK, displayName, lore);
             inv.setItem(slot++, item);
             if (slot >= size - 9) break;
         }
@@ -427,4 +436,149 @@ public class GUIManager {
         ClaimRole role = ClaimRole.fromName(roleName);
 
         if (role == ClaimRole.NONE || role == ClaimRole.OWNER) {
-            messages.send(player, "&cInvalid role
+            messages.send(player, "&cInvalid role selection.");
+            return;
+        }
+
+        Plot plot = plotManager.getPlotAt(player.getLocation());
+        if (plot == null) {
+            messages.send(player, "&cNo claim found here.");
+            return;
+        }
+
+        roleManager.setRole(plot, targetUuid, role);
+
+        String targetName = Optional.ofNullable(Bukkit.getOfflinePlayer(targetUuid).getName())
+                .orElse(targetUuid.toString().substring(0, 8));
+
+        messages.send(player, "&aAssigned &f" + targetName + " &ato role &f" + role.getDisplayName() + "&a.");
+        clickTone(player);
+        openTrusted(player);
+    }
+
+    private void clearPendingRoleAssignment(UUID actorUuid) {
+        pendingRoleAssignments.remove(actorUuid);
+    }
+
+    /* ============================
+     * FLAGS (Player Claim)
+     * ============================ */
+    public void openFlags(Player player) {
+        // Placeholder - implement claim flag menu
+        String title = plugin.getConfig().getString("gui.menus.flags.title", "&eClaim Flags");
+        int size = plugin.getConfig().getInt("gui.menus.flags.size", 27);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        Plot plot = plotManager.getPlotAt(player.getLocation());
+        if (plot == null) {
+            inv.setItem(13, simpleItem(Material.BARRIER, "&cNo claim here", "&7Stand inside your claim to manage flags."));
+        } else {
+            // Example: PvP flag toggle
+            boolean pvp = getEffectiveClaimFlag(plot, "pvp");
+            inv.setItem(11, simpleItem(Material.DIAMOND_SWORD, "&fPvP: " + (pvp ? "&aON" : "&cOFF"),
+                    "&7Toggle PvP inside this claim",
+                    TAG_CFLAG + "pvp"));
+        }
+
+        placeNavButtons(inv);
+        player.openInventory(inv);
+    }
+
+    public void handleFlagsClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (isBack(clicked)) { clickTone(player); openMain(player); return; }
+        if (isExit(clicked)) { clickTone(player); player.closeInventory(); return; }
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String flagKey = extractHidden(clicked, TAG_CFLAG);
+        if (flagKey != null) {
+            Plot plot = plotManager.getPlotAt(player.getLocation());
+            if (plot != null) {
+                boolean current = getEffectiveClaimFlag(plot, flagKey);
+                plot.setFlag(flagKey, !current);
+                plotManager.saveAll();
+                messages.send(player, "&eToggled &f" + flagKey + " &eto " + (!current ? "&aON" : "&cOFF"));
+                clickTone(player);
+                openFlags(player);
+            }
+        }
+    }
+
+    /* ============================
+     * ADMIN TOOLS
+     * ============================ */
+    public void openAdminTools(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.admin.title", "&cAdmin Tools");
+        int size = plugin.getConfig().getInt("gui.menus.admin.size", 27);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        inv.setItem(10, simpleItem(Material.BOOK, "&eReload Config", "&7Reloads all configuration files."));
+        inv.setItem(12, simpleItem(Material.REDSTONE_TORCH, "&cToggle Debug", "&7Enable/disable debug mode."));
+        inv.setItem(14, simpleItem(Material.FEATHER, "&aToggle Bypass", "&7Enable/disable admin bypass."));
+        inv.setItem(16, simpleItem(Material.NETHER_STAR, "&dWorld Controls", "&7Manage world-level flags."));
+
+        placeNavButtons(inv);
+        player.openInventory(inv);
+    }
+
+    public void handleAdminToolsClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (isBack(clicked)) { clickTone(player); openMain(player); return; }
+        if (isExit(clicked)) { clickTone(player); player.closeInventory(); return; }
+        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) return;
+
+        String name = ChatColor.stripColor(clicked.getItemMeta().getDisplayName()).toLowerCase(Locale.ROOT);
+
+        if (name.contains("reload")) {
+            plugin.reloadConfig();
+            messages.send(player, "&aProShield configuration reloaded.");
+            clickTone(player);
+        } else if (name.contains("debug")) {
+            plugin.toggleDebug();
+            messages.send(player, plugin.isDebugEnabled() ? "&eDebug mode: &aENABLED" : "&eDebug mode: &cDISABLED");
+            clickTone(player);
+        } else if (name.contains("bypass")) {
+            boolean newState = plugin.toggleBypass(player.getUniqueId());
+            messages.send(player, newState ? "&aBypass enabled." : "&cBypass disabled.");
+            clickTone(player);
+        } else if (name.contains("world controls")) {
+            clickTone(player);
+            openWorldControls(player);
+        }
+    }
+
+    /* ============================
+     * WORLD CONTROLS (Admin)
+     * ============================ */
+    public void openWorldControls(Player player) {
+        String title = plugin.getConfig().getString("gui.menus.world-controls.title", "&cWorld Controls");
+        int size = plugin.getConfig().getInt("gui.menus.world-controls.size", 27);
+        Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
+
+        // Example: toggle PvP globally
+        boolean globalPvp = plugin.getConfig().getBoolean("world.flags.pvp", true);
+        inv.setItem(11, simpleItem(Material.DIAMOND_SWORD, "&fGlobal PvP: " + (globalPvp ? "&aON" : "&cOFF"),
+                "&7Toggle PvP across the entire world",
+                TAG_WCTRL + "pvp"));
+
+        placeNavButtons(inv);
+        player.openInventory(inv);
+    }
+
+    public void handleWorldControlsClick(Player player, InventoryClickEvent event) {
+        ItemStack clicked = event.getCurrentItem();
+        if (isBack(clicked)) { clickTone(player); openAdminTools(player); return; }
+        if (isExit(clicked)) { clickTone(player); player.closeInventory(); return; }
+        if (clicked == null || !clicked.hasItemMeta()) return;
+
+        String flagKey = extractHidden(clicked, TAG_WCTRL);
+        if (flagKey != null) {
+            boolean current = plugin.getConfig().getBoolean("world.flags." + flagKey, true);
+            plugin.getConfig().set("world.flags." + flagKey, !current);
+            plugin.saveConfig();
+            messages.send(player, "&eWorld control &f" + flagKey + " &eis now " + (!current ? "&aENABLED" : "&cDISABLED"));
+            clickTone(player);
+            openWorldControls(player);
+        }
+    }
+}

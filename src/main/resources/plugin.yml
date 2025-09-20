@@ -15,7 +15,8 @@ commands:
     description: Main ProShield command (opens GUI, help, or Admin Tools)
     usage: |
       /<command> [help|compass|admin|reload|debug|bypass]
-      Tip: All player features are GUI-driven. Commands are not required.
+      Note: All core features are GUI-driven. 
+      Commands are only for fallback or admin tools.
     aliases: [ps, shield]
     permission: proshield.player.access
 
@@ -23,6 +24,10 @@ permissions:
   # --- Player Core Access ---
   proshield.player.access:
     description: Allows players to open the GUI and use all standard ProShield features
+    default: true
+
+  proshield.player.claim:
+    description: Allows players to create and manage their own claims
     default: true
 
   proshield.unlimited:
@@ -71,3 +76,11 @@ permissions:
   proshield.compass:
     description: Allow receiving/using the ProShield compass manually (/proshield compass)
     default: op
+
+  proshield.transfer:
+    description: Allow transferring claim ownership (/proshield transfer)
+    default: true
+
+  proshield.preview:
+    description: Allow using claim preview particles (/proshield preview)
+    default: true

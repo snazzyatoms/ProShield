@@ -11,10 +11,12 @@ import org.bukkit.entity.Player;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager
- * - Central authority for handling claim roles and permissions
- * - Fully synchronized with ClaimRole (v1.2.5)
- * - Provides fine-grained helpers for GUI, listeners, and protection checks
+ * ClaimRoleManager (ProShield v1.2.6)
+ * -----------------------------------
+ * - Central authority for claim roles & permissions
+ * - Pulls default role name from config.yml
+ * - Provides helpers for GUI, listeners, and protection checks
+ * - Uses messages.yml for player-facing feedback
  */
 public class ClaimRoleManager {
 
@@ -28,17 +30,20 @@ public class ClaimRoleManager {
         this.messages = plugin.getMessagesUtil();
     }
 
+    /* ========================
+     * Lifecycle (future persistence hooks)
+     * ======================== */
     public void loadAll() {
-        // TODO: load roles from disk if persisted separately
+        // TODO: load persisted roles if stored separately (planned for 2.0)
     }
 
     public void saveAll() {
-        // TODO: persist roles if applicable
+        // TODO: persist roles if needed (planned for 2.0)
     }
 
-    // ========================
-    // Core Role Utilities
-    // ========================
+    /* ========================
+     * Core Role Utilities
+     * ======================== */
 
     /**
      * Get a player's role inside a plot.
@@ -66,9 +71,9 @@ public class ClaimRoleManager {
         plotManager.saveAll();
     }
 
-    // ========================
-    // Permission Helpers
-    // ========================
+    /* ========================
+     * Permission Helpers
+     * ======================== */
     public boolean canInteract(Player player, Plot plot) {
         return getRole(player.getUniqueId(), plot).canInteract();
     }
@@ -93,9 +98,9 @@ public class ClaimRoleManager {
         return getRole(player.getUniqueId(), plot).canTransferClaim();
     }
 
-    // ========================
-    // Utility
-    // ========================
+    /* ========================
+     * Utility
+     * ======================== */
 
     /**
      * Compare two players' hierarchy inside a plot.
@@ -108,24 +113,30 @@ public class ClaimRoleManager {
 
     /**
      * Assign a role via chat input (legacy support).
+     * Uses roles.default from config.yml as fallback.
      */
     public void assignRoleViaChat(Player actor, UUID targetUuid, String rawRole) {
         if (actor == null || targetUuid == null || rawRole == null) return;
 
         Plot plot = plotManager.getPlotAt(actor.getLocation());
         if (plot == null) {
-            messages.send(actor, "&cYou must stand inside your claim to manage roles.");
+            messages.send(actor, messages.getOrDefault("messages.error.no-claim-here",
+                    "&cYou must stand inside your claim to manage roles."));
             return;
         }
 
         // Only owner or admin can assign roles
         if (!plot.getOwner().equals(actor.getUniqueId()) && !actor.hasPermission("proshield.admin")) {
-            messages.send(actor, "&cOnly the owner (or admin) can assign roles in this claim.");
+            messages.send(actor, messages.getOrDefault("messages.error.not-owner",
+                    "&cOnly the owner (or admin) can assign roles in this claim."));
             return;
         }
 
         ClaimRole role = ClaimRole.fromName(rawRole);
-        if (role == ClaimRole.NONE) role = ClaimRole.TRUSTED; // fallback
+        if (role == ClaimRole.NONE) {
+            String fallback = plugin.getConfig().getString("roles.default", "member");
+            role = ClaimRole.fromName(fallback);
+        }
 
         setRole(plot, targetUuid, role);
 
@@ -134,6 +145,9 @@ public class ClaimRoleManager {
                 ? target.getName()
                 : targetUuid.toString().substring(0, 8);
 
-        messages.send(actor, "&aAssigned &f" + targetName + " &ato role &f" + role.getDisplayName() + " &ain this claim.");
+        messages.send(actor, messages.getOrDefault("messages.roles.assigned",
+                "&aAssigned &f{player} &ato role &f{role} &ain this claim.")
+                .replace("{player}", targetName)
+                .replace("{role}", role.getDisplayName()));
     }
 }

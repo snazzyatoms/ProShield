@@ -2,7 +2,7 @@
 # ProShield Messages
 # Version: 1.2.6 (Polished & Synced)
 # ----------------------------------------------------------
-# - Added role display names (customizable/localizable)
+# - Role display names + lore are now fully customizable
 # ==========================================================
 
 messages:
@@ -97,7 +97,7 @@ messages:
       expansion-requests: "&eExpansion Requests"
       expansion-history: "&7Expansion History"
 
-  # --- Role Display Names (NEW) ---
+  # --- Role Display Names & Lore (NEW) ---
   roles:
     display:
       none: "&7None"
@@ -109,6 +109,35 @@ messages:
       moderator: "&eModerator"
       manager: "&6Manager"
       owner: "&cOwner"
+    lore:
+      visitor:
+        - "&7Default role for non-trusted players"
+        - "&cCannot build or open containers"
+      member:
+        - "&7Basic trusted role"
+        - "&aCan open containers"
+        - "&cCannot build or toggle flags"
+      trusted:
+        - "&7Advanced trusted role"
+        - "&aFull access except claim owner actions"
+      builder:
+        - "&7Construction role"
+        - "&aCan build & break blocks"
+        - "&cCannot toggle flags"
+      container:
+        - "&7Storage role"
+        - "&aCan open containers only"
+        - "&cCannot build or break"
+      moderator:
+        - "&7Management role"
+        - "&aCan manage roles & flags"
+        - "&cCannot transfer ownership"
+      manager:
+        - "&7High-level management role"
+        - "&aCan manage roles, flags, and transfer ownership"
+      owner:
+        - "&cClaim Owner"
+        - "&aFull control of the claim"
 
 # ==========================================================
 # Help Pages

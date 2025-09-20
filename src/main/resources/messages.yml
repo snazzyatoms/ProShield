@@ -2,11 +2,7 @@
 # ProShield Messages
 # Version: 1.2.6 (Polished & Synced)
 # ----------------------------------------------------------
-# - Synced with GUIManager + GUIListener + config.yml (1.2.6)
-# - GUI titles centralized here for routing + consistency
-# - Added lore/tooltips for Back/Exit
-# - Refined help pages: GUI-first, commands as fallback only
-# - Added block/bucket/PvP error messages (ClaimProtectionListener)
+# - Added role display names (customizable/localizable)
 # ==========================================================
 
 messages:
@@ -18,8 +14,6 @@ messages:
     player-only: "&cOnly players can use this action."
     no-permission: "&cYou do not have permission to do this."
     inventory-full: "&cYour inventory is full. Clear a slot first."
-
-    # Protection-specific denials
     block-break: "&cYou cannot break blocks here."
     block-place: "&cYou cannot place blocks here."
     bucket-empty: "&cYou cannot empty buckets here."
@@ -69,7 +63,7 @@ messages:
       deny: "&cRight-click: Deny and choose a reason"
       info: "&7Use the deny reasons menu for detailed denial messages."
 
-  # --- Deny reasons (Admin GUI → Deny menu) ---
+  # --- Deny reasons ---
   deny-reasons:
     too-large: "&cRequested expansion is too large."
     abusive: "&cExpansion request denied due to abuse."
@@ -77,13 +71,13 @@ messages:
     custom-1: "&cNot enough playtime yet for this expansion."
     custom-2: "&cYour claim already reached the maximum size."
 
-  # --- World Controls (Admin GUI) ---
+  # --- World Controls ---
   world-controls:
     toggle: "&eWorld control &f{flag} &eis now {state}."
     enabled: "&aENABLED"
     disabled: "&cDISABLED"
 
-  # --- GUI Navigation (Back / Exit) ---
+  # --- GUI Navigation ---
   gui:
     back-button: "&eBack"
     back-lore:
@@ -91,8 +85,6 @@ messages:
     exit-button: "&cExit"
     exit-lore:
       - "&7Close this menu safely"
-
-    # GUI Titles (used by GUIListener + GUIManager)
     titles:
       main: "&6ProShield Menu"
       trusted: "&bTrusted Players"
@@ -105,8 +97,21 @@ messages:
       expansion-requests: "&eExpansion Requests"
       expansion-history: "&7Expansion History"
 
+  # --- Role Display Names (NEW) ---
+  roles:
+    display:
+      none: "&7None"
+      visitor: "&7Visitor"
+      member: "&aMember"
+      trusted: "&bTrusted"
+      builder: "&2Builder"
+      container: "&3Container"
+      moderator: "&eModerator"
+      manager: "&6Manager"
+      owner: "&cOwner"
+
 # ==========================================================
-# Help Pages (GUI-first style)
+# Help Pages
 # ==========================================================
 help:
   player:

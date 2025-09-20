@@ -3,14 +3,19 @@ package com.snazzyatoms.proshield.roles;
 import java.util.Locale;
 
 /**
- * ClaimRole
- * - Defines claim roles, hierarchy, and permissions
- * - Used across ClaimProtection, GUIManager, and Plot management
+ * ClaimRole (ProShield v1.2.6)
+ * -----------------------------
+ * - Defines all roles available in claims
+ * - Each role has a hierarchy rank and fine-grained permissions
+ * - Used across:
+ *   • ClaimProtectionListener (block/place/buckets/PvP)
+ *   • ClaimRoleManager (assignment, GUIs, chat)
+ *   • GUIManager (role menus)
  *
- * v1.2.5 Enhancements:
- *  • Added rank system for hierarchy comparisons
- *  • Added fine-grained permissions (build, containers, flags, roles)
- *  • Unified display name handling
+ * Notes:
+ * - Rank: higher = more powerful (OWNER=7, NONE=0)
+ * - Display name: can be overridden via messages.yml
+ * - Sync: roles also appear in config.yml (for lore/permissions text)
  */
 public enum ClaimRole {
 
@@ -32,9 +37,13 @@ public enum ClaimRole {
     private final boolean canManageRoles;
     private final boolean canTransferClaim;
 
-    ClaimRole(int rank, boolean canInteract, boolean canBuild,
-              boolean canOpenContainers, boolean canModifyFlags,
-              boolean canManageRoles, boolean canTransferClaim) {
+    ClaimRole(int rank,
+              boolean canInteract,
+              boolean canBuild,
+              boolean canOpenContainers,
+              boolean canModifyFlags,
+              boolean canManageRoles,
+              boolean canTransferClaim) {
         this.rank = rank;
         this.canInteract = canInteract;
         this.canBuild = canBuild;
@@ -68,6 +77,7 @@ public enum ClaimRole {
 
     /**
      * Resolve role by name (case-insensitive).
+     * Falls back to NONE if invalid.
      */
     public static ClaimRole fromName(String name) {
         if (name == null || name.isBlank()) return NONE;
@@ -80,6 +90,7 @@ public enum ClaimRole {
 
     /**
      * Get display-friendly name (title-cased).
+     * Note: can be overridden in messages.yml if needed.
      */
     public String getDisplayName() {
         String raw = name().toLowerCase(Locale.ROOT).replace("_", " ");

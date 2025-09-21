@@ -1,0 +1,171 @@
+# ==========================================================
+# ProShield 消息
+# 版本: 1.2.6 (优化 & 同步)
+# ----------------------------------------------------------
+# - 角色名称和说明现在完全可自定义
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[调试]&r "
+
+  # --- 常见错误 ---
+  error:
+    player-only: "&c此操作仅限玩家使用。"
+    no-permission: "&c你没有执行此操作的权限。"
+    inventory-full: "&c你的物品栏已满，请先清理空间。"
+    block-break: "&c你不能在这里破坏方块。"
+    block-place: "&c你不能在这里放置方块。"
+    bucket-empty: "&c你不能在这里倒空桶。"
+    bucket-fill: "&c你不能在这里装满桶。"
+    pvp: "&c该领地内禁止PvP。"
+
+  # --- 指南针 ---
+  compass:
+    command-success: "&a你获得了一把 ProShield 指南针。"
+    already-have: "&e你已经拥有一把 ProShield 指南针。"
+    lore:
+      - "&7右键点击以打开 ProShield 菜单"
+      - "&7管理领地、标志和受信任的玩家"
+
+  # --- 管理员 / 系统 ---
+  reloaded: "&aProShield 配置已重载。"
+
+  admin:
+    debug-on: "&e调试模式: &a开启"
+    debug-off: "&e调试模式: &c关闭"
+    bypass-on: "&a绕过模式已启用。"
+    bypass-off: "&c绕过模式已禁用。"
+
+  # --- 领地 / 区域切换 ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&a你进入了自己的领地。"
+  enter-other: "&a你进入了 {owner} 的领地。"
+  leave-own: "&c你离开了自己的领地。"
+  leave-other: "&c你离开了 {owner} 的领地。"
+  wilderness: "&7你进入了荒野。"
+
+  # --- 扩展请求 (玩家) ---
+  expansion:
+    request-sent: "&e你的扩展请求 (+{blocks} 方块) 已发送给管理员。"
+    approved: "&a你的扩展请求 (+{blocks} 方块) 已被批准！"
+    denied: "&c你的扩展请求被拒绝: {reason}"
+    disabled: "&c扩展请求已被服务器禁用。"
+    cooldown-title: "&c冷却中"
+    cooldown-active: "&7你可以在 &f{hours}小时 {minutes}分钟 &7后再次请求。"
+    expired: "&e你的扩展请求在 {days} 天后过期（未处理）。"
+
+  # --- 扩展审核 (管理员GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&a左键点击: 批准该扩展"
+      deny: "&c右键点击: 拒绝并选择原因"
+      info: "&7使用拒绝原因菜单以查看详细消息"
+
+  # --- 拒绝原因 ---
+  deny-reasons:
+    too-large: "&c请求的扩展过大。"
+    abusive: "&c因滥用行为，扩展请求被拒绝。"
+    overlap: "&c请求的区域与现有领地重叠。"
+    custom-1: "&c游戏时间不足，无法扩展。"
+    custom-2: "&c该领地已达到最大规模。"
+
+  # --- 世界控制 ---
+  world-controls:
+    toggle: "&e世界控制 &f{flag} &e现已 {state}。"
+    enabled: "&a已启用"
+    disabled: "&c已禁用"
+
+  # --- GUI 导航 ---
+  gui:
+    back-button: "&e返回"
+    back-lore:
+      - "&7返回上一级菜单"
+    exit-button: "&c退出"
+    exit-lore:
+      - "&7安全关闭此菜单"
+    titles:
+      main: "&6ProShield 菜单"
+      trusted: "&b受信任的玩家"
+      assign-role: "&b分配角色"
+      flags: "&e领地标志"
+      admin: "&c管理员工具"
+      world-controls: "&c世界控制"
+      deny-reasons: "&c拒绝原因"
+      request-expansion: "&a扩展请求"
+      expansion-requests: "&e扩展请求列表"
+      expansion-history: "&7扩展历史"
+
+  # --- 角色 ---
+  roles:
+    display:
+      none: "&7无"
+      visitor: "&7访客"
+      member: "&a成员"
+      trusted: "&b信任"
+      builder: "&2建造者"
+      container: "&3箱子权限"
+      moderator: "&e版主"
+      manager: "&6管理员"
+      owner: "&c所有者"
+    lore:
+      visitor:
+        - "&7默认角色 (非信任玩家)"
+        - "&c无法建造或使用容器"
+      member:
+        - "&7基础角色"
+        - "&a可使用容器"
+        - "&c不可更改标志"
+      trusted:
+        - "&7高级角色"
+        - "&a除所有者操作外，拥有全部权限"
+      builder:
+        - "&7建造角色"
+        - "&a可放置和破坏方块"
+        - "&c不可更改标志"
+      container:
+        - "&7存储角色"
+        - "&a仅可打开容器"
+        - "&c不可建造或破坏"
+      moderator:
+        - "&7管理角色"
+        - "&a可管理角色和标志"
+        - "&c不可转让所有权"
+      manager:
+        - "&7高级管理角色"
+        - "&a可管理角色、标志并转让所有权"
+      owner:
+        - "&c领地主人"
+        - "&a拥有完全控制权"
+
+# ==========================================================
+# 帮助页面
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— 玩家指南"
+    - "&a右键点击 ProShield 指南针 &7→ 打开主菜单"
+    - "&b主菜单 &7→ 领地、信息、解除、受信任玩家、标志"
+    - "&b受信任玩家 &7→ 管理角色和权限"
+    - "&b标志 &7→ 切换保护"
+    - "&a扩展请求 &7→ 请求管理员扩展 (若启用)"
+    - "&7冷却时间: &f{cooldown-hours}h&7."
+    - "&7所有功能通过GUI完成。命令仅在必要时使用。"
+
+  admin:
+    - "&c&lProShield — 管理员指南"
+    - "&c管理员工具GUI &7→ 重载, 调试, 绕过, 世界控制"
+    - "&7扩展请求和世界控制需要额外权限。"
+    - "&7所有功能通过GUI完成。命令仅作辅助。"
+    - "&7备用命令:"
+    - "&f/proshield reload &7→ 重载配置"
+    - "&f/proshield debug &7→ 切换调试模式"
+    - "&f/proshield bypass &7→ 切换绕过模式"
+    - "&f/proshield admin &7→ 打开管理员工具GUI"
+
+  senior:
+    - "&4&l高级管理员工具"
+    - "&4扩展请求 &7– 需要权限: &fproshield.admin.expansions"
+    - "&4世界控制 &7– 需要权限: &fproshield.admin.worldcontrols"
+    - "&7所有功能通过GUI完成。命令不必要。"

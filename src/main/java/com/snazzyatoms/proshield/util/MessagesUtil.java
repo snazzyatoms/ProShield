@@ -26,43 +26,38 @@ public class MessagesUtil {
 
     /** Reloads language file (messages_xx.yml) based on config.yml */
     public void reload() {
-        // read chosen language from config.yml
-        String lang = plugin.getConfig().getString("settings.language", "en").toLowerCase(Locale.ROOT);
+        // normalize language code
+        String lang = plugin.getConfig().getString("settings.language", "en")
+                .toLowerCase(Locale.ROOT)
+                .replace("-", "_");
 
-        // /plugins/ProShield/languages/messages_xx.yml
         File langFolder = new File(plugin.getDataFolder(), "languages");
-        if (!langFolder.exists()) {
-            langFolder.mkdirs();
-        }
+        if (!langFolder.exists()) langFolder.mkdirs();
 
+        // choose filename
         String filename = lang.equals("en") ? "messages.yml" : "messages_" + lang + ".yml";
         messagesFile = new File(langFolder, filename);
 
-        // If file doesn’t exist in /languages/, try to save a default copy from resources
+        // ensure file exists
         if (!messagesFile.exists()) {
             InputStream resource = plugin.getResource("languages/" + filename);
             if (resource != null) {
                 plugin.saveResource("languages/" + filename, false);
-            } else if (!lang.equals("en")) {
-                // fallback: force English if no such language found
-                plugin.getLogger().warning("[ProShield] No translation found for '" + lang + "', falling back to English.");
-                messagesFile = new File(langFolder, "messages.yml");
+            } else {
+                plugin.getLogger().warning("[ProShield] No translation for '" + lang + "', falling back to English.");
+                filename = "messages.yml";
+                messagesFile = new File(langFolder, filename);
                 if (!messagesFile.exists()) {
                     plugin.saveResource("messages.yml", false);
                 }
             }
         }
 
-        // Load configuration
+        // load user config
         msgs = YamlConfiguration.loadConfiguration(messagesFile);
 
-        // Load defaults from jar (for missing keys)
-        InputStream defStream;
-        if (lang.equals("en")) {
-            defStream = plugin.getResource("messages.yml");
-        } else {
-            defStream = plugin.getResource("languages/" + filename);
-        }
+        // load defaults from jar
+        InputStream defStream = plugin.getResource(lang.equals("en") ? "messages.yml" : "languages/" + filename);
         if (defStream != null) {
             YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream));
             msgs.setDefaults(defConfig);
@@ -116,11 +111,11 @@ public class MessagesUtil {
     }
 
     private String prefix() {
-        return msgs.getString("messages.prefix", "&3[ProShield]&r ");
+        return msgs.getString("prefix", "&3[ProShield]&r ");
     }
 
     private String debugPrefix() {
-        return msgs.getString("messages.debug-prefix", "&8[Debug]&r ");
+        return msgs.getString("debug-prefix", "&8[Debug]&r ");
     }
 
     /** Get a colored string from messages.yml (or "" if missing) */

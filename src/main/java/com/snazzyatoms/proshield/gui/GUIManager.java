@@ -1,3 +1,4 @@
+
 // src/main/java/com/snazzyatoms/proshield/gui/GUIManager.java
 package com.snazzyatoms.proshield.gui;
 
@@ -27,14 +28,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * GUIManager (ProShield v1.2.6)
+ * GUIManager (ProShield v1.2.6+ Multilingual)
  *
  * Menus:
  *  - Main
  *  - Claim Info
  *  - Trusted Players / Assign Role
  *  - Claim Flags
- *  - Player Expansion Request (Submit)
+ *  - Player Expansion Request (Submit + Status)
  *  - Admin Tools
  *  - Expansion Review (Approve / Deny → Reason)
  *  - Deny Reasons
@@ -58,8 +59,9 @@ public class GUIManager {
     private static final String TAG_WCTRL = "#WCTRL:";  // world control key
     private static final String TAG_RID   = "#RID:";    // expansion request id
     private static final String TAG_ACT   = "#ACT:";    // action hint (APPROVE / DENY / PAGE_*)
-    private static final String ACT_APPROVE = "APPROVE";
-    private static final String ACT_DENY    = "DENY";
+
+    private static final String ACT_APPROVE   = "APPROVE";
+    private static final String ACT_DENY      = "DENY";
     private static final String ACT_PAGE_NEXT = "PAGE_NEXT";
     private static final String ACT_PAGE_PREV = "PAGE_PREV";
 
@@ -73,10 +75,9 @@ public class GUIManager {
 
     /* ---------- ephemeral GUI state ---------- */
     private final Map<UUID, UUID> pendingRoleAssignments = new HashMap<>();             // actor → target
-    private final Map<UUID, UUID> pendingDenyTarget = new HashMap<>();                 // admin → requestId
+    private final Map<UUID, UUID> pendingDenyTarget      = new HashMap<>();            // admin → requestId
     private final Map<UUID, Integer> pendingPlayerExpansionAmount = new HashMap<>();   // player → amount
-    private final Map<UUID, Integer> historyPages = new HashMap<>();                   // player → page index
-    private final Map<UUID, List<ExpansionRequest>> filteredHistory = new HashMap<>(); // player → cached list
+    private final Map<UUID, Integer> historyPages        = new HashMap<>();            // player → page index
 
     public GUIManager(ProShield plugin) {
         this.plugin = plugin;
@@ -210,10 +211,14 @@ public class GUIManager {
         return plugin.getConfig().getBoolean("flags.available." + key + ".default", false);
     }
 
-    private DateTimeFormatter dtFmt(Player p) {
-        ZoneId zone = p != null ? p.getWorld().getTimeZone() : ZoneId.systemDefault();
-        return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                .withZone(zone);
+    private DateTimeFormatter dtFmt() {
+        ZoneId zone = ZoneId.systemDefault();
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(zone);
+    }
+
+    private String safeName(UUID uuid) {
+        OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
+        return (op != null && op.getName() != null) ? op.getName() : uuid.toString().substring(0, 8);
     }
 
     /* ===================================================================
@@ -332,7 +337,7 @@ public class GUIManager {
     }
 
     /* ===================================================================
-     * PLAYER EXPANSION REQUEST (Submit)
+     * PLAYER EXPANSION REQUEST (Submit + Status)
      * =================================================================== */
 
     public void openPlayerExpansionRequest(Player player) {
@@ -342,6 +347,7 @@ public class GUIManager {
 
         int current = pendingPlayerExpansionAmount.getOrDefault(player.getUniqueId(), 16);
 
+        // Controls
         inv.setItem(10, simpleItem(Material.LIME_DYE, "&f+16", "&7" + messages.getOrDefault("messages.gui.expansion.plus16", "Increase by 16 blocks")));
         inv.setItem(11, simpleItem(Material.LIME_DYE, "&f+32", "&7" + messages.getOrDefault("messages.gui.expansion.plus32", "Increase by 32 blocks")));
         inv.setItem(12, simpleItem(Material.LIME_DYE, "&f+64", "&7" + messages.getOrDefault("messages.gui.expansion.plus64", "Increase by 64 blocks")));
@@ -354,6 +360,27 @@ public class GUIManager {
         inv.setItem(14, simpleItem(Material.RED_DYE, "&f-16", "&7" + messages.getOrDefault("messages.gui.expansion.minus16", "Decrease by 16 blocks")));
         inv.setItem(15, simpleItem(Material.RED_DYE, "&f-32", "&7" + messages.getOrDefault("messages.gui.expansion.minus32", "Decrease by 32 blocks")));
         inv.setItem(16, simpleItem(Material.RED_DYE, "&f-64", "&7" + messages.getOrDefault("messages.gui.expansion.minus64", "Decrease by 64 blocks")));
+
+        // Status preview (latest request for this player)
+        ExpansionRequest latest = expansionManager.getLatestFor(player.getUniqueId());
+        if (latest != null) {
+            List<String> statusLore = new ArrayList<>();
+            statusLore.add("&7" + messages.getOrDefault("messages.expansion.amount", "Amount:") + " &f+" + latest.getAmount());
+            statusLore.add("&7" + messages.getOrDefault("messages.expansion.created", "Created:") + " &f" + dtFmt().format(latest.getCreatedAt()));
+            statusLore.add("&7" + messages.getOrDefault("messages.expansion.status", "Status:") + " &e" + latest.getStatus().name());
+            if (latest.getReviewedAt() != null) {
+                statusLore.add("&7" + messages.getOrDefault("messages.expansion.reviewed", "Reviewed:") + " &f" + dtFmt().format(latest.getReviewedAt()));
+            }
+            if (latest.getReviewedBy() != null) {
+                statusLore.add("&7" + messages.getOrDefault("messages.expansion.reviewer", "Reviewer:") + " &f" + safeName(latest.getReviewedBy()));
+            }
+            if (latest.getDenialReason() != null) {
+                statusLore.add("&7" + messages.getOrDefault("messages.expansion.reason", "Reason:") + " &f" + latest.getDenialReason());
+            }
+            inv.setItem(22, simpleItem(Material.PAPER,
+                    messages.getOrDefault("messages.gui.expansion.latest", "&eYour latest request"),
+                    statusLore));
+        }
 
         placeNavButtons(inv);
         player.openInventory(inv);
@@ -548,7 +575,6 @@ public class GUIManager {
                     "&c" + messages.getOrDefault("messages.error.no-claim-here", "No claim here"),
                     "&7" + messages.getOrDefault("messages.info.stand-in-claim", "Stand inside your claim to manage flags.")));
         } else {
-            // Example: PvP flag toggle
             boolean pvp = getEffectiveClaimFlag(plot, "pvp");
             inv.setItem(11, simpleItem(Material.DIAMOND_SWORD,
                     "&fPvP: " + (pvp ? "&aON" : "&cOFF"),
@@ -719,24 +745,21 @@ public class GUIManager {
         }
 
         int slot = 0;
+        DateTimeFormatter fmt = dtFmt();
         for (ExpansionRequest req : pending) {
-            OfflinePlayer requester = Bukkit.getOfflinePlayer(req.getRequester());
-            String name = requester != null && requester.getName() != null
-                    ? requester.getName()
-                    : req.getRequester().toString().substring(0, 8);
+            String name = safeName(req.getRequester());
 
             List<String> lore = new ArrayList<>();
             lore.add("&7" + messages.getOrDefault("messages.expansion.requester", "Requester:") + " &f" + name);
             lore.add("&7" + messages.getOrDefault("messages.expansion.amount", "Amount:") + " &f+" + req.getAmount());
             lore.add("&7" + messages.getOrDefault("messages.expansion.status", "Status:") + " &e" + req.getStatus().name());
-            lore.add("&7" + messages.getOrDefault("messages.expansion.created", "Created:") + " &f" + dtFmt(player).format(req.getCreatedAt()));
+            lore.add("&7" + messages.getOrDefault("messages.expansion.created", "Created:") + " &f" + fmt.format(req.getCreatedAt()));
             lore.add(messages.color("&a" + messages.getOrDefault("messages.expansion-admin.lore.approve", "Left-click: Approve this expansion")));
             lore.add(messages.color("&c" + messages.getOrDefault("messages.expansion-admin.lore.deny", "Right-click: Deny and choose a reason")));
             lore.add(messages.color("&7" + messages.getOrDefault("messages.expansion-admin.lore.info", "Use the deny reasons menu for detailed denial messages.")));
             lore.add(TAG_RID + req.getId());
 
-            Material icon = Material.EMERALD;
-            ItemStack item = simpleItem(icon, "&e+" + req.getAmount() + " &7(" + name + ")", lore);
+            ItemStack item = simpleItem(Material.EMERALD, "&e+" + req.getAmount() + " &7(" + name + ")", lore);
             inv.setItem(slot++, item);
             if (slot >= size - 9) break;
         }
@@ -754,7 +777,7 @@ public class GUIManager {
         UUID rid = extractHiddenRequestId(clicked);
         if (rid == null) return;
 
-        ExpansionRequest req = findRequest(rid);
+        ExpansionRequest req = expansionManager.findById(rid);
         if (req == null || !req.isPending()) {
             messages.send(player, messages.getOrDefault("messages.expansion.not-found", "&cRequest not found or not pending."));
             clickTone(player);
@@ -763,7 +786,6 @@ public class GUIManager {
         }
 
         if (event.isLeftClick()) {
-            // Approve
             expansionManager.approveRequest(req, player.getUniqueId());
             messages.send(player, messages.getOrDefault("messages.expansion.approved-admin", "&aApproved expansion (+{blocks}) for {player}.")
                     .replace("{blocks}", String.valueOf(req.getAmount()))
@@ -771,7 +793,6 @@ public class GUIManager {
             clickTone(player);
             openExpansionReview(player);
         } else if (event.isRightClick()) {
-            // Deny → choose reason
             pendingDenyTarget.put(player.getUniqueId(), rid);
             clickTone(player);
             openDenyReasons(player);
@@ -787,7 +808,6 @@ public class GUIManager {
         int size = plugin.getConfig().getInt("gui.menus.deny-reasons.size", 27);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        // reasons come from messages.deny-reasons.*, values are colored text
         Set<String> keys = messages.getKeys("messages.deny-reasons");
         if (keys.isEmpty()) {
             inv.setItem(13, simpleItem(Material.BARRIER,
@@ -815,7 +835,7 @@ public class GUIManager {
         UUID rid = pendingDenyTarget.remove(player.getUniqueId());
         if (rid == null) { clickTone(player); openExpansionReview(player); return; }
 
-        ExpansionRequest req = findRequest(rid);
+        ExpansionRequest req = expansionManager.findById(rid);
         if (req == null || !req.isPending()) {
             messages.send(player, messages.getOrDefault("messages.expansion.not-found", "&cRequest not found or not pending."));
             clickTone(player);
@@ -853,11 +873,10 @@ public class GUIManager {
         if (filterByPlayer != null) {
             source = expansionManager.getAllRequestsFor(filterByPlayer);
         } else {
-            source = expansionManager.getAllRequests(); // include past approved/denied
+            source = expansionManager.getAllRequests();
         }
 
         source.sort(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed());
-        filteredHistory.put(player.getUniqueId(), source);
         historyPages.put(player.getUniqueId(), page);
 
         int start = page * HISTORY_PER_PAGE;
@@ -872,22 +891,20 @@ public class GUIManager {
             return;
         }
 
+        DateTimeFormatter fmt = dtFmt();
         int slot = 0;
         for (int i = start; i < end; i++) {
             ExpansionRequest req = source.get(i);
-            OfflinePlayer requester = Bukkit.getOfflinePlayer(req.getRequester());
-            String name = requester != null && requester.getName() != null
-                    ? requester.getName()
-                    : req.getRequester().toString().substring(0, 8);
+            String name = safeName(req.getRequester());
 
             List<String> lore = new ArrayList<>();
             lore.add("&7" + messages.getOrDefault("messages.expansion.requester", "Requester:") + " &f" + name);
             lore.add("&7" + messages.getOrDefault("messages.expansion.amount", "Amount:") + " &f+" + req.getAmount());
             lore.add("&7" + messages.getOrDefault("messages.expansion.status", "Status:") + " &e" + req.getStatus().name());
-            lore.add("&7" + messages.getOrDefault("messages.expansion.created", "Created:") + " &f" + dtFmt(player).format(req.getCreatedAt()));
+            lore.add("&7" + messages.getOrDefault("messages.expansion.created", "Created:") + " &f" + fmt.format(req.getCreatedAt()));
 
             if (req.getReviewedAt() != null) {
-                lore.add("&7" + messages.getOrDefault("messages.expansion.reviewed", "Reviewed:") + " &f" + dtFmt(player).format(req.getReviewedAt()));
+                lore.add("&7" + messages.getOrDefault("messages.expansion.reviewed", "Reviewed:") + " &f" + fmt.format(req.getReviewedAt()));
             }
             if (req.getReviewedBy() != null) {
                 lore.add("&7" + messages.getOrDefault("messages.expansion.reviewer", "Reviewer:") + " &f" + safeName(req.getReviewedBy()));
@@ -909,14 +926,15 @@ public class GUIManager {
         }
 
         // Pagination controls
-        List<String> nextLore = List.of(messages.color("&7" + messages.getOrDefault("messages.gui.page.next", "Next page")), TAG_ACT + ACT_PAGE_NEXT);
-        List<String> prevLore = List.of(messages.color("&7" + messages.getOrDefault("messages.gui.page.prev", "Previous page")), TAG_ACT + ACT_PAGE_PREV);
-
         if (end < source.size()) {
-            inv.setItem(size - 5, simpleItem(Material.ARROW, "&e" + messages.getOrDefault("messages.gui.page.next", "Next page"), nextLore));
+            inv.setItem(size - 5, simpleItem(Material.ARROW,
+                    "&e" + messages.getOrDefault("messages.gui.page.next", "Next page"),
+                    List.of(messages.color("&7" + messages.getOrDefault("messages.gui.page.next", "Next page")), TAG_ACT + ACT_PAGE_NEXT)));
         }
         if (page > 0) {
-            inv.setItem(size - 6, simpleItem(Material.ARROW, "&e" + messages.getOrDefault("messages.gui.page.prev", "Previous page"), prevLore));
+            inv.setItem(size - 6, simpleItem(Material.ARROW,
+                    "&e" + messages.getOrDefault("messages.gui.page.prev", "Previous page"),
+                    List.of(messages.color("&7" + messages.getOrDefault("messages.gui.page.prev", "Previous page")), TAG_ACT + ACT_PAGE_PREV)));
         }
 
         placeNavButtons(inv);
@@ -941,22 +959,5 @@ public class GUIManager {
             openHistory(player, Math.max(0, cur - 1), null);
             return;
         }
-    }
-
-    /* ===================================================================
-     * Helpers
-     * =================================================================== */
-
-    private ExpansionRequest findRequest(UUID id) {
-        // Manager may have a fast lookup; otherwise linear scan
-        for (ExpansionRequest r : expansionManager.getAllRequests()) {
-            if (r.getId().equals(id)) return r;
-        }
-        return null;
-    }
-
-    private String safeName(UUID uuid) {
-        OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
-        return (op != null && op.getName() != null) ? op.getName() : uuid.toString().substring(0, 8);
     }
 }

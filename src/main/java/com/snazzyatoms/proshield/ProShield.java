@@ -5,7 +5,6 @@ import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
-import com.snazzyatoms.proshield.gui.cache.GUICache;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -26,7 +25,6 @@ public class ProShield extends JavaPlugin {
     private GUIManager guiManager;
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
-    private GUICache guiCache;
     private ExpansionRequestManager expansionRequestManager;
 
     private final Set<UUID> bypassing = new HashSet<>();
@@ -40,7 +38,6 @@ public class ProShield extends JavaPlugin {
         messages = new MessagesUtil(this);
         plotManager = new PlotManager(this);
         roleManager = new ClaimRoleManager(this);
-        guiCache = new GUICache();
         expansionRequestManager = new ExpansionRequestManager(this);
         guiManager = new GUIManager(this);
 
@@ -61,7 +58,7 @@ public class ProShield extends JavaPlugin {
     @Override
     public void onDisable() {
         // Save data safely
-        if (plotManager != null) plotManager.saveAll();
+        if (plotManager != null) plotManager.save();
         if (expansionRequestManager != null) expansionRequestManager.save();
 
         getLogger().info("[ProShield] Disabled cleanly.");
@@ -91,10 +88,6 @@ public class ProShield extends JavaPlugin {
         return plotManager;
     }
 
-    public GUICache getGuiCache() {
-        return guiCache;
-    }
-
     public ExpansionRequestManager getExpansionRequestManager() {
         return expansionRequestManager;
     }
@@ -119,5 +112,14 @@ public class ProShield extends JavaPlugin {
 
     public boolean isBypassing(Player player) {
         return bypassing.contains(player.getUniqueId());
+    }
+
+    public Set<UUID> getBypassing() {
+        return bypassing;
+    }
+
+    /** Reload messages.yml safely */
+    public void loadMessagesConfig() {
+        messages.reload();
     }
 }

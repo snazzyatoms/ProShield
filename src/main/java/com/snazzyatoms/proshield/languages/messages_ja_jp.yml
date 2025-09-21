@@ -1,0 +1,171 @@
+# ==========================================================
+# ProShield メッセージ
+# バージョン: 1.2.6 (最適化 & 同期)
+# ----------------------------------------------------------
+# - 役職名と説明は完全にカスタマイズ可能
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[デバッグ]&r "
+
+  # --- 一般エラー ---
+  error:
+    player-only: "&cこの操作はプレイヤーのみ使用できます。"
+    no-permission: "&cこの操作を行う権限がありません。"
+    inventory-full: "&cインベントリがいっぱいです。空きスロットを確保してください。"
+    block-break: "&cここではブロックを破壊できません。"
+    block-place: "&cここではブロックを設置できません。"
+    bucket-empty: "&cここではバケツを空にできません。"
+    bucket-fill: "&cここではバケツを満たせません。"
+    pvp: "&cこの領地では PvP は無効です。"
+
+  # --- コンパス ---
+  compass:
+    command-success: "&aProShield コンパスが与えられました。"
+    already-have: "&eすでに ProShield コンパスを持っています。"
+    lore:
+      - "&7右クリックで ProShield メニューを開く"
+      - "&7領地、フラグ、信頼プレイヤーを管理"
+
+  # --- 管理者 / システム ---
+  reloaded: "&aProShield 設定を再読み込みしました。"
+
+  admin:
+    debug-on: "&eデバッグモード: &a有効"
+    debug-off: "&eデバッグモード: &c無効"
+    bypass-on: "&aバイパスが有効になりました。"
+    bypass-off: "&cバイパスが無効になりました。"
+
+  # --- 領地 / エリア遷移 ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&a自分の領地に入りました。"
+  enter-other: "&a{owner} の領地に入りました。"
+  leave-own: "&c自分の領地を離れました。"
+  leave-other: "&c{owner} の領地を離れました。"
+  wilderness: "&7荒野に入りました。"
+
+  # --- 拡張リクエスト (プレイヤー) ---
+  expansion:
+    request-sent: "&e+{blocks} ブロックの拡張リクエストを管理者に送信しました。"
+    approved: "&aあなたの拡張リクエスト (+{blocks} ブロック) が承認されました！"
+    denied: "&c拡張リクエストが拒否されました: {reason}"
+    disabled: "&cサーバーで拡張リクエストは無効になっています。"
+    cooldown-title: "&cクールダウン中"
+    cooldown-active: "&7再リクエスト可能まで: &f{hours}時間 {minutes}分&7"
+    expired: "&e拡張リクエストは {days} 日間未処理のため失効しました。"
+
+  # --- 拡張レビュー (管理者GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&a左クリック: この拡張を承認"
+      deny: "&c右クリック: 拒否して理由を選択"
+      info: "&7詳細な拒否理由は専用メニューから選択"
+
+  # --- 拒否理由 ---
+  deny-reasons:
+    too-large: "&cリクエストされた拡張は大きすぎます。"
+    abusive: "&c不正利用により拡張リクエストは拒否されました。"
+    overlap: "&cリクエストされた領域は既存の領地と重なっています。"
+    custom-1: "&cプレイ時間が不足しているため拡張できません。"
+    custom-2: "&c領地はすでに最大サイズに達しています。"
+
+  # --- ワールド制御 ---
+  world-controls:
+    toggle: "&eワールド制御 &f{flag} &eが {state} になりました。"
+    enabled: "&a有効"
+    disabled: "&c無効"
+
+  # --- GUI ナビゲーション ---
+  gui:
+    back-button: "&e戻る"
+    back-lore:
+      - "&7前のメニューに戻る"
+    exit-button: "&c終了"
+    exit-lore:
+      - "&7このメニューを安全に閉じる"
+    titles:
+      main: "&6ProShield メニュー"
+      trusted: "&b信頼プレイヤー"
+      assign-role: "&b役職を割り当て"
+      flags: "&e領地フラグ"
+      admin: "&c管理者ツール"
+      world-controls: "&cワールド制御"
+      deny-reasons: "&c拒否理由"
+      request-expansion: "&a拡張リクエスト"
+      expansion-requests: "&e拡張リクエスト一覧"
+      expansion-history: "&7拡張履歴"
+
+  # --- 役職 ---
+  roles:
+    display:
+      none: "&7なし"
+      visitor: "&7訪問者"
+      member: "&aメンバー"
+      trusted: "&b信頼"
+      builder: "&2建築者"
+      container: "&3コンテナ"
+      moderator: "&eモデレーター"
+      manager: "&6管理者"
+      owner: "&c所有者"
+    lore:
+      visitor:
+        - "&7デフォルトの役職 (信頼されていないプレイヤー)"
+        - "&c建築やコンテナの使用不可"
+      member:
+        - "&7基本的な役職"
+        - "&aコンテナを使用可能"
+        - "&cフラグの変更不可"
+      trusted:
+        - "&7上級役職"
+        - "&a所有者以外の全ての操作が可能"
+      builder:
+        - "&7建築役職"
+        - "&aブロックの設置・破壊が可能"
+        - "&cフラグの変更不可"
+      container:
+        - "&7倉庫役職"
+        - "&aコンテナのみ使用可能"
+        - "&c建築や破壊不可"
+      moderator:
+        - "&7管理役職"
+        - "&a役職とフラグの管理が可能"
+        - "&c所有権移譲不可"
+      manager:
+        - "&7上級管理役職"
+        - "&a役職・フラグの管理や所有権移譲が可能"
+      owner:
+        - "&c領地主"
+        - "&a領地の完全な制御権"
+
+# ==========================================================
+# ヘルプページ
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— プレイヤーガイド"
+    - "&aProShield コンパスを右クリック &7→ メインメニューを開く"
+    - "&bメインメニュー &7→ 領地、情報、解除、信頼プレイヤー、フラグ"
+    - "&b信頼プレイヤー &7→ 役職と権限を管理"
+    - "&b領地フラグ &7→ 保護を切り替え"
+    - "&a拡張リクエスト &7→ 管理者に拡張を依頼 (有効な場合)"
+    - "&7拡張リクエストには &f{cooldown-hours}時間 &7のクールダウンがあります。"
+    - "&7全ての機能はGUIで操作できます。コマンドは緊急時のみ使用。"
+
+  admin:
+    - "&c&lProShield — 管理者ガイド"
+    - "&c管理者ツール GUI &7→ 再読み込み、デバッグ、バイパス、ワールド制御"
+    - "&7拡張リクエストとワールド制御には追加の権限が必要です。"
+    - "&7全ての操作はGUIで行えます。コマンドはバックアップ用途のみ。"
+    - "&7バックアップコマンド:"
+    - "&f/proshield reload &7→ 設定を再読み込み"
+    - "&f/proshield debug &7→ デバッグモード切替"
+    - "&f/proshield bypass &7→ バイパス切替"
+    - "&f/proshield admin &7→ 管理者ツールGUIを開く"
+
+  senior:
+    - "&4&l上級管理者ツール"
+    - "&4拡張リクエスト &7– 権限必須: &fproshield.admin.expansions"
+    - "&4ワールド制御 &7– 権限必須: &fproshield.admin.worldcontrols"
+    - "&7全ての機能はGUIで完結、コマンドは不要です。"

@@ -31,6 +31,9 @@ public class Plot {
     // Trusted players with roles
     private final Map<UUID, String> trusted = new HashMap<>();
 
+    // Default role for new trusted players (GUIManager expects this)
+    private String defaultRole = "member";
+
     public Plot(UUID owner, String world, int x, int z, UUID id, int radius) {
         this.owner = owner;
         this.world = world;
@@ -153,6 +156,37 @@ public class Plot {
         info.put("Flags", String.join(", ", flagList));
 
         return info;
+    }
+
+    /* -------------------------
+     * COMPATIBILITY SHIMS (for GUIManager 1.2.6)
+     * ------------------------- */
+
+    // GUI expects isOwner(uuid)
+    public boolean isOwner(UUID uuid) {
+        return uuid != null && uuid.equals(this.owner);
+    }
+
+    // GUI expects chunk counts
+    public int getChunkCount() {
+        // Approximate chunks claimed by radius (circle area / 256)
+        double area = Math.PI * (radius * radius);
+        return (int) Math.max(1, area / 256.0);
+    }
+
+    // GUI expects default role
+    public String getDefaultRole() {
+        return defaultRole;
+    }
+
+    public void setDefaultRole(String roleId) {
+        this.defaultRole = (roleId != null ? roleId.toLowerCase(Locale.ROOT) : "member");
+    }
+
+    // GUI expects plot center Location
+    public Location getCenter() {
+        if (Bukkit.getWorld(world) == null) return null;
+        return new Location(Bukkit.getWorld(world), x + 0.5, 64, z + 0.5);
     }
 
     /* -------------------------

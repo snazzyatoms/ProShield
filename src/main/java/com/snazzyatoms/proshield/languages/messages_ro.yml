@@ -1,0 +1,170 @@
+# ==========================================================
+# Mesaje ProShield
+# Versiune: 1.2.6 (Polish și sincronizat)
+# ----------------------------------------------------------
+# - Numele și descrierile rolurilor sunt acum complet personalizabile
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- Erori generale ---
+  error:
+    player-only: "&cDoar jucătorii pot folosi această acțiune."
+    no-permission: "&cNu ai permisiunea să faci asta."
+    inventory-full: "&cInventarul tău este plin. Eliberează mai întâi un slot."
+    block-break: "&cNu poți sparge blocuri aici."
+    block-place: "&cNu poți plasa blocuri aici."
+    bucket-empty: "&cNu poți goli găleți aici."
+    bucket-fill: "&cNu poți umple găleți aici."
+    pvp: "&cPvP este dezactivat în acest claim."
+
+  # --- Busolă ---
+  compass:
+    command-success: "&aAi primit o Busolă ProShield."
+    already-have: "&eDeja ai o Busolă ProShield."
+    lore:
+      - "&7Click dreapta pentru a deschide meniul ProShield"
+      - "&7Gestionează-ți claim-urile, flag-urile și jucătorii de încredere"
+
+  # --- Admin / Sistem ---
+  reloaded: "&aConfigurația ProShield a fost reîncărcată."
+
+  admin:
+    debug-on: "&eMod debug: &aACTIVAT"
+    debug-off: "&eMod debug: &cDEZACTIVAT"
+    bypass-on: "&aBypass activat."
+    bypass-off: "&cBypass dezactivat."
+
+  # --- Tranziții claim / regiuni ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aAi intrat în claim-ul tău."
+  enter-other: "&aAi intrat în claim-ul lui {owner}."
+  leave-own: "&cAi părăsit claim-ul tău."
+  leave-other: "&cAi părăsit claim-ul lui {owner}."
+  wilderness: "&7Ai intrat în sălbăticie."
+
+  # --- Cereri de extindere (Jucător) ---
+  expansion:
+    request-sent: "&eCererea ta de extindere pentru +{blocks} blocuri a fost trimisă administratorilor."
+    approved: "&aExtinderea claim-ului tău (+{blocks} blocuri) a fost aprobată!"
+    denied: "&cCererea ta de extindere a fost respinsă: {reason}"
+    disabled: "&cCererea de extindere este dezactivată pe server."
+    cooldown-title: "&cTimp de așteptare activ"
+    cooldown-active: "&7Poți trimite o nouă cerere în &f{hours}h {minutes}m&7."
+    expired: "&eCererea ta de extindere a expirat după {days} zile fără a fi procesată."
+
+  # --- Revizuire extindere (GUI Admin) ---
+  expansion-admin:
+    lore:
+      approve: "&aClick stânga: Aprobare extindere"
+      deny: "&cClick dreapta: Respingere și alegere motiv"
+      info: "&7Folosește meniul motivelor de respingere pentru mesaje detaliate."
+
+  # --- Motive de respingere ---
+  deny-reasons:
+    too-large: "&cExtinderea cerută este prea mare."
+    abusive: "&cCererea de extindere a fost respinsă din cauza abuzului."
+    overlap: "&cZona cerută se suprapune cu un claim existent."
+    custom-1: "&cNu ai încă suficient timp de joc pentru această extindere."
+    custom-2: "&cClaim-ul tău a atins deja dimensiunea maximă."
+
+  # --- Controlul lumii ---
+  world-controls:
+    toggle: "&eSetarea &f{flag} &ea fost schimbată la {state}."
+    enabled: "&aACTIVAT"
+    disabled: "&cDEZACTIVAT"
+
+  # --- Navigare GUI ---
+  gui:
+    back-button: "&eÎnapoi"
+    back-lore:
+      - "&7Înapoi la meniul anterior"
+    exit-button: "&cIeșire"
+    exit-lore:
+      - "&7Închide acest meniu în siguranță"
+    titles:
+      main: "&6Meniu ProShield"
+      trusted: "&bJucători de încredere"
+      assign-role: "&bAtribuie rol"
+      flags: "&eFlag-uri claim"
+      admin: "&cUnelte Admin"
+      world-controls: "&cControlul lumii"
+      deny-reasons: "&cMotive de respingere"
+      request-expansion: "&aCere extindere"
+      expansion-requests: "&eCereri de extindere"
+      expansion-history: "&7Istoric extinderi"
+
+  # --- Roluri (nume și descrieri) ---
+  roles:
+    display:
+      none: "&7Niciunul"
+      visitor: "&7Vizitator"
+      member: "&aMembru"
+      trusted: "&bDe încredere"
+      builder: "&2Constructor"
+      container: "&3Container"
+      moderator: "&eModerator"
+      manager: "&6Manager"
+      owner: "&cProprietar"
+    lore:
+      visitor:
+        - "&7Rol implicit pentru jucătorii necunoscuți"
+        - "&cNu poate construi sau deschide containere"
+      member:
+        - "&7Rol de bază"
+        - "&aPoate deschide containere"
+        - "&cNu poate construi sau modifica flag-uri"
+      trusted:
+        - "&7Rol avansat de încredere"
+        - "&aAcces complet, cu excepția acțiunilor proprietarului"
+      builder:
+        - "&7Rol de construcție"
+        - "&aPoate construi și sparge blocuri"
+        - "&cNu poate modifica flag-uri"
+      container:
+        - "&7Rol de stocare"
+        - "&aPoate deschide doar containere"
+        - "&cNu poate construi sau sparge"
+      moderator:
+        - "&7Rol de moderare"
+        - "&aPoate gestiona roluri și flag-uri"
+        - "&cNu poate transfera proprietatea"
+      manager:
+        - "&7Rol de manager"
+        - "&aPoate gestiona roluri, flag-uri și transfera proprietatea"
+      owner:
+        - "&cProprietar claim"
+        - "&aControl complet asupra claim-ului"
+
+# ==========================================================
+# Pagini de ajutor
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Ghid jucător"
+    - "&aClick dreapta pe Busola ProShield &7→ Deschide meniul principal"
+    - "&bMeniu principal &7→ Claim, Info, Unclaim, Jucători de încredere, Flag-uri"
+    - "&bJucători de încredere &7→ Gestionează roluri și acces"
+    - "&bFlag-uri claim &7→ Activează/dezactivează protecții"
+    - "&aCere extindere &7→ Trimite o cerere de extindere către admini"
+    - "&7Cererea are o perioadă de așteptare de &f{cooldown-hours}h &7(implicit)."
+    - "&7Totul este gestionat prin GUI. Comenzile sunt necesare doar dacă ceva nu merge."
+
+  admin:
+    - "&c&lProShield — Ghid Admin"
+    - "&cUnelte Admin GUI &7→ Reload, Debug, Bypass, Controlul lumii"
+    - "&7Cereri de extindere și controlul lumii necesită permisiuni speciale."
+    - "&7Comenzi fallback (numai pentru admini):"
+    - "&f/proshield reload &7→ Reîncarcă configurația"
+    - "&f/proshield debug &7→ Activează/dezactivează modul debug"
+    - "&f/proshield bypass &7→ Activează/dezactivează bypass admin"
+    - "&f/proshield admin &7→ Deschide GUI-ul Unelte Admin"
+
+  senior:
+    - "&4&lUnelte Admin Senior"
+    - "&4Cereri de extindere &7– Necesită &fproshield.admin.expansions"
+    - "&4Controlul lumii &7– Necesită &fproshield.admin.worldcontrols"
+    - "&7Ambele funcții sunt gestionate prin GUI. Comenzile nu sunt necesare."

@@ -225,4 +225,47 @@ public class PlotManager {
     public World getWorld(String name) {
         return Bukkit.getWorld(name);
     }
+
+    /* -------------------------
+     * COMPATIBILITY SHIMS (for GUIManager 1.2.6)
+     * ------------------------- */
+
+    /** GUI expects claimChunk(owner, location) */
+    public Plot claimChunk(UUID owner, Location where) {
+        if (where == null) return null;
+        return createPlot(owner, where);
+    }
+
+    /** GUI expects unclaim(plot) */
+    public boolean unclaim(Plot plot) {
+        if (plot == null) return false;
+        deletePlot(plot.getId());
+        return true;
+    }
+
+    /** GUI expects save(plot) */
+    public void save(Plot plot) {
+        // Just save everything for now (simple + safe)
+        saveAll();
+    }
+
+    /** GUI expects findNearestClaim(location, radius) */
+    public Plot findNearestClaim(Location origin, int maxRadius) {
+        if (origin == null) return null;
+        Plot nearest = null;
+        double nearestDist = Double.MAX_VALUE;
+
+        for (Plot plot : plots.values()) {
+            if (!plot.getWorld().equalsIgnoreCase(origin.getWorld().getName())) continue;
+            Location center = plot.getCenter();
+            if (center == null) continue;
+
+            double dist = center.distance(origin);
+            if (dist < nearestDist && dist <= maxRadius) {
+                nearest = plot;
+                nearestDist = dist;
+            }
+        }
+        return nearest;
+    }
 }

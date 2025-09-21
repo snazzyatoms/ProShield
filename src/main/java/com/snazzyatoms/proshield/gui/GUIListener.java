@@ -17,12 +17,19 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
+/**
+ * GUIListener (ProShield v1.2.6)
+ *
+ * - Routes clicks to GUIManager handlers based on localized titles from messages.yml
+ * - Handles clearing of ephemeral state (role assignments, deny reasons) on close
+ * - Ensures back/exit buttons and all menus remain synchronized
+ */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
 
-    // Routing table for GUIs
+    // Routing table for GUIs (title → click handler)
     private final Map<String, BiConsumer<Player, InventoryClickEvent>> clickHandlers = new HashMap<>();
 
     public GUIListener(ProShield plugin) {
@@ -47,6 +54,9 @@ public class GUIListener implements Listener {
         return ChatColor.stripColor(raw).toLowerCase(Locale.ROOT).trim();
     }
 
+    /**
+     * Register all GUI menus and their handlers.
+     */
     private void registerHandlers() {
         clickHandlers.put(getGuiTitle("main", "proshield menu"), guiManager::handleMainClick);
         clickHandlers.put(getGuiTitle("trusted", "trusted players"), guiManager::handleTrustedClick);
@@ -112,6 +122,7 @@ public class GUIListener implements Listener {
         String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
         UUID uuid = player.getUniqueId();
 
+        // Cleanup ephemeral state when menus close
         if (lowerTitle.contains(getGuiTitle("assign-role", "assign role"))) {
             guiManager.clearPendingRoleAssignment(uuid);
             if (plugin.isDebugEnabled()) {

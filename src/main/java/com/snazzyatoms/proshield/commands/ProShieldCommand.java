@@ -154,7 +154,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             }
 
             default -> {
-                messages.send(sender, "&cUnknown subcommand.");
+                messages.send(sender, messages.getOrDefault("messages.error.unknown-subcommand", "&cUnknown subcommand."));
                 messages.sendList(sender, messages.getList("help.admin")); // fallback to admin help
             }
         }

@@ -1,9 +1,8 @@
 # ==========================================================
-# Mensagens ProShield (Português - Brasil)
-# Versão: 1.2.6 (Polido & Sincronizado)
+# Mensagens do ProShield
+# Versão: 1.2.6 (Polido e sincronizado)
 # ----------------------------------------------------------
-# - Funções e descrições totalmente personalizáveis
-# - Tradução adaptada para comunidades Minecraft BR
+# - Nomes e descrições de funções totalmente personalizáveis
 # ==========================================================
 
 messages:
@@ -12,33 +11,33 @@ messages:
 
   # --- Erros gerais ---
   error:
-    player-only: "&cSomente jogadores podem usar esta ação."
-    no-permission: "&cVocê não tem permissão para fazer isso."
-    inventory-full: "&cSeu inventário está cheio. Libere um espaço primeiro."
+    player-only: "&cApenas jogadores podem usar esta ação."
+    no-permission: "&cVocê não tem permissão para isso."
+    inventory-full: "&cSeu inventário está cheio. Liberte um espaço primeiro."
     block-break: "&cVocê não pode quebrar blocos aqui."
     block-place: "&cVocê não pode colocar blocos aqui."
     bucket-empty: "&cVocê não pode esvaziar baldes aqui."
     bucket-fill: "&cVocê não pode encher baldes aqui."
-    pvp: "&cO PvP está desativado neste claim."
+    pvp: "&cPvP está desativado neste claim."
 
   # --- Bússola ---
   compass:
     command-success: "&aVocê recebeu uma Bússola ProShield."
-    already-have: "&eVocê já possui uma Bússola ProShield."
+    already-have: "&eVocê já tem uma Bússola ProShield."
     lore:
-      - "&7Clique com o botão direito → abrir menu ProShield"
+      - "&7Clique direito → Abrir menu do ProShield"
       - "&7Gerencie seus claims, flags e jogadores confiáveis"
 
   # --- Admin / Sistema ---
   reloaded: "&aConfigurações do ProShield recarregadas."
 
   admin:
-    debug-on: "&eModo de depuração: &aATIVADO"
-    debug-off: "&eModo de depuração: &cDESATIVADO"
-    bypass-on: "&aBypass habilitado."
-    bypass-off: "&cBypass desabilitado."
+    debug-on: "&eModo debug: &aATIVADO"
+    debug-off: "&eModo debug: &cDESATIVADO"
+    bypass-on: "&aBypass ativado."
+    bypass-off: "&cBypass desativado."
 
-  # --- Transições de claim/região ---
+  # --- Transições de região ---
   show-wilderness: true
   admin-flag-chat: true
   enter-own: "&aVocê entrou no seu claim."
@@ -52,29 +51,29 @@ messages:
     request-sent: "&eSua solicitação de expansão de +{blocks} blocos foi enviada aos administradores."
     approved: "&aSua expansão de claim (+{blocks} blocos) foi aprovada!"
     denied: "&cSua solicitação de expansão foi negada: {reason}"
-    disabled: "&cAs solicitações de expansão estão desativadas neste servidor."
+    disabled: "&cSolicitações de expansão estão desativadas no servidor."
     cooldown-title: "&cTempo de espera ativo"
-    cooldown-active: "&7Você poderá solicitar novamente em &f{hours}h {minutes}m&7."
-    expired: "&eSua solicitação de expansão expirou após {days} dias sem resposta."
+    cooldown-active: "&7Você pode solicitar novamente em &f{hours}h {minutes}m&7."
+    expired: "&eSua solicitação de expansão expirou após {days} dias sem revisão."
 
   # --- Revisão de expansão (Admin GUI) ---
   expansion-admin:
     lore:
-      approve: "&aClique esquerdo: aprovar esta expansão"
-      deny: "&cClique direito: negar e escolher um motivo"
-      info: "&7Use o menu de motivos de negação para mensagens detalhadas"
+      approve: "&aClique esquerdo: Aprovar expansão"
+      deny: "&cClique direito: Negar e escolher motivo"
+      info: "&7Use o menu de motivos de negação para detalhes."
 
   # --- Motivos de negação ---
   deny-reasons:
     too-large: "&cA expansão solicitada é muito grande."
-    abusive: "&cSolicitação de expansão negada por abuso."
+    abusive: "&cSolicitação negada por uso abusivo."
     overlap: "&cA área solicitada se sobrepõe a outro claim."
-    custom-1: "&cAinda não há tempo de jogo suficiente para esta expansão."
+    custom-1: "&cVocê ainda não tem tempo de jogo suficiente para esta expansão."
     custom-2: "&cSeu claim já atingiu o tamanho máximo."
 
-  # --- Controles Mundiais ---
+  # --- Controles mundiais ---
   world-controls:
-    toggle: "&eO controle mundial &f{flag} &eagora está {state}."
+    toggle: "&eO controle {flag} &eagora está {state}."
     enabled: "&aATIVADO"
     disabled: "&cDESATIVADO"
 
@@ -82,23 +81,23 @@ messages:
   gui:
     back-button: "&eVoltar"
     back-lore:
-      - "&7Voltar ao menu anterior"
+      - "&7Retornar ao menu anterior"
     exit-button: "&cSair"
     exit-lore:
       - "&7Fechar este menu com segurança"
     titles:
       main: "&6Menu ProShield"
-      trusted: "&bJogadores Confiáveis"
-      assign-role: "&bAtribuir Função"
-      flags: "&eFlags do Claim"
-      admin: "&cFerramentas de Administração"
-      world-controls: "&cControles Mundiais"
-      deny-reasons: "&cMotivos de Negação"
-      request-expansion: "&aSolicitar Expansão"
-      expansion-requests: "&eSolicitações de Expansão"
-      expansion-history: "&7Histórico de Expansão"
+      trusted: "&bJogadores confiáveis"
+      assign-role: "&bAtribuir função"
+      flags: "&eFlags do claim"
+      admin: "&cFerramentas de administração"
+      world-controls: "&cControles mundiais"
+      deny-reasons: "&cMotivos de negação"
+      request-expansion: "&aSolicitar expansão"
+      expansion-requests: "&eSolicitações de expansão"
+      expansion-history: "&7Histórico de expansões"
 
-  # --- Funções (Nomes + Descrições) ---
+  # --- Funções ---
   roles:
     display:
       none: "&7Nenhum"
@@ -113,17 +112,17 @@ messages:
     lore:
       visitor:
         - "&7Função padrão para jogadores não confiáveis"
-        - "&cNão pode construir ou abrir contêineres"
+        - "&cNão pode construir nem abrir contêineres"
       member:
-        - "&7Função básica de confiança"
+        - "&7Função básica"
         - "&aPode abrir contêineres"
         - "&cNão pode construir nem alterar flags"
       trusted:
-        - "&7Função avançada de confiança"
-        - "&aAcesso quase total (exceto proprietário)"
+        - "&7Função avançada"
+        - "&aAcesso completo, exceto ações do proprietário"
       builder:
         - "&7Função de construção"
-        - "&aPode construir e quebrar blocos"
+        - "&aPode colocar e quebrar blocos"
         - "&cNão pode alterar flags"
       container:
         - "&7Função de armazenamento"
@@ -132,13 +131,13 @@ messages:
       moderator:
         - "&7Função de moderação"
         - "&aPode gerenciar funções e flags"
-        - "&cNão pode transferir o claim"
+        - "&cNão pode transferir propriedade"
       manager:
-        - "&7Função de alta gestão"
-        - "&aPode gerenciar funções, flags e transferir claim"
+        - "&7Função de gestão avançada"
+        - "&aPode gerenciar funções, flags e transferir propriedade"
       owner:
-        - "&cProprietário do Claim"
-        - "&aControle total"
+        - "&cProprietário do claim"
+        - "&aControle total do claim"
 
 # ==========================================================
 # Páginas de ajuda
@@ -146,27 +145,27 @@ messages:
 help:
   player:
     - "&3&lProShield &7— Guia do Jogador"
-    - "&aClique com o botão direito na Bússola ProShield &7→ abrir menu principal"
-    - "&bMenu Principal &7→ Claim, Informações, Unclaim, Jogadores Confiáveis, Flags"
-    - "&bJogadores Confiáveis &7→ Gerenciar funções e acessos"
-    - "&bFlags do Claim &7→ Ativar/desativar proteções"
-    - "&aSolicitar Expansão &7→ Pedir aos administradores para expandir o claim (se habilitado)"
-    - "&7Solicitações têm tempo de espera de &f{cooldown-hours}h &7(padrão)."
-    - "&7Todos os recursos usam GUI. Comandos só em caso de problema."
+    - "&aClique direito na Bússola ProShield &7→ Abrir menu principal"
+    - "&bMenu principal &7→ Reivindicar terreno, Info, Unclaim, Jogadores, Flags"
+    - "&bJogadores confiáveis &7→ Gerenciar funções e acesso"
+    - "&bFlags do claim &7→ Ativar/desativar proteções"
+    - "&aSolicitar expansão &7→ Pedir aos administradores para expandir seu claim"
+    - "&7Solicitações têm cooldown de &f{cooldown-hours}h&7."
+    - "&7Tudo é gerido por GUI. Comandos só se algo falhar."
 
   admin:
     - "&c&lProShield — Guia de Administração"
-    - "&cFerramentas GUI &7→ Reload, Debug, Bypass, Controles Mundiais"
-    - "&7Solicitações e controles exigem permissões avançadas."
-    - "&7Nota: tudo é feito via GUI. Comandos apenas em caso de falha."
-    - "&7Comandos de backup:"
-    - "&f/proshield reload &7→ Recarregar configs"
-    - "&f/proshield debug &7→ Alternar debug"
-    - "&f/proshield bypass &7→ Alternar bypass"
-    - "&f/proshield admin &7→ Abrir Admin Tools"
+    - "&cMenu Admin &7→ Recarregar, Debug, Bypass, Controles mundiais"
+    - "&7Expansões e controles exigem permissões elevadas."
+    - "&7Nota: Tudo é gerido por GUI. Comandos só se a GUI falhar."
+    - "&7Comandos de fallback:"
+    - "&f/proshield reload &7→ Recarregar configuração"
+    - "&f/proshield debug &7→ Ativar/desativar debug"
+    - "&f/proshield bypass &7→ Ativar/desativar bypass"
+    - "&f/proshield admin &7→ Abrir menu admin"
 
   senior:
-    - "&4&lFerramentas de Administração Avançada"
-    - "&4Solicitações de Expansão &7– requer &fproshield.admin.expansions"
-    - "&4Controles Mundiais &7– requer &fproshield.admin.worldcontrols"
-    - "&7Ambos os recursos usam GUI. Comandos são desnecessários."
+    - "&4&lFerramentas avançadas"
+    - "&4Solicitações de expansão &7– Requer &fproshield.admin.expansions"
+    - "&4Controles mundiais &7– Requer &fproshield.admin.worldcontrols"
+    - "&7Ambas funções são GUI. Não há necessidade de comandos."

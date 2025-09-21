@@ -70,26 +70,30 @@ public class PlotListener implements Listener {
         if (from != null && (to == null || !from.equals(to))) {
             String ownerName = resolveName(from.getOwner());
             if (from.getOwner().equals(playerId)) {
-                messages.send(player, messages.get("messages.leave-own"));
+                messages.send(player, messages.getOrDefault("messages.leave-own", "&7You left your claim."));
             } else {
-                messages.send(player, messages.get("messages.leave-other").replace("{owner}", ownerName));
+                messages.send(player,
+                        messages.getOrDefault("messages.leave-other", "&7You left {owner}'s claim.")
+                                .replace("{owner}", ownerName));
             }
         } else if (from == null && plugin.getConfig().getBoolean("messages.show-wilderness", true)) {
             // Leaving wilderness into claim handled below, so here only wilderness exit
-            messages.send(player, messages.get("messages.wilderness"));
+            messages.send(player, messages.getOrDefault("messages.wilderness", "&7You are in the wilderness."));
         }
 
         // Entering new plot
         if (to != null && (from == null || !from.equals(to))) {
             String ownerName = resolveName(to.getOwner());
             if (to.getOwner().equals(playerId)) {
-                messages.send(player, messages.get("messages.enter-own"));
+                messages.send(player, messages.getOrDefault("messages.enter-own", "&7You entered your claim."));
             } else {
-                messages.send(player, messages.get("messages.enter-other").replace("{owner}", ownerName));
+                messages.send(player,
+                        messages.getOrDefault("messages.enter-other", "&7You entered {owner}'s claim.")
+                                .replace("{owner}", ownerName));
             }
         } else if (to == null && plugin.getConfig().getBoolean("messages.show-wilderness", true)) {
             // Entering wilderness
-            messages.send(player, messages.get("messages.wilderness"));
+            messages.send(player, messages.getOrDefault("messages.wilderness", "&7You are in the wilderness."));
         }
 
         if (plugin.isDebugEnabled()) {

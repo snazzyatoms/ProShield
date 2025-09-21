@@ -17,26 +17,55 @@ public class MessagesUtil {
 
     private final ProShield plugin;
     private FileConfiguration msgs;
-    private final File messagesFile;
+    private File messagesFile;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        this.messagesFile = new File(plugin.getDataFolder(), "messages.yml");
         reload();
     }
 
-    /** Reloads messages.yml */
+    /** Reloads language file (messages_xx.yml) based on config.yml */
     public void reload() {
-        if (!messagesFile.exists()) {
-            plugin.saveResource("messages.yml", false);
-        }
-        this.msgs = YamlConfiguration.loadConfiguration(messagesFile);
+        // read chosen language from config.yml
+        String lang = plugin.getConfig().getString("settings.language", "en").toLowerCase(Locale.ROOT);
 
-        // Defaults from jar
-        InputStream defStream = plugin.getResource("messages.yml");
+        // /plugins/ProShield/languages/messages_xx.yml
+        File langFolder = new File(plugin.getDataFolder(), "languages");
+        if (!langFolder.exists()) {
+            langFolder.mkdirs();
+        }
+
+        String filename = lang.equals("en") ? "messages.yml" : "messages_" + lang + ".yml";
+        messagesFile = new File(langFolder, filename);
+
+        // If file doesn’t exist in /languages/, try to save a default copy from resources
+        if (!messagesFile.exists()) {
+            InputStream resource = plugin.getResource("languages/" + filename);
+            if (resource != null) {
+                plugin.saveResource("languages/" + filename, false);
+            } else if (!lang.equals("en")) {
+                // fallback: force English if no such language found
+                plugin.getLogger().warning("[ProShield] No translation found for '" + lang + "', falling back to English.");
+                messagesFile = new File(langFolder, "messages.yml");
+                if (!messagesFile.exists()) {
+                    plugin.saveResource("messages.yml", false);
+                }
+            }
+        }
+
+        // Load configuration
+        msgs = YamlConfiguration.loadConfiguration(messagesFile);
+
+        // Load defaults from jar (for missing keys)
+        InputStream defStream;
+        if (lang.equals("en")) {
+            defStream = plugin.getResource("messages.yml");
+        } else {
+            defStream = plugin.getResource("languages/" + filename);
+        }
         if (defStream != null) {
             YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream));
-            this.msgs.setDefaults(defConfig);
+            msgs.setDefaults(defConfig);
         }
     }
 

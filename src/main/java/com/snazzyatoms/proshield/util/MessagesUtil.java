@@ -1,151 +1,102 @@
+// src/main/java/com/snazzyatoms/proshield/util/MessagesUtil.java
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
-import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.*;
 
+/**
+ * MessagesUtil (ProShield v1.2.6)
+ *
+ * Handles:
+ *  - Loading and caching messages.yml values
+ *  - Color formatting (& → § codes)
+ *  - Safe fallback lookups
+ *  - Utility for lists and optional values
+ */
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private FileConfiguration msgs;
-    private File messagesFile;
+    private FileConfiguration config;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
         reload();
     }
 
-    /** Reloads language file (messages_xx.yml) based on config.yml */
+    /* -------------------
+     * Lifecycle
+     * ------------------- */
+
     public void reload() {
-        // normalize language code
-        String lang = plugin.getConfig().getString("settings.language", "en")
-                .toLowerCase(Locale.ROOT)
-                .replace("-", "_");
+        plugin.saveDefaultConfig(); // ensures config exists
+        plugin.reloadConfig();
+        this.config = plugin.getConfig();
+    }
 
-        File langFolder = new File(plugin.getDataFolder(), "languages");
-        if (!langFolder.exists()) langFolder.mkdirs();
+    /* -------------------
+     * Core Getters
+     * ------------------- */
 
-        // choose filename
-        String filename = lang.equals("en") ? "messages.yml" : "messages_" + lang + ".yml";
-        messagesFile = new File(langFolder, filename);
+    /** Get a colored message by key, with fallback. */
+    public String getOrDefault(String key, String fallback) {
+        String raw = config.getString(key, fallback);
+        if (raw == null || raw.isBlank()) raw = fallback;
+        return color(raw);
+    }
 
-        // ensure file exists
-        if (!messagesFile.exists()) {
-            InputStream resource = plugin.getResource("languages/" + filename);
-            if (resource != null) {
-                plugin.saveResource("languages/" + filename, false);
-            } else {
-                plugin.getLogger().warning("[ProShield] No translation for '" + lang + "', falling back to English.");
-                filename = "messages.yml";
-                messagesFile = new File(langFolder, filename);
-                if (!messagesFile.exists()) {
-                    plugin.saveResource("messages.yml", false);
-                }
+    /** Get a message by key, or null if not found. */
+    public String getOrNull(String key) {
+        String raw = config.getString(key, null);
+        return (raw == null || raw.isBlank()) ? null : color(raw);
+    }
+
+    /** Get a list of messages by key. */
+    public List<String> getList(String key) {
+        List<String> list = config.getStringList(key);
+        if (list == null || list.isEmpty()) return Collections.emptyList();
+        List<String> colored = new ArrayList<>();
+        for (String s : list) {
+            if (s != null && !s.isBlank()) {
+                colored.add(color(s));
             }
         }
+        return colored;
+    }
 
-        // load user config
-        msgs = YamlConfiguration.loadConfiguration(messagesFile);
+    /** Get all subkeys under a given path. */
+    public Set<String> getKeys(String path) {
+        if (config.isConfigurationSection(path)) {
+            return config.getConfigurationSection(path).getKeys(false);
+        }
+        return Collections.emptySet();
+    }
 
-        // load defaults from jar
-        InputStream defStream = plugin.getResource(lang.equals("en") ? "messages.yml" : "languages/" + filename);
-        if (defStream != null) {
-            YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream));
-            msgs.setDefaults(defConfig);
+    /* -------------------
+     * Sending Helpers
+     * ------------------- */
+
+    public void send(CommandSender sender, String msg) {
+        if (msg == null || msg.isBlank()) return;
+        sender.sendMessage(color(msg));
+    }
+
+    public void sendList(CommandSender sender, List<String> msgs) {
+        if (msgs == null || msgs.isEmpty()) return;
+        for (String m : msgs) {
+            send(sender, m);
         }
     }
 
-    public FileConfiguration getConfig() {
-        return msgs;
-    }
-
-    public void send(Player player, String message) {
-        if (player == null || message == null) return;
-        player.sendMessage(color(prefix() + message));
-    }
-
-    public void send(CommandSender sender, String message) {
-        if (sender == null || message == null) return;
-        sender.sendMessage(color(prefix() + message));
-    }
-
-    /** For pre-colored lines (strings coming from config help lists, etc.) */
-    public void sendRaw(CommandSender sender, String coloredLine) {
-        if (sender == null || coloredLine == null) return;
-        sender.sendMessage(color(coloredLine));
-    }
-
-    /** Send a list of lines (e.g., help pages) */
-    public void sendList(CommandSender sender, List<String> lines) {
-        if (sender == null || lines == null) return;
-        for (String line : colorList(lines)) {
-            sender.sendMessage(line);
-        }
-    }
-
-    /** Colorize every string in a list */
-    public List<String> colorList(List<String> list) {
-        if (list == null) return Collections.emptyList();
-        List<String> out = new ArrayList<>(list.size());
-        for (String s : list) out.add(color(s));
-        return out;
-    }
-
-    public void debug(String message) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().info(color(debugPrefix() + message));
-        }
-    }
+    /* -------------------
+     * Color Utility
+     * ------------------- */
 
     public String color(String input) {
-        return ChatColor.translateAlternateColorCodes('&', Objects.requireNonNullElse(input, ""));
-    }
-
-    private String prefix() {
-        return msgs.getString("prefix", "&3[ProShield]&r ");
-    }
-
-    private String debugPrefix() {
-        return msgs.getString("debug-prefix", "&8[Debug]&r ");
-    }
-
-    /** Get a colored string from messages.yml (or "" if missing) */
-    public String get(String path) {
-        String v = msgs.getString(path, "");
-        return color(v);
-    }
-
-    /** Overload: get with default fallback (colored). */
-    public String get(String path, String def) {
-        String v = msgs.getString(path);
-        return color(v != null ? v : def);
-    }
-
-    /** Preferred: fallback helper. */
-    public String getOrDefault(String path, String def) {
-        String v = msgs.getString(path);
-        return color(v == null || v.isEmpty() ? def : v);
-    }
-
-    /** Get a string list path from messages.yml */
-    public List<String> getList(String path) {
-        List<String> list = msgs.getStringList(path);
-        return list != null ? list : Collections.emptyList();
-    }
-
-    /** Get child keys (non-recursive) at a section path (used for deny reasons). */
-    public Set<String> getKeys(String path) {
-        ConfigurationSection sec = msgs.getConfigurationSection(path);
-        if (sec == null) return Collections.emptySet();
-        return sec.getKeys(false);
+        if (input == null) return "";
+        return ChatColor.translateAlternateColorCodes('&', input);
     }
 }

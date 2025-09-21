@@ -58,7 +58,7 @@ public class ProShield extends JavaPlugin {
     @Override
     public void onDisable() {
         // Save data safely
-        if (plotManager != null) plotManager.save();
+        if (plotManager != null) plotManager.saveAll();
         if (expansionRequestManager != null) expansionRequestManager.save();
 
         getLogger().info("[ProShield] Disabled cleanly.");

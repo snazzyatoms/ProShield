@@ -25,7 +25,7 @@ import java.time.Instant;
 import java.util.*;
 
 /**
- * GUIManager (ProShield v1.2.6 polished & synced)
+ * GUIManager (ProShield v1.2.6 polished, multilingual-ready)
  *
  * Menus:
  *  - Main
@@ -38,12 +38,7 @@ import java.util.*;
  *  - Expansion History
  *  - World Controls
  *
- * Sync (messages.yml):
- *  - Back/Exit buttons
- *  - Admin Tools buttons
- *  - Expansion admin lore
- *  - World Controls toggles
- *  - Notifications (reload/debug/bypass/etc.)
+ * All strings are pulled from messages.yml (or translations in /languages).
  */
 public class GUIManager {
 
@@ -79,13 +74,13 @@ public class GUIManager {
     private ItemStack backButton() {
         return simpleItem(Material.ARROW,
                 messages.getOrDefault("messages.gui.back-button", "&eBack"),
-                messages.getListOrDefault("messages.gui.back-lore", List.of("&7Return to previous menu")));
+                messages.getList("messages.gui.back-lore"));
     }
 
     private ItemStack exitButton() {
         return simpleItem(Material.BARRIER,
                 messages.getOrDefault("messages.gui.exit-button", "&cExit"),
-                messages.getListOrDefault("messages.gui.exit-lore", List.of("&7Close this menu safely")));
+                messages.getList("messages.gui.exit-lore"));
     }
 
     private void placeNavButtons(Inventory inv) {
@@ -173,24 +168,40 @@ public class GUIManager {
      * MAIN MENU
      * ============================ */
     public void openMain(Player player) {
-        String title = plugin.getConfig().getString("gui.menus.main.title", "&6ProShield Menu");
+        String title = messages.getOrDefault("messages.gui.titles.main", "&6ProShield Menu");
         int size = plugin.getConfig().getInt("gui.menus.main.size", 45);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        inv.setItem(10, simpleItem(Material.GRASS_BLOCK, "&aClaim Land", "&7Claim the chunk you are in."));
+        inv.setItem(10, simpleItem(Material.GRASS_BLOCK,
+                messages.getOrDefault("messages.gui.main.claim-land", "&aClaim Land"),
+                messages.getList("messages.gui.main.claim-land-lore")));
+
         inv.setItem(12, buildClaimInfoItem(player));
-        inv.setItem(14, simpleItem(Material.BARRIER, "&cUnclaim Land", "&7Remove your current claim."));
-        inv.setItem(16, simpleItem(Material.PLAYER_HEAD, "&bTrusted Players", "&7Manage trusted players & roles."));
-        inv.setItem(28, simpleItem(Material.REDSTONE_TORCH, "&eClaim Flags", "&7Toggle protection flags."));
+
+        inv.setItem(14, simpleItem(Material.BARRIER,
+                messages.getOrDefault("messages.gui.main.unclaim-land", "&cUnclaim Land"),
+                messages.getList("messages.gui.main.unclaim-land-lore")));
+
+        inv.setItem(16, simpleItem(Material.PLAYER_HEAD,
+                messages.getOrDefault("messages.gui.main.trusted-players", "&bTrusted Players"),
+                messages.getList("messages.gui.main.trusted-players-lore")));
+
+        inv.setItem(28, simpleItem(Material.REDSTONE_TORCH,
+                messages.getOrDefault("messages.gui.main.claim-flags", "&eClaim Flags"),
+                messages.getList("messages.gui.main.claim-flags-lore")));
 
         if (plugin.getConfig().getBoolean("claims.expansion.enabled", true)) {
-            inv.setItem(30, simpleItem(Material.EMERALD, "&aRequest Expansion", "&7Request to expand your claim."));
+            inv.setItem(30, simpleItem(Material.EMERALD,
+                    messages.getOrDefault("messages.gui.main.request-expansion", "&aRequest Expansion"),
+                    messages.getList("messages.gui.main.request-expansion-lore")));
         }
 
         if (player.hasPermission("proshield.admin")
                 || player.hasPermission("proshield.admin.expansions")
                 || player.hasPermission("proshield.admin.worldcontrols")) {
-            inv.setItem(32, simpleItem(Material.COMMAND_BLOCK, "&cAdmin Tools", "&7Admin-only controls."));
+            inv.setItem(32, simpleItem(Material.COMMAND_BLOCK,
+                    messages.getOrDefault("messages.gui.main.admin-tools", "&cAdmin Tools"),
+                    messages.getList("messages.gui.main.admin-tools-lore")));
         }
 
         placeNavButtons(inv);
@@ -205,11 +216,11 @@ public class GUIManager {
 
         if (name.contains("claim land")) {
             if (plotManager.getPlotByOwner(player.getUniqueId()) != null) {
-                messages.send(player, "&cYou already own a claim.");
+                messages.send(player, messages.get("messages.errors.already-claimed", "&cYou already own a claim."));
                 return;
             }
             plotManager.createPlot(player.getUniqueId(), player.getLocation());
-            messages.send(player, "&aClaim created for your current chunk.");
+            messages.send(player, messages.get("messages.claims.created", "&aClaim created for your current chunk."));
             clickTone(player);
             player.closeInventory();
 
@@ -217,9 +228,9 @@ public class GUIManager {
             Plot plot = plotManager.getPlotAt(player.getLocation());
             if (plot != null && (plot.getOwner().equals(player.getUniqueId()) || player.hasPermission("proshield.admin"))) {
                 plotManager.deletePlot(plot.getId());
-                messages.send(player, "&cYour claim has been unclaimed.");
+                messages.send(player, messages.get("messages.claims.unclaimed", "&cYour claim has been unclaimed."));
             } else {
-                messages.send(player, "&cYou are not the owner of this claim.");
+                messages.send(player, messages.get("messages.errors.not-owner", "&cYou are not the owner of this claim."));
             }
             clickTone(player);
             player.closeInventory();
@@ -256,7 +267,7 @@ public class GUIManager {
         List<String> lore = new ArrayList<>();
 
         if (plot == null) {
-            lore.add(messages.color("&7No claim here."));
+            lore.add(messages.get("messages.claims.no-claim-here", "&7No claim here."));
         } else {
             Map<String, String> info = plot.getInfo();
             for (Map.Entry<String, String> entry : info.entrySet()) {
@@ -264,7 +275,9 @@ public class GUIManager {
             }
         }
 
-        return simpleItem(Material.PAPER, "&eClaim Info", lore);
+        return simpleItem(Material.PAPER,
+                messages.get("messages.gui.main.claim-info", "&eClaim Info"),
+                lore);
     }
 
     private boolean getEffectiveClaimFlag(Plot plot, String key) {
@@ -277,7 +290,7 @@ public class GUIManager {
      * PLAYER EXPANSION REQUEST
      * ============================ */
     public void openPlayerExpansionRequest(Player player) {
-        String title = plugin.getConfig().getString("gui.menus.player-expansion.title", "&aRequest Expansion");
+        String title = messages.getOrDefault("messages.gui.titles.player-expansion", "&aRequest Expansion");
         int size = plugin.getConfig().getInt("gui.menus.player-expansion.size", 27);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
@@ -285,9 +298,9 @@ public class GUIManager {
         inv.setItem(10, simpleItem(Material.LIME_DYE, "&f+16", "&7Increase by 16 blocks"));
         inv.setItem(11, simpleItem(Material.LIME_DYE, "&f+32", "&7Increase by 32 blocks"));
         inv.setItem(12, simpleItem(Material.LIME_DYE, "&f+64", "&7Increase by 64 blocks"));
-        inv.setItem(13, simpleItem(Material.EMERALD_BLOCK, "&aSubmit Request",
-                "&7Current amount: &f" + current,
-                "&7Click to submit"));
+        inv.setItem(13, simpleItem(Material.EMERALD_BLOCK,
+                messages.get("messages.gui.player-expansion.submit", "&aSubmit Request"),
+                Arrays.asList("&7Current amount: &f" + current, "&7Click to submit")));
         inv.setItem(14, simpleItem(Material.RED_DYE, "&f-16", "&7Decrease by 16 blocks"));
         inv.setItem(15, simpleItem(Material.RED_DYE, "&f-32", "&7Decrease by 32 blocks"));
         inv.setItem(16, simpleItem(Material.RED_DYE, "&f-64", "&7Decrease by 64 blocks"));
@@ -334,13 +347,15 @@ public class GUIManager {
      * TRUSTED PLAYERS + ROLES
      * ============================ */
     public void openTrusted(Player player) {
-        String title = plugin.getConfig().getString("gui.menus.roles.title", "&bTrusted Players");
+        String title = messages.getOrDefault("messages.gui.titles.roles", "&bTrusted Players");
         int size = plugin.getConfig().getInt("gui.menus.roles.size", 45);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) {
-            inv.setItem(13, simpleItem(Material.BARRIER, "&cNo claim here", "&7Stand inside your claim to manage roles."));
+            inv.setItem(13, simpleItem(Material.BARRIER,
+                    messages.get("messages.errors.no-claim-here", "&cNo claim here"),
+                    Arrays.asList("&7Stand inside your claim to manage roles.")));
             placeNavButtons(inv);
             player.openInventory(inv);
             return;
@@ -356,8 +371,8 @@ public class GUIManager {
             ClaimRole role = roleManager.getRole(uuid, plot);
             List<String> lore = new ArrayList<>();
             lore.add(messages.color("&7Role: &b" + role.getDisplayName()));
-            lore.add(messages.color("&aLeft-click: Assign new role"));
-            lore.add(messages.color("&cRight-click: Untrust"));
+            lore.add(messages.get("messages.gui.roles.assign-hint", "&aLeft-click: Assign new role"));
+            lore.add(messages.get("messages.gui.roles.untrust-hint", "&cRight-click: Untrust"));
             lore.add(TAG_UUID + uuid);
 
             ItemStack head = simpleItem(Material.PLAYER_HEAD, "&f" + display, lore);
@@ -388,14 +403,15 @@ public class GUIManager {
             roleManager.setRole(plot, targetUuid, ClaimRole.NONE);
             String name = Optional.ofNullable(Bukkit.getOfflinePlayer(targetUuid).getName())
                     .orElse(targetUuid.toString().substring(0, 8));
-            messages.send(player, "&cUntrusted &f" + name);
+            messages.send(player, messages.get("messages.roles.untrusted", "&cUntrusted &f{player}")
+                    .replace("{player}", name));
             clickTone(player);
             openTrusted(player);
         }
     }
 
     public void openAssignRole(Player actor, UUID targetUuid) {
-        String title = plugin.getConfig().getString("gui.menus.assign-role.title", "&bAssign Role");
+        String title = messages.getOrDefault("messages.gui.titles.assign-role", "&bAssign Role");
         int size = plugin.getConfig().getInt("gui.menus.assign-role.size", 45);
         Inventory inv = Bukkit.createInventory(actor, size, messages.color(title));
 
@@ -403,11 +419,8 @@ public class GUIManager {
         for (ClaimRole role : ClaimRole.values()) {
             if (role == ClaimRole.NONE || role == ClaimRole.OWNER) continue;
 
-            // Display name from messages.yml
             String displayName = role.getDisplayName();
-
-            // Lore from messages.yml
-            List<String> lore = messages.getListOrNull("messages.roles.lore." + role.name().toLowerCase(Locale.ROOT));
+            List<String> lore = messages.getList("messages.roles.lore." + role.name().toLowerCase(Locale.ROOT));
             if (lore == null || lore.isEmpty()) {
                 lore = new ArrayList<>();
                 lore.add("&7Click to assign this role");
@@ -436,13 +449,13 @@ public class GUIManager {
         ClaimRole role = ClaimRole.fromName(roleName);
 
         if (role == ClaimRole.NONE || role == ClaimRole.OWNER) {
-            messages.send(player, "&cInvalid role selection.");
+            messages.send(player, messages.get("messages.errors.invalid-role", "&cInvalid role selection."));
             return;
         }
 
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) {
-            messages.send(player, "&cNo claim found here.");
+            messages.send(player, messages.get("messages.errors.no-claim-here", "&cNo claim found here."));
             return;
         }
 
@@ -451,7 +464,9 @@ public class GUIManager {
         String targetName = Optional.ofNullable(Bukkit.getOfflinePlayer(targetUuid).getName())
                 .orElse(targetUuid.toString().substring(0, 8));
 
-        messages.send(player, "&aAssigned &f" + targetName + " &ato role &f" + role.getDisplayName() + "&a.");
+        messages.send(player, messages.get("messages.roles.assigned", "&aAssigned &f{player} &ato role &f{role}&a.")
+                .replace("{player}", targetName)
+                .replace("{role}", role.getDisplayName()));
         clickTone(player);
         openTrusted(player);
     }
@@ -464,19 +479,20 @@ public class GUIManager {
      * FLAGS (Player Claim)
      * ============================ */
     public void openFlags(Player player) {
-        // Placeholder - implement claim flag menu
-        String title = plugin.getConfig().getString("gui.menus.flags.title", "&eClaim Flags");
+        String title = messages.getOrDefault("messages.gui.titles.flags", "&eClaim Flags");
         int size = plugin.getConfig().getInt("gui.menus.flags.size", 27);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) {
-            inv.setItem(13, simpleItem(Material.BARRIER, "&cNo claim here", "&7Stand inside your claim to manage flags."));
+            inv.setItem(13, simpleItem(Material.BARRIER,
+                    messages.get("messages.errors.no-claim-here", "&cNo claim here"),
+                    Arrays.asList("&7Stand inside your claim to manage flags.")));
         } else {
-            // Example: PvP flag toggle
             boolean pvp = getEffectiveClaimFlag(plot, "pvp");
-            inv.setItem(11, simpleItem(Material.DIAMOND_SWORD, "&fPvP: " + (pvp ? "&aON" : "&cOFF"),
-                    "&7Toggle PvP inside this claim",
+            inv.setItem(11, simpleItem(Material.DIAMOND_SWORD,
+                    messages.get("messages.flags.pvp", "&fPvP: ") + (pvp ? "&aON" : "&cOFF"),
+                    Arrays.asList(messages.get("messages.flags.pvp-lore", "&7Toggle PvP inside this claim")),
                     TAG_CFLAG + "pvp"));
         }
 
@@ -497,7 +513,9 @@ public class GUIManager {
                 boolean current = getEffectiveClaimFlag(plot, flagKey);
                 plot.setFlag(flagKey, !current);
                 plotManager.saveAll();
-                messages.send(player, "&eToggled &f" + flagKey + " &eto " + (!current ? "&aON" : "&cOFF"));
+                messages.send(player, messages.get("messages.flags.toggled", "&eToggled &f{flag} &eto {state}")
+                        .replace("{flag}", flagKey)
+                        .replace("{state}", !current ? "&aON" : "&cOFF"));
                 clickTone(player);
                 openFlags(player);
             }
@@ -508,14 +526,22 @@ public class GUIManager {
      * ADMIN TOOLS
      * ============================ */
     public void openAdminTools(Player player) {
-        String title = plugin.getConfig().getString("gui.menus.admin.title", "&cAdmin Tools");
-        int size = plugin.getConfig().getInt("gui.menus.admin.size", 27);
+        String title = messages.getOrDefault("messages.gui.titles.admin-tools", "&cAdmin Tools");
+        int size = plugin.getConfig().getInt("gui.menus.admin-tools.size", 27);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        inv.setItem(10, simpleItem(Material.BOOK, "&eReload Config", "&7Reloads all configuration files."));
-        inv.setItem(12, simpleItem(Material.REDSTONE_TORCH, "&cToggle Debug", "&7Enable/disable debug mode."));
-        inv.setItem(14, simpleItem(Material.FEATHER, "&aToggle Bypass", "&7Enable/disable admin bypass."));
-        inv.setItem(16, simpleItem(Material.NETHER_STAR, "&dWorld Controls", "&7Manage world-level flags."));
+        inv.setItem(10, simpleItem(Material.BOOK,
+                messages.get("messages.gui.admin.reload", "&eReload Config"),
+                Arrays.asList("&7Reloads all configuration files.")));
+        inv.setItem(12, simpleItem(Material.REDSTONE_TORCH,
+                messages.get("messages.gui.admin.debug", "&cToggle Debug"),
+                Arrays.asList("&7Enable/disable debug mode.")));
+        inv.setItem(14, simpleItem(Material.FEATHER,
+                messages.get("messages.gui.admin.bypass", "&aToggle Bypass"),
+                Arrays.asList("&7Enable/disable admin bypass.")));
+        inv.setItem(16, simpleItem(Material.NETHER_STAR,
+                messages.get("messages.gui.admin.world-controls", "&dWorld Controls"),
+                Arrays.asList("&7Manage world-level flags.")));
 
         placeNavButtons(inv);
         player.openInventory(inv);
@@ -531,15 +557,19 @@ public class GUIManager {
 
         if (name.contains("reload")) {
             plugin.reloadConfig();
-            messages.send(player, "&aProShield configuration reloaded.");
+            messages.send(player, messages.get("messages.admin.reloaded", "&aProShield configuration reloaded."));
             clickTone(player);
         } else if (name.contains("debug")) {
             plugin.toggleDebug();
-            messages.send(player, plugin.isDebugEnabled() ? "&eDebug mode: &aENABLED" : "&eDebug mode: &cDISABLED");
+            messages.send(player, plugin.isDebugEnabled()
+                    ? messages.get("messages.admin.debug-enabled", "&eDebug mode: &aENABLED")
+                    : messages.get("messages.admin.debug-disabled", "&eDebug mode: &cDISABLED"));
             clickTone(player);
         } else if (name.contains("bypass")) {
             boolean newState = plugin.toggleBypass(player.getUniqueId());
-            messages.send(player, newState ? "&aBypass enabled." : "&cBypass disabled.");
+            messages.send(player, newState
+                    ? messages.get("messages.admin.bypass-enabled", "&aBypass enabled.")
+                    : messages.get("messages.admin.bypass-disabled", "&cBypass disabled."));
             clickTone(player);
         } else if (name.contains("world controls")) {
             clickTone(player);
@@ -551,14 +581,14 @@ public class GUIManager {
      * WORLD CONTROLS (Admin)
      * ============================ */
     public void openWorldControls(Player player) {
-        String title = plugin.getConfig().getString("gui.menus.world-controls.title", "&cWorld Controls");
+        String title = messages.getOrDefault("messages.gui.titles.world-controls", "&cWorld Controls");
         int size = plugin.getConfig().getInt("gui.menus.world-controls.size", 27);
         Inventory inv = Bukkit.createInventory(player, size, messages.color(title));
 
-        // Example: toggle PvP globally
         boolean globalPvp = plugin.getConfig().getBoolean("world.flags.pvp", true);
-        inv.setItem(11, simpleItem(Material.DIAMOND_SWORD, "&fGlobal PvP: " + (globalPvp ? "&aON" : "&cOFF"),
-                "&7Toggle PvP across the entire world",
+        inv.setItem(11, simpleItem(Material.DIAMOND_SWORD,
+                messages.get("messages.world.pvp", "&fGlobal PvP: ") + (globalPvp ? "&aON" : "&cOFF"),
+                Arrays.asList(messages.get("messages.world.pvp-lore", "&7Toggle PvP across the entire world")),
                 TAG_WCTRL + "pvp"));
 
         placeNavButtons(inv);
@@ -576,7 +606,9 @@ public class GUIManager {
             boolean current = plugin.getConfig().getBoolean("world.flags." + flagKey, true);
             plugin.getConfig().set("world.flags." + flagKey, !current);
             plugin.saveConfig();
-            messages.send(player, "&eWorld control &f" + flagKey + " &eis now " + (!current ? "&aENABLED" : "&cDISABLED"));
+            messages.send(player, messages.get("messages.world.toggled", "&eWorld control &f{flag} &eis now {state}")
+                    .replace("{flag}", flagKey)
+                    .replace("{state}", !current ? "&aENABLED" : "&cDISABLED"));
             clickTone(player);
             openWorldControls(player);
         }

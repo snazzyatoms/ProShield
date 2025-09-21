@@ -19,9 +19,7 @@ import java.util.UUID;
  * - Tracks entering/leaving claims and wilderness
  * - Syncs with messages.yml for all transitions
  * - Respects config toggles (show-wilderness, admin-flag-chat)
- * - Enforces safezone vs. wilderness logic:
- *      Claims → Safezone (PvP off, protected)
- *      Wilderness → Vanilla (PvP on, unprotected)
+ * - Enforces safezone vs. wilderness logic
  * - Uses caching to avoid spam
  */
 public class PlotListener implements Listener {
@@ -77,7 +75,6 @@ public class PlotListener implements Listener {
                                 .replace("{owner}", ownerName));
             }
         } else if (from == null && plugin.getConfig().getBoolean("messages.show-wilderness", true)) {
-            // Leaving wilderness into claim handled below, so here only wilderness exit
             messages.send(player, messages.getOrDefault("messages.wilderness", "&7You are in the wilderness."));
         }
 
@@ -92,15 +89,13 @@ public class PlotListener implements Listener {
                                 .replace("{owner}", ownerName));
             }
         } else if (to == null && plugin.getConfig().getBoolean("messages.show-wilderness", true)) {
-            // Entering wilderness
             messages.send(player, messages.getOrDefault("messages.wilderness", "&7You are in the wilderness."));
         }
 
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().info("[PlotListener] " + player.getName() +
-                    " moved from " + (from != null ? "claim " + from.getId() : "wilderness") +
-                    " → " + (to != null ? "claim " + to.getId() : "wilderness"));
-        }
+        debug(player.getName() + " moved from " +
+                (from != null ? "claim " + from.getId() : "wilderness") +
+                " → " +
+                (to != null ? "claim " + to.getId() : "wilderness"));
     }
 
     /**
@@ -121,8 +116,6 @@ public class PlotListener implements Listener {
 
     /**
      * Utility: Check if player is protected inside this plot.
-     * - True for claim owner
-     * - True for trusted roles
      */
     public boolean isProtected(Player player, Plot plot) {
         if (plot == null || player == null) return false;
@@ -137,5 +130,14 @@ public class PlotListener implements Listener {
     public void clearCaches() {
         lastPlotCache.clear();
         nameCache.clear();
+    }
+
+    /**
+     * Debug logger for PlotListener.
+     */
+    private void debug(String msg) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[PlotListener] " + msg);
+        }
     }
 }

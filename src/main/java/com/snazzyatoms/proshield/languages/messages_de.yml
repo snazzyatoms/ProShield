@@ -1,0 +1,171 @@
+# =================================================
+# ProShield-Nachrichten
+# Version: 1.2.6 (poliert und synchronisiert)
+# -----------------------------------------------------
+# - Rollendisplay-Namen + Überlieferungen sind jetzt vollständig anpassbar
+# =================================================
+
+Nachrichten:
+  Präfix: "&3[ProShield]&r "
+  Debug-Präfix: "&8[Debug]&r "
+
+  # --- Allgemeine Fehler ---
+  Fehler:
+    nur für Spieler: „&cNur Spieler können diese Aktion verwenden.“
+    keine Erlaubnis: „&cSie haben keine Erlaubnis, dies zu tun.“
+    inventory-full: "&cIhr Inventar ist voll. Räumen Sie zuerst einen Schlitz frei."
+    Blockbruch: „&cHier können Sie keine Blöcke brechen.“
+    block-place: „&cHier können Sie keine Blöcke platzieren.“
+    Bucket-Leer: „&cHier können Sie keine Buckets leeren.“
+    Eimerfüllung: „&cHier können Sie keine Eimer füllen.“
+    pvp: „&cPvP ist in diesem Anspruch deaktiviert.“
+
+  # --- Kompass ---
+  Kompass:
+    Befehlserfolg: „&aEin ProShield-Kompass wurde Ihnen gegeben.“
+    bereits vorhanden: „&eSie haben bereits einen ProShield-Kompass.“
+    Überlieferung:
+      - „&7Rechtsklick zum Öffnen des ProShield-Menüs“
+      - „&7Verwalten Sie Ihre Ansprüche, Flaggen und vertrauenswürdigen Spieler“
+
+  # --- Admin / System ---
+  neu geladen: „&aProShield-Konfiguration neu geladen.“
+
+  Administrator:
+    Debug-on: "&eDebug-Modus: &aENABLED"
+    Debug-Off: "&eDebug-Modus: &cDISABLED"
+    Bypass-On: „&aBypass aktiviert.“
+    Bypass-Off: „&cBypass deaktiviert.“
+
+  # --- Anspruchs-/Regionalübergänge ---
+  Show-Wildnis: wahr
+  Admin-Flag-Chat: wahr
+  enter-own: „&aSie haben Ihren Anspruch eingegeben.“
+  enter-other: "&aSie haben den Anspruch {Eigentümer} eingegeben."
+  Leave-own: „&cSie haben Ihren Anspruch hinterlassen.“
+  leave-other: „&cSie haben den Anspruch des {Eigentümers} hinterlassen.“
+  Wildnis: „&7Du bist in die Wildnis eingetreten.“
+
+  # -- Erweiterungsanfragen (Player) --
+  Erweiterung:
+    request-sent: „&eIhre Erweiterungsanforderung für +{blocks}-Blöcke wurde an Administratoren gesendet.“
+    genehmigt: „&aIhre Anspruchserweiterung (+{blocks} Blöcke) wurde genehmigt!“
+    abgelehnt: „&cIhre Erweiterungsanfrage wurde abgelehnt: {Grund}“
+    deaktiviert: „&cExpansion-Anfragen werden vom Server deaktiviert.“
+    Abkühltitel: „&cAbkühlung aktiv“
+    Abkühlung-aktiv: "&7Sie können erneut in &f{Stunden}h {Minuten}m&7 anfordern"
+    abgelaufen: „&eIhre Erweiterungsanforderung ist nach {days} Tagen ohne Überprüfung abgelaufen.“
+
+  # --- Erweiterungsüberprüfung (Admin-GUI) ---
+  Erweiterungsadministrator:
+    Überlieferung:
+      genehmigen: "&aLinksklick: Genehmigen Sie diese Erweiterung"
+      leugnen: „&cRechtsklick: Leugnen und einen Grund auswählen“
+      Info: "&7Verwenden Sie das Menü Ablehnungsgründe für detaillierte Ablehnungsnachrichten"
+
+  # --- Gründe leugnen ---
+  Ablehnungsgründe:
+    zu groß: „Die angeforderte &c-Erweiterung ist zu groß.“
+    missbräuchlich: „&cErweiterungsantrag wegen Missbrauchs abgelehnt.“
+    Überlappung: „Der angeforderte Bereich überschneidet sich mit einem bestehenden Anspruch.“
+    custom-1: „&cNoch nicht genug Spielzeit für diese Erweiterung.“
+    custom-2: „&cIhr Anspruch hat bereits die maximale Größe erreicht.“
+
+  # --- Weltweite Kontrollen ---
+  Weltkontrolle:
+    Umschalten: "&eWorld-Steuerung &f{flag} &eis jetzt {state}."
+    aktiviert: "&aENABLED"
+    deaktiviert: "&cDISABLED"
+
+  # - GUI Navigation ---
+  gui:
+    Zurück-Taste: "&eBack"
+    Rückgeschichte:
+      - "&7Zurück zum vorherigen Menü"
+    Exit-Button: "&cExit"
+    Ausstiegsgeschichte:
+      - „&7Schließen Sie dieses Menü sicher“
+    Titel:
+      Haupt: "&6ProShield-Menü"
+      vertrauenswürdig: „&bTrusted Players“
+      Rolle zuweisen: "&bRolle zuweisen"
+      Flaggen: „&eClaim-Flaggen“
+      admin: "&cAdmin Tools"
+      Weltkontrollen: „&cWorld Controls“
+      Ablehnungsgründe: „&cAblehnungsgründe“
+      Anfrageerweiterung: „&aRequest-Erweiterung“
+      Erweiterungsanfragen: „&eExpansion Requests“
+      Erweiterungsgeschichte: "&7Erweiterungsgeschichte"
+
+  # --- Rollendisplay-Namen und Überlieferungen (NEU) ---
+  Rollen:
+    Anzeige:
+      keine: "&7Keine"
+      Besucher: "&7Visitor"
+      Mitglied: "&aMitglied"
+      vertrauenswürdig: "&bTrusted"
+      Builder: "&2Builder"
+      Container: "&3Container"
+      Moderator: "&eModerator"
+      Manager: "&6Manager"
+      Eigentümer: "&cOwner"
+    Überlieferung:
+      Besucher:
+        - „&7Standardrolle für nicht vertrauenswürdige Spieler“
+        - „&cCannot build or open container“
+      Mitglied:
+        - „&7Grundlegende vertrauenswürdige Rolle“
+        - „&aCan-Container öffnen“
+        - „&cFlags können nicht erstellt oder umgeschaltet werden“
+      vertrauenswürdig:
+        - „&7Erweiterte vertrauenswürdige Rolle“
+        - „&aVollständiger Zugriff außer Aktionen des Anspruchsinhabers“
+      Baumeister:
+        - "&7Baurolle"
+        - „&aKann Blöcke bauen und zerstören“
+        - „&cFlags können nicht umgeschaltet werden“
+      Behälter:
+        - "&7Speicherrolle"
+        - „&aKann nur Container öffnen“
+        - „&cKann nicht erstellt oder unterbrochen werden“
+      Moderator:
+        - "&7Managementrolle"
+        - „&aCan verwaltet Rollen und Flags“
+        - „&cEigentum kann nicht übertragen werden“
+      Manager:
+        - „&7Hochrangige Managementrolle“
+        - „&aCan verwaltet Rollen, Flags und überträgt Eigentum“
+      Eigentümer:
+        - "&cClaim-Eigentümer"
+        - „&aVollständige Kontrolle über den Anspruch“
+
+# =================================================
+# Hilfeseiten
+# =================================================
+Hilfe:
+  Spieler:
+    - „&3&lProShield &7— Spielerhandbuch“
+    - „&aKlicken Sie mit der rechten Maustaste auf Ihren ProShield-Kompass &7→ Öffnen Sie das Hauptmenü“
+    - „&bHauptmenü &7→ Land beanspruchen, Informationen, Nicht beanspruchen, Vertrauenswürdige Spieler, Flaggen beanspruchen“
+    - „&bTrusted Players &7→ Rollen und Zugriff verwalten“
+    - „&bClaim Flags &7→ Toggle-Schutz“
+    - „&aRequest-Erweiterung &7→ Bitten Sie Administratoren, Ihren Anspruch zu erweitern (falls aktiviert)“
+    - „&7Erweiterungsanfragen haben eine Abklingzeit von &f{cooldown-hours}h &7(Standard).“
+    - „&7Alle Funktionen sind GUI-gesteuert. Befehle werden nur benötigt, wenn etwas kaputt geht.“
+
+  Administrator:
+    - "&c&lProShield — Admin-Handbuch"
+    - „&cAdmin Tools GUI &7→ Neuladen, Debuggen, Umgehen, Weltsteuerung“
+    - „&7Erweiterungsanfragen und Weltkontrollen erfordern höhere Berechtigungen.“
+    - „&7Hinweis: Alle Aktionen sind GUI-gesteuert. Verwenden Sie Befehle nur, wenn die GUI nicht verfügbar ist."
+    - "&7Fallback-Befehle (nur für Administratoren):"
+    - „&f/proshield reload &7→ Konfigurationen neu laden“
+    - „&f/proshield debug &7→ Debug-Modus umschalten“
+    - „&f/proshield-Bypass &7→ Admin-Bypass umschalten“
+    - „&f/proshield admin &7→ Öffnen Sie die GUI der Admin Tools (dasselbe wie Compass)“
+
+  Senior:
+    - „&4&lSenior Admin Tools“
+    - „&4Erweiterungsanfragen &7– Erfordert &fproshield.admin.expansions“
+    - „&4World Controls &7– Erfordert &fproshield.admin.worldcontrols“
+    - „&7Beide Funktionen sind GUI-gesteuert. Befehle sind unnötig.“

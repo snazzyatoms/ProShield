@@ -1,15 +1,15 @@
+// src/main/java/com/snazzyatoms/proshield/expansions/ExpansionRequestManager.java
 package com.snazzyatoms.proshield.expansions;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
  * Handles:
  *  - Creating new expansion requests
  *  - Approving / denying requests with reasons
- *  - Auto-expiring requests after configurable days
  *  - Browsing history and pending lists
  *  - Persistent storage in expansions.yml (survives crash/restore)
+ *  - Expiry system with daily cleanup task
  */
 public class ExpansionRequestManager {
 
@@ -37,11 +37,14 @@ public class ExpansionRequestManager {
     private File storeFile;
     private YamlConfiguration store;
 
+    /** Expiry duration (7 days default, configurable later) */
+    private static final Duration EXPIRY_DURATION = Duration.ofDays(7);
+
     public ExpansionRequestManager(ProShield plugin) {
         this.plugin = plugin;
         initStore();
-        load(); // auto-load from disk
-        scheduleExpiryTask(); // daily expiry sweep
+        load();
+        scheduleExpirySweep();
     }
 
     /* -------------------
@@ -97,30 +100,48 @@ public class ExpansionRequestManager {
                 .collect(Collectors.toList());
     }
 
+    /** Get all requests for one player. */
+    public List<ExpansionRequest> getAllRequestsFor(UUID requester) {
+        return getRequests(requester).stream()
+                .sorted(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /** Get latest request for a player (or null). */
+    public ExpansionRequest getLatestFor(UUID requester) {
+        return getRequests(requester).stream()
+                .max(Comparator.comparing(ExpansionRequest::getCreatedAt))
+                .orElse(null);
+    }
+
     /** Get only pending requests globally. */
     public List<ExpansionRequest> getPendingRequests() {
         return getAllRequests().stream()
-                .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
+                .filter(ExpansionRequest::isPending)
                 .collect(Collectors.toList());
     }
 
     /** Get only pending requests for one player. */
     public List<ExpansionRequest> getPendingRequestsFor(UUID requester) {
         return getRequests(requester).stream()
-                .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
+                .filter(ExpansionRequest::isPending)
                 .collect(Collectors.toList());
     }
 
     /** Get non-pending history for one player. */
     public List<ExpansionRequest> getHistoryFor(UUID requester) {
         return getRequests(requester).stream()
-                .filter(r -> r.getStatus() != ExpansionRequest.Status.PENDING)
+                .filter(r -> !r.isPending())
                 .sorted(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed())
                 .collect(Collectors.toList());
     }
 
     public ExpansionRequest getById(UUID id) {
         return byId.get(id);
+    }
+
+    public ExpansionRequest findById(UUID id) {
+        return getById(id);
     }
 
     /* -------------------
@@ -134,16 +155,6 @@ public class ExpansionRequestManager {
         req.setReviewedAt(Instant.now());
         req.setDenialReason(null);
         save();
-
-        // notify if online
-        Player p = Bukkit.getPlayer(req.getRequester());
-        if (p != null && p.isOnline()) {
-            MessagesUtil mu = plugin.getMessagesUtil();
-            mu.send(p, mu.getOrDefault("messages.expansion.approved",
-                    "&aYour claim expansion (+{blocks} blocks) was approved!")
-                    .replace("{blocks}", String.valueOf(req.getAmount())));
-        }
-
         plugin.getLogger().info("[ProShield] Approved expansion request from "
                 + req.getRequester() + " for +" + req.getAmount());
     }
@@ -155,16 +166,6 @@ public class ExpansionRequestManager {
         req.setReviewedAt(Instant.now());
         req.setDenialReason(reason);
         save();
-
-        // notify if online
-        Player p = Bukkit.getPlayer(req.getRequester());
-        if (p != null && p.isOnline()) {
-            MessagesUtil mu = plugin.getMessagesUtil();
-            mu.send(p, mu.getOrDefault("messages.expansion.denied",
-                    "&cYour expansion request was denied: {reason}")
-                    .replace("{reason}", reason));
-        }
-
         plugin.getLogger().info("[ProShield] Denied expansion request from "
                 + req.getRequester() + " (Reason: " + reason + ")");
     }
@@ -173,35 +174,29 @@ public class ExpansionRequestManager {
      * Expiry System
      * ------------------- */
 
-    /** Run once per day to expire old requests. */
-    public void scheduleExpiryTask() {
-        long ticksPerDay = 20L * 60L * 60L * 24L;
-        Bukkit.getScheduler().runTaskTimer(plugin, this::runExpirySweep, ticksPerDay, ticksPerDay);
+    private void scheduleExpirySweep() {
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::sweepExpiredRequests,
+                20L * 60 * 60 * 24,   // every 24h
+                20L * 60 * 60 * 24);
     }
 
-    /** Expire pending requests older than expire-days. */
-    public void runExpirySweep() {
-        int expireDays = plugin.getConfig().getInt("claims.expansion.expire-days", 30);
-        Instant cutoff = Instant.now().minusSeconds(expireDays * 86400L);
+    /** Sweep expired requests daily */
+    private synchronized void sweepExpiredRequests() {
+        Instant now = Instant.now();
+        int expiredCount = 0;
 
-        for (ExpansionRequest req : getPendingRequests()) {
-            if (req.getCreatedAt().isBefore(cutoff)) {
+        for (ExpansionRequest req : getAllRequests()) {
+            if (req.isPending() && Duration.between(req.getCreatedAt(), now).compareTo(EXPIRY_DURATION) > 0) {
                 req.setStatus(ExpansionRequest.Status.EXPIRED);
-                req.setReviewedAt(Instant.now());
-                save();
-
-                // notify requester if online
-                Player p = Bukkit.getPlayer(req.getRequester());
-                if (p != null && p.isOnline()) {
-                    MessagesUtil mu = plugin.getMessagesUtil();
-                    mu.send(p, mu.getOrDefault("messages.expansion.expired",
-                            "&eYour expansion request has expired after {days} days without review.")
-                            .replace("{days}", String.valueOf(expireDays)));
-                }
-
-                plugin.getLogger().info("[ProShield] Expired expansion request from "
-                        + req.getRequester() + " (+" + req.getAmount() + ")");
+                req.setReviewedAt(now);
+                req.setDenialReason("Expired (no action taken)");
+                expiredCount++;
             }
+        }
+
+        if (expiredCount > 0) {
+            save();
+            plugin.getLogger().info("[ProShield] Expired " + expiredCount + " old expansion requests.");
         }
     }
 

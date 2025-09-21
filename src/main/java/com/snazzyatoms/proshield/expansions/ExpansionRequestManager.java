@@ -1,244 +1,235 @@
-// src/main/java/com/snazzyatoms/proshield/expansions/ExpansionRequestManager.java
 package com.snazzyatoms.proshield.expansions;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * ExpansionRequestManager (v1.2.6)
- * --------------------------------
- * - Handles creation, approval, denial, expiry of expansion requests
- * - Persists requests to expansions.yml
- * - Respects cooldown-hours and expire-days from config.yml
- * - Provides clean logs + messages for admins/players
+ * ExpansionRequestManager (ProShield v1.2.6)
+ *
+ * Handles:
+ *  - Creating new expansion requests
+ *  - Approving / denying requests with reasons
+ *  - Browsing history and pending lists
+ *  - Persistent storage in expansions.yml (survives crash/restore)
  */
 public class ExpansionRequestManager {
 
     private final ProShield plugin;
-    private final MessagesUtil messages;
-    private final Map<UUID, List<ExpansionRequest>> requests = new ConcurrentHashMap<>();
 
-    private final File dataFile;
-    private FileConfiguration dataConfig;
+    /** Requests indexed by requester UUID */
+    private final Map<UUID, List<ExpansionRequest>> requests = new ConcurrentHashMap<>();
+    /** Requests indexed by requestId */
+    private final Map<UUID, ExpansionRequest> byId = new ConcurrentHashMap<>();
+
+    private File storeFile;
+    private YamlConfiguration store;
 
     public ExpansionRequestManager(ProShield plugin) {
         this.plugin = plugin;
-        this.messages = plugin.getMessagesUtil();
-        this.dataFile = new File(plugin.getDataFolder(), "expansions.yml");
-        load();
+        initStore();
+        load(); // auto-load from disk
+    }
+
+    /* -------------------
+     * Init & Store
+     * ------------------- */
+
+    private void initStore() {
+        File data = plugin.getDataFolder();
+        if (!data.exists()) data.mkdirs();
+
+        storeFile = new File(data, "expansions.yml");
+        if (!storeFile.exists()) {
+            try {
+                storeFile.createNewFile();
+            } catch (IOException ex) {
+                plugin.getLogger().warning("[ProShield] Failed to create expansions.yml: " + ex.getMessage());
+            }
+        }
+        store = YamlConfiguration.loadConfiguration(storeFile);
     }
 
     /* -------------------
      * Request Lifecycle
      * ------------------- */
 
+    /** Create a new request (default status PENDING). */
     public ExpansionRequest createRequest(UUID requester, int amount) {
-        // Enforce cooldown
-        int cooldownHours = plugin.getConfig().getInt("claims.expansion.cooldown-hours", 6);
-        Duration cooldown = Duration.ofHours(cooldownHours);
-
-        List<ExpansionRequest> playerReqs = requests.computeIfAbsent(requester, k -> new ArrayList<>());
-        Optional<ExpansionRequest> recent = playerReqs.stream()
-                .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
-                .max(Comparator.comparing(ExpansionRequest::getTimestamp));
-
-        if (recent.isPresent() &&
-                Duration.between(recent.get().getTimestamp(), Instant.now()).compareTo(cooldown) < 0) {
-            messages.send(Bukkit.getPlayer(requester),
-                    messages.getOrDefault("messages.expansion.cooldown",
-                            "&cYou must wait before submitting another expansion request."));
-            return null;
-        }
-
-        ExpansionRequest req = new ExpansionRequest(requester, amount);
-        playerReqs.add(req);
-        saveAll();
-        plugin.getLogger().info("Created expansion request: " + requester + " for +" + amount + " blocks");
-        messages.send(Bukkit.getPlayer(requester),
-                messages.getOrDefault("messages.expansion.request-sent",
-                        "&eYour expansion request for +{blocks} blocks has been sent to admins.")
-                        .replace("{blocks}", String.valueOf(amount)));
+        ExpansionRequest req = new ExpansionRequest(
+                UUID.randomUUID(),
+                requester,
+                amount,
+                ExpansionRequest.Status.PENDING,
+                null,
+                null,
+                null,
+                Instant.now()
+        );
+        requests.computeIfAbsent(requester, k -> new ArrayList<>()).add(req);
+        byId.put(req.getId(), req);
+        save();
         return req;
     }
 
-    public void approveRequest(ExpansionRequest req, UUID reviewer) {
-        req.setStatus(ExpansionRequest.Status.APPROVED);
-        req.setReviewedBy(reviewer);
-        saveAll();
-        plugin.getLogger().info("Approved expansion request from " + req.getRequester() +
-                " for +" + req.getAmount());
-        messages.send(Bukkit.getPlayer(req.getRequester()),
-                messages.getOrDefault("messages.expansion.approved",
-                        "&aYour expansion request for +{blocks} blocks has been approved!")
-                        .replace("{blocks}", String.valueOf(req.getAmount())));
-    }
-
-    public void denyRequest(ExpansionRequest req, UUID reviewer, String reason) {
-        req.setStatus(ExpansionRequest.Status.DENIED);
-        req.setReviewedBy(reviewer);
-        req.setDenialReason(reason);
-        saveAll();
-        plugin.getLogger().info("Denied expansion request from " + req.getRequester() +
-                " (" + reason + ")");
-        messages.send(Bukkit.getPlayer(req.getRequester()),
-                messages.getOrDefault("messages.expansion.denied",
-                        "&cYour expansion request was denied. Reason: {reason}")
-                        .replace("{reason}", reason));
-    }
-
-    /** Expire old pending requests (called on load/reload). */
-    public void expireOldRequests() {
-        int expireDays = plugin.getConfig().getInt("claims.expansion.expire-days", 30);
-        Duration expiry = Duration.ofDays(expireDays);
-
-        for (List<ExpansionRequest> list : requests.values()) {
-            for (ExpansionRequest req : list) {
-                if (req.getStatus() == ExpansionRequest.Status.PENDING &&
-                        Duration.between(req.getTimestamp(), Instant.now()).compareTo(expiry) > 0) {
-                    req.setStatus(ExpansionRequest.Status.EXPIRED);
-                    plugin.getLogger().info("Expired expansion request from " + req.getRequester()
-                            + " (" + req.getAmount() + " blocks, older than " + expireDays + " days)");
-                }
-            }
-        }
-        saveAll();
-    }
-
-    /* -------------------
-     * Getters
-     * ------------------- */
-
+    /** Get all requests from one player. */
     public List<ExpansionRequest> getRequests(UUID requester) {
-        return requests.getOrDefault(requester, Collections.emptyList());
+        return new ArrayList<>(requests.getOrDefault(requester, Collections.emptyList()));
     }
 
+    /** Get all requests globally. */
     public List<ExpansionRequest> getAllRequests() {
-        return requests.values().stream()
-                .flatMap(Collection::stream)
+        return byId.values().stream()
+                .sorted(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed())
                 .collect(Collectors.toList());
     }
 
+    /** Get only pending requests globally. */
     public List<ExpansionRequest> getPendingRequests() {
         return getAllRequests().stream()
                 .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
                 .collect(Collectors.toList());
     }
 
+    /** Get only pending requests for one player. */
     public List<ExpansionRequest> getPendingRequestsFor(UUID requester) {
         return getRequests(requester).stream()
                 .filter(r -> r.getStatus() == ExpansionRequest.Status.PENDING)
                 .collect(Collectors.toList());
     }
 
+    /** Get non-pending history for one player. */
+    public List<ExpansionRequest> getHistoryFor(UUID requester) {
+        return getRequests(requester).stream()
+                .filter(r -> r.getStatus() != ExpansionRequest.Status.PENDING)
+                .sorted(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed())
+                .collect(Collectors.toList());
+    }
+
+    public ExpansionRequest getById(UUID id) {
+        return byId.get(id);
+    }
+
+    /* -------------------
+     * Approve / Deny
+     * ------------------- */
+
+    public void approveRequest(ExpansionRequest req, UUID reviewer) {
+        if (req == null) return;
+        req.setStatus(ExpansionRequest.Status.APPROVED);
+        req.setReviewedBy(reviewer);
+        req.setReviewedAt(Instant.now());
+        req.setDenialReason(null);
+        save();
+        plugin.getLogger().info("[ProShield] Approved expansion request from "
+                + req.getRequester() + " for +" + req.getAmount());
+    }
+
+    public void denyRequest(ExpansionRequest req, UUID reviewer, String reason) {
+        if (req == null) return;
+        req.setStatus(ExpansionRequest.Status.DENIED);
+        req.setReviewedBy(reviewer);
+        req.setReviewedAt(Instant.now());
+        req.setDenialReason(reason);
+        save();
+        plugin.getLogger().info("[ProShield] Denied expansion request from "
+                + req.getRequester() + " (Reason: " + reason + ")");
+    }
+
+    /* -------------------
+     * Utilities
+     * ------------------- */
+
     public OfflinePlayer getOfflinePlayer(UUID uuid) {
         return Bukkit.getOfflinePlayer(uuid);
+    }
+
+    /** Reload from disk (overwrites in-memory). */
+    public void reload() {
+        initStore();
+        load();
+    }
+
+    /** Clear in-memory (not persisted). */
+    public void clear() {
+        requests.clear();
+        byId.clear();
     }
 
     /* -------------------
      * Persistence
      * ------------------- */
 
-    public void saveAll() {
-        dataConfig.set("requests", null);
+    private void load() {
+        clear();
+        if (store == null) initStore();
 
-        for (Map.Entry<UUID, List<ExpansionRequest>> entry : requests.entrySet()) {
-            String base = "requests." + entry.getKey();
-            List<ExpansionRequest> list = entry.getValue();
+        ConfigurationSection root = store.getConfigurationSection("requests");
+        if (root == null) return;
 
-            for (int i = 0; i < list.size(); i++) {
-                ExpansionRequest req = list.get(i);
-                String path = base + "." + i;
-                dataConfig.set(path + ".amount", req.getAmount());
-                dataConfig.set(path + ".timestamp", req.getTimestamp().toString());
-                dataConfig.set(path + ".status", req.getStatus().name());
-                if (req.getReviewedBy() != null) {
-                    dataConfig.set(path + ".reviewedBy", req.getReviewedBy().toString());
+        for (String idStr : root.getKeys(false)) {
+            try {
+                UUID id = UUID.fromString(idStr);
+                ConfigurationSection sec = root.getConfigurationSection(idStr);
+                if (sec == null) continue;
+
+                UUID requester = UUID.fromString(Objects.requireNonNull(sec.getString("requester")));
+                int amount = sec.getInt("amount", 0);
+                ExpansionRequest.Status status = ExpansionRequest.Status.valueOf(
+                        sec.getString("status", "PENDING"));
+
+                UUID reviewedBy = null;
+                if (sec.isString("reviewedBy")) {
+                    String rb = sec.getString("reviewedBy");
+                    if (rb != null && !rb.isBlank()) reviewedBy = UUID.fromString(rb);
                 }
-                if (req.getDenialReason() != null) {
-                    dataConfig.set(path + ".reason", req.getDenialReason());
-                }
+
+                String denialReason = sec.getString("denialReason", null);
+
+                Instant createdAt = Instant.ofEpochMilli(sec.getLong("createdAt", System.currentTimeMillis()));
+                Instant reviewedAt = sec.isLong("reviewedAt")
+                        ? Instant.ofEpochMilli(sec.getLong("reviewedAt"))
+                        : null;
+
+                ExpansionRequest req = new ExpansionRequest(id, requester, amount, status,
+                        reviewedBy, reviewedAt, denialReason, createdAt);
+
+                requests.computeIfAbsent(requester, k -> new ArrayList<>()).add(req);
+                byId.put(id, req);
+            } catch (Exception ex) {
+                plugin.getLogger().warning("[ProShield] Failed to parse expansion request: " + ex.getMessage());
             }
+        }
+    }
+
+    public synchronized void save() {
+        if (store == null) initStore();
+        store.set("requests", null); // wipe old
+
+        for (ExpansionRequest req : getAllRequests()) {
+            String base = "requests." + req.getId();
+            store.set(base + ".requester", req.getRequester().toString());
+            store.set(base + ".amount", req.getAmount());
+            store.set(base + ".status", req.getStatus().name());
+            store.set(base + ".createdAt", req.getCreatedAt() != null ? req.getCreatedAt().toEpochMilli() : System.currentTimeMillis());
+            store.set(base + ".reviewedAt", req.getReviewedAt() != null ? req.getReviewedAt().toEpochMilli() : null);
+            store.set(base + ".reviewedBy", req.getReviewedBy() != null ? req.getReviewedBy().toString() : null);
+            store.set(base + ".denialReason", req.getDenialReason());
         }
 
         try {
-            dataConfig.save(dataFile);
+            store.save(storeFile);
         } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save expansions.yml: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    public void load() {
-        if (!dataFile.exists()) {
-            try {
-                dataFile.createNewFile();
-            } catch (IOException e) {
-                plugin.getLogger().severe("Could not create expansions.yml");
-            }
-        }
-        this.dataConfig = YamlConfiguration.loadConfiguration(dataFile);
-        requests.clear();
-
-        if (!dataConfig.contains("requests")) return;
-
-        for (String uuidStr : dataConfig.getConfigurationSection("requests").getKeys(false)) {
-            try {
-                UUID playerUuid = UUID.fromString(uuidStr);
-                List<ExpansionRequest> list = new ArrayList<>();
-
-                for (String index : dataConfig.getConfigurationSection("requests." + uuidStr).getKeys(false)) {
-                    String base = "requests." + uuidStr + "." + index;
-                    int amount = dataConfig.getInt(base + ".amount", 16);
-                    String tsStr = dataConfig.getString(base + ".timestamp", Instant.now().toString());
-                    Instant ts = Instant.parse(tsStr);
-
-                    ExpansionRequest.Status status = ExpansionRequest.Status.valueOf(
-                            dataConfig.getString(base + ".status", "PENDING"));
-                    UUID reviewer = null;
-                    if (dataConfig.contains(base + ".reviewedBy")) {
-                        reviewer = UUID.fromString(dataConfig.getString(base + ".reviewedBy"));
-                    }
-                    String reason = dataConfig.getString(base + ".reason");
-
-                    ExpansionRequest req = new ExpansionRequest(playerUuid, amount, ts);
-                    req.setStatus(status);
-                    req.setReviewedBy(reviewer);
-                    req.setDenialReason(reason);
-
-                    list.add(req);
-                }
-                requests.put(playerUuid, list);
-
-            } catch (Exception ex) {
-                plugin.getLogger().warning("Failed to load expansion requests for " + uuidStr + ": " + ex.getMessage());
-            }
-        }
-
-        expireOldRequests();
-    }
-
-    /** Clears all requests from memory and disk. */
-    public void clear() {
-        requests.clear();
-        if (dataConfig != null) {
-            dataConfig.set("requests", null);
-            try {
-                dataConfig.save(dataFile);
-            } catch (IOException e) {
-                plugin.getLogger().severe("Failed to clear expansions.yml: " + e.getMessage());
-            }
+            plugin.getLogger().warning("[ProShield] Failed to save expansions.yml: " + e.getMessage());
         }
     }
 }

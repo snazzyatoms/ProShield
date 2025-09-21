@@ -2,13 +2,13 @@
 package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
+import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -44,10 +44,13 @@ public class ProShield extends JavaPlugin {
         // Register GUI listener
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Register command dispatcher
+        // Register compass listener
+        new PlayerCommandDispatcher(this);
+
+        // Register /proshield command
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
-            PlayerCommandDispatcher dispatcher = new PlayerCommandDispatcher(this);
+            ProShieldCommand dispatcher = new ProShieldCommand(this);
             cmd.setExecutor(dispatcher);
             cmd.setTabCompleter(dispatcher);
         }

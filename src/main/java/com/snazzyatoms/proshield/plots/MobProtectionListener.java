@@ -29,7 +29,7 @@ public class MobProtectionListener implements Listener {
     private final PlotManager plotManager;
     private final MessagesUtil messages;
 
-    public MobProtectionListener(ProShield plugin, PlotManager plotManager, PlotListener plotListener) {
+    public MobProtectionListener(ProShield plugin, PlotManager plotManager) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.messages = plugin.getMessagesUtil();

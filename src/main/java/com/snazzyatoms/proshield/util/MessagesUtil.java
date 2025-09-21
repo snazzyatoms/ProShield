@@ -16,6 +16,7 @@ import java.util.*;
  *  - Color formatting (& → § codes)
  *  - Safe fallback lookups
  *  - Utility for lists and optional values
+ *  - Debug logging
  */
 public class MessagesUtil {
 
@@ -52,6 +53,11 @@ public class MessagesUtil {
     public String getOrNull(String key) {
         String raw = config.getString(key, null);
         return (raw == null || raw.isBlank()) ? null : color(raw);
+    }
+
+    /** Get a message by key, with empty string fallback. */
+    public String get(String key) {
+        return getOrDefault(key, "");
     }
 
     /** Get a list of messages by key. */
@@ -98,5 +104,24 @@ public class MessagesUtil {
     public String color(String input) {
         if (input == null) return "";
         return ChatColor.translateAlternateColorCodes('&', input);
+    }
+
+    public List<String> colorList(List<String> input) {
+        if (input == null) return Collections.emptyList();
+        List<String> out = new ArrayList<>();
+        for (String s : input) {
+            out.add(color(s));
+        }
+        return out;
+    }
+
+    /* -------------------
+     * Debug Utility
+     * ------------------- */
+
+    public void debug(String msg) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[Debug] " + msg);
+        }
     }
 }

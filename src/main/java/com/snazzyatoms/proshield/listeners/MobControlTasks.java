@@ -47,7 +47,7 @@ public class MobControlTasks {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    Plot plot = plots.getPlot(player.getLocation());
+                    Plot plot = plots.getPlotAt(player.getLocation()); // ✅ fixed
                     if (plot == null || !plot.getFlag("safezone", cfg)) continue;
 
                     List<Entity> nearby = player.getNearbyEntities(radius, radius, radius);
@@ -79,7 +79,7 @@ public class MobControlTasks {
                     for (Entity entity : world.getEntities()) {
                         if (!(entity instanceof Monster)) continue;
 
-                        Plot plot = plots.getPlot(entity.getLocation());
+                        Plot plot = plots.getPlotAt(entity.getLocation()); // ✅ fixed
                         if (plot != null && plot.getFlag("safezone", cfg)) {
                             entity.remove();
                         }
@@ -99,15 +99,14 @@ public class MobControlTasks {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    Plot plot = plots.getPlot(player.getLocation());
+                    Plot plot = plots.getPlotAt(player.getLocation()); // ✅ fixed
                     if (plot == null || !plot.getFlag("safezone", cfg)) continue;
 
                     List<Entity> nearby = player.getNearbyEntities(20, 10, 20);
                     for (Entity e : nearby) {
                         if (e instanceof Monster mob) {
-                            if (mob.getTarget() instanceof Player) {
-                                Player target = (Player) mob.getTarget();
-                                Plot targetPlot = plots.getPlot(target.getLocation());
+                            if (mob.getTarget() instanceof Player target) {
+                                Plot targetPlot = plots.getPlotAt(target.getLocation()); // ✅ fixed
                                 if (targetPlot != null && targetPlot.getFlag("safezone", cfg)) {
                                     mob.setTarget(null);
                                 }

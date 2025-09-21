@@ -1,0 +1,170 @@
+# ==========================================================
+# ProShield Zprávy
+# Verze: 1.2.6 (Vyleštěno a synchronizováno)
+# ----------------------------------------------------------
+# - Názvy rolí a popisy jsou nyní plně přizpůsobitelné
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- Obecné chyby ---
+  error:
+    player-only: "&cTuto akci mohou použít pouze hráči."
+    no-permission: "&cNemáte oprávnění k této akci."
+    inventory-full: "&cVáš inventář je plný. Uvolněte nejprve jedno místo."
+    block-break: "&cNemůžete zde ničit bloky."
+    block-place: "&cNemůžete zde umisťovat bloky."
+    bucket-empty: "&cNemůžete zde vylévat kbelíky."
+    bucket-fill: "&cNemůžete zde naplňovat kbelíky."
+    pvp: "&cPvP je v tomto claimu zakázáno."
+
+  # --- Kompas ---
+  compass:
+    command-success: "&aByl vám dán ProShield Kompas."
+    already-have: "&eJiž máte ProShield Kompas."
+    lore:
+      - "&7Klikněte pravým tlačítkem pro otevření ProShield menu"
+      - "&7Spravujte své claimy, vlajky a důvěryhodné hráče"
+
+  # --- Admin / Systém ---
+  reloaded: "&aKonfigurace ProShield byla znovu načtena."
+
+  admin:
+    debug-on: "&eRežim ladění: &aZAPNUTO"
+    debug-off: "&eRežim ladění: &cVYPNUTO"
+    bypass-on: "&aObcházení zapnuto."
+    bypass-off: "&cObcházení vypnuto."
+
+  # --- Přechody mezi claimy ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aVstoupili jste do svého claimu."
+  enter-other: "&aVstoupili jste do claimu hráče {owner}."
+  leave-own: "&cOpustili jste svůj claim."
+  leave-other: "&cOpustili jste claim hráče {owner}."
+  wilderness: "&7Vstoupili jste do divočiny."
+
+  # --- Žádosti o rozšíření (Hráč) ---
+  expansion:
+    request-sent: "&eVaše žádost o rozšíření o +{blocks} bloků byla odeslána adminům."
+    approved: "&aVaše rozšíření claimu (+{blocks} bloků) bylo schváleno!"
+    denied: "&cVaše žádost o rozšíření byla zamítnuta: {reason}"
+    disabled: "&cŽádosti o rozšíření jsou na serveru zakázány."
+    cooldown-title: "&cČekací doba aktivní"
+    cooldown-active: "&7Můžete znovu požádat za &f{hours}h {minutes}m&7."
+    expired: "&eVaše žádost o rozšíření vypršela po {days} dnech bez posouzení."
+
+  # --- Přezkum rozšíření (Admin GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&aLevým klikem: Schválit toto rozšíření"
+      deny: "&cPravým klikem: Zamítnout a vybrat důvod"
+      info: "&7Použijte menu důvodů zamítnutí pro detailní zprávy."
+
+  # --- Důvody zamítnutí ---
+  deny-reasons:
+    too-large: "&cPožadované rozšíření je příliš velké."
+    abusive: "&cŽádost o rozšíření byla zamítnuta kvůli zneužití."
+    overlap: "&cPožadovaná oblast se překrývá s existujícím claimem."
+    custom-1: "&cNemáte zatím dostatek herního času pro toto rozšíření."
+    custom-2: "&cVáš claim již dosáhl maximální velikosti."
+
+  # --- Ovládání světa ---
+  world-controls:
+    toggle: "&eNastavení &f{flag} &eje nyní {state}."
+    enabled: "&aZAPNUTO"
+    disabled: "&cVYPNUTO"
+
+  # --- GUI Navigace ---
+  gui:
+    back-button: "&eZpět"
+    back-lore:
+      - "&7Vrátit se do předchozího menu"
+    exit-button: "&cUkončit"
+    exit-lore:
+      - "&7Bezpečně zavřít toto menu"
+    titles:
+      main: "&6ProShield Menu"
+      trusted: "&bDůvěryhodní hráči"
+      assign-role: "&bPřiřadit roli"
+      flags: "&eVlajky claimu"
+      admin: "&cAdmin Nástroje"
+      world-controls: "&cOvládání světa"
+      deny-reasons: "&cDůvody zamítnutí"
+      request-expansion: "&aPožádat o rozšíření"
+      expansion-requests: "&eŽádosti o rozšíření"
+      expansion-history: "&7Historie rozšíření"
+
+  # --- Role (Zobrazení a popisy) ---
+  roles:
+    display:
+      none: "&7Žádná"
+      visitor: "&7Návštěvník"
+      member: "&aČlen"
+      trusted: "&bDůvěryhodný"
+      builder: "&2Stavitel"
+      container: "&3Kontejner"
+      moderator: "&eModerátor"
+      manager: "&6Manažer"
+      owner: "&cVlastník"
+    lore:
+      visitor:
+        - "&7Výchozí role pro cizí hráče"
+        - "&cNemůže stavět ani otevírat kontejnery"
+      member:
+        - "&7Základní důvěryhodná role"
+        - "&aMůže otevírat kontejnery"
+        - "&cNemůže stavět ani měnit vlajky"
+      trusted:
+        - "&7Pokročilá důvěryhodná role"
+        - "&aPlný přístup kromě akcí vlastníka"
+      builder:
+        - "&7Stavební role"
+        - "&aMůže stavět a ničit bloky"
+        - "&cNemůže měnit vlajky"
+      container:
+        - "&7Role pro úložiště"
+        - "&aMůže otevírat pouze kontejnery"
+        - "&cNemůže stavět ani ničit"
+      moderator:
+        - "&7Role moderátora"
+        - "&aMůže spravovat role a vlajky"
+        - "&cNemůže převést vlastnictví"
+      manager:
+        - "&7Role manažera"
+        - "&aMůže spravovat role, vlajky i převádět vlastnictví"
+      owner:
+        - "&cVlastník claimu"
+        - "&aPlná kontrola claimu"
+
+# ==========================================================
+# Nápověda
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Hráčská příručka"
+    - "&aKlikněte pravým tlačítkem na ProShield Kompas &7→ Otevřete hlavní menu"
+    - "&bHlavní menu &7→ Claim, Info, Unclaim, Důvěryhodní hráči, Vlajky"
+    - "&bDůvěryhodní hráči &7→ Správa rolí a přístupu"
+    - "&bVlajky claimu &7→ Zapnout/Vypnout ochranu"
+    - "&aŽádost o rozšíření &7→ Požádejte adminy o rozšíření claimu"
+    - "&7Žádosti mají čekací dobu &f{cooldown-hours}h &7(výchozí)."
+    - "&7Vše funguje přes GUI, příkazy jsou potřeba jen výjimečně."
+
+  admin:
+    - "&c&lProShield — Admin příručka"
+    - "&cAdmin Nástroje GUI &7→ Reload, Debug, Bypass, Ovládání světa"
+    - "&7Žádosti o rozšíření a ovládání světa vyžadují vyšší oprávnění."
+    - "&7Záložní příkazy (jen pro adminy):"
+    - "&f/proshield reload &7→ Znovu načíst konfigurace"
+    - "&f/proshield debug &7→ Přepnout režim ladění"
+    - "&f/proshield bypass &7→ Přepnout obcházení"
+    - "&f/proshield admin &7→ Otevřít Admin Nástroje GUI"
+
+  senior:
+    - "&4&lSenior Admin Nástroje"
+    - "&4Žádosti o rozšíření &7– vyžaduje &fproshield.admin.expansions"
+    - "&4Ovládání světa &7– vyžaduje &fproshield.admin.worldcontrols"
+    - "&7Obě funkce jsou GUI-řízené. Příkazy nejsou potřeba."

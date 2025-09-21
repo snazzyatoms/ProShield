@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * ExpansionRequestManager (ProShield v1.2.6)
+ * ExpansionRequestManager (ProShield v1.2.6-polished)
  *
  * Handles:
  *  - Creating new expansion requests
@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
  *  - Browsing history and pending lists
  *  - Persistent storage in expansions.yml (survives crash/restore)
  *  - Expiry system with daily cleanup task
+ *  - Added compatibility shims for GUIManager 1.2.6
  */
 public class ExpansionRequestManager {
 
@@ -88,47 +89,40 @@ public class ExpansionRequestManager {
         return req;
     }
 
-    /** Get all requests from one player. */
     public List<ExpansionRequest> getRequests(UUID requester) {
         return new ArrayList<>(requests.getOrDefault(requester, Collections.emptyList()));
     }
 
-    /** Get all requests globally. */
     public List<ExpansionRequest> getAllRequests() {
         return byId.values().stream()
                 .sorted(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed())
                 .collect(Collectors.toList());
     }
 
-    /** Get all requests for one player. */
     public List<ExpansionRequest> getAllRequestsFor(UUID requester) {
         return getRequests(requester).stream()
                 .sorted(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed())
                 .collect(Collectors.toList());
     }
 
-    /** Get latest request for a player (or null). */
     public ExpansionRequest getLatestFor(UUID requester) {
         return getRequests(requester).stream()
                 .max(Comparator.comparing(ExpansionRequest::getCreatedAt))
                 .orElse(null);
     }
 
-    /** Get only pending requests globally. */
     public List<ExpansionRequest> getPendingRequests() {
         return getAllRequests().stream()
                 .filter(ExpansionRequest::isPending)
                 .collect(Collectors.toList());
     }
 
-    /** Get only pending requests for one player. */
     public List<ExpansionRequest> getPendingRequestsFor(UUID requester) {
         return getRequests(requester).stream()
                 .filter(ExpansionRequest::isPending)
                 .collect(Collectors.toList());
     }
 
-    /** Get non-pending history for one player. */
     public List<ExpansionRequest> getHistoryFor(UUID requester) {
         return getRequests(requester).stream()
                 .filter(r -> !r.isPending())
@@ -180,7 +174,6 @@ public class ExpansionRequestManager {
                 20L * 60 * 60 * 24);
     }
 
-    /** Sweep expired requests daily */
     private synchronized void sweepExpiredRequests() {
         Instant now = Instant.now();
         int expiredCount = 0;
@@ -208,13 +201,11 @@ public class ExpansionRequestManager {
         return Bukkit.getOfflinePlayer(uuid);
     }
 
-    /** Reload from disk (overwrites in-memory). */
     public void reload() {
         initStore();
         load();
     }
 
-    /** Clear in-memory (not persisted). */
     public void clear() {
         requests.clear();
         byId.clear();
@@ -268,7 +259,7 @@ public class ExpansionRequestManager {
 
     public synchronized void save() {
         if (store == null) initStore();
-        store.set("requests", null); // wipe old
+        store.set("requests", null);
 
         for (ExpansionRequest req : getAllRequests()) {
             String base = "requests." + req.getId();
@@ -286,5 +277,47 @@ public class ExpansionRequestManager {
         } catch (IOException e) {
             plugin.getLogger().warning("[ProShield] Failed to save expansions.yml: " + e.getMessage());
         }
+    }
+
+    /* -------------------
+     * Compatibility Shims (for GUIManager 1.2.6)
+     * ------------------- */
+
+    /** GUI expects createRequest(UUID, UUID, int, String) */
+    public ExpansionRequest createRequest(UUID requester, UUID reviewer, int amount, String reason) {
+        ExpansionRequest req = createRequest(requester, amount);
+        if (reason != null && !reason.isBlank()) {
+            req.setDenialReason(reason); // optional metadata
+        }
+        if (reviewer != null) {
+            req.setReviewedBy(reviewer);
+        }
+        return req;
+    }
+
+    /** GUI expects approve(String id, UUID reviewer, String note) */
+    public void approve(String id, UUID reviewer, String note) {
+        try {
+            UUID reqId = UUID.fromString(id);
+            ExpansionRequest req = byId.get(reqId);
+            if (req != null) {
+                approveRequest(req, reviewer);
+                if (note != null && !note.isBlank()) {
+                    req.setDenialReason(note); // treat as moderator note
+                }
+                save();
+            }
+        } catch (IllegalArgumentException ignored) {}
+    }
+
+    /** GUI expects deny(String id, UUID reviewer, String reason) */
+    public void deny(String id, UUID reviewer, String reason) {
+        try {
+            UUID reqId = UUID.fromString(id);
+            ExpansionRequest req = byId.get(reqId);
+            if (req != null) {
+                denyRequest(req, reviewer, reason);
+            }
+        } catch (IllegalArgumentException ignored) {}
     }
 }

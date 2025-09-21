@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/PlayerCommandDispatcher.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -18,6 +19,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * PlayerCommandDispatcher
+ *
+ * - Handles ProShield compass interactions
+ * - Gives compass on join (if enabled)
+ * - Provides chat-based claim info (fallback/debug)
+ */
 public class PlayerCommandDispatcher implements Listener {
 
     private final ProShield plugin;
@@ -39,7 +47,7 @@ public class PlayerCommandDispatcher implements Listener {
         if (event.getHand() != EquipmentSlot.HAND) return;
         Player player = event.getPlayer();
 
-        if (!player.hasPermission("ProShield.access")) return;
+        if (!player.hasPermission("proshield.player.access")) return;
 
         ItemStack item = event.getItem();
         if (item == null || item.getType() != Material.COMPASS) return;
@@ -55,7 +63,7 @@ public class PlayerCommandDispatcher implements Listener {
     }
 
     /**
-     * Give a ProShield compass, only if player doesn't have one.
+     * Give a ProShield compass, only if player doesn't already have one.
      */
     public void giveCompass(Player player) {
         if (!plugin.getConfig().getBoolean("settings.give-compass-on-join", true)) return;
@@ -85,10 +93,10 @@ public class PlayerCommandDispatcher implements Listener {
     }
 
     /**
-     * Optional: Show claim info in chat (debug or fallback)
+     * Optional: Show claim info in chat (debug or fallback).
      */
     public void sendClaimInfo(Player player) {
-        Plot plot = plotManager.getPlot(player.getLocation());
+        Plot plot = plotManager.getPlotAt(player.getLocation()); // ✅ fixed
 
         if (plot == null) {
             messages.send(player, "&7You are in the wilderness.");

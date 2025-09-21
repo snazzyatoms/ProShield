@@ -2,7 +2,7 @@
 # Messages ProShield
 # Version : 1.2.6 (Poli et synchronisé)
 # ----------------------------------------------------------
-# - Les noms et descriptions de rôles sont entièrement personnalisables
+# - Noms et descriptions des rôles entièrement personnalisables
 # ==========================================================
 
 messages:
@@ -13,7 +13,7 @@ messages:
   error:
     player-only: "&cSeuls les joueurs peuvent utiliser cette action."
     no-permission: "&cVous n'avez pas la permission de faire cela."
-    inventory-full: "&cVotre inventaire est plein. Libérez d'abord une case."
+    inventory-full: "&cVotre inventaire est plein. Libérez un emplacement."
     block-break: "&cVous ne pouvez pas casser de blocs ici."
     block-place: "&cVous ne pouvez pas placer de blocs ici."
     bucket-empty: "&cVous ne pouvez pas vider de seaux ici."
@@ -22,14 +22,14 @@ messages:
 
   # --- Boussole ---
   compass:
-    command-success: "&aUne boussole ProShield vous a été donnée."
-    already-have: "&eVous avez déjà une boussole ProShield."
+    command-success: "&aVous avez reçu une Boussole ProShield."
+    already-have: "&eVous possédez déjà une Boussole ProShield."
     lore:
       - "&7Clic droit → Ouvrir le menu ProShield"
-      - "&7Gérez vos claims, vos flags et vos joueurs de confiance"
+      - "&7Gérez vos claims, flags et joueurs de confiance"
 
   # --- Admin / Système ---
-  reloaded: "&aConfiguration de ProShield rechargée."
+  reloaded: "&aConfiguration ProShield rechargée."
 
   admin:
     debug-on: "&eMode debug : &aACTIVÉ"
@@ -37,7 +37,7 @@ messages:
     bypass-on: "&aBypass activé."
     bypass-off: "&cBypass désactivé."
 
-  # --- Transitions de zone ---
+  # --- Transitions de région ---
   show-wilderness: true
   admin-flag-chat: true
   enter-own: "&aVous êtes entré dans votre claim."
@@ -46,34 +46,34 @@ messages:
   leave-other: "&cVous avez quitté le claim de {owner}."
   wilderness: "&7Vous êtes entré dans la nature."
 
-  # --- Demandes d'extension (Joueur) ---
+  # --- Demandes d'expansion (Joueur) ---
   expansion:
-    request-sent: "&eVotre demande d'extension de +{blocks} blocs a été envoyée aux admins."
-    approved: "&aVotre extension de claim (+{blocks} blocs) a été approuvée !"
-    denied: "&cVotre demande d'extension a été refusée : {reason}"
-    disabled: "&cLes demandes d'extension sont désactivées sur ce serveur."
+    request-sent: "&eVotre demande d'expansion de +{blocks} blocs a été envoyée aux administrateurs."
+    approved: "&aVotre expansion de claim (+{blocks} blocs) a été approuvée !"
+    denied: "&cVotre demande d'expansion a été refusée : {reason}"
+    disabled: "&cLes demandes d'expansion sont désactivées par le serveur."
     cooldown-title: "&cTemps de recharge actif"
-    cooldown-active: "&7Vous pourrez refaire une demande dans &f{hours}h {minutes}m&7."
-    expired: "&eVotre demande d'extension a expiré après {days} jours sans réponse."
+    cooldown-active: "&7Vous pouvez redemander dans &f{hours}h {minutes}m&7."
+    expired: "&eVotre demande d'expansion a expiré après {days} jours sans réponse."
 
-  # --- Revue d'extension (Admin GUI) ---
+  # --- Revue d'expansion (Admin GUI) ---
   expansion-admin:
     lore:
-      approve: "&aClic gauche : Approuver l'extension"
+      approve: "&aClic gauche : Approuver l'expansion"
       deny: "&cClic droit : Refuser et choisir une raison"
-      info: "&7Utilisez le menu des raisons de refus pour plus de détails."
+      info: "&7Utilisez le menu des refus pour plus de détails."
 
   # --- Raisons de refus ---
   deny-reasons:
-    too-large: "&cL'extension demandée est trop grande."
-    abusive: "&cDemande d'extension refusée pour abus."
+    too-large: "&cL'expansion demandée est trop grande."
+    abusive: "&cDemande refusée pour abus."
     overlap: "&cLa zone demandée chevauche un autre claim."
-    custom-1: "&cPas encore assez de temps de jeu pour cette extension."
+    custom-1: "&cPas assez de temps de jeu pour cette expansion."
     custom-2: "&cVotre claim a déjà atteint la taille maximale."
 
   # --- Contrôles mondiaux ---
   world-controls:
-    toggle: "&eLe contrôle {flag} &eest maintenant {state}."
+    toggle: "&eLe contrôle {flag} est maintenant {state}."
     enabled: "&aACTIVÉ"
     disabled: "&cDÉSACTIVÉ"
 
@@ -84,18 +84,18 @@ messages:
       - "&7Revenir au menu précédent"
     exit-button: "&cQuitter"
     exit-lore:
-      - "&7Fermer ce menu"
+      - "&7Fermer ce menu en toute sécurité"
     titles:
       main: "&6Menu ProShield"
       trusted: "&bJoueurs de confiance"
-      assign-role: "&bAssigner un rôle"
+      assign-role: "&bAttribuer un rôle"
       flags: "&eFlags du claim"
-      admin: "&cOutils admin"
+      admin: "&cOutils Admin"
       world-controls: "&cContrôles mondiaux"
       deny-reasons: "&cRaisons de refus"
-      request-expansion: "&aDemander une extension"
-      expansion-requests: "&eDemandes d'extension"
-      expansion-history: "&7Historique des extensions"
+      request-expansion: "&aDemander une expansion"
+      expansion-requests: "&eDemandes d'expansion"
+      expansion-history: "&7Historique des expansions"
 
   # --- Rôles ---
   roles:
@@ -103,7 +103,7 @@ messages:
       none: "&7Aucun"
       visitor: "&7Visiteur"
       member: "&aMembre"
-      trusted: "&bDe confiance"
+      trusted: "&bConfiance"
       builder: "&2Constructeur"
       container: "&3Conteneur"
       moderator: "&eModérateur"
@@ -111,33 +111,33 @@ messages:
       owner: "&cPropriétaire"
     lore:
       visitor:
-        - "&7Rôle par défaut des joueurs non autorisés"
+        - "&7Rôle par défaut pour les joueurs non approuvés"
         - "&cNe peut pas construire ni ouvrir de conteneurs"
       member:
         - "&7Rôle de base"
         - "&aPeut ouvrir les conteneurs"
-        - "&cNe peut pas construire ni modifier les flags"
+        - "&cNe peut pas construire ni changer de flags"
       trusted:
         - "&7Rôle avancé"
-        - "&aAccès complet sauf actions du propriétaire"
+        - "&aAccès complet sauf actions réservées au propriétaire"
       builder:
         - "&7Rôle de construction"
         - "&aPeut placer et casser des blocs"
-        - "&cNe peut pas modifier les flags"
+        - "&cNe peut pas changer de flags"
       container:
         - "&7Rôle de stockage"
-        - "&aPeut seulement ouvrir des conteneurs"
-        - "&cNe peut pas construire ni casser"
+        - "&aPeut seulement ouvrir les conteneurs"
+        - "&cNe peut pas construire ni détruire"
       moderator:
-        - "&7Rôle de gestion"
+        - "&7Rôle de modération"
         - "&aPeut gérer les rôles et flags"
-        - "&cNe peut pas transférer la propriété"
+        - "&cNe peut pas transférer le claim"
       manager:
-        - "&7Rôle de haut niveau"
-        - "&aPeut gérer rôles, flags et transferts"
+        - "&7Rôle de gestion avancée"
+        - "&aPeut gérer rôles, flags et transférer le claim"
       owner:
         - "&cPropriétaire du claim"
-        - "&aContrôle total du claim"
+        - "&aContrôle total"
 
 # ==========================================================
 # Pages d'aide
@@ -145,27 +145,27 @@ messages:
 help:
   player:
     - "&3&lProShield &7— Guide du joueur"
-    - "&aClic droit sur la Boussole ProShield &7→ Ouvre le menu principal"
-    - "&bMenu principal &7→ Claim terrain, Infos, Unclaim, Joueurs, Flags"
-    - "&bJoueurs de confiance &7→ Gérer les rôles et accès"
-    - "&bFlags du claim &7→ Activer/désactiver les protections"
-    - "&aDemander extension &7→ Demander aux admins d’agrandir ton claim"
-    - "&7Les demandes ont un cooldown de &f{cooldown-hours}h&7."
-    - "&7Tout est géré via GUI. Commandes seulement si problème."
+    - "&aClic droit sur la Boussole ProShield &7→ Ouvrir le menu principal"
+    - "&bMenu principal &7→ Revendiquer, Infos, Annuler, Joueurs de confiance, Flags"
+    - "&bJoueurs de confiance &7→ Gérer rôles et accès"
+    - "&bFlags du claim &7→ Activer/désactiver protections"
+    - "&aDemander une expansion &7→ Demander aux admins d'agrandir votre claim"
+    - "&7Cooldown : &f{cooldown-hours}h&7."
+    - "&7Tout est géré par GUI. Commandes si problème seulement."
 
   admin:
-    - "&c&lProShield — Guide admin"
+    - "&c&lProShield — Guide Admin"
     - "&cMenu Admin &7→ Reload, Debug, Bypass, Contrôles mondiaux"
-    - "&7Les demandes d’extension et contrôles nécessitent des permissions élevées."
-    - "&7Note : Tout est GUI. Commandes seulement en secours."
-    - "&7Commandes de secours :"
-    - "&f/proshield reload &7→ Recharger la config"
+    - "&7Expansion et contrôles nécessitent permissions élevées."
+    - "&7Tout est GUI. Commandes uniquement si la GUI ne marche pas."
+    - "&7Commandes disponibles :"
+    - "&f/proshield reload &7→ Recharger config"
     - "&f/proshield debug &7→ Activer/désactiver debug"
     - "&f/proshield bypass &7→ Activer/désactiver bypass"
     - "&f/proshield admin &7→ Ouvrir menu admin"
 
   senior:
     - "&4&lOutils avancés"
-    - "&4Demandes d’extension &7– Requiert &fproshield.admin.expansions"
+    - "&4Demandes d'expansion &7– Requiert &fproshield.admin.expansions"
     - "&4Contrôles mondiaux &7– Requiert &fproshield.admin.worldcontrols"
-    - "&7Les deux fonctions sont GUI. Pas besoin de commandes."
+    - "&7Tout est GUI. Pas besoin de commandes."

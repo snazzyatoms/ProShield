@@ -1,0 +1,171 @@
+# ==========================================================
+# Wiadomości ProShield
+# Wersja: 1.2.6 (Dopracowana i zsynchronizowana)
+# ----------------------------------------------------------
+# - Nazwy ról i opisy są teraz w pełni konfigurowalne
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- Ogólne błędy ---
+  error:
+    player-only: "&cTylko gracze mogą używać tej akcji."
+    no-permission: "&cNie masz do tego uprawnień."
+    inventory-full: "&cTwój ekwipunek jest pełny. Najpierw zwolnij miejsce."
+    block-break: "&cNie możesz niszczyć bloków tutaj."
+    block-place: "&cNie możesz stawiać bloków tutaj."
+    bucket-empty: "&cNie możesz opróżniać wiader tutaj."
+    bucket-fill: "&cNie możesz napełniać wiader tutaj."
+    pvp: "&cPvP jest wyłączone na tym terenie."
+
+  # --- Kompas ---
+  compass:
+    command-success: "&aOtrzymałeś kompas ProShield."
+    already-have: "&eMasz już kompas ProShield."
+    lore:
+      - "&7Kliknij PPM, aby otworzyć menu ProShield"
+      - "&7Zarządzaj terenami, flagami i zaufanymi graczami"
+
+  # --- Admin / System ---
+  reloaded: "&aKonfiguracja ProShield została przeładowana."
+
+  admin:
+    debug-on: "&eTryb debugowania: &aWŁĄCZONY"
+    debug-off: "&eTryb debugowania: &cWYŁĄCZONY"
+    bypass-on: "&aBypass włączony."
+    bypass-off: "&cBypass wyłączony."
+
+  # --- Przejścia terenów ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aWszedłeś na swój teren."
+  enter-other: "&aWszedłeś na teren gracza {owner}."
+  leave-own: "&cOpuściłeś swój teren."
+  leave-other: "&cOpuściłeś teren gracza {owner}."
+  wilderness: "&7Wszedłeś na dzikie tereny."
+
+  # --- Prośby o rozszerzenie (Gracz) ---
+  expansion:
+    request-sent: "&eTwoja prośba o rozszerzenie o +{blocks} bloków została wysłana do administratorów."
+    approved: "&aTwoje rozszerzenie (+{blocks} bloków) zostało zatwierdzone!"
+    denied: "&cTwoja prośba została odrzucona: {reason}"
+    disabled: "&cProśby o rozszerzenie są wyłączone na tym serwerze."
+    cooldown-title: "&cCzas odnowienia aktywny"
+    cooldown-active: "&7Możesz wysłać kolejną prośbę za &f{hours}h {minutes}m&7."
+    expired: "&eTwoja prośba wygasła po {days} dniach bez odpowiedzi."
+
+  # --- Sprawdzanie rozszerzeń (Admin GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&aLPM: Zatwierdź rozszerzenie"
+      deny: "&cPPM: Odrzuć i wybierz powód"
+      info: "&7Użyj menu powodów odrzucenia, aby zobaczyć szczegóły"
+
+  # --- Powody odrzucenia ---
+  deny-reasons:
+    too-large: "&cŻądane rozszerzenie jest zbyt duże."
+    abusive: "&cProśba odrzucona: nadużycie."
+    overlap: "&cObszar nachodzi na inny teren."
+    custom-1: "&cZa mało czasu gry, by rozszerzyć teren."
+    custom-2: "&cTwój teren osiągnął maksymalny rozmiar."
+
+  # --- Ustawienia globalne ---
+  world-controls:
+    toggle: "&eFlaga &f{flag} &ezmieniona na {state}."
+    enabled: "&aWŁĄCZONA"
+    disabled: "&cWYŁĄCZONA"
+
+  # --- Nawigacja GUI ---
+  gui:
+    back-button: "&eWstecz"
+    back-lore:
+      - "&7Powrót do poprzedniego menu"
+    exit-button: "&cWyjdź"
+    exit-lore:
+      - "&7Bezpieczne zamknięcie menu"
+    titles:
+      main: "&6Menu ProShield"
+      trusted: "&bZaufani gracze"
+      assign-role: "&bPrzypisz rolę"
+      flags: "&eFlagi terenu"
+      admin: "&cNarzędzia administratora"
+      world-controls: "&cUstawienia globalne"
+      deny-reasons: "&cPowody odrzucenia"
+      request-expansion: "&aProśba o rozszerzenie"
+      expansion-requests: "&eProśby o rozszerzenie"
+      expansion-history: "&7Historia rozszerzeń"
+
+  # --- Role ---
+  roles:
+    display:
+      none: "&7Brak"
+      visitor: "&7Gość"
+      member: "&aCzłonek"
+      trusted: "&bZaufany"
+      builder: "&2Budowniczy"
+      container: "&3Kontener"
+      moderator: "&eModerator"
+      manager: "&6Menedżer"
+      owner: "&cWłaściciel"
+    lore:
+      visitor:
+        - "&7Domyślna rola"
+        - "&cNie może budować ani używać kontenerów"
+      member:
+        - "&7Podstawowa rola zaufanego"
+        - "&aMoże używać kontenerów"
+        - "&cNie może zmieniać flag"
+      trusted:
+        - "&7Zaawansowana rola"
+        - "&aDostęp do wszystkiego oprócz praw właściciela"
+      builder:
+        - "&7Rola budowniczego"
+        - "&aMoże stawiać i niszczyć bloki"
+        - "&cNie może zmieniać flag"
+      container:
+        - "&7Rola magazyniera"
+        - "&aMoże tylko otwierać kontenery"
+        - "&cNie może budować ani niszczyć"
+      moderator:
+        - "&7Rola moderatora"
+        - "&aMoże zarządzać rolami i flagami"
+        - "&cNie może przekazać własności"
+      manager:
+        - "&7Rola menedżera"
+        - "&aMoże zarządzać rolami, flagami i własnością"
+      owner:
+        - "&cWłaściciel terenu"
+        - "&aPełna kontrola"
+
+# ==========================================================
+# Strony pomocy
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Poradnik gracza"
+    - "&aKliknij PPM kompas ProShield &7→ Otwórz menu główne"
+    - "&bMenu główne &7→ Zarządzanie terenami, Info, Oddanie terenu, Zaufani, Flagi"
+    - "&bZaufani gracze &7→ Zarządzanie rolami i dostępem"
+    - "&bFlagi terenu &7→ Włączanie/wyłączanie ochrony"
+    - "&aProśba o rozszerzenie &7→ Wyślij zapytanie do administratorów"
+    - "&7Czas odnowienia: &f{cooldown-hours}h&7."
+    - "&7Wszystko odbywa się przez GUI. Komendy potrzebne tylko awaryjnie."
+
+  admin:
+    - "&c&lProShield — Poradnik administratora"
+    - "&cAdmin GUI &7→ Przeładuj, Debug, Bypass, Ustawienia globalne"
+    - "&7Prośby o rozszerzenie i ustawienia wymagają dodatkowych uprawnień."
+    - "&7Wszystko odbywa się przez GUI. Komendy są opcjonalne."
+    - "&7Komendy awaryjne:"
+    - "&f/proshield reload &7→ Przeładuj konfigurację"
+    - "&f/proshield debug &7→ Włącz/wyłącz debug"
+    - "&f/proshield bypass &7→ Włącz/wyłącz bypass"
+    - "&f/proshield admin &7→ Otwórz GUI administratora"
+
+  senior:
+    - "&4&lZaawansowane narzędzia"
+    - "&4Prośby o rozszerzenie &7– wymagają &fproshield.admin.expansions"
+    - "&4Ustawienia globalne &7– wymagają &fproshield.admin.worldcontrols"
+    - "&7Wszystko w GUI. Komendy niepotrzebne."

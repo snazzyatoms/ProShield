@@ -1,0 +1,171 @@
+# ==========================================================
+# ProShield Mesajları
+# Sürüm: 1.2.6 (Düzenlenmiş & Senkronize)
+# ----------------------------------------------------------
+# - Rol isimleri ve açıklamaları tamamen özelleştirilebilir
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- Genel Hatalar ---
+  error:
+    player-only: "&cBu işlemi yalnızca oyuncular yapabilir."
+    no-permission: "&cBunu yapmak için izniniz yok."
+    inventory-full: "&cEnvanteriniz dolu. Önce bir boşluk açın."
+    block-break: "&cBurada blok kıramazsınız."
+    block-place: "&cBurada blok koyamazsınız."
+    bucket-empty: "&cBurada kova boşaltamazsınız."
+    bucket-fill: "&cBurada kova dolduramazsınız."
+    pvp: "&cBu bölgede PvP devre dışıdır."
+
+  # --- Pusula ---
+  compass:
+    command-success: "&aBir ProShield Pusulası verildi."
+    already-have: "&eZaten bir ProShield Pusulasına sahipsiniz."
+    lore:
+      - "&7Sağ tık → ProShield menüsünü aç"
+      - "&7Bölgeleri, bayrakları ve güvenilir oyuncuları yönet"
+
+  # --- Yönetici / Sistem ---
+  reloaded: "&aProShield yapılandırması yeniden yüklendi."
+
+  admin:
+    debug-on: "&eDebug modu: &aAÇIK"
+    debug-off: "&eDebug modu: &cKAPALI"
+    bypass-on: "&aBypass etkin."
+    bypass-off: "&cBypass devre dışı."
+
+  # --- Bölge Geçişleri ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aKendi bölgenize girdiniz."
+  enter-other: "&a{owner} bölgesine girdiniz."
+  leave-own: "&cKendi bölgenizden çıktınız."
+  leave-other: "&c{owner} bölgesinden ayrıldınız."
+  wilderness: "&7Vahşi doğaya girdiniz."
+
+  # --- Genişletme İstekleri (Oyuncu) ---
+  expansion:
+    request-sent: "&e+{blocks} blokluk genişletme isteğiniz yöneticilere gönderildi."
+    approved: "&aBölge genişletme isteğiniz (+{blocks} blok) onaylandı!"
+    denied: "&cGenişletme isteğiniz reddedildi: {reason}"
+    disabled: "&cGenişletme istekleri sunucuda devre dışı."
+    cooldown-title: "&cBekleme Süresi Aktif"
+    cooldown-active: "&7Tekrar istekte bulunabilirsiniz: &f{hours}s {minutes}d&7"
+    expired: "&eGenişletme isteğiniz {days} gün içinde incelenmediği için iptal edildi."
+
+  # --- Genişletme İnceleme (Yönetici GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&aSol tık: Bu genişletmeyi onayla"
+      deny: "&cSağ tık: Reddet ve sebep seç"
+      info: "&7Detaylı red mesajları için menüyü kullan"
+
+  # --- Red Sebepleri ---
+  deny-reasons:
+    too-large: "&cİstenen genişletme çok büyük."
+    abusive: "&cKötüye kullanım nedeniyle genişletme reddedildi."
+    overlap: "&cİstenen alan mevcut bir bölge ile çakışıyor."
+    custom-1: "&cBu genişletme için yeterli oyun süreniz yok."
+    custom-2: "&cBölgeniz zaten maksimum boyuta ulaştı."
+
+  # --- Dünya Kontrolleri ---
+  world-controls:
+    toggle: "&eDünya kontrolü &f{flag} &eartık {state}."
+    enabled: "&aAKTİF"
+    disabled: "&cPASİF"
+
+  # --- GUI Navigasyonu ---
+  gui:
+    back-button: "&eGeri"
+    back-lore:
+      - "&7Önceki menüye dön"
+    exit-button: "&cÇıkış"
+    exit-lore:
+      - "&7Bu menüyü güvenle kapat"
+    titles:
+      main: "&6ProShield Menüsü"
+      trusted: "&bGüvenilir Oyuncular"
+      assign-role: "&bRol Ata"
+      flags: "&eBölge Bayrakları"
+      admin: "&cYönetici Araçları"
+      world-controls: "&cDünya Kontrolleri"
+      deny-reasons: "&cRed Sebepleri"
+      request-expansion: "&aGenişletme Talebi"
+      expansion-requests: "&eGenişletme Talepleri"
+      expansion-history: "&7Genişletme Geçmişi"
+
+  # --- Roller ---
+  roles:
+    display:
+      none: "&7Yok"
+      visitor: "&7Ziyaretçi"
+      member: "&aÜye"
+      trusted: "&bGüvenilir"
+      builder: "&2İnşaatçı"
+      container: "&3Konteyner"
+      moderator: "&eModeratör"
+      manager: "&6Yönetici"
+      owner: "&cSahip"
+    lore:
+      visitor:
+        - "&7Güvenilmeyen oyuncular için varsayılan rol"
+        - "&cBlok koyamaz, konteyner açamaz"
+      member:
+        - "&7Temel güvenilir rol"
+        - "&aKonteyner açabilir"
+        - "&cBayrak ekleyemez veya değiştiremez"
+      trusted:
+        - "&7Gelişmiş güvenilir rol"
+        - "&aSahip işlemleri dışında tüm yetkiler"
+      builder:
+        - "&7İnşaat rolü"
+        - "&aBlok koyabilir ve kırabilir"
+        - "&cBayrak değiştiremez"
+      container:
+        - "&7Depolama rolü"
+        - "&aSadece konteyner açabilir"
+        - "&cBlok koyamaz veya kıramaz"
+      moderator:
+        - "&7Yönetim rolü"
+        - "&aRolleri ve bayrakları yönetebilir"
+        - "&cSahiplik devredemez"
+      manager:
+        - "&7Üst düzey yönetim rolü"
+        - "&aRolleri, bayrakları yönetebilir ve sahipliği devredebilir"
+      owner:
+        - "&cBölge Sahibi"
+        - "&aBölge üzerinde tam kontrol"
+
+# ==========================================================
+# Yardım Sayfaları
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Oyuncu Rehberi"
+    - "&aProShield Pusulasına sağ tıkla &7→ Ana menüyü aç"
+    - "&bAna Menü &7→ Bölge talebi, Bilgi, İptal, Güvenilir oyuncular, Bayraklar"
+    - "&bGüvenilir Oyuncular &7→ Roller ve erişim yönetimi"
+    - "&bBölge Bayrakları &7→ Koruma ayarlarını değiştir"
+    - "&aGenişletme Talebi &7→ Yöneticilerden genişletme iste (aktifse)"
+    - "&7Genişletme taleplerinin bekleme süresi: &f{cooldown-hours}s &7(standart)."
+    - "&7Tüm işlemler GUI üzerinden yapılır. Komutlar yalnızca sorun durumunda kullanılır."
+
+  admin:
+    - "&c&lProShield — Yönetici Rehberi"
+    - "&cYönetici Araçları GUI &7→ Yenile, Debug, Bypass, Dünya Kontrolleri"
+    - "&7Genişletme talepleri ve dünya kontrolleri için ek yetki gerekir."
+    - "&7Not: Tüm işlemler GUI üzerinden yapılır. Komutlar yalnızca GUI mevcut değilse kullanılmalıdır."
+    - "&7Yedek komutlar:"
+    - "&f/proshield reload &7→ Yapılandırmaları yeniden yükle"
+    - "&f/proshield debug &7→ Debug modunu aç/kapat"
+    - "&f/proshield bypass &7→ Yönetici bypass aç/kapat"
+    - "&f/proshield admin &7→ Yönetici Araçları GUI aç"
+
+  senior:
+    - "&4&lKıdemli Yönetici Araçları"
+    - "&4Genişletme Talepleri &7– Gerekli izin: &fproshield.admin.expansions"
+    - "&4Dünya Kontrolleri &7– Gerekli izin: &fproshield.admin.worldcontrols"
+    - "&7Her iki işlev de GUI ile yapılır. Komutlara gerek yoktur."

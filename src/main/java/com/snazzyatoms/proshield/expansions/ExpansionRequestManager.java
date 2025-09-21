@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,11 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * ExpansionRequestManager (ProShield v1.2.6)
+ * ExpansionRequestManager (ProShield v1.2.6+)
  *
  * Handles:
  *  - Creating new expansion requests
  *  - Approving / denying requests with reasons
+ *  - Notifying players of results (chat + GUI)
  *  - Browsing history and pending lists
  *  - Persistent storage in expansions.yml (survives crash/restore)
  */
@@ -86,6 +88,15 @@ public class ExpansionRequestManager {
         return new ArrayList<>(requests.getOrDefault(requester, Collections.emptyList()));
     }
 
+    /** Get the most recent request from one player (any status). */
+    public ExpansionRequest getLatestFor(UUID requester) {
+        List<ExpansionRequest> list = getRequests(requester);
+        if (list.isEmpty()) return null;
+        return list.stream()
+                .max(Comparator.comparing(ExpansionRequest::getCreatedAt))
+                .orElse(null);
+    }
+
     /** Get all requests globally. */
     public List<ExpansionRequest> getAllRequests() {
         return byId.values().stream()
@@ -130,6 +141,16 @@ public class ExpansionRequestManager {
         req.setReviewedAt(Instant.now());
         req.setDenialReason(null);
         save();
+
+        // Notify player
+        Player target = Bukkit.getPlayer(req.getRequester());
+        if (target != null && target.isOnline()) {
+            plugin.getMessagesUtil().send(target,
+                    plugin.getMessagesUtil().getOrDefault("messages.expansion.approved",
+                            "&aYour claim expansion (+{blocks} blocks) was approved!")
+                            .replace("{blocks}", String.valueOf(req.getAmount())));
+        }
+
         plugin.getLogger().info("[ProShield] Approved expansion request from "
                 + req.getRequester() + " for +" + req.getAmount());
     }
@@ -141,6 +162,16 @@ public class ExpansionRequestManager {
         req.setReviewedAt(Instant.now());
         req.setDenialReason(reason);
         save();
+
+        // Notify player
+        Player target = Bukkit.getPlayer(req.getRequester());
+        if (target != null && target.isOnline()) {
+            plugin.getMessagesUtil().send(target,
+                    plugin.getMessagesUtil().getOrDefault("messages.expansion.denied",
+                            "&cYour expansion request was denied: {reason}")
+                            .replace("{reason}", reason != null ? reason : ""));
+        }
+
         plugin.getLogger().info("[ProShield] Denied expansion request from "
                 + req.getRequester() + " (Reason: " + reason + ")");
     }

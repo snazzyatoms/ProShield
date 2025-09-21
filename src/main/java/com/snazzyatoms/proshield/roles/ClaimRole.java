@@ -9,6 +9,7 @@ import java.util.Locale;
  * ClaimRole
  * - Defines claim roles, hierarchy, and permissions
  * - v1.2.6: Display names + lore now check messages.yml first
+ * - v1.2.6-polished: Added compatibility shims for GUIManager calls
  */
 public enum ClaimRole {
 
@@ -95,5 +96,48 @@ public enum ClaimRole {
         // Fallback: Title-case enum name
         String raw = name().toLowerCase(Locale.ROOT).replace("_", " ");
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+    }
+
+    /* -------------------
+     * Compatibility Shims (for GUIManager 1.2.6)
+     * ------------------- */
+
+    /** GUI expects getId() */
+    public String getId() {
+        return this.name().toLowerCase(Locale.ROOT);
+    }
+
+    /** GUI expects getDescription() */
+    public String getDescription() {
+        ProShield plugin = ProShield.getInstance();
+        String key = "messages.roles.lore." + this.name().toLowerCase(Locale.ROOT);
+        String custom = plugin.getMessagesUtil().getOrNull(key);
+        if (custom != null && !custom.isBlank()) {
+            return plugin.getMessagesUtil().color(custom);
+        }
+        return "Role: " + getDisplayName();
+    }
+
+    /** GUI expects canContainers() */
+    public boolean canContainers() {
+        return canOpenContainers;
+    }
+
+    /** GUI expects canSwitches() */
+    public boolean canSwitches() {
+        // For now, reuse interact flag
+        return canInteract;
+    }
+
+    /** GUI expects canDamageMobs() */
+    public boolean canDamageMobs() {
+        // Default: only MODERATOR+ can damage mobs in claims
+        return this.rank >= MODERATOR.rank;
+    }
+
+    /** GUI expects canPlaceFluids() */
+    public boolean canPlaceFluids() {
+        // Default: TRUSTED+ can place fluids
+        return this.rank >= TRUSTED.rank;
     }
 }

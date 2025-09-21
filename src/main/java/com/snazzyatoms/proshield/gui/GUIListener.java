@@ -52,20 +52,12 @@ public class GUIListener implements Listener {
         clickHandlers.put(getGuiTitle("trusted", "trusted players"), guiManager::handleTrustedClick);
         clickHandlers.put(getGuiTitle("assign-role", "assign role"), guiManager::handleAssignRoleClick);
         clickHandlers.put(getGuiTitle("flags", "claim flags"), guiManager::handleFlagsClick);
-        clickHandlers.put(getGuiTitle("admin", "admin tools"), guiManager::handleAdminToolsClick);
+        clickHandlers.put(getGuiTitle("admin", "admin tools"), guiManager::handleAdminClick);
         clickHandlers.put(getGuiTitle("world-controls", "world controls"), guiManager::handleWorldControlsClick);
         clickHandlers.put(getGuiTitle("request-expansion", "request expansion"), guiManager::handlePlayerExpansionRequestClick);
         clickHandlers.put(getGuiTitle("expansion-requests", "expansion requests"), guiManager::handleExpansionReviewClick);
         clickHandlers.put(getGuiTitle("expansion-history", "expansion history"), guiManager::handleHistoryClick);
-
-        // Placeholder until deny-reasons is fully interactive
-        clickHandlers.put(getGuiTitle("deny-reasons", "deny reasons"), (player, event) -> {
-            event.setCancelled(true);
-            if (plugin.isDebugEnabled()) {
-                plugin.getLogger().info("[GUIListener] " + player.getName() + " clicked in Deny Reasons menu.");
-            }
-            // Optional: expand later with actual deny reason selection
-        });
+        clickHandlers.put(getGuiTitle("deny-reasons", "deny reasons"), guiManager::handleDenyReasonClick);
     }
 
     @EventHandler

@@ -1,8 +1,9 @@
 # ==========================================================
 # ProShield Messages
-# Version: 1.2.6 (Polished & Synced)
+# Version: 1.2.6 (Polished & Synced + Expanded)
 # ----------------------------------------------------------
 # - Role display names + lore are now fully customizable
+# - All GUI buttons and lore now covered
 # ==========================================================
 
 messages:
@@ -76,6 +77,10 @@ messages:
     toggle: "&eWorld control &f{flag} &eis now {state}."
     enabled: "&aENABLED"
     disabled: "&cDISABLED"
+    pvp: "&fGlobal PvP"
+    pvp-lore:
+      - "&7Toggle PvP across the entire world"
+    toggled: "&eWorld control &f{flag} &eis now {state}"
 
   # --- GUI Navigation ---
   gui:
@@ -96,6 +101,59 @@ messages:
       request-expansion: "&aRequest Expansion"
       expansion-requests: "&eExpansion Requests"
       expansion-history: "&7Expansion History"
+
+    # --- Main Menu Buttons ---
+    main:
+      claim-land: "&aClaim Land"
+      claim-land-lore:
+        - "&7Claim the chunk you are standing in."
+      claim-info: "&eClaim Info"
+      claim-info-lore:
+        - "&7View details about this claim"
+      unclaim-land: "&cUnclaim Land"
+      unclaim-land-lore:
+        - "&7Remove your current claim."
+      trusted-players: "&bTrusted Players"
+      trusted-players-lore:
+        - "&7Manage trusted players & roles."
+      claim-flags: "&eClaim Flags"
+      claim-flags-lore:
+        - "&7Toggle protection flags for this claim."
+      request-expansion: "&aRequest Expansion"
+      request-expansion-lore:
+        - "&7Request to expand your claim."
+      admin-tools: "&cAdmin Tools"
+      admin-tools-lore:
+        - "&7Admin-only controls."
+
+    # --- Role GUI ---
+    roles:
+      assign-hint: "&aLeft-click: Assign new role"
+      untrust-hint: "&cRight-click: Untrust"
+      untrusted: "&cUntrusted &f{name}"
+      assigned: "&aAssigned &f{name} &ato role &f{role}&a."
+
+    # --- Flags Menu ---
+    flags:
+      pvp: "&fPvP: {state}"
+      pvp-lore:
+        - "&7Toggle PvP inside this claim"
+      toggled: "&eToggled &f{flag} &eto {state}"
+
+    # --- Admin Tools Menu ---
+    admin:
+      reload: "&eReload Config"
+      reload-lore:
+        - "&7Reloads all configuration files."
+      debug: "&cToggle Debug"
+      debug-lore:
+        - "&7Enable/disable debug mode."
+      bypass: "&aToggle Bypass"
+      bypass-lore:
+        - "&7Enable/disable admin bypass."
+      world-controls: "&dWorld Controls"
+      world-controls-lore:
+        - "&7Manage world-level flags."
 
   # --- Role Display Names & Lore (NEW) ---
   roles:

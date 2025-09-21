@@ -46,7 +46,7 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("mob-spawn")) {
             event.setCancelled(true);
-            messages.debug("Blocked mob spawn at " + loc + " (Plot=" + plot.getId() + ")");
+            debug("Blocked mob spawn at " + loc + " (Plot=" + plot.getId() + ")");
         }
     }
 
@@ -60,7 +60,7 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot != null && plot.getFlag("safezone") && event.getEntity() instanceof Monster) {
             event.setCancelled(true);
-            messages.debug("Prevented " + event.getEntity().getType()
+            debug("Prevented " + event.getEntity().getType()
                     + " from targeting " + player.getName()
                     + " inside safezone (Plot=" + plot.getId() + ")");
         }
@@ -77,7 +77,7 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("explosions")) {
             event.blockList().clear(); // Prevent block damage
-            messages.debug("Blocked explosion block damage at " + loc
+            debug("Blocked explosion block damage at " + loc
                     + " (Entity=" + event.getEntityType() + ", Plot=" + plot.getId() + ")");
         }
     }
@@ -94,7 +94,7 @@ public class MobProtectionListener implements Listener {
         // For now tied to mob-spawn flag (could add enderman-grief flag later)
         if (plot != null && !plot.getFlag("mob-spawn")) {
             event.setCancelled(true);
-            messages.debug("Prevented Enderman block move at " + loc
+            debug("Prevented Enderman block move at " + loc
                     + " (Plot=" + plot.getId() + ")");
         }
     }
@@ -111,8 +111,17 @@ public class MobProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot != null && !plot.getFlag("explosions")) {
             event.blockList().clear();
-            messages.debug("Prevented projectile/explosive damage at " + loc
+            debug("Prevented projectile/explosive damage at " + loc
                     + " (Entity=" + entity.getType() + ", Plot=" + plot.getId() + ")");
+        }
+    }
+
+    /* -------------------------
+     * DEBUG HELPER
+     * ------------------------- */
+    private void debug(String msg) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[MobProtection] " + msg);
         }
     }
 }

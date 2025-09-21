@@ -47,7 +47,7 @@ public class MobControlTasks {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    Plot plot = plots.getPlotAt(player.getLocation()); // ✅ fixed
+                    Plot plot = plots.getPlotAt(player.getLocation());
                     if (plot == null || !plot.getFlag("safezone", cfg)) continue;
 
                     List<Entity> nearby = player.getNearbyEntities(radius, radius, radius);
@@ -60,6 +60,9 @@ public class MobControlTasks {
                                 .normalize();
                         dir.setY(pushY);
                         e.setVelocity(dir.multiply(pushX));
+
+                        debug("Repelled " + e.getType() + " near " + player.getName()
+                                + " in safezone plot=" + plot.getId());
                     }
                 }
             }
@@ -79,9 +82,11 @@ public class MobControlTasks {
                     for (Entity entity : world.getEntities()) {
                         if (!(entity instanceof Monster)) continue;
 
-                        Plot plot = plots.getPlotAt(entity.getLocation()); // ✅ fixed
+                        Plot plot = plots.getPlotAt(entity.getLocation());
                         if (plot != null && plot.getFlag("safezone", cfg)) {
                             entity.remove();
+                            debug("Despawned " + entity.getType()
+                                    + " inside safezone plot=" + plot.getId());
                         }
                     }
                 }
@@ -99,16 +104,19 @@ public class MobControlTasks {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    Plot plot = plots.getPlotAt(player.getLocation()); // ✅ fixed
+                    Plot plot = plots.getPlotAt(player.getLocation());
                     if (plot == null || !plot.getFlag("safezone", cfg)) continue;
 
                     List<Entity> nearby = player.getNearbyEntities(20, 10, 20);
                     for (Entity e : nearby) {
                         if (e instanceof Monster mob) {
                             if (mob.getTarget() instanceof Player target) {
-                                Plot targetPlot = plots.getPlotAt(target.getLocation()); // ✅ fixed
+                                Plot targetPlot = plots.getPlotAt(target.getLocation());
                                 if (targetPlot != null && targetPlot.getFlag("safezone", cfg)) {
                                     mob.setTarget(null);
+                                    debug("Cleared target of " + mob.getType()
+                                            + " on player=" + target.getName()
+                                            + " inside safezone plot=" + targetPlot.getId());
                                 }
                             }
                         }
@@ -116,5 +124,14 @@ public class MobControlTasks {
                 }
             }
         }.runTaskTimer(plugin, interval, interval);
+    }
+
+    /**
+     * Debug logger for MobControlTasks.
+     */
+    private void debug(String msg) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info("[MobControlTasks] " + msg);
+        }
     }
 }

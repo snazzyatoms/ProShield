@@ -35,10 +35,10 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 if (player.hasPermission("proshield.player.access")) {
                     plugin.getGuiManager().openMain(player);
                 } else {
-                    messages.send(player, messages.get("messages.error.no-permission"));
+                    messages.send(player, messages.getOrDefault("messages.error.no-permission", "&cNo permission."));
                 }
             } else {
-                messages.send(sender, messages.get("messages.error.player-only"));
+                messages.send(sender, messages.getOrDefault("messages.error.player-only", "&cPlayers only."));
             }
             return true;
         }
@@ -55,7 +55,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     || sender.hasPermission("proshield.admin.expansions")) {
                 messages.sendList(sender, messages.getList("help.senior"));
             } else {
-                messages.send(sender, messages.get("messages.error.no-permission"));
+                messages.send(sender, messages.getOrDefault("messages.error.no-permission", "&cNo permission."));
             }
             return true;
         }
@@ -63,11 +63,11 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         // --- COMPASS ---
         if (sub.equals("compass")) {
             if (!(sender instanceof Player player)) {
-                messages.send(sender, messages.get("messages.error.player-only"));
+                messages.send(sender, messages.getOrDefault("messages.error.player-only", "&cPlayers only."));
                 return true;
             }
             if (!player.hasPermission("proshield.player.access")) {
-                messages.send(player, messages.get("messages.error.no-permission"));
+                messages.send(player, messages.getOrDefault("messages.error.no-permission", "&cNo permission."));
                 return true;
             }
 
@@ -85,13 +85,13 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             }
 
             if (alreadyHas) {
-                messages.send(player, messages.get("messages.compass.already-have"));
+                messages.send(player, messages.getOrDefault("messages.compass.already-have", "&cYou already have a ProShield compass."));
                 return true;
             }
 
             // Check inventory space
             if (player.getInventory().firstEmpty() == -1) {
-                messages.send(player, messages.get("messages.error.inventory-full"));
+                messages.send(player, messages.getOrDefault("messages.error.inventory-full", "&cYour inventory is full."));
                 return true;
             }
 
@@ -103,13 +103,13 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 compass.setItemMeta(meta);
             }
             player.getInventory().addItem(compass);
-            messages.send(player, messages.get("messages.compass.command-success"));
+            messages.send(player, messages.getOrDefault("messages.compass.command-success", "&aYou received a ProShield compass."));
             return true;
         }
 
         // --- ADMIN COMMANDS ---
         if (!sender.hasPermission("proshield.admin")) {
-            messages.send(sender, messages.get("messages.error.no-permission"));
+            messages.send(sender, messages.getOrDefault("messages.error.no-permission", "&cNo permission."));
             return true;
         }
 
@@ -118,30 +118,30 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 plugin.reloadConfig();
                 plugin.loadMessagesConfig(); // reload messages.yml
                 plugin.getExpansionRequestManager().reload(); // reload expansions.yml
-                messages.send(sender, messages.get("messages.reloaded"));
+                messages.send(sender, messages.getOrDefault("messages.reloaded", "&aProShield reloaded."));
             }
 
             case "debug" -> {
                 plugin.toggleDebug();
                 if (plugin.isDebugEnabled()) {
-                    messages.send(sender, messages.get("messages.admin.debug-on"));
+                    messages.send(sender, messages.getOrDefault("messages.admin.debug-on", "&aDebug mode enabled."));
                 } else {
-                    messages.send(sender, messages.get("messages.admin.debug-off"));
+                    messages.send(sender, messages.getOrDefault("messages.admin.debug-off", "&cDebug mode disabled."));
                 }
             }
 
             case "bypass" -> {
                 if (!(sender instanceof Player player)) {
-                    messages.send(sender, messages.get("messages.error.player-only"));
+                    messages.send(sender, messages.getOrDefault("messages.error.player-only", "&cPlayers only."));
                     return true;
                 }
                 UUID uuid = player.getUniqueId();
                 if (plugin.getBypassing().contains(uuid)) {
                     plugin.getBypassing().remove(uuid);
-                    messages.send(player, messages.get("messages.admin.bypass-off"));
+                    messages.send(player, messages.getOrDefault("messages.admin.bypass-off", "&cBypass disabled."));
                 } else {
                     plugin.getBypassing().add(uuid);
-                    messages.send(player, messages.get("messages.admin.bypass-on"));
+                    messages.send(player, messages.getOrDefault("messages.admin.bypass-on", "&aBypass enabled."));
                 }
             }
 
@@ -149,7 +149,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 if (sender instanceof Player player) {
                     plugin.getGuiManager().openAdminTools(player);
                 } else {
-                    messages.send(sender, messages.get("messages.error.player-only"));
+                    messages.send(sender, messages.getOrDefault("messages.error.player-only", "&cPlayers only."));
                 }
             }
 

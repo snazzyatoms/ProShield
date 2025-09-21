@@ -1,6 +1,8 @@
+// src/main/java/com/snazzyatoms/proshield/roles/ClaimRole.java
 package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
+
 import java.util.Locale;
 
 /**
@@ -40,7 +42,9 @@ public enum ClaimRole {
         this.canTransferClaim = canTransferClaim;
     }
 
-    // Permissions
+    /* -------------------
+     * Permission Checks
+     * ------------------- */
     public boolean canInteract() { return canInteract; }
     public boolean canBuild() { return canBuild; }
     public boolean canOpenContainers() { return canOpenContainers; }
@@ -50,12 +54,16 @@ public enum ClaimRole {
 
     public int getRank() { return rank; }
 
-    // Compare hierarchy
+    /* -------------------
+     * Role Logic
+     * ------------------- */
+
+    /** Compare hierarchy (this >= other). */
     public boolean isAtLeast(ClaimRole other) {
         return this.rank >= other.rank;
     }
 
-    // Resolve role by name
+    /** Resolve role by name (case-insensitive). */
     public static ClaimRole fromName(String name) {
         if (name == null || name.isBlank()) return NONE;
         try {

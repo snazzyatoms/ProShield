@@ -1,14 +1,19 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (Synced)
+# Version: 1.2.6 (Synced + Multilingual)
 # ----------------------------------------------------------
 # - Claims are safe zones by default (PvP disabled inside)
 # - Wilderness = vanilla baseline (PvP enabled, no safezone)
 # - Expansion request steps synced with GUI (16/32/64)
-# - Messages moved to messages.yml for clean localization
+# - Messages moved to /languages/messages_xx.yml for localization
+# - Language toggle added for community translation support
 # ==========================================================
 
 settings:
+  language: "en"   # 🌍 Language code (en, de, es, fr, pt-BR, ru, ja, zh_cn, etc.)
+                   # ⚠️ Disclaimer: Translations are machine-assisted and may not be perfect.
+                   # You are free to edit the /languages/messages_xx.yml files to better fit your community.
+
   give-compass-on-join: true
   compass-despawn-delay: 600
   compass-auto-replace: false

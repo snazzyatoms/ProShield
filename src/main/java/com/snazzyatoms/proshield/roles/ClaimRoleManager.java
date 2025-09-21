@@ -8,16 +8,19 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager (ProShield v1.2.6)
+ * ClaimRoleManager (ProShield v1.2.6-polished)
  * -----------------------------------
  * - Central authority for claim roles & permissions
  * - Pulls default role name from config.yml
  * - Provides helpers for GUI, listeners, and protection checks
  * - Uses messages.yml for player-facing feedback
  * - Fully synced with ClaimRole.getDisplayName() (customizable/localizable)
+ * - Added compatibility shims for GUIManager
  */
 public class ClaimRoleManager {
 
@@ -151,5 +154,19 @@ public class ClaimRoleManager {
                 "&aAssigned &f{player} &ato role &f{role} &ain this claim.")
                 .replace("{player}", targetName)
                 .replace("{role}", role.getDisplayName()));
+    }
+
+    /* ========================
+     * Compatibility Shims (for GUIManager 1.2.6)
+     * ======================== */
+
+    /** GUI expects to list all roles */
+    public List<ClaimRole> getAllRoles() {
+        return Arrays.asList(ClaimRole.values());
+    }
+
+    /** GUI sometimes calls role lookup by raw string */
+    public ClaimRole getRole(String raw) {
+        return ClaimRole.fromName(raw);
     }
 }

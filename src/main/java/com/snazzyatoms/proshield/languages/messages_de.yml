@@ -1,10 +1,9 @@
-# =================================================
-# ProShield Nachrichten (Deutsch)
-# Version: 1.2.6 (poliert & synchronisiert)
-# -------------------------------------------------
-# Rollennamen + Lore sind voll anpassbar
-# Gamer-freundliche Übersetzung für deutsche Spieler
-# =================================================
+# ==========================================================
+# ProShield-Nachrichten
+# Version: 1.2.6 (Poliert & Synchronisiert)
+# ----------------------------------------------------------
+# - Rollenanzeige-Namen + Beschreibungen jetzt vollständig anpassbar
+# ==========================================================
 
 messages:
   prefix: "&3[ProShield]&r "
@@ -14,38 +13,38 @@ messages:
   error:
     player-only: "&cNur Spieler können diese Aktion verwenden."
     no-permission: "&cDu hast keine Berechtigung dafür."
-    inventory-full: "&cDein Inventar ist voll. Bitte räume zuerst einen Slot frei."
-    block-break: "&cDu kannst hier keine Blöcke abbauen."
+    inventory-full: "&cDein Inventar ist voll. Bitte mache zuerst Platz."
+    block-break: "&cDu kannst hier keine Blöcke zerstören."
     block-place: "&cDu kannst hier keine Blöcke platzieren."
     bucket-empty: "&cDu kannst hier keinen Eimer entleeren."
     bucket-fill: "&cDu kannst hier keinen Eimer füllen."
-    pvp: "&cPvP ist in diesem Claim deaktiviert."
+    pvp: "&cPvP ist in diesem Gebiet deaktiviert."
 
   # --- Kompass ---
   compass:
-    command-success: "&aDu hast einen ProShield Kompass erhalten."
-    already-have: "&eDu besitzt bereits einen ProShield Kompass."
+    command-success: "&aDir wurde ein ProShield-Kompass gegeben."
+    already-have: "&eDu hast bereits einen ProShield-Kompass."
     lore:
-      - "&7Rechtsklick → öffnet das ProShield Menü"
-      - "&7Verwalte Claims, Flags & Trusted Spieler"
+      - "&7Rechtsklick → ProShield-Menü öffnen"
+      - "&7Verwalte Claims, Flags & vertraute Spieler"
 
   # --- Admin / System ---
-  reloaded: "&aProShield Konfiguration neu geladen."
+  reloaded: "&aProShield-Konfiguration neu geladen."
 
   admin:
-    debug-on: "&eDebug Modus: &aAKTIV"
-    debug-off: "&eDebug Modus: &cDEAKTIV"
+    debug-on: "&eDebug-Modus: &aAKTIV"
+    debug-off: "&eDebug-Modus: &cDEAKTIVIERT"
     bypass-on: "&aBypass aktiviert."
     bypass-off: "&cBypass deaktiviert."
 
-  # --- Claim / Regionswechsel ---
+  # --- Claim / Regionen-Übergänge ---
   show-wilderness: true
   admin-flag-chat: true
   enter-own: "&aDu hast deinen Claim betreten."
   enter-other: "&aDu hast den Claim von {owner} betreten."
   leave-own: "&cDu hast deinen Claim verlassen."
   leave-other: "&cDu hast den Claim von {owner} verlassen."
-  wilderness: "&7Du bist nun in der Wildnis."
+  wilderness: "&7Du betrittst die Wildnis."
 
   # --- Erweiterungsanfragen (Spieler) ---
   expansion:
@@ -54,27 +53,27 @@ messages:
     denied: "&cDeine Anfrage wurde abgelehnt: {reason}"
     disabled: "&cErweiterungsanfragen sind auf diesem Server deaktiviert."
     cooldown-title: "&cAbklingzeit aktiv"
-    cooldown-active: "&7Du kannst in &f{hours}h {minutes}m &7wieder eine Anfrage stellen."
-    expired: "&eDeine Erweiterungsanfrage ist nach {days} Tagen ohne Antwort abgelaufen."
+    cooldown-active: "&7Du kannst erneut anfragen in &f{hours}h {minutes}m&7."
+    expired: "&eDeine Erweiterungsanfrage ist nach {days} Tagen ohne Prüfung abgelaufen."
 
-  # --- Erweiterungsprüfung (Admin GUI) ---
+  # --- Erweiterungsprüfung (Admin-GUI) ---
   expansion-admin:
     lore:
-      approve: "&aLinksklick: Genehmigen"
-      deny: "&cRechtsklick: Ablehnen und Grund wählen"
-      info: "&7Nutze das Menü für Ablehnungsgründe"
+      approve: "&aLinksklick: Erweiterung genehmigen"
+      deny: "&cRechtsklick: Ablehnen & Grund auswählen"
+      info: "&7Nutze das Menü 'Ablehnungsgründe' für detaillierte Nachrichten."
 
   # --- Ablehnungsgründe ---
   deny-reasons:
-    too-large: "&cDie Anfrage ist zu groß."
-    abusive: "&cAnfrage wegen Missbrauch abgelehnt."
-    overlap: "&cDas gewünschte Gebiet überschneidet sich mit einem anderen Claim."
-    custom-1: "&cNoch nicht genug Spielzeit für diese Erweiterung."
+    too-large: "&cDie angefragte Erweiterung ist zu groß."
+    abusive: "&cAnfrage wegen Missbrauchs abgelehnt."
+    overlap: "&cDer Bereich überschneidet sich mit einem bestehenden Claim."
+    custom-1: "&cNicht genug Spielzeit für diese Erweiterung."
     custom-2: "&cDein Claim hat bereits die maximale Größe erreicht."
 
-  # --- Welt-Kontrollen ---
+  # --- Weltkontrollen ---
   world-controls:
-    toggle: "&eWelt-Einstellung &f{flag} &ewurde {state}."
+    toggle: "&eWeltkontrolle &f{flag} &eist jetzt {state}."
     enabled: "&aAKTIVIERT"
     disabled: "&cDEAKTIVIERT"
 
@@ -85,89 +84,88 @@ messages:
       - "&7Zurück zum vorherigen Menü"
     exit-button: "&cBeenden"
     exit-lore:
-      - "&7Menü sicher schließen"
+      - "&7Dieses Menü sicher schließen"
     titles:
-      main: "&6ProShield Menü"
-      trusted: "&bTrusted Spieler"
+      main: "&6ProShield-Menü"
+      trusted: "&bVertrauenswürdige Spieler"
       assign-role: "&bRolle zuweisen"
-      flags: "&eClaim Flags"
-      admin: "&cAdmin Tools"
-      world-controls: "&cWelt-Kontrollen"
+      flags: "&eClaim-Flags"
+      admin: "&cAdmin-Werkzeuge"
+      world-controls: "&cWeltkontrollen"
       deny-reasons: "&cAblehnungsgründe"
       request-expansion: "&aErweiterung anfragen"
       expansion-requests: "&eErweiterungsanfragen"
-      expansion-history: "&7Erweiterungsverlauf"
+      expansion-history: "&7Erweiterungshistorie"
 
-  # --- Rollen (Namen + Lore) ---
+  # --- Rollen (Namen & Beschreibungen) ---
   roles:
     display:
       none: "&7Keine"
       visitor: "&7Besucher"
       member: "&aMitglied"
-      trusted: "&bTrusted"
-      builder: "&2Builder"
+      trusted: "&bVertraut"
+      builder: "&2Baumeister"
       container: "&3Container"
       moderator: "&eModerator"
       manager: "&6Manager"
-      owner: "&cEigentümer"
+      owner: "&cBesitzer"
     lore:
       visitor:
-        - "&7Standardrolle für Fremde"
+        - "&7Standardrolle für nicht vertrauenswürdige Spieler"
         - "&cKann nicht bauen oder Container öffnen"
       member:
-        - "&7Basisrolle"
+        - "&7Basisrolle für vertraute Spieler"
         - "&aKann Container öffnen"
-        - "&cKann nicht bauen oder Flags ändern"
+        - "&cKann keine Flags setzen oder ändern"
       trusted:
-        - "&7Trusted Rolle"
-        - "&aFast voller Zugriff außer Besitzerrechte"
+        - "&7Erweiterte vertraute Rolle"
+        - "&aVoller Zugriff außer Besitzerrechte"
       builder:
         - "&7Bau-Rolle"
-        - "&aKann Blöcke platzieren & abbauen"
+        - "&aKann Blöcke setzen & abbauen"
         - "&cKann keine Flags ändern"
       container:
         - "&7Lager-Rolle"
         - "&aKann nur Container öffnen"
-        - "&cKann nicht bauen"
+        - "&cKann nicht bauen oder abbauen"
       moderator:
         - "&7Verwaltungsrolle"
         - "&aKann Rollen & Flags verwalten"
         - "&cKann Claim nicht übertragen"
       manager:
-        - "&7Manager-Rolle"
-        - "&aKann alles verwalten inkl. Rollen & Flags"
-        - "&cKann Claim übertragen"
+        - "&7Höhere Verwaltungsrolle"
+        - "&aKann Rollen, Flags & Besitz übertragen"
       owner:
         - "&cClaim-Besitzer"
-        - "&aVollständige Kontrolle"
+        - "&aVolle Kontrolle über den Claim"
 
-# =================================================
-# Hilfe-Seiten
-# =================================================
+# ==========================================================
+# Hilfeseiten
+# ==========================================================
 help:
   player:
-    - "&3&lProShield &7— Spielerhilfe"
-    - "&aRechtsklick mit dem ProShield Kompass &7→ Hauptmenü öffnen"
-    - "&bHauptmenü &7→ Claim erstellen, Infos, Unclaim, Trusted Spieler, Flags"
-    - "&bTrusted Spieler &7→ Rollen & Zugriff verwalten"
-    - "&bClaim Flags &7→ Schutzoptionen umschalten"
-    - "&aErweiterung anfragen &7→ Admins um mehr Claim-Blöcke bitten"
-    - "&7Abklingzeit: &f{cooldown-hours}h &7(Standard)."
-    - "&7Alles ist GUI-gesteuert. Befehle nur bei Problemen nötig."
+    - "&3&lProShield &7— Spielerhandbuch"
+    - "&aRechtsklick auf den ProShield-Kompass &7→ Hauptmenü öffnen"
+    - "&bHauptmenü &7→ Land claimen, Info, Unclaim, Spieler, Flags"
+    - "&bVertrauenswürdige Spieler &7→ Rollen & Zugänge verwalten"
+    - "&bClaim-Flags &7→ Schutzoptionen umschalten"
+    - "&aErweiterung anfragen &7→ Admins um Claim-Erweiterung bitten"
+    - "&7Anfragen haben eine Abklingzeit von &f{cooldown-hours}h &7(Standard)."
+    - "&7Alle Funktionen sind GUI-gesteuert. Befehle nur wenn nötig."
 
   admin:
-    - "&c&lProShield — Adminhilfe"
-    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, Welt-Kontrollen"
-    - "&7Erweiterungen & Welt-Kontrollen brauchen höhere Rechte."
-    - "&7Hinweis: Alles läuft über GUI. Befehle nur im Notfall."
-    - "&7Admin-Befehle:"
-    - "&f/proshield reload &7→ Konfig neu laden"
-    - "&f/proshield debug &7→ Debug umschalten"
-    - "&f/proshield bypass &7→ Bypass umschalten"
-    - "&f/proshield admin &7→ Admin Tools öffnen"
+    - "&c&lProShield — Admin-Handbuch"
+    - "&cAdmin-Menü &7→ Reload, Debug, Bypass, Weltkontrollen"
+    - "&7Erweiterungsanfragen & Weltkontrollen erfordern spezielle Rechte."
+    - "&7Hinweis: Alles ist GUI-gesteuert. Befehle nur als Fallback."
+    - "&7Fallback-Befehle (nur Admins):"
+    - "&f/proshield reload &7→ Konfiguration neu laden"
+    - "&f/proshield debug &7→ Debug-Modus umschalten"
+    - "&f/proshield bypass &7→ Admin-Bypass umschalten"
+    - "&f/proshield admin &7→ Admin-Menü öffnen"
 
   senior:
-    - "&4&lSenior Admin Tools"
-    - "&4Erweiterungen prüfen &7– benötigt &fproshield.admin.expansions"
-    - "&4Welt-Kontrollen &7– benötigt &fproshield.admin.worldcontrols"
-    - "&7Beides läuft über GUI. Befehle nicht nötig."
+    - "&4&lSenior-Admin-Werkzeuge"
+    - "&4Erweiterungsanfragen &7– Benötigt &fproshield.admin.expansions"
+    - "&4Weltkontrollen &7– Benötigt &fproshield.admin.worldcontrols"
+    - "&7Beide Funktionen sind GUI-gesteuert. Befehle unnötig."

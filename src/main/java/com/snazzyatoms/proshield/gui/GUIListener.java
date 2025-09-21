@@ -1,8 +1,6 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -11,128 +9,56 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.BiConsumer;
-
 /**
- * GUIListener (ProShield v1.2.6)
+ * GUIListener (ProShield v1.2.6+)
  *
- * - Routes clicks to GUIManager handlers based on localized titles from messages.yml
- * - Handles clearing of ephemeral state (role assignments, deny reasons) on close
- * - Ensures back/exit buttons and all menus remain synchronized
+ * - Forwards all click events into GUIManager#handleClick
+ * - Cancels vanilla inventory behavior inside ProShield GUIs
+ * - Cleans up ephemeral state (role assignment, deny reasons) when needed
  */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
 
-    // Routing table for GUIs (title → click handler)
-    private final Map<String, BiConsumer<Player, InventoryClickEvent>> clickHandlers = new HashMap<>();
-
     public GUIListener(ProShield plugin) {
         this.plugin = plugin;
         this.guiManager = plugin.getGuiManager();
-        registerHandlers();
     }
 
-    // Optional legacy constructor
+    // Legacy fallback
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
         this.guiManager = (guiManager != null ? guiManager : plugin.getGuiManager());
-        registerHandlers();
-    }
-
-    /**
-     * Fetches normalized GUI title from messages.yml (with fallback).
-     */
-    private String getGuiTitle(String key, String fallback) {
-        String raw = plugin.getMessagesUtil().getOrDefault("messages.gui.titles." + key, fallback);
-        if (raw == null || raw.isBlank()) raw = fallback;
-        return ChatColor.stripColor(raw).toLowerCase(Locale.ROOT).trim();
-    }
-
-    /**
-     * Register all GUI menus and their handlers.
-     */
-    private void registerHandlers() {
-        clickHandlers.put(getGuiTitle("main", "proshield menu"), guiManager::handleMainClick);
-        clickHandlers.put(getGuiTitle("trusted", "trusted players"), guiManager::handleTrustedClick);
-        clickHandlers.put(getGuiTitle("assign-role", "assign role"), guiManager::handleAssignRoleClick);
-        clickHandlers.put(getGuiTitle("flags", "claim flags"), guiManager::handleFlagsClick);
-        clickHandlers.put(getGuiTitle("admin", "admin tools"), guiManager::handleAdminClick);
-        clickHandlers.put(getGuiTitle("world-controls", "world controls"), guiManager::handleWorldControlsClick);
-        clickHandlers.put(getGuiTitle("request-expansion", "request expansion"), guiManager::handlePlayerExpansionRequestClick);
-        clickHandlers.put(getGuiTitle("expansion-requests", "expansion requests"), guiManager::handleExpansionReviewClick);
-        clickHandlers.put(getGuiTitle("expansion-history", "expansion history"), guiManager::handleHistoryClick);
-        clickHandlers.put(getGuiTitle("deny-reasons", "deny reasons"), guiManager::handleDenyReasonClick);
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (guiManager == null) return; // safety guard
+        if (guiManager == null) return;
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        String rawTitle = event.getView().getTitle();
-        if (rawTitle == null || rawTitle.isBlank()) return;
+        // Always cancel to prevent vanilla actions inside ProShield menus
+        event.setCancelled(true);
 
-        String cleanTitle = ChatColor.stripColor(rawTitle);
-        if (cleanTitle == null || cleanTitle.isBlank()) return;
-
-        String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
-
-        // Route clicks only if title matches our handlers
-        for (Map.Entry<String, BiConsumer<Player, InventoryClickEvent>> entry : clickHandlers.entrySet()) {
-            if (lowerTitle.contains(entry.getKey())) {
-                event.setCancelled(true); // block vanilla behavior
-
-                if (plugin.isDebugEnabled()) {
-                    plugin.getLogger().info("[GUIListener] Routed click → " + entry.getKey()
-                            + " | Player: " + player.getName()
-                            + " | Slot: " + event.getSlot());
-                }
-
-                try {
-                    entry.getValue().accept(player, event);
-                } catch (Exception ex) {
-                    plugin.getLogger().warning("[GUIListener] Error handling click in " + cleanTitle + ": " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-                return;
-            }
+        try {
+            guiManager.handleClick(event);
+        } catch (Exception ex) {
+            plugin.getLogger().warning("[GUIListener] Error handling click for " + player.getName()
+                    + " in GUI: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
-        if (guiManager == null) return; // safety guard
+        if (guiManager == null) return;
 
-        String rawTitle = event.getView().getTitle();
-        if (rawTitle == null || rawTitle.isBlank()) return;
-
-        String cleanTitle = ChatColor.stripColor(rawTitle);
-        if (cleanTitle == null || cleanTitle.isBlank()) return;
-
-        String lowerTitle = cleanTitle.toLowerCase(Locale.ROOT).trim();
-        UUID uuid = player.getUniqueId();
-
-        // Cleanup ephemeral state when menus close
-        if (lowerTitle.contains(getGuiTitle("assign-role", "assign role"))) {
-            guiManager.clearPendingRoleAssignment(uuid);
-            if (plugin.isDebugEnabled()) {
-                plugin.getLogger().info("[GUIListener] Cleared pending role assignment for " + player.getName());
-            }
-        } else if (lowerTitle.contains(getGuiTitle("deny-reasons", "deny reasons"))) {
-            guiManager.clearPendingDenyTarget(uuid);
-            if (plugin.isDebugEnabled()) {
-                plugin.getLogger().info("[GUIListener] Cleared pending deny target for " + player.getName());
-            }
-        }
+        // Optional: clear any temporary state if your GUIManager still uses it
+        guiManager.clearPendingRoleAssignment(player.getUniqueId());
+        guiManager.clearPendingDenyTarget(player.getUniqueId());
     }
 }

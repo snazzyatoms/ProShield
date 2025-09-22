@@ -3,13 +3,14 @@ package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
 
-import java.util.Locale;
+import java.util.*;
 
 /**
  * ClaimRole
  * - Defines claim roles, hierarchy, and permissions
  * - v1.2.6: Display names + lore now check messages.yml first
  * - v1.2.6-polished: Added compatibility shims for GUIManager calls
+ * - v1.2.6-enhanced: Supports multi-line lore + aliases
  */
 public enum ClaimRole {
 
@@ -64,11 +65,28 @@ public enum ClaimRole {
         return this.rank >= other.rank;
     }
 
-    /** Resolve role by name (case-insensitive). */
+    // Aliases for convenience (config, commands, etc.)
+    private static final Map<String, ClaimRole> ALIASES = Map.ofEntries(
+        Map.entry("visitor", VISITOR),
+        Map.entry("member", MEMBER),
+        Map.entry("trusted", TRUSTED),
+        Map.entry("builder", BUILDER),
+        Map.entry("container", CONTAINER),
+        Map.entry("mod", MODERATOR),
+        Map.entry("moderator", MODERATOR),
+        Map.entry("mgr", MANAGER),
+        Map.entry("manager", MANAGER),
+        Map.entry("admin", MANAGER),
+        Map.entry("owner", OWNER)
+    );
+
+    /** Resolve role by name or alias (case-insensitive). */
     public static ClaimRole fromName(String name) {
         if (name == null || name.isBlank()) return NONE;
+        String key = name.trim().toLowerCase(Locale.ROOT);
+        if (ALIASES.containsKey(key)) return ALIASES.get(key);
         try {
-            return ClaimRole.valueOf(name.trim().toUpperCase(Locale.ROOT));
+            return ClaimRole.valueOf(key.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
             return NONE;
         }
@@ -87,13 +105,11 @@ public enum ClaimRole {
             return plugin.getMessagesUtil().color(custom);
         }
 
-        // Debug log for missing key (only if debug enabled)
         if (plugin.isDebugEnabled()) {
             plugin.getLogger().info("[ProShield] No display name found for role: "
                     + this.name() + " (using fallback)");
         }
 
-        // Fallback: Title-case enum name
         String raw = name().toLowerCase(Locale.ROOT).replace("_", " ");
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
@@ -107,7 +123,7 @@ public enum ClaimRole {
         return this.name().toLowerCase(Locale.ROOT);
     }
 
-    /** GUI expects getDescription() */
+    /** GUI expects getDescription() (single-line fallback) */
     public String getDescription() {
         ProShield plugin = ProShield.getInstance();
         String key = "messages.roles.lore." + this.name().toLowerCase(Locale.ROOT);
@@ -118,26 +134,26 @@ public enum ClaimRole {
         return "Role: " + getDisplayName();
     }
 
-    /** GUI expects canContainers() */
-    public boolean canContainers() {
-        return canOpenContainers;
+    /** Enhanced: Multi-line lore for GUIs */
+    public List<String> getLore() {
+        ProShield plugin = ProShield.getInstance();
+        String key = "messages.roles.lore." + this.name().toLowerCase(Locale.ROOT);
+        List<String> list = plugin.getMessagesUtil().getListOrNull(key);
+        if (list != null && !list.isEmpty()) {
+            return plugin.getMessagesUtil().color(list);
+        }
+        return List.of("Role: " + getDisplayName());
     }
+
+    /** GUI expects canContainers() */
+    public boolean canContainers() { return canOpenContainers; }
 
     /** GUI expects canSwitches() */
-    public boolean canSwitches() {
-        // For now, reuse interact flag
-        return canInteract;
-    }
+    public boolean canSwitches() { return canInteract; }
 
     /** GUI expects canDamageMobs() */
-    public boolean canDamageMobs() {
-        // Default: only MODERATOR+ can damage mobs in claims
-        return this.rank >= MODERATOR.rank;
-    }
+    public boolean canDamageMobs() { return this.rank >= MODERATOR.rank; }
 
     /** GUI expects canPlaceFluids() */
-    public boolean canPlaceFluids() {
-        // Default: TRUSTED+ can place fluids
-        return this.rank >= TRUSTED.rank;
-    }
+    public boolean canPlaceFluids() { return this.rank >= TRUSTED.rank; }
 }

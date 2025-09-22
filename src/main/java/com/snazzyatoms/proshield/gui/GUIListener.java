@@ -1,8 +1,6 @@
-// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,31 +14,22 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 /**
- * GUIListener (ProShield v1.2.6 FINAL + Compass Support)
+ * GUIListener (ProShield v1.2.6 FINAL)
  *
  * - Routes ALL clicks into GUIManager.handleClick()
  * - Cancels vanilla inventory behavior inside ProShield GUIs
- * - Detects ProShield Compass right-click to open Main Menu
+ * - Detects ProShield Compass right-click → opens main menu
  */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
     private final GUIManager guiManager;
 
-    public GUIListener(ProShield plugin) {
-        this.plugin = plugin;
-        this.guiManager = plugin.getGuiManager();
-    }
-
-    // Legacy fallback
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
-        this.guiManager = (guiManager != null ? guiManager : plugin.getGuiManager());
+        this.guiManager = guiManager;
     }
 
-    /* -----------------------------
-     * GUI Click Routing
-     * ----------------------------- */
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -49,14 +38,13 @@ public class GUIListener implements Listener {
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        // Always cancel vanilla actions inside ProShield menus
+        // Always cancel vanilla actions inside our GUIs
         event.setCancelled(true);
 
         try {
-            guiManager.handleClick(event); // ✅ Central router does all the work
+            guiManager.handleClick(event);
         } catch (Exception ex) {
-            plugin.getLogger().warning("[GUIListener] Error handling click for "
-                    + player.getName() + " in GUI: " + ex.getMessage());
+            plugin.getLogger().warning("[GUIListener] Error handling click: " + ex.getMessage());
             ex.printStackTrace();
         }
     }
@@ -64,39 +52,27 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player)) return;
-        // No explicit cleanup needed — GUIManager v1.2.6 manages its own View stack
+        // No explicit cleanup — GUIManager manages view stack
     }
 
-    /* -----------------------------
-     * Compass Right-Click -> Open GUI
-     * ----------------------------- */
+    /** Compass right-click → open GUI */
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        // Avoid double triggers from off-hand
-        if (event.getHand() != EquipmentSlot.HAND) return;
-
+        if (event.getHand() != EquipmentSlot.HAND) return; // ignore off-hand
         Player player = event.getPlayer();
-        if (guiManager == null) return;
-
-        Action action = event.getAction();
-        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
-
         ItemStack item = event.getItem();
-        if (!isProShieldCompass(item)) return;
+        if (item == null || item.getType() != Material.COMPASS) return;
 
-        // Cancel vanilla compass behavior
-        event.setCancelled(true);
-
-        // ✅ Open the main ProShield menu
-        guiManager.openMainMenu(player);
-    }
-
-    /** Utility: check if item is the ProShield Compass */
-    private boolean isProShieldCompass(ItemStack item) {
-        if (item == null || item.getType() != Material.COMPASS) return false;
         ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) return false;
-        String dn = ChatColor.stripColor(meta.getDisplayName());
-        return dn != null && dn.equalsIgnoreCase("ProShield Compass");
+        if (meta == null || !meta.hasDisplayName()) return;
+
+        String dn = meta.getDisplayName();
+        String expected = plugin.getMessagesUtil().color(
+                plugin.getMessagesUtil().getOrDefault("messages.compass.display-name", "&bProShield Compass")
+        );
+        if (!expected.equals(dn)) return; // not our compass
+
+        event.setCancelled(true);
+        guiManager.openMainMenu(player);
     }
 }

@@ -1,11 +1,11 @@
-// ========================== GUIManager.java (v1.2.6 FINAL, feature-complete) ==========================
-// ProShield GUI Manager — consolidated & complete (v1.2.4 → v1.2.6)
-// - Main Menu, Claim Info, Trusted (pagination), Assign Role
+// ========================== GUIManager.java (v1.2.6 POLISHED, feature-complete) ==========================
+// ProShield GUI Manager — consolidated, upgraded & complete (v1.2.4 → v1.2.6)
+// - Main Menu, Claim Info, Trusted (pagination), Assign Role (with multi-line lore from ClaimRole)
 // - Claim Flags, Expansion Requests (submit/review/history)
 // - Admin Tools (World Controls, Pending, Teleport Nearest)
 // - Back/Exit navigation stack & title-based routing (works with GUIListener)
-// - Permissions helper deny(Player) included
-// - Uses Plot/PlotManager/ClaimRoleManager signatures you provided
+// - Permissions helper deny(Player) + externalized error messages
+// - Uses Plot/PlotManager/ClaimRoleManager signatures (synchronized with your fixes)
 // ======================================================================================================
 
 package com.snazzyatoms.proshield.gui;
@@ -65,8 +65,7 @@ public class GUIManager {
 
     // ------------------------------ State ----------------------------------
 
-    // Per-player "view stack" so Back works across nested menus
-    private final Map<UUID, Deque<View>> nav = new HashMap<>();
+    private final Map<UUID, Deque<View>> nav = new HashMap<>(); // per-player "view stack"
 
     // ---------------------------- Construction -----------------------------
 
@@ -83,9 +82,7 @@ public class GUIManager {
 
     // ---------------------------- Title helper -----------------------------
 
-    // Titles intentionally include stable keywords so GUIListener’s title routing matches.
     private String title(String key, String fallback) {
-        // messages.yml: messages.gui.titles.<key>
         String raw = messages.getOrDefault("messages.gui.titles." + key, fallback);
         return ChatColor.translateAlternateColorCodes('&', raw);
     }
@@ -121,7 +118,9 @@ public class GUIManager {
         border(inv);
 
         if (plot == null) {
-            inv.setItem(13, textItem(Material.BOOK, "&7No claim here.", List.of(line("#NOOP"))));
+            inv.setItem(13, textItem(Material.BOOK,
+                    messages.getOrDefault("messages.gui.no-claim", "&7No claim here."),
+                    List.of(line("#NOOP"))));
         } else {
             inv.setItem(11, iconOwner(plot.getOwner()));
             inv.setItem(13, iconClaimSummary(plot));
@@ -140,9 +139,10 @@ public class GUIManager {
         border(inv);
 
         if (plot == null) {
-            inv.setItem(22, textItem(Material.PLAYER_HEAD, "&7No claim here.", List.of(line("#NOOP"))));
+            inv.setItem(22, textItem(Material.PLAYER_HEAD,
+                    messages.getOrDefault("messages.gui.no-claim", "&7No claim here."),
+                    List.of(line("#NOOP"))));
         } else {
-            // Paginate trusted map
             List<UUID> list = new ArrayList<>(plot.getTrusted().keySet());
             list.sort(Comparator.comparing(this::nameOrShort));
             int pageSize = 28;
@@ -177,7 +177,14 @@ public class GUIManager {
         int i = 10;
         for (ClaimRole r : ClaimRole.values()) {
             if (r == ClaimRole.NONE) continue;
-            inv.setItem(i, iconRoleOption(r, plot, peek.pendingTarget));
+
+            List<String> lore = new ArrayList<>(r.getLore()); // ✅ YAML-driven lore
+            lore.add(line("ROLE:" + r.name()));              // hidden click action
+
+            inv.setItem(i, textItem(Material.PAPER,
+                    (roles.getRole(plot, peek.pendingTarget) == r ? "&a" : "&7") + r.getDisplayName(),
+                    lore));
+
             i += (i % 9 == 7) ? 3 : 1;
         }
 
@@ -186,14 +193,15 @@ public class GUIManager {
         p.openInventory(inv);
         click(p);
     }
-
     public void openFlags(Player p, int page) {
         Plot plot = plots.getPlotAt(p.getLocation());
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("flags", "&8Claim Flags"));
         border(inv);
 
         if (plot == null) {
-            inv.setItem(22, textItem(Material.LEVER, "&7No claim here.", List.of(line("#NOOP"))));
+            inv.setItem(22, textItem(Material.LEVER,
+                    messages.getOrDefault("messages.gui.no-claim", "&7No claim here."),
+                    List.of(line("#NOOP"))));
         } else {
             List<FlagSpec> spec = defaultFlags();
             int pageSize = 21;
@@ -290,7 +298,6 @@ public class GUIManager {
         p.openInventory(inv);
         click(p);
     }
-
     // --------------------------- Expansion Requests ---------------------------
 
     public void openPending(Player p, int page) {
@@ -335,6 +342,7 @@ public class GUIManager {
         p.openInventory(inv);
         click(p);
     }
+
     // ----------------------------- Central Click Router -----------------------------
 
     /** Routes clicks by inventory title keywords into specific handlers. */
@@ -402,26 +410,34 @@ public class GUIManager {
         switch (id) {
             case "CLAIM" -> {
                 Plot here = plots.getPlotAt(p.getLocation());
-                if (here != null) { warn(p, "&cThis chunk is already claimed."); return; }
+                if (here != null) {
+                    warn(p, messages.getOrDefault("messages.error.already-claimed", "&cThis chunk is already claimed."));
+                    return;
+                }
                 Plot created = plots.createPlot(p.getUniqueId(), p.getLocation());
                 if (created != null) {
-                    msg(p, "&aClaim created.");
+                    msg(p, messages.getOrDefault("messages.success.claim-created", "&aClaim created."));
                     openClaimInfo(p);
-                } else warn(p, "&cUnable to create claim here.");
+                } else {
+                    warn(p, messages.getOrDefault("messages.error.claim-failed", "&cUnable to create claim here."));
+                }
             }
             case "UNCLAIM" -> {
                 Plot here = plots.getPlotAt(p.getLocation());
-                if (here == null) { warn(p, "&cNo claim here."); return; }
+                if (here == null) {
+                    warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here."));
+                    return;
+                }
                 if (!here.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
                     deny(p); return;
                 }
                 plots.deletePlot(here.getId());
-                msg(p, "&eClaim removed.");
+                msg(p, messages.getOrDefault("messages.success.claim-removed", "&eClaim removed."));
                 openMainMenu(p);
             }
             case "INFO" -> openClaimInfo(p);
             case "TRUSTED" -> openTrusted(p, 0);
-            case "ROLES" -> msg(p, "&7Open &fTrusted&7, click a player, then choose a role.");
+            case "ROLES" -> msg(p, messages.getOrDefault("messages.info.roles-howto", "&7Open &fTrusted&7, click a player, then choose a role."));
             case "FLAGS" -> openFlags(p, 0);
             case "ADMIN" -> {
                 if (!p.hasPermission("proshield.admin")) { deny(p); return; }
@@ -439,20 +455,22 @@ public class GUIManager {
         if (id == null) return;
 
         Plot plot = plots.getPlotAt(p.getLocation());
-        if (plot == null) { warn(p, "&cNo claim here."); return; }
+        if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
 
         View peek = peek(p);
-        if (peek == null || peek.pendingTarget == null) { warn(p, "&cPick a player first."); return; }
+        if (peek == null || peek.pendingTarget == null) { warn(p, messages.getOrDefault("messages.error.pick-player-first", "&cPick a player first.")); return; }
 
         if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
 
         if (id.startsWith("ROLE:")) {
             String roleName = id.substring("ROLE:".length());
             ClaimRole role = ClaimRole.fromName(roleName);
-            if (role == ClaimRole.NONE) { warn(p, "&cUnknown role."); return; }
+            if (role == ClaimRole.NONE) { warn(p, messages.getOrDefault("messages.error.unknown-role", "&cUnknown role.")); return; }
             roles.setRole(plot, peek.pendingTarget, role); // correct signature
             plots.save(plot);
-            msg(p, "&aAssigned &f" + nameOrShort(peek.pendingTarget) + " &ato &f" + role.getDisplayName());
+            msg(p, messages.getOrDefault("messages.success.role-assigned", "&aAssigned &f%player% &ato &f%role%")
+                    .replace("%player%", nameOrShort(peek.pendingTarget))
+                    .replace("%role%", role.getDisplayName()));
             back(p);
         } else if (id.equals("BACK")) {
             back(p);
@@ -468,7 +486,7 @@ public class GUIManager {
         if (id == null) return;
 
         Plot plot = plots.getPlotAt(p.getLocation());
-        if (plot == null) { warn(p, "&cNo claim here."); return; }
+        if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
 
         if (id.startsWith("TRUST:REMOVE:")) {
             if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
@@ -476,7 +494,8 @@ public class GUIManager {
             if (target == null) return;
             plot.getTrusted().remove(target);
             plots.save(plot);
-            msg(p, "&eRemoved &f" + nameOrShort(target) + " &efrom trusted.");
+            msg(p, messages.getOrDefault("messages.success.trust-removed", "&eRemoved &f%player% &efrom trusted.")
+                    .replace("%player%", nameOrShort(target)));
             openTrusted(p, pageFrom(peek(p)));
         } else if (id.startsWith("TRUST:ROLE:")) {
             UUID target = uuidSafe(id.substring("TRUST:ROLE:".length()));
@@ -507,7 +526,7 @@ public class GUIManager {
         if (id.equals("EXIT")) { p.closeInventory(); return; }
 
         Plot plot = plots.getPlotAt(p.getLocation());
-        if (plot == null) { warn(p, "&cNo claim here."); return; }
+        if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
 
         if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
 
@@ -516,7 +535,11 @@ public class GUIManager {
             boolean cur = plot.getFlag(key);
             plot.setFlag(key, !cur);
             plots.save(plot);
-            msg(p, "&b" + key + " &7→ " + (plot.getFlag(key) ? "&aON" : "&cOFF"));
+            String on = messages.getOrDefault("messages.state.on", "&aON");
+            String off = messages.getOrDefault("messages.state.off", "&cOFF");
+            msg(p, messages.getOrDefault("messages.success.flag-toggled", "&b%flag% &7→ %state%")
+                    .replace("%flag%", key)
+                    .replace("%state%", plot.getFlag(key) ? on : off));
             openFlags(p, pageFrom(peek(p)));
         }
     }
@@ -534,10 +557,14 @@ public class GUIManager {
             case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
             case "ADMIN:TP_NEAREST" -> {
                 Plot nearest = plots.findNearestClaim(p.getLocation(), 200); // PlotManager shim
-                if (nearest == null) { warn(p, "&cNo nearby claims."); return; }
+                if (nearest == null) {
+                    warn(p, messages.getOrDefault("messages.error.no-nearby-claims", "&cNo nearby claims."));
+                    return;
+                }
                 Location dest = nearest.getCenter();
                 if (dest != null) p.teleport(dest);
-                msg(p, "&aTeleported to claim &f" + nearest.getId());
+                msg(p, messages.getOrDefault("messages.success.tp-nearest", "&aTeleported to claim &f%id%")
+                        .replace("%id%", nearest.getId().toString()));
                 p.closeInventory();
             }
             case "BACK" -> back(p);
@@ -572,7 +599,12 @@ public class GUIManager {
             String key   = parts[3];
             boolean cur  = readWorldBool(world, key, defaultWorld(key));
             writeWorldBool(world, key, !cur);
-            msg(p, "&b" + world + "." + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
+            String on = messages.getOrDefault("messages.state.on", "&aON");
+            String off = messages.getOrDefault("messages.state.off", "&cOFF");
+            msg(p, messages.getOrDefault("messages.success.world-flag-toggled", "&b%world%.%key% &7→ %state%")
+                    .replace("%world%", world)
+                    .replace("%key%", key)
+                    .replace("%state%", !cur ? on : off));
             openWorldDetail(p, world);
         }
     }
@@ -587,10 +619,11 @@ public class GUIManager {
             int amount = safeInt(id.substring("EXPAND:".length()), 1);
             ExpansionRequest created = expansions.createRequest(p.getUniqueId(), amount);
             if (created != null) {
-                msg(p, "&aExpansion request submitted (&f+" + amount + "&a).");
+                msg(p, messages.getOrDefault("messages.success.expand-submitted", "&aExpansion request submitted (&f+%n%&a).")
+                        .replace("%n%", String.valueOf(amount)));
                 soundGood(p);
             } else {
-                warn(p, "&cYou may already have a pending request.");
+                warn(p, messages.getOrDefault("messages.error.expand-already-pending", "&cYou may already have a pending request."));
             }
             openClaimInfo(p);
         } else if (id.equals("BACK")) {
@@ -622,19 +655,21 @@ public class GUIManager {
             UUID reqId = uuidSafe(parts[1]);
             String action = parts[2];
             ExpansionRequest req = (reqId != null) ? expansions.getById(reqId) : null;
-            if (req == null) { warn(p, "&cRequest not found."); return; }
+            if (req == null) { warn(p, messages.getOrDefault("messages.error.request-not-found", "&cRequest not found.")); return; }
 
             if (action.equals("APPROVE")) {
                 expansions.approveRequest(req, p.getUniqueId());
-                msg(p, "&aApproved &f" + shortId(req.getId()) + "&a.");
+                msg(p, messages.getOrDefault("messages.success.request-approved", "&aApproved &f%id%&a.")
+                        .replace("%id%", shortId(req.getId())));
                 Player requester = Bukkit.getPlayer(req.getRequester());
-                if (requester != null) requester.sendMessage(gray("&aYour expansion request was approved."));
+                if (requester != null) requester.sendMessage(gray(messages.getOrDefault("messages.notify.expand-approved", "&aYour expansion request was approved.")));
                 openPending(p, pageFrom(peek(p)));
             } else if (action.equals("DENY")) {
                 expansions.denyRequest(req, p.getUniqueId(), "Denied via GUI");
-                msg(p, "&cDenied &f" + shortId(req.getId()) + "&c.");
+                msg(p, messages.getOrDefault("messages.success.request-denied", "&cDenied &f%id%&c.")
+                        .replace("%id%", shortId(req.getId())));
                 Player requester = Bukkit.getPlayer(req.getRequester());
-                if (requester != null) requester.sendMessage(gray("&cYour expansion request was denied."));
+                if (requester != null) requester.sendMessage(gray(messages.getOrDefault("messages.notify.expand-denied", "&cYour expansion request was denied.")));
                 openPending(p, pageFrom(peek(p)));
             }
         }
@@ -667,7 +702,9 @@ public class GUIManager {
         return textItem(
                 canClaim ? Material.LIME_BED : Material.GRAY_BED,
                 canClaim ? "&aClaim Chunk" : "&7Claim Chunk",
-                List.of(gray(canClaim ? "&7Create a new claim centered here." : "&7Already claimed."),
+                List.of(gray(canClaim
+                        ? messages.getOrDefault("messages.lore.claim", "&7Create a new claim centered here.")
+                        : messages.getOrDefault("messages.lore.already-claimed", "&7Already claimed.")),
                         line("#CLAIM"))
         );
     }
@@ -676,7 +713,9 @@ public class GUIManager {
         return textItem(
                 canUnclaim ? Material.RED_BED : Material.GRAY_BED,
                 canUnclaim ? "&cUnclaim Chunk" : "&7Unclaim Chunk",
-                List.of(gray(canUnclaim ? "&7Remove your current claim." : "&7No claim here."),
+                List.of(gray(canUnclaim
+                        ? messages.getOrDefault("messages.lore.unclaim", "&7Remove your current claim.")
+                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
                         line("#UNCLAIM"))
         );
     }
@@ -684,7 +723,7 @@ public class GUIManager {
     private ItemStack iconClaimInfo(Plot plot) {
         List<String> lore = new ArrayList<>();
         if (plot == null) {
-            lore.add(gray("&7You are not standing in a claim."));
+            lore.add(gray(messages.getOrDefault("messages.lore.no-claim", "&7You are not standing in a claim.")));
         } else {
             lore.add(gray("&7ID: &f" + plot.getId()));
             lore.add(gray("&7Owner: &f" + nameOrShort(plot.getOwner())));
@@ -698,27 +737,33 @@ public class GUIManager {
     private ItemStack iconTrusted(boolean enabled) {
         return textItem(Material.PLAYER_HEAD,
                 enabled ? "&aTrusted Players" : "&7Trusted Players",
-                List.of(gray(enabled ? "&7Manage trusted players & roles." : "&7No claim here."),
+                List.of(gray(enabled
+                        ? messages.getOrDefault("messages.lore.trusted", "&7Manage trusted players & roles.")
+                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
                         line("#TRUSTED")));
     }
 
     private ItemStack iconRoles(boolean enabled) {
         return textItem(Material.NAME_TAG,
                 enabled ? "&eAssign Roles" : "&7Assign Roles",
-                List.of(gray(enabled ? "&7Choose a player in Trusted, then pick a role." : "&7No claim here."),
+                List.of(gray(enabled
+                        ? messages.getOrDefault("messages.lore.roles", "&7Choose a player in Trusted, then pick a role.")
+                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
                         line("#ROLES")));
     }
 
     private ItemStack iconFlags(boolean enabled) {
         return textItem(Material.LEVER,
                 enabled ? "&6Flags" : "&7Flags",
-                List.of(gray(enabled ? "&7Toggle claim flags (explosions, fire, pvp…)" : "&7No claim here."),
+                List.of(gray(enabled
+                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp…)")
+                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
                         line("#FLAGS")));
     }
 
     private ItemStack iconAdminTools() {
         return textItem(Material.COMPASS, "&dAdmin Tools", List.of(
-                gray("&7TP to nearest claim / review requests / world controls"),
+                gray(messages.getOrDefault("messages.lore.admin", "&7TP to nearest claim / review requests / world controls")),
                 line("#ADMIN")));
     }
 
@@ -739,7 +784,7 @@ public class GUIManager {
 
     private ItemStack iconExpansionRequest() {
         return textItem(Material.EMERALD, "&aRequest Expansion", List.of(
-                gray("&7Submit +1 expansion request."),
+                gray(messages.getOrDefault("messages.lore.expand", "&7Submit +1 expansion request.")),
                 line("#EXPAND:1")
         ));
     }
@@ -749,7 +794,7 @@ public class GUIManager {
         return textItem(Material.PLAYER_HEAD,
                 "&f" + nameOrShort(target) + " &7[" + r.getDisplayName() + "]",
                 List.of(
-                        gray("&8Left: set role  •  Right: remove"),
+                        gray(messages.getOrDefault("messages.lore.trusted-entry", "&8Left: set role  •  Right: remove")),
                         line("TRUST:ROLE:" + target),
                         line("TRUST:REMOVE:" + target)
                 ));
@@ -769,7 +814,6 @@ public class GUIManager {
     }
 
     private List<FlagSpec> defaultFlags() {
-        // Keep this short & generic; actual defaults are read from plot flags/config on toggle
         return List.of(
                 new FlagSpec("explosions", "Explosions", Material.TNT),
                 new FlagSpec("fire_spread", "Fire Spread", Material.FLINT_AND_STEEL),
@@ -826,7 +870,7 @@ public class GUIManager {
         return textItem(Material.ARROW, "&7Back", List.of(line("#BACK")));
     }
 
-    private ItemStack exitButton() { // (not currently placed, kept for future use)
+    private ItemStack exitButton() {
         return textItem(Material.OAK_DOOR, "&7Exit", List.of(line("#EXIT")));
     }
 
@@ -891,7 +935,7 @@ public class GUIManager {
     private void soundGood(Player p) { p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.9f, 1.2f); }
 
     private void deny(Player p) {
-        warn(p, "&cYou don’t have permission for this action.");
+        warn(p, messages.getOrDefault("messages.error.no-permission", "&cYou don’t have permission for this action."));
         click(p);
     }
 
@@ -904,6 +948,7 @@ public class GUIManager {
     private int safeInt(String s, int def) { try { return Integer.parseInt(s); } catch (Exception e) { return def; } }
     private UUID uuidSafe(String s) { try { return UUID.fromString(s); } catch (Exception e) { return null; } }
     private String shortId(UUID id) { String s = id.toString(); return s.substring(0, 8); }
+
     // ------------------------------ View Stack ------------------------------
 
     private static class View {
@@ -960,10 +1005,7 @@ public class GUIManager {
 
     private int pageFrom(View v) { return (v != null ? v.page : 0); }
 
-    // When choosing a player in Trusted, push an AssignRole view with that target
-    private void setPendingTarget(Player p, UUID t) {
-        push(p, View.assignRole(t));
-    }
+    private void setPendingTarget(Player p, UUID t) { push(p, View.assignRole(t)); }
 
     // --------------------------- World Controls I/O ---------------------------
 
@@ -983,7 +1025,6 @@ public class GUIManager {
                 map.put(k, plugin.getConfig().getBoolean("worlds." + world + "." + k, defaultWorld(k)));
             }
         } else {
-            // If absent, seed visible defaults
             map.put(WC_PVP, defaultWorld(WC_PVP));
             map.put(WC_SAFEZONE, defaultWorld(WC_SAFEZONE));
         }

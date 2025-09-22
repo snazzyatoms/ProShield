@@ -6,26 +6,25 @@ import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.projectiles.ProjectileSource;
 
 /**
- * ClaimProtectionListener (v1.2.6 SAFEZONE ENHANCED)
- * - Handles block break/place, bucket use, and PvP inside claims
- * - Adds Safe Zone (mob protection + despawn logic) when enabled
+ * ClaimProtectionListener (v1.2.6)
+ * - Handles block break/place, bucket use, PvP inside claims
+ * - Adds SAFEZONE protections: cancel mob targeting & mob damage
  * - Uses ClaimRoleManager for role-based permissions
  * - Respects claim flags and world-control defaults
- * - Denial messages pulled from messages.yml
+ * - Denial messages + PvP rules pulled from messages.yml
  */
 public class ClaimProtectionListener implements Listener {
 
@@ -72,6 +71,11 @@ public class ClaimProtectionListener implements Listener {
                 event, false);
     }
 
+    /**
+     * Unified block + bucket handling.
+     *
+     * @param requiresBuild true if action needs build perms, false if interaction-only
+     */
     private void handleBlockAction(Player player, Location loc, String flag,
                                    String denyMessage, org.bukkit.event.Cancellable event, boolean requiresBuild) {
         Plot plot = plotManager.getPlotAt(loc);
@@ -99,7 +103,7 @@ public class ClaimProtectionListener implements Listener {
      * PVP HANDLING
      * ------------------------- */
     @EventHandler
-    public void onEntityDamageByPlayer(EntityDamageByEntityEvent event) {
+    public void onEntityDamagePvP(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player attacker)) return;
         if (!(event.getEntity() instanceof Player victim)) return;
 
@@ -116,38 +120,58 @@ public class ClaimProtectionListener implements Listener {
     }
 
     /* -------------------------
-     * SAFEZONE MOB HANDLING
+     * SAFEZONE: MOB PROTECTION
      * ------------------------- */
+
+    // Cancel mob targeting players in safezone (immediate)
     @EventHandler
-    public void onMobTarget(EntityTargetEvent event) {
+    public void onMobTargetPlayer(EntityTargetLivingEntityEvent event) {
         if (!(event.getTarget() instanceof Player player)) return;
+
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) return;
+        if (!plot.getFlag("safezone")) return;
 
-        if (plot.getFlag("safezone")) {
-            event.setCancelled(true);
-            debug("Mob prevented from targeting " + player.getName() + " in safezone (plot=" + plot.getId() + ")");
-        }
+        FileConfiguration cfg = plugin.getConfig();
+        if (!cfg.getBoolean("protection.mobs.prevent-targeting", true)) return;
+
+        // Clear target & cancel event
+        if (event.getEntity() instanceof Mob mob) mob.setTarget(null);
+        event.setCancelled(true);
+
+        debug("Cleared mob target " + event.getEntity().getType()
+                + " on " + player.getName() + " inside safezone plot=" + plot.getId());
     }
 
+    // Cancel mob damage to players in safezone (covers melee & projectiles)
     @EventHandler
-    public void onMobDamage(EntityDamageEvent event) {
+    public void onMobDamagePlayer(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
+
         Plot plot = plotManager.getPlotAt(player.getLocation());
         if (plot == null) return;
+        if (!plot.getFlag("safezone")) return;
 
-        if (plot.getFlag("safezone")) {
-            if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK ||
-                event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
-                event.setCancelled(true);
-                debug("Damage prevented to " + player.getName() + " in safezone (plot=" + plot.getId() + ")");
-            }
+        FileConfiguration cfg = plugin.getConfig();
+        if (!cfg.getBoolean("protection.mobs.prevent-damage", true)) return;
+
+        if (isHostileDamage(event.getDamager())) {
+            event.setCancelled(true);
+            debug("Blocked mob damage by " + event.getDamager().getType()
+                    + " to " + player.getName() + " inside safezone plot=" + plot.getId());
         }
     }
 
-    /* -------------------------
-     * DEBUGGING
-     * ------------------------- */
+    private boolean isHostileDamage(Entity damager) {
+        if (damager instanceof Monster) return true;
+        if (damager instanceof Projectile proj) {
+            ProjectileSource src = proj.getShooter();
+            return (src instanceof Monster);
+        }
+        // You can extend here if you want other hostile sources treated as "mob damage".
+        return false;
+    }
+
     private void debug(String msg) {
         if (plugin.isDebugEnabled()) {
             plugin.getLogger().info("[ClaimProtection] " + msg);

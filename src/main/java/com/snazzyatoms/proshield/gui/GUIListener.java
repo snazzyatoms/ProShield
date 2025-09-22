@@ -10,11 +10,11 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * GUIListener (ProShield v1.2.6 FINAL)
+ * GUIListener (ProShield v1.2.6 FINAL-SYNCED)
  *
- * - Routes ALL clicks into GUIManager.handleClick()
+ * - Forwards ALL clicks into GUIManager.handleClick()
  * - Cancels vanilla inventory behavior inside ProShield GUIs
- * - No manual routing duplication (keeps GUIManager and Listener in sync)
+ * - No duplicate routing logic (keeps GUIManager authoritative)
  */
 public class GUIListener implements Listener {
 
@@ -26,7 +26,7 @@ public class GUIListener implements Listener {
         this.guiManager = plugin.getGuiManager();
     }
 
-    // Legacy fallback
+    // Legacy fallback (safe for testing/migration)
     public GUIListener(ProShield plugin, GUIManager guiManager) {
         this.plugin = plugin;
         this.guiManager = (guiManager != null ? guiManager : plugin.getGuiManager());
@@ -40,14 +40,14 @@ public class GUIListener implements Listener {
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
-        // Always cancel vanilla actions inside ProShield menus
+        // Cancel vanilla behavior always (GUIManager decides outcomes)
         event.setCancelled(true);
 
         try {
-            guiManager.handleClick(event); // ✅ Central router does all the work
-        } catch (Exception ex) {
-            plugin.getLogger().warning("[GUIListener] Error handling click for "
-                    + player.getName() + " in GUI: " + ex.getMessage());
+            guiManager.handleClick(event); // ✅ Central router
+        } catch (Throwable ex) {
+            plugin.getLogger().warning("[GUIListener] Error routing click for player " 
+                    + player.getName() + ": " + ex.getMessage());
             ex.printStackTrace();
         }
     }
@@ -55,6 +55,6 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player)) return;
-        // No explicit cleanup needed — GUIManager v1.2.6 manages its own View stack
+        // No cleanup required — GUIManager maintains its own View stack
     }
 }

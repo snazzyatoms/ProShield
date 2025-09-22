@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
@@ -19,12 +20,10 @@ import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.projectiles.ProjectileSource;
 
 /**
- * ClaimProtectionListener (v1.2.6)
- * - Handles block break/place, bucket use, PvP inside claims
- * - Adds SAFEZONE protections: cancel mob targeting & mob damage
- * - Uses ClaimRoleManager for role-based permissions
- * - Respects claim flags and world-control defaults
- * - Denial messages + PvP rules pulled from messages.yml
+ * ClaimProtectionListener (v1.2.6 + Safezone Spawn Block)
+ * - Handles block/bucket/PvP logic
+ * - Cancels mob targeting & mob damage inside safezones
+ * - Cancels hostile mob spawns inside safezones
  */
 public class ClaimProtectionListener implements Listener {
 
@@ -71,31 +70,19 @@ public class ClaimProtectionListener implements Listener {
                 event, false);
     }
 
-    /**
-     * Unified block + bucket handling.
-     *
-     * @param requiresBuild true if action needs build perms, false if interaction-only
-     */
     private void handleBlockAction(Player player, Location loc, String flag,
                                    String denyMessage, org.bukkit.event.Cancellable event, boolean requiresBuild) {
         Plot plot = plotManager.getPlotAt(loc);
-        if (plot == null) return; // wilderness = vanilla rules
+        if (plot == null) return;
 
         ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
         boolean allowed = requiresBuild ? role.canBuild() : role.canInteract();
 
-        if (!allowed) {
-            event.setCancelled(true);
-            messages.send(player, denyMessage);
-            debug("Denied " + flag + " for " + player.getName() + " (role=" + role + ")");
-            return;
-        }
-
-        if (!plot.getFlag(flag)) {
+        if (!allowed || !plot.getFlag(flag)) {
             event.setCancelled(true);
             messages.send(player, denyMessage);
             debug("Denied " + flag + " for " + player.getName()
-                    + " (flag=" + flag + " disabled, role=" + role + ", plot=" + plot.getId() + ")");
+                    + " (role=" + role + ", flag=" + flag + ", plot=" + plot.getId() + ")");
         }
     }
 
@@ -108,49 +95,42 @@ public class ClaimProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player victim)) return;
 
         Plot plot = plotManager.getPlotAt(victim.getLocation());
-        if (plot == null) return; // wilderness = PvP allowed
+        if (plot == null) return;
 
-        // Inside claim → respect PvP flag (default false → safezone)
         if (!plot.getFlag("pvp")) {
             event.setCancelled(true);
             messages.send(attacker, messages.getOrDefault("messages.error.pvp", "&cPvP is disabled in this claim."));
             debug("Prevented PvP: " + attacker.getName() + " → " + victim.getName()
-                    + " (flag=pvp=false, plot=" + plot.getId() + ")");
+                    + " (plot=" + plot.getId() + ")");
         }
     }
 
     /* -------------------------
      * SAFEZONE: MOB PROTECTION
      * ------------------------- */
-
-    // Cancel mob targeting players in safezone (immediate)
     @EventHandler
     public void onMobTargetPlayer(EntityTargetLivingEntityEvent event) {
         if (!(event.getTarget() instanceof Player player)) return;
 
         Plot plot = plotManager.getPlotAt(player.getLocation());
-        if (plot == null) return;
-        if (!plot.getFlag("safezone")) return;
+        if (plot == null || !plot.getFlag("safezone")) return;
 
         FileConfiguration cfg = plugin.getConfig();
         if (!cfg.getBoolean("protection.mobs.prevent-targeting", true)) return;
 
-        // Clear target & cancel event
         if (event.getEntity() instanceof Mob mob) mob.setTarget(null);
         event.setCancelled(true);
 
-        debug("Cleared mob target " + event.getEntity().getType()
-                + " on " + player.getName() + " inside safezone plot=" + plot.getId());
+        debug("Cleared target " + event.getEntity().getType()
+                + " on " + player.getName() + " in safezone " + plot.getId());
     }
 
-    // Cancel mob damage to players in safezone (covers melee & projectiles)
     @EventHandler
     public void onMobDamagePlayer(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
 
         Plot plot = plotManager.getPlotAt(player.getLocation());
-        if (plot == null) return;
-        if (!plot.getFlag("safezone")) return;
+        if (plot == null || !plot.getFlag("safezone")) return;
 
         FileConfiguration cfg = plugin.getConfig();
         if (!cfg.getBoolean("protection.mobs.prevent-damage", true)) return;
@@ -158,7 +138,7 @@ public class ClaimProtectionListener implements Listener {
         if (isHostileDamage(event.getDamager())) {
             event.setCancelled(true);
             debug("Blocked mob damage by " + event.getDamager().getType()
-                    + " to " + player.getName() + " inside safezone plot=" + plot.getId());
+                    + " to " + player.getName() + " in safezone " + plot.getId());
         }
     }
 
@@ -168,8 +148,26 @@ public class ClaimProtectionListener implements Listener {
             ProjectileSource src = proj.getShooter();
             return (src instanceof Monster);
         }
-        // You can extend here if you want other hostile sources treated as "mob damage".
         return false;
+    }
+
+    /* -------------------------
+     * SAFEZONE: MOB SPAWN BLOCK
+     * ------------------------- */
+    @EventHandler
+    public void onMobSpawn(CreatureSpawnEvent event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof Monster)) return; // only hostiles
+
+        Plot plot = plotManager.getPlotAt(entity.getLocation());
+        if (plot == null || !plot.getFlag("safezone")) return;
+
+        FileConfiguration cfg = plugin.getConfig();
+        if (!cfg.getBoolean("protection.mobs.prevent-spawn", true)) return;
+
+        event.setCancelled(true);
+        debug("Prevented hostile spawn " + entity.getType()
+                + " inside safezone " + plot.getId());
     }
 
     private void debug(String msg) {

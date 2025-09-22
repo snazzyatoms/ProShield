@@ -8,7 +8,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager (v1.2.6 FINAL)
+ * ClaimRoleManager (v1.2.6 FINAL-PATCHED)
  *
  * - Centralized manager for role assignment inside claims
  * - Provides default role fallbacks
@@ -46,7 +46,7 @@ public class ClaimRoleManager {
      */
     public void setRole(Plot plot, UUID player, ClaimRole role) {
         if (plot == null || player == null || role == null) return;
-        plot.getTrusted().put(player, role.name().toLowerCase(Locale.ROOT));
+        plot.getTrusted().put(player, role.getId()); // ✅ use getId() instead of name().toLowerCase()
     }
 
     /**
@@ -76,7 +76,7 @@ public class ClaimRoleManager {
      * ------------------------- */
 
     /**
-     * Get the default role ID for new trusted players.
+     * Get the default role ID (string) for new trusted players.
      */
     public String getDefaultRoleId() {
         return plugin != null
@@ -89,5 +89,14 @@ public class ClaimRoleManager {
      */
     public ClaimRole getDefaultRole() {
         return ClaimRole.fromName(getDefaultRoleId());
+    }
+
+    /**
+     * Helper: Get the stored role ID for a player in a plot.
+     */
+    public String getRoleId(Plot plot, UUID player) {
+        if (plot == null || player == null) return "none";
+        String stored = plot.getTrusted().get(player);
+        return (stored != null ? stored.toLowerCase(Locale.ROOT) : "none");
     }
 }

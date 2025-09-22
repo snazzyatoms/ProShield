@@ -148,7 +148,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
             case "admin" -> {
                 if (sender instanceof Player player) {
-                    plugin.getGuiManager().openAdminTools(player);
+                    // 🔄 patched: use openAdmin() instead of openAdminTools()
+                    plugin.getGuiManager().openAdmin(player);
                 } else {
                     messages.send(sender, messages.getOrDefault("messages.error.player-only", "&cPlayers only."));
                 }

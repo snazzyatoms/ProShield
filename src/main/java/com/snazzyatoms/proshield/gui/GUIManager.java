@@ -769,9 +769,9 @@ public class GUIManager {
         return textItem(Material.LEVER,
                 enabled ? "&6Flags" : "&7Flags",
                 List.of(gray(enabled
-                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)"))
+                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)")
                         : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
-                        line("#FLAGS")));
+                        line("#FLAGS")
     }
 
     private ItemStack iconAdminTools() {

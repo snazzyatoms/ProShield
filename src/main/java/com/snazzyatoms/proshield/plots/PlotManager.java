@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -11,7 +10,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Handles persistent storage of plots (plots.yml)
  * - Applies default flags from config.yml when missing
  * - Ensures new plots are safezones with PvP disabled (v1.2.6 default)
+ * - Migrates old plots to enforce safezone/pvp defaults
  * - Provides CRUD methods for plots and trusted roles
  */
 public class PlotManager {
@@ -33,6 +32,7 @@ public class PlotManager {
         this.plugin = plugin;
         this.plotsFile = new File(plugin.getDataFolder(), "plots.yml");
         load();
+        migrateDefaults(); // ✅ enforce safezone/pvp for old plots
     }
 
     /* -------------------------
@@ -72,14 +72,6 @@ public class PlotManager {
                         plugin.getConfig().getInt("claims.default-radius", 50));
 
                 Plot plot = new Plot(owner, world, x, z, id, radius);
-
-                // --- CreatedAt ---
-                String createdStr = plotsConfig.getString("plots." + key + ".createdAt");
-                if (createdStr != null) {
-                    try {
-                        plot.getInfo().put("Created", createdStr); // GUI fallback
-                    } catch (Exception ignored) {}
-                }
 
                 // --- Flags ---
                 Map<String, Object> flags = plotsConfig.getConfigurationSection("plots." + key + ".flags") != null
@@ -184,17 +176,22 @@ public class PlotManager {
 
         Plot plot = new Plot(owner, world, x, z, id, radius);
 
+        // ✅ Apply defaults from config
         for (String flag : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
             boolean def = plugin.getConfig().getBoolean("flags.available." + flag + ".default", false);
             plot.setFlag(flag, def);
         }
+
+        // ✅ Override safezone/pvp regardless of config
+        plot.setFlag("safezone", true);
+        plot.setFlag("pvp", false);
 
         plots.put(id, plot);
         saveAll();
 
         if (plugin.isDebugEnabled()) {
             plugin.getLogger().info("[PlotManager] Created new plot for " + owner + " at "
-                    + x + "," + z + " (radius=" + radius + ", id=" + id + ")");
+                    + x + "," + z + " (radius=" + radius + ", id=" + id + ", safezone=true, pvp=false)");
         }
 
         return plot;
@@ -277,5 +274,34 @@ public class PlotManager {
             }
         }
         return nearest;
+    }
+
+    /* -------------------------
+     * Migration
+     * ------------------------- */
+    private void migrateDefaults() {
+        int changed = 0;
+        for (Plot plot : plots.values()) {
+            boolean updated = false;
+
+            if (!plot.getFlags().containsKey("safezone")) {
+                plot.setFlag("safezone", true);
+                updated = true;
+            }
+            if (!plot.getFlags().containsKey("pvp")) {
+                plot.setFlag("pvp", false);
+                updated = true;
+            }
+
+            if (updated) {
+                save(plot);
+                changed++;
+            }
+        }
+
+        if (changed > 0) {
+            plugin.getLogger().info("[PlotManager] Migrated " + changed +
+                    " plots → safezone=true, pvp=false.");
+        }
     }
 }

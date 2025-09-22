@@ -1,11 +1,12 @@
+// src/main/java/com/snazzyatoms/proshield/gui/GUIListener.java
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -13,13 +14,6 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-/**
- * GUIListener (ProShield v1.2.6 FINAL)
- *
- * - Routes ALL clicks into GUIManager.handleClick()
- * - Cancels vanilla inventory behavior inside ProShield GUIs
- * - Detects ProShield Compass right-click → opens main menu
- */
 public class GUIListener implements Listener {
 
     private final ProShield plugin;
@@ -30,35 +24,31 @@ public class GUIListener implements Listener {
         this.guiManager = guiManager;
     }
 
+    // =====================
+    // 📌 GUI click handling
+    // =====================
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (guiManager == null) return;
+        if (event.getClickedInventory() == null) return;
 
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || clicked.getType() == Material.AIR) return;
-
-        // Always cancel vanilla actions inside our GUIs
-        event.setCancelled(true);
-
-        try {
-            guiManager.handleClick(event);
-        } catch (Exception ex) {
-            plugin.getLogger().warning("[GUIListener] Error handling click: " + ex.getMessage());
-            ex.printStackTrace();
-        }
+        guiManager.handleClick(event, player);
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player)) return;
-        // No explicit cleanup — GUIManager manages view stack
+        if (!(event.getPlayer() instanceof Player player)) return;
+        guiManager.handleClose(player);
     }
 
-    /** Compass right-click → open GUI */
+    // =====================
+    // 📌 Compass right-click
+    // =====================
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND) return; // ignore off-hand
+        // Avoid off-hand double fire
+        if (event.getHand() != EquipmentSlot.HAND) return;
+
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
         if (item == null || item.getType() != Material.COMPASS) return;
@@ -66,13 +56,13 @@ public class GUIListener implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
-        String dn = meta.getDisplayName();
-        String expected = plugin.getMessagesUtil().color(
-                plugin.getMessagesUtil().getOrDefault("messages.compass.display-name", "&bProShield Compass")
-        );
-        if (!expected.equals(dn)) return; // not our compass
+        String name = ChatColor.stripColor(meta.getDisplayName());
+        if (!"ProShield Compass".equalsIgnoreCase(name)) return;
 
+        // Cancel vanilla compass action
         event.setCancelled(true);
+
+        // ✅ Open GUI
         guiManager.openMainMenu(player);
     }
 }

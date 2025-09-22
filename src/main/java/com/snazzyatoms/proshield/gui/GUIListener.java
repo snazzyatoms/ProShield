@@ -14,7 +14,6 @@ import org.bukkit.inventory.ItemStack;
  *
  * - Forwards all click events into GUIManager#handleClick
  * - Cancels vanilla inventory behavior inside ProShield GUIs
- * - Cleans up ephemeral state (role assignment, deny reasons) when needed
  */
 public class GUIListener implements Listener {
 
@@ -54,11 +53,7 @@ public class GUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
-        if (guiManager == null) return;
-
-        // Optional: clear any temporary state if your GUIManager still uses it
-        guiManager.clearPendingRoleAssignment(player.getUniqueId());
-        guiManager.clearPendingDenyTarget(player.getUniqueId());
+        if (!(event.getPlayer() instanceof Player)) return;
+        // No explicit cleanup needed — GUIManager v1.2.6 uses ViewState routing only
     }
 }

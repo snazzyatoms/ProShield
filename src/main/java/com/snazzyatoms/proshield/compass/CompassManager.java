@@ -1,7 +1,7 @@
 package com.snazzyatoms.proshield.compass;
 
 import com.snazzyatoms.proshield.ProShield;
-import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -14,69 +14,49 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.List;
 
 /**
- * Handles giving and managing the ProShield Compass for players.
- * Distribution only — opening GUI is handled in GUIListener.
- * Synced with v1.2.6 GUI system + messages.yml.
+ * Handles creating and giving the ProShield Compass.
+ * Reads display-name + lore from messages.yml.
  */
 public class CompassManager implements Listener {
 
     private final ProShield plugin;
-    private final GUIManager guiManager;
+    private final MessagesUtil messages;
 
-    public CompassManager(ProShield plugin, GUIManager guiManager) {
+    public CompassManager(ProShield plugin) {
         this.plugin = plugin;
-        this.guiManager = guiManager;
+        this.messages = plugin.getMessagesUtil();
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    /**
-     * Creates a correctly tagged ProShield Compass.
-     * Display name + lore pulled from messages.yml.
-     */
-    private ItemStack createCompass() {
+    /** Create a correctly tagged ProShield Compass from messages.yml */
+    public ItemStack createCompass() {
         ItemStack compass = new ItemStack(Material.COMPASS);
         ItemMeta meta = compass.getItemMeta();
         if (meta != null) {
-            String name = plugin.getMessagesUtil().getOrDefault(
-                    "compass.display-name", "&bProShield Compass"
-            );
-            List<String> lore = plugin.getMessagesUtil().getListOrDefault(
-                    "compass.lore",
-                    List.of("&7Right-click to open the ProShield menu")
-            );
-            meta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', name));
-            meta.setLore(lore.stream()
-                    .map(s -> org.bukkit.ChatColor.translateAlternateColorCodes('&', s))
-                    .toList());
+            String name = messages.getOrDefault("messages.compass.display-name", "&bProShield Compass");
+            List<String> lore = messages.getList("messages.compass.lore");
+            meta.setDisplayName(name);
+            if (!lore.isEmpty()) meta.setLore(lore);
             compass.setItemMeta(meta);
         }
         return compass;
     }
 
-    /**
-     * Checks if the player already has the official ProShield Compass.
-     */
+    /** Check if a player already has the official compass */
     public boolean hasCompass(Player player) {
         if (player == null) return false;
         for (ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType() != Material.COMPASS) continue;
             ItemMeta meta = item.getItemMeta();
             if (meta != null && meta.hasDisplayName()) {
-                String dn = org.bukkit.ChatColor.stripColor(meta.getDisplayName());
-                String expected = org.bukkit.ChatColor.stripColor(
-                        plugin.getMessagesUtil().getOrDefault("compass.display-name", "ProShield Compass")
-                );
-                if (dn != null && dn.equalsIgnoreCase(expected)) {
-                    return true;
-                }
+                String dn = messages.color(messages.getOrDefault("messages.compass.display-name", "&bProShield Compass"));
+                if (dn.equals(meta.getDisplayName())) return true;
             }
         }
         return false;
     }
 
-    /**
-     * Gives the ProShield Compass if the player doesn’t already have one.
-     */
+    /** Give the compass if player doesn’t already have one */
     public void giveCompass(Player player) {
         if (player == null) return;
         if (!hasCompass(player)) {
@@ -84,37 +64,17 @@ public class CompassManager implements Listener {
         }
     }
 
-    /**
-     * Force-replace a ProShield Compass (for despawn/auto-replace cases).
-     */
+    /** Force-replace compass (auto-replace cases) */
     public void replaceCompass(Player player) {
         if (player == null) return;
         giveCompass(player);
     }
 
-    /**
-     * Distributes compasses to all players if config allows.
-     */
-    public void giveCompassToAll() {
-        boolean giveOnJoin = plugin.getConfig().getBoolean("settings.give-compass-on-join", true);
-        boolean autoReplace = plugin.getConfig().getBoolean("settings.compass-auto-replace", false);
-
-        if (giveOnJoin || autoReplace) {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                giveCompass(player);
-            }
-        }
-    }
-
-    /**
-     * Handles compass distribution when players join.
-     */
+    /** Give compass on join if enabled */
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         boolean giveOnJoin = plugin.getConfig().getBoolean("settings.give-compass-on-join", true);
-        boolean autoReplace = plugin.getConfig().getBoolean("settings.compass-auto-replace", false);
-
-        if (giveOnJoin || autoReplace) {
+        if (giveOnJoin) {
             giveCompass(event.getPlayer());
         }
     }

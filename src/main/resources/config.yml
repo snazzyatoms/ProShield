@@ -1,12 +1,13 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (Synced + Multilingual)
+# Version: 1.2.6 (Synced + Multilingual, Safezone Spawn Fix)
 # ----------------------------------------------------------
 # - Claims are safe zones by default (PvP disabled inside)
 # - Wilderness = vanilla baseline (PvP enabled, no safezone)
 # - Expansion request steps synced with GUI (16/32/64)
 # - Messages moved to /languages/messages_xx.yml for localization
 # - Language toggle added for community translation support
+# - Hostile mob spawns are blocked in safezones
 # ==========================================================
 
 settings:
@@ -74,6 +75,7 @@ protection:
     despawn-interval-seconds: 30
     prevent-damage: true
     prevent-targeting: true
+    prevent-spawn: true      # ✅ NEW: blocks hostile mob spawns in safezones
     protect-pets: true
     protect-passive: true
 
@@ -139,7 +141,7 @@ flags:
     safezone:
       name: "&bSafe Zone"
       description:
-        - "&7Prevents hostile targeting and damage"
+        - "&7Prevents hostile targeting, damage & spawns"
         - "&7Repels & despawns hostiles (if enabled)"
       default: true     # ✅ claims auto-safezone
 

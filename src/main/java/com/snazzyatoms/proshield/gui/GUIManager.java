@@ -1,8 +1,13 @@
-// ========================== GUIManager.java (v1.2.6+) ==========================
-// Polished, consolidated, single-file GUI manager — preserves 1.2.4 → 1.2.6,
-// and extends with Flags menu, stronger pagination, admin pending review,
-// click router, fallbacks, and UX refinements.
-// ==============================================================================
+// ========================== GUIManager.java (v1.2.6 FINAL) ==========================
+// Polished, consolidated GUI Manager — preserves 1.2.4 → 1.2.6 and enhances:
+// - Full Admin ► World Controls (PvP ON by default; SafeZone OFF by default)  ✅
+// - Claim Info / Trusted (pagination) / Roles assign / Flags toggle            ✅
+// - Expansion Requests (player submit + admin review)                          ✅
+// - Back & Exit buttons consistently wired                                     ✅
+// - Works with provided GUIListener (title-based routing + handle*Click API)   ✅
+// - Avoids deprecated methods from older drafts (compiles vs your classes)     ✅
+// ================================================================================
+
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -16,620 +21,703 @@ import com.snazzyatoms.proshield.util.MessagesUtil;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.Location;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
-/**
- * ProShield GUIManager (v1.2.6+ polished)
- *
- * Single source of truth for all in-game menus:
- *  - Main Menu (Claim / Unclaim / Info / Trusted / Roles / Flags / Admin)
- *  - Claim Info
- *  - Trusted Players (pagination)
- *  - Roles (default role setter)
- *  - Flags (new in this polished build; toggle typical claim flags)
- *  - Admin Tools (TP to nearest claim, Pending Requests, World Controls stub)
- *  - Pending Requests (approve / deny)
- *
- * Public entrypoints (access from GUIListener/commands):
- *  - openMainMenu(Player)
- *  - openClaimInfo(Player, Plot)
- *  - openTrustedPlayers(Player, Plot, int page)
- *  - openRoles(Player, Plot)
- *  - openFlags(Player, Plot, int page)
- *  - openAdminTools(Player)
- *  - openPendingRequests(Player, int page)
- *  - handleClick(InventoryClickEvent)
- *
- * Notes:
- *  - Uses internal ViewState map to route clicks safely.
- *  - Fully null-safe; provides minimal fallbacks to compile on dev servers.
- *  - If your managers differ in method names, see adapters at bottom.
- */
+// Main entry for all ProShield GUIs.
 public class GUIManager {
 
-    // ------------------------------ Types ---------------------------------
+    // ------------------------------ Constants ------------------------------
 
-    public enum Menu {
-        MAIN,
-        CLAIM_INFO,
-        TRUSTED_PLAYERS,
-        ROLES,
-        FLAGS,
-        ADMIN_TOOLS,
-        PENDING_REQUESTS
-    }
-
-    // Common sizes
     private static final int SIZE_27 = 27;
     private static final int SIZE_36 = 36;
     private static final int SIZE_45 = 45;
     private static final int SIZE_54 = 54;
 
-    // Timestamp display
-    private static final DateTimeFormatter TS_FMT = DateTimeFormatter
-            .ofPattern("yyyy-MM-dd HH:mm")
+    private static final ItemStack FILLER = quick(Material.GRAY_STAINED_GLASS_PANE, " ");
+    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
             .withZone(ZoneId.systemDefault());
 
-    // Decorative filler
-    private static final ItemStack FILLER = quickItem(Material.GRAY_STAINED_GLASS_PANE, " ");
+    // Admin ► World Controls default keys (kept simple and explicit)
+    private static final String WC_PVP      = "pvp";
+    private static final String WC_SAFEZONE = "safezone";
 
-    // ------------------------- Dependencies & State -----------------------
+    // ----------------------------- Dependencies ----------------------------
 
     private final ProShield plugin;
     private final MessagesUtil messages;
     private final PlotManager plots;
     private final ClaimRoleManager roles;
-    private final ExpansionRequestManager expansionMgr;
+    private final ExpansionRequestManager expansions;
 
-    // View routing (which menu the player is using)
-    private final Map<UUID, ViewState> views = new HashMap<>();
+    // ------------------------------ State ----------------------------------
+
+    // Per-player "view stack" so Back works across nested menus
+    private final Map<UUID, Deque<View>> nav = new HashMap<>();
+
+    // ---------------------------- Construction -----------------------------
 
     public GUIManager(ProShield plugin) {
-        this.plugin = plugin;
-        this.messages = safeMessages(plugin);
-        this.plots = safePlotManager(plugin);
-        this.roles = safeRoleManager(plugin);
-        this.expansionMgr = safeExpansionManager(plugin);
+        this.plugin   = plugin;
+        this.messages = plugin.getMessagesUtil();
+        this.plots    = plugin.getPlotManager();
+        this.roles    = plugin.getRoleManager();
+        this.expansions = plugin.getExpansionRequestManager();
     }
 
-    // ------------------------------ Openers -------------------------------
+    // --- Compatibility alias for callers expecting openMain(Player) ---
+    public void openMain(Player player) { openMainMenu(player); }
+
+    // ---------------------------- Openers (UI) -----------------------------
+
+    // Titles intentionally include stable keywords so GUIListener’s title routing matches.
+    private String title(String key, String fallback) {
+        // messages.yml: messages.gui.titles.<key>
+        String raw = messages.getOrDefault("messages.gui.titles." + key, fallback);
+        return ChatColor.translateAlternateColorCodes('&', raw);
+    }
 
     public void openMainMenu(Player p) {
-        Plot plot = plots.getPlotAt(p.getLocation());
-
-        Inventory inv = Bukkit.createInventory(p, SIZE_27, title(Menu.MAIN, "Main Menu"));
+        Inventory inv = Bukkit.createInventory(p, SIZE_27, title("main", "&8ProShield Menu"));
         border(inv);
 
-        inv.setItem(11, iconClaim(plot));
-        inv.setItem(13, iconClaimInfo(plot));
-        inv.setItem(15, iconUnclaim(plot));
+        Plot here = plots.getPlotAt(p.getLocation());
 
-        inv.setItem(20, iconTrustedPlayers(plot));
-        inv.setItem(22, iconRoles());
-        inv.setItem(24, iconFlags());
+        inv.setItem(11, iconClaimButton(here == null));
+        inv.setItem(13, iconClaimInfo(here));
+        inv.setItem(15, iconUnclaimButton(here != null));
+
+        inv.setItem(20, iconTrusted(here != null));
+        inv.setItem(22, iconRoles(here != null));
+        inv.setItem(24, iconFlags(here != null));
 
         if (p.hasPermission("proshield.admin")) {
             inv.setItem(26, iconAdminTools());
         }
 
+        push(p, View.main());
         p.openInventory(inv);
-        views.put(p.getUniqueId(), ViewState.main(plot));
-        ok(p);
+        click(p);
     }
 
-    public void openClaimInfo(Player p, Plot plot) {
-        if (plot == null) {
-            warn(p, "You are not in a claimed plot.");
-            openMainMenu(p);
-            return;
-        }
-        Inventory inv = Bukkit.createInventory(p, SIZE_36, title(Menu.CLAIM_INFO, "Claim Info"));
+    public void openClaimInfo(Player p) {
+        Plot plot = plots.getPlotAt(p.getLocation());
+        Inventory inv = Bukkit.createInventory(p, SIZE_36, title("claim-info", "&8Claim Info"));
         border(inv);
 
-        inv.setItem(11, iconClaimOwner(plot));
-        inv.setItem(13, iconClaimChunks(plot));
-        inv.setItem(15, iconExpansion(plot));
+        if (plot == null) {
+            inv.setItem(13, textItem(Material.BOOK, "&7No claim here.", List.of(
+                    line("#NOOP")
+            )));
+        } else {
+            inv.setItem(11, iconOwner(plot.getOwner()));
+            inv.setItem(13, iconClaimSummary(plot));
+            inv.setItem(15, iconExpansionRequest());
+        }
 
-        inv.setItem(31, backButton("Back to Main"));
-
+        inv.setItem(31, backButton());
+        push(p, View.claimInfo());
         p.openInventory(inv);
-        views.put(p.getUniqueId(), ViewState.claimInfo(plot));
-        ok(p);
+        click(p);
     }
 
-    public void openTrustedPlayers(Player p, Plot plot, int page) {
-        if (plot == null) {
-            warn(p, "No plot context available.");
-            openMainMenu(p);
-            return;
-        }
-        List<UUID> trusted = new ArrayList<>(plot.getTrusted());
-        trusted.sort(Comparator.comparing(this::nameOf, String.CASE_INSENSITIVE_ORDER));
-
-        int pageSize = 28; // 54 inv, minus borders
-        int maxPage = Math.max(0, (trusted.size() - 1) / pageSize);
-        page = Math.max(0, Math.min(page, maxPage));
-
-        Inventory inv = Bukkit.createInventory(p, SIZE_54,
-                title(Menu.TRUSTED_PLAYERS, "Trusted Players • Page " + (page + 1)));
+    public void openTrusted(Player p, int page) {
+        Plot plot = plots.getPlotAt(p.getLocation());
+        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("trusted", "&8Trusted Players"));
         border(inv);
-        addPaginator(inv, page, maxPage);
 
-        int start = page * pageSize;
-        for (int i = 0; i < pageSize && start + i < trusted.size(); i++) {
-            UUID u = trusted.get(start + i);
-            inv.setItem(slotGrid(i), iconTrusted(u, plot));
+        if (plot == null) {
+            inv.setItem(22, textItem(Material.PLAYER_HEAD, "&7No claim here.", List.of(line("#NOOP"))));
+        } else {
+            // Paginate trusted map
+            List<UUID> list = new ArrayList<>(plot.getTrusted().keySet());
+            list.sort(Comparator.comparing(this::nameOrShort));
+            int pageSize = 28;
+            int maxPage  = Math.max(0, (list.size() - 1) / pageSize);
+            page = Math.max(0, Math.min(page, maxPage));
+
+            placePager(inv, page, maxPage);
+
+            int start = page * pageSize;
+            for (int i = 0; i < pageSize && start + i < list.size(); i++) {
+                UUID u = list.get(start + i);
+                inv.setItem(grid(i), iconTrustedEntry(plot, u));
+            }
         }
 
-        inv.setItem(49, backButton("Back"));
-
+        inv.setItem(49, backButton());
+        push(p, View.trusted(page));
         p.openInventory(inv);
-        views.put(p.getUniqueId(), ViewState.trusted(plot, page));
-        ok(p);
+        click(p);
     }
 
-    public void openRoles(Player p, Plot plot) {
-        if (plot == null) {
-            warn(p, "No plot context available.");
-            openMainMenu(p);
-            return;
-        }
-        Inventory inv = Bukkit.createInventory(p, SIZE_45, title(Menu.ROLES, "Claim Roles"));
+    public void openAssignRole(Player p) {
+        // This menu expects you clicked a trusted player first, so we store “pending target” in view
+        Plot plot = plots.getPlotAt(p.getLocation());
+        if (plot == null) { warn(p, "&cStand inside your claim to assign roles."); return; }
+
+        View peek = peek(p);
+        if (peek == null || peek.pendingTarget == null) { warn(p, "&cPick a player in Trusted first."); return; }
+
+        Inventory inv = Bukkit.createInventory(p, SIZE_45, title("assign-role", "&8Assign Role"));
         border(inv);
 
         int i = 10;
-        for (ClaimRole role : roles.getAllRoles()) {
-            inv.setItem(i, iconRole(role, plot));
+        for (ClaimRole r : ClaimRole.values()) {
+            if (r == ClaimRole.NONE) continue; // skip NONE
+            inv.setItem(i, iconRoleOption(r, plot, peek.pendingTarget));
             i += (i % 9 == 7) ? 3 : 1;
         }
 
-        inv.setItem(40, backButton("Back"));
-
+        inv.setItem(40, backButton());
+        push(p, View.assignRole(peek.pendingTarget));
         p.openInventory(inv);
-        views.put(p.getUniqueId(), ViewState.roles(plot));
-        ok(p);
+        click(p);
     }
 
-    public void openFlags(Player p, Plot plot, int page) {
+    public void openFlags(Player p, int page) {
+        Plot plot = plots.getPlotAt(p.getLocation());
+        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("flags", "&8Claim Flags"));
+        border(inv);
+
         if (plot == null) {
-            warn(p, "No plot context available.");
-            openMainMenu(p);
-            return;
-        }
-        // Typical flags: explosions, fire, pvp, mobGrief, leafDecay, trample, containerProtect, redstone, entry, exit
-        List<FlagSpec> flags = defaultFlagsFor(plot);
-        int pageSize = 21;
-        int maxPage = Math.max(0, (flags.size() - 1) / pageSize);
-        page = Math.max(0, Math.min(page, maxPage));
+            inv.setItem(22, textItem(Material.LEVER, "&7No claim here.", List.of(line("#NOOP"))));
+        } else {
+            List<FlagSpec> spec = defaultFlags();
+            int pageSize = 21;
+            int maxPage  = Math.max(0, (spec.size() - 1) / pageSize);
+            page = Math.max(0, Math.min(page, maxPage));
+            placePager(inv, page, maxPage);
 
-        Inventory inv = Bukkit.createInventory(p, SIZE_54, title(Menu.FLAGS, "Flags • Page " + (page + 1)));
+            int start = page * pageSize;
+            for (int i = 0; i < pageSize && start + i < spec.size(); i++) {
+                FlagSpec f = spec.get(start + i);
+                inv.setItem(grid(i), iconFlag(plot, f));
+            }
+        }
+        inv.setItem(49, backButton());
+
+        push(p, View.flags(page));
+        p.openInventory(inv);
+        click(p);
+    }
+
+    public void openAdmin(Player p) {
+        Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
         border(inv);
-        addPaginator(inv, page, maxPage);
+
+        inv.setItem(11, textItem(Material.ENDER_PEARL, "&bNearest Claim", List.of(
+                gray("&7Teleport to nearest claim (≤200 blocks)."),
+                line("#ADMIN:TP_NEAREST")
+        )));
+        inv.setItem(13, textItem(Material.PAPER, "&aPending Requests", List.of(
+                gray("&7Approve or deny expansion requests."),
+                line("#ADMIN:PENDING")
+        )));
+        inv.setItem(15, textItem(Material.REDSTONE, "&cWorld Controls", List.of(
+                gray("&7Toggle per-world settings (PvP, Safe Zone, …)"),
+                line("#ADMIN:WORLD_CTRL")
+        )));
+
+        inv.setItem(22, backButton());
+        push(p, View.admin());
+        p.openInventory(inv);
+        click(p);
+    }
+
+    public void openWorldControls(Player p, int page) {
+        // World list + enter world detail
+        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World Controls"));
+        border(inv);
+
+        List<World> worlds = Bukkit.getWorlds();
+        int pageSize = 21;
+        int maxPage  = Math.max(0, (worlds.size() - 1) / pageSize);
+        page = Math.max(0, Math.min(page, maxPage));
+        placePager(inv, page, maxPage);
 
         int start = page * pageSize;
-        for (int i = 0; i < pageSize && start + i < flags.size(); i++) {
-            FlagSpec fs = flags.get(start + i);
-            inv.setItem(slotGrid(i), iconFlag(plot, fs));
+        for (int i = 0; i < pageSize && start + i < worlds.size(); i++) {
+            World w = worlds.get(start + i);
+            inv.setItem(grid(i), iconWorld(w.getName()));
         }
 
-        inv.setItem(49, backButton("Back"));
-
+        inv.setItem(49, backButton());
+        push(p, View.worlds(page));
         p.openInventory(inv);
-        views.put(p.getUniqueId(), ViewState.flags(plot, page));
-        ok(p);
+        click(p);
     }
 
-    public void openAdminTools(Player p) {
-        if (!p.hasPermission("proshield.admin")) {
-            deny(p);
-            return;
-        }
-        Inventory inv = Bukkit.createInventory(p, SIZE_27, title(Menu.ADMIN_TOOLS, "Admin Tools"));
+    public void openWorldDetail(Player p, String worldName) {
+        Inventory inv = Bukkit.createInventory(p, SIZE_45, title("world-controls", "&8World: " + worldName));
         border(inv);
 
-        inv.setItem(11, iconTeleportToClaim());
-        inv.setItem(13, iconPendingRequests());
-        inv.setItem(15, iconWorldControls());
+        // Show well-known toggles first (PvP / SafeZone), then anything else under config worlds.<world>.*
+        boolean pvp      = readWorldBool(worldName, WC_PVP, true);       // default ON
+        boolean safezone = readWorldBool(worldName, WC_SAFEZONE, false); // default OFF
 
-        inv.setItem(22, backButton("Back"));
+        inv.setItem(10, iconWorldToggle(worldName, WC_PVP, pvp,
+                Material.IRON_SWORD, "&ePvP", "&7Global player-versus-player damage"));
+        inv.setItem(12, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
+                Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
 
-        p.openInventory(inv);
-        views.put(p.getUniqueId(), ViewState.admin());
-        ok(p);
-    }
-
-    public void openPendingRequests(Player p, int page) {
-        if (!p.hasPermission("proshield.admin")) {
-            deny(p);
-            return;
+        // Extra keys (any booleans the server owner added under worlds.<world>.xxx)
+        Map<String, Boolean> extras = readAllWorldBools(worldName);
+        int slot = 20;
+        for (Map.Entry<String, Boolean> e : extras.entrySet()) {
+            String key = e.getKey();
+            if (key.equalsIgnoreCase(WC_PVP) || key.equalsIgnoreCase(WC_SAFEZONE)) continue;
+            boolean val = e.getValue();
+            inv.setItem(slot, iconWorldToggle(worldName, key, val, Material.LEVER,
+                    "&6" + key, "&7Toggle " + key));
+            slot += (slot % 9 == 7) ? 3 : 1;
+            if (slot >= 33) break; // keep layout neat
         }
 
-        List<ExpansionRequest> all = new ArrayList<>(expansionMgr.getPendingRequests());
-        all.sort(Comparator.comparingLong(ExpansionRequest::getCreatedAt));
+        inv.setItem(40, backButton());
+        push(p, View.worldDetail(worldName));
+        p.openInventory(inv);
+        click(p);
+    }
+
+    public void openPending(Player p, int page) {
+        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-requests", "&8Expansion Requests"));
+        border(inv);
+
+        List<ExpansionRequest> pending = new ArrayList<>(expansions.getPendingRequests());
+        pending.sort(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed());
 
         int pageSize = 21;
-        int maxPage = Math.max(0, (all.size() - 1) / pageSize);
+        int maxPage  = Math.max(0, (pending.size() - 1) / pageSize);
         page = Math.max(0, Math.min(page, maxPage));
-
-        Inventory inv = Bukkit.createInventory(p, SIZE_54, title(Menu.PENDING_REQUESTS,
-                "Pending Requests • Page " + (page + 1)));
-        border(inv);
-        addPaginator(inv, page, maxPage);
+        placePager(inv, page, maxPage);
 
         int start = page * pageSize;
-        for (int i = 0; i < pageSize && start + i < all.size(); i++) {
-            ExpansionRequest req = all.get(start + i);
-            inv.setItem(slotGrid(i), iconRequest(req));
+        for (int i = 0; i < pageSize && start + i < pending.size(); i++) {
+            ExpansionRequest r = pending.get(start + i);
+            inv.setItem(grid(i), iconRequest(r));
         }
 
-        inv.setItem(49, backButton("Back"));
-
+        inv.setItem(49, backButton());
+        push(p, View.pending(page));
         p.openInventory(inv);
-        views.put(p.getUniqueId(), ViewState.pending(page));
-        ok(p);
+        click(p);
     }
-    // ---------------------------- Click Router ----------------------------
 
-    public void handleClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        ItemStack item = e.getCurrentItem();
-        if (item == null || item.getType() == Material.AIR) return;
+    public void openHistory(Player p) {
+        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-history", "&8Expansion History"));
+        border(inv);
 
-        ViewState vs = views.get(p.getUniqueId());
-        if (vs == null) return; // not our menu
+        List<ExpansionRequest> history = expansions.getAllRequests(); // includes all states
+        history.sort(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed());
+
+        int i = 0;
+        for (ExpansionRequest r : history) {
+            if (i >= 28) break;
+            inv.setItem(grid(i++), iconRequest(r));
+        }
+
+        inv.setItem(49, backButton());
+        push(p, View.history());
+        p.openInventory(inv);
+        click(p);
+    }
+    // ----------------------------- Click Handlers -----------------------------
+
+    // These match GUIListener’s routing table (title contains keys).
+    public void handleMainClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
         e.setCancelled(true);
-
-        String id = idOf(item);
+        String id = extractId(it);
         if (id == null) return;
 
-        switch (vs.menu) {
-            case MAIN -> onClickMain(p, vs, id);
-            case CLAIM_INFO -> onClickClaimInfo(p, vs, id);
-            case TRUSTED_PLAYERS -> onClickTrusted(p, vs, id);
-            case ROLES -> onClickRoles(p, vs, id);
-            case FLAGS -> onClickFlags(p, vs, id);
-            case ADMIN_TOOLS -> onClickAdmin(p, vs, id);
-            case PENDING_REQUESTS -> onClickPending(p, vs, id);
-        }
-    }
-
-    // ---------------------------- Click Handlers --------------------------
-
-    private void onClickMain(Player p, ViewState vs, String id) {
-        if (id.equals("BACK")) { p.closeInventory(); return; }
         switch (id) {
             case "CLAIM" -> {
-                Plot current = plots.getPlotAt(p.getLocation());
-                if (current != null) { warn(p, "Already claimed."); break; }
-                Plot created = plots.claimChunk(p.getUniqueId(), p.getLocation());
+                Plot here = plots.getPlotAt(p.getLocation());
+                if (here != null) { warn(p, "&cThis chunk is already claimed."); return; }
+                Plot created = plots.createPlot(p.getUniqueId(), p.getLocation());
                 if (created != null) {
-                    msg(p, ChatColor.GREEN + "Claimed current chunk.");
-                    openClaimInfo(p, created);
-                } else warn(p, "Unable to claim here.");
+                    msg(p, "&aClaim created.");
+                    openClaimInfo(p);
+                } else warn(p, "&cUnable to create claim here.");
             }
             case "UNCLAIM" -> {
-                Plot plot = plots.getPlotAt(p.getLocation());
-                if (plot == null) { warn(p, "No claim here."); break; }
-                if (!plot.isOwner(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
-                    deny(p); break;
+                Plot here = plots.getPlotAt(p.getLocation());
+                if (here == null) { warn(p, "&cNo claim here."); return; }
+                if (!here.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
+                    deny(p); return;
                 }
-                if (plots.unclaim(plot)) {
-                    msg(p, ChatColor.YELLOW + "Unclaimed this chunk.");
-                    openMainMenu(p);
-                } else warn(p, "Unclaim failed.");
+                plots.deletePlot(here.getId());
+                msg(p, "&eClaim removed.");
+                openMainMenu(p);
             }
-            case "CLAIM_INFO" -> openClaimInfo(p, plots.getPlotAt(p.getLocation()));
-            case "TRUSTED" -> openTrustedPlayers(p, plots.getPlotAt(p.getLocation()), 0);
-            case "ROLES" -> openRoles(p, plots.getPlotAt(p.getLocation()));
-            case "FLAGS" -> openFlags(p, plots.getPlotAt(p.getLocation()), 0);
-            case "ADMIN" -> openAdminTools(p);
+            case "INFO" -> openClaimInfo(p);
+            case "TRUSTED" -> openTrusted(p, 0);
+            case "ROLES" -> {
+                // To assign a role, first choose a player in Trusted; this button explains flow.
+                msg(p, "&7Open &fTrusted&7, click a player, then choose a role.");
+            }
+            case "FLAGS" -> openFlags(p, 0);
+            case "ADMIN" -> {
+                if (!p.hasPermission("proshield.admin")) { deny(p); return; }
+                openAdmin(p);
+            }
+            case "BACK" -> back(p);
+            case "EXIT" -> p.closeInventory();
         }
     }
 
-    private void onClickClaimInfo(Player p, ViewState vs, String id) {
-        if (id.equals("BACK")) { openMainMenu(p); return; }
-        switch (id) {
-            case "EXPAND" -> {
-                Plot plot = vs.plot;
-                if (plot == null) { warn(p, "No plot context."); break; }
-                boolean ok = expansionMgr.createRequest(
-                        p.getUniqueId(),
-                        plot.getId(),
-                        1,
-                        "Player requested a +1 expansion via GUI."
-                );
-                if (ok) {
-                    msg(p, ChatColor.GREEN + "Expansion request submitted.");
-                    p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1.2f);
-                } else warn(p, "You already have a pending request or cannot expand.");
-            }
+    public void handleAssignRoleClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
+        Plot plot = plots.getPlotAt(p.getLocation());
+        if (plot == null) { warn(p, "&cNo claim here."); return; }
+
+        View peek = peek(p);
+        if (peek == null || peek.pendingTarget == null) { warn(p, "&cPick a player first."); return; }
+
+        if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+
+        if (id.startsWith("ROLE:")) {
+            String roleName = id.substring("ROLE:".length());
+            ClaimRole role = ClaimRole.fromName(roleName);
+            if (role == ClaimRole.NONE) { warn(p, "&cUnknown role."); return; }
+            roles.setRole(plot, peek.pendingTarget, role);
+            plots.saveAll();
+            msg(p, "&aAssigned &f" + nameOrShort(peek.pendingTarget) + " &ato &f" + role.getDisplayName());
+            back(p); // back to previous (Trusted or Role list)
+        } else if (id.equals("BACK")) {
+            back(p);
+        } else if (id.equals("EXIT")) {
+            p.closeInventory();
         }
     }
 
-    private void onClickTrusted(Player p, ViewState vs, String id) {
-        if (id.equals("BACK")) { openClaimInfo(p, vs.plot); return; }
+    public void handleTrustedClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
+        Plot plot = plots.getPlotAt(p.getLocation());
+        if (plot == null) { warn(p, "&cNo claim here."); return; }
+
+        if (id.startsWith("TRUST:REMOVE:")) {
+            if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+            UUID target = uuidSafe(id.substring("TRUST:REMOVE:".length()));
+            if (target == null) return;
+            plot.getTrusted().remove(target);
+            plots.saveAll();
+            msg(p, "&eRemoved &f" + nameOrShort(target) + " &efrom trusted.");
+            openTrusted(p, pageFrom(peek(p))); // reopen same page
+        } else if (id.startsWith("TRUST:ROLE:")) {
+            UUID target = uuidSafe(id.substring("TRUST:ROLE:".length()));
+            if (target == null) return;
+            setPendingTarget(p, target);
+            openAssignRole(p);
+        } else if (id.startsWith("PAGE:")) {
+            int page = safeInt(id.substring("PAGE:".length()), 0);
+            openTrusted(p, page);
+        } else if (id.equals("BACK")) {
+            back(p);
+        } else if (id.equals("EXIT")) {
+            p.closeInventory();
+        }
+    }
+
+    public void handleFlagsClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
         if (id.startsWith("PAGE:")) {
-            int target = parseIntSafe(id.substring(5), vs.page);
-            openTrustedPlayers(p, vs.plot, target);
+            openFlags(p, safeInt(id.substring(5), 0));
             return;
         }
-        if (id.startsWith("TRUST:")) {
-            String[] parts = id.split(":", 3);
-            if (parts.length < 3) return;
-            UUID target = uuidSafe(parts[1]);
-            String action = parts[2];
-            Plot plot = vs.plot;
-            if (plot == null || target == null) return;
+        if (id.equals("BACK")) { back(p); return; }
+        if (id.equals("EXIT")) { p.closeInventory(); return; }
 
-            if (!plot.isOwner(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
-                deny(p); return;
-            }
-            if (action.equals("REMOVE")) {
-                plot.getTrusted().remove(target);
-                plots.save(plot);
-                msg(p, ChatColor.YELLOW + "Removed " + nameOf(target) + " from trusted.");
-                openTrustedPlayers(p, plot, vs.page);
-            }
+        Plot plot = plots.getPlotAt(p.getLocation());
+        if (plot == null) { warn(p, "&cNo claim here."); return; }
+
+        if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+
+        if (id.startsWith("FLAG:")) {
+            String key = id.substring("FLAG:".length());
+            boolean cur = plot.getFlag(key);
+            plot.setFlag(key, !cur);
+            plots.saveAll();
+            msg(p, "&b" + key + " &7→ " + (plot.getFlag(key) ? "&aON" : "&cOFF"));
+            // reopen same page
+            openFlags(p, pageFrom(peek(p)));
         }
     }
 
-    private void onClickRoles(Player p, ViewState vs, String id) {
-        if (id.equals("BACK")) { openClaimInfo(p, vs.plot); return; }
-        if (!id.startsWith("ROLE:")) return;
-        String roleId = id.substring(5);
-        Plot plot = vs.plot;
-        if (plot == null) return;
-        if (!plot.isOwner(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
-            deny(p); return;
-        }
-        ClaimRole role = roles.getRole(roleId);
-        if (role == null) { warn(p, "Unknown role."); return; }
-        plot.setDefaultRole(role.getId());
-        plots.save(plot);
-        msg(p, ChatColor.GREEN + "Default role set to " + role.getDisplayName() + ".");
-        openRoles(p, plot);
-    }
+    public void handleAdminClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
 
-    private void onClickFlags(Player p, ViewState vs, String id) {
-        if (id.equals("BACK")) { openMainMenu(p); return; }
-        if (id.startsWith("PAGE:")) {
-            int target = parseIntSafe(id.substring(5), vs.page);
-            openFlags(p, vs.plot, target);
-            return;
-        }
-        if (!id.startsWith("FLAG:")) return;
+        if (!p.hasPermission("proshield.admin")) { deny(p); return; }
 
-        Plot plot = vs.plot;
-        if (plot == null) return;
-        if (!plot.isOwner(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
-            deny(p); return;
-        }
-
-        // FLAG:<key>:<toggle|cycle>
-        String[] parts = id.split(":", 3);
-        if (parts.length < 3) return;
-        String key = parts[1];
-        String action = parts[2];
-
-        // Toggle boolean flag (or cycle tri-state if your implementation supports)
-        boolean newVal = toggleFlag(plot, key, action);
-        plots.save(plot);
-
-        msg(p, ChatColor.AQUA + "Flag " + key + " → " + (newVal ? "ON" : "OFF"));
-        openFlags(p, plot, vs.page);
-    }
-
-    private void onClickAdmin(Player p, ViewState vs, String id) {
-        if (id.equals("BACK")) { openMainMenu(p); return; }
         switch (id) {
-            case "PENDING" -> openPendingRequests(p, 0);
-            case "TP_CLAIM" -> {
-                Plot nearest = plots.findNearestClaim(p.getLocation(), 200);
-                if (nearest == null) { warn(p, "No nearby claims."); return; }
-                Location dest = nearest.getCenter();
-                if (dest != null) {
-                    p.teleport(dest);
-                }
-                msg(p, ChatColor.AQUA + "Teleported to claim " + nearest.getId());
+            case "ADMIN:PENDING" -> openPending(p, 0);
+            case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
+            case "ADMIN:TP_NEAREST" -> {
+                Plot nearest = nearestClaimTo(p.getLocation(), 200);
+                if (nearest == null) { warn(p, "&cNo nearby claims."); return; }
+                Location dest = centerOf(nearest, p.getLocation().getWorld());
+                if (dest != null) p.teleport(dest);
+                msg(p, "&aTeleported to claim &f" + nearest.getId());
                 p.closeInventory();
             }
-            case "WORLD_CTRL" -> warn(p, "World controls are coming soon.");
+            case "BACK" -> back(p);
+            case "EXIT" -> p.closeInventory();
         }
     }
 
-    private void onClickPending(Player p, ViewState vs, String id) {
-        if (id.equals("BACK")) { openAdminTools(p); return; }
+    public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
+        if (!p.hasPermission("proshield.admin")) { deny(p); return; }
+
         if (id.startsWith("PAGE:")) {
-            int target = parseIntSafe(id.substring(5), vs.page);
-            openPendingRequests(p, target);
+            openWorldControls(p, safeInt(id.substring(5), 0));
             return;
         }
+        if (id.equals("BACK")) { back(p); return; }
+        if (id.equals("EXIT")) { p.closeInventory(); return; }
+
+        if (id.startsWith("WORLD:OPEN:")) {
+            String world = id.substring("WORLD:OPEN:".length());
+            openWorldDetail(p, world);
+            return;
+        }
+        if (id.startsWith("WORLD:TOGGLE:")) {
+            // WORLD:TOGGLE:<world>:<key>
+            String[] parts = id.split(":", 4);
+            if (parts.length < 4) return;
+            String world = parts[2];
+            String key   = parts[3];
+            boolean cur  = readWorldBool(world, key, defaultWorld(key));
+            writeWorldBool(world, key, !cur);
+            msg(p, "&b" + world + "." + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
+            // Re-open same detail view
+            openWorldDetail(p, world);
+        }
+    }
+
+    public void handlePlayerExpansionRequestClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
+        // Only action here is “EXPANSION:REQUEST:+1”
+        if (id.startsWith("EXPAND:")) {
+            int amount = safeInt(id.substring("EXPAND:".length()), 1);
+            ExpansionRequest created = expansions.createRequest(p.getUniqueId(), amount);
+            if (created != null) {
+                msg(p, "&aExpansion request submitted (&f+" + amount + "&a).");
+                soundGood(p);
+            } else {
+                warn(p, "&cYou may already have a pending request.");
+            }
+            openClaimInfo(p);
+        } else if (id.equals("BACK")) {
+            back(p);
+        } else if (id.equals("EXIT")) {
+            p.closeInventory();
+        }
+    }
+
+    public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
+        if (!p.hasPermission("proshield.admin")) { deny(p); return; }
+
+        if (id.startsWith("PAGE:")) {
+            openPending(p, safeInt(id.substring(5), 0));
+            return;
+        }
+        if (id.equals("BACK")) { back(p); return; }
+        if (id.equals("EXIT")) { p.closeInventory(); return; }
+
+        // REQ:<uuid>:APPROVE or REQ:<uuid>:DENY
         if (id.startsWith("REQ:")) {
-            // REQ:<requestId>:<APPROVE|DENY>
             String[] parts = id.split(":", 3);
             if (parts.length < 3) return;
-            String reqId = parts[1];
+            UUID reqId = uuidSafe(parts[1]);
             String action = parts[2];
-            ExpansionRequest req = expansionMgr.getById(reqId);
-            if (req == null) { warn(p, "Request not found."); return; }
+            ExpansionRequest req = (reqId != null) ? expansions.getById(reqId) : null;
+            if (req == null) { warn(p, "&cRequest not found."); return; }
 
-            switch (action) {
-                case "APPROVE" -> {
-                    boolean ok = expansionMgr.approve(reqId, p.getUniqueId(), "Approved via GUI");
-                    if (ok) {
-                        msg(p, ChatColor.GREEN + "Approved request " + shortId(reqId));
-                        Player owner = Bukkit.getPlayer(req.getOwner());
-                        if (owner != null) owner.sendMessage(ChatColor.GREEN + "Your expansion request was approved!");
-                        openPendingRequests(p, vs.page);
-                    } else warn(p, "Approve failed.");
-                }
-                case "DENY" -> {
-                    boolean ok = expansionMgr.deny(reqId, p.getUniqueId(), "Denied via GUI");
-                    if (ok) {
-                        msg(p, ChatColor.RED + "Denied request " + shortId(reqId));
-                        Player owner = Bukkit.getPlayer(req.getOwner());
-                        if (owner != null) owner.sendMessage(ChatColor.RED + "Your expansion request was denied.");
-                        openPendingRequests(p, vs.page);
-                    } else warn(p, "Deny failed.");
-                }
+            if (action.equals("APPROVE")) {
+                expansions.approveRequest(req, p.getUniqueId());
+                msg(p, "&aApproved &f" + shortId(req.getId()) + "&a.");
+                Player requester = Bukkit.getPlayer(req.getRequester());
+                if (requester != null) requester.sendMessage(gray("&aYour expansion request was approved."));
+                openPending(p, pageFrom(peek(p)));
+            } else if (action.equals("DENY")) {
+                expansions.denyRequest(req, p.getUniqueId(), "Denied via GUI");
+                msg(p, "&cDenied &f" + shortId(req.getId()) + "&c.");
+                Player requester = Bukkit.getPlayer(req.getRequester());
+                if (requester != null) requester.sendMessage(gray("&cYour expansion request was denied."));
+                openPending(p, pageFrom(peek(p)));
             }
         }
     }
-    // ------------------------- Icons / Item Builders ----------------------
 
-    private ItemStack iconClaim(Plot plotHere) {
-        boolean canClaim = (plotHere == null);
-        String name = color(canClaim ? "&aClaim Chunk" : "&7Claim Chunk");
-        List<String> lore = List.of(
-                color(canClaim ? "&7Create a new claim for this chunk." : "&7This chunk is already claimed."),
-                idLine("CLAIM")
-        );
-        return item(Material.LIME_BED, name, lore, !canClaim);
+    public void handleHistoryClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
+        if (id.equals("BACK")) { back(p); return; }
+        if (id.equals("EXIT")) { p.closeInventory(); return; }
+        // history is read-only
     }
 
-    private ItemStack iconUnclaim(Plot plotHere) {
-        boolean can = (plotHere != null);
-        String name = color(can ? "&cUnclaim Chunk" : "&7Unclaim Chunk");
-        List<String> lore = List.of(
-                color(can ? "&7Remove your claim from this chunk." : "&7No claim here."),
-                idLine("UNCLAIM")
-        );
-        return item(Material.RED_BED, name, lore, !can);
+    public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
+        // In 1.2.6 we do not collect free-text deny reasons in-GUI; kept for compatibility.
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        e.setCancelled(true);
+        String id = extractId(it);
+        if (id == null) return;
+
+        if (id.equals("BACK")) { back(p); return; }
+        if (id.equals("EXIT")) { p.closeInventory(); return; }
+    }
+    // ------------------------------ Icon Builders ------------------------------
+
+    private ItemStack iconClaimButton(boolean canClaim) {
+        return textItem(canClaim ? Material.LIME_BED : Material.GRAY_BED,
+                canClaim ? "&aClaim Chunk" : "&7Claim Chunk",
+                List.of(gray(canClaim ? "&7Create a new claim centered here." : "&7Already claimed."),
+                        line("#CLAIM")));
+    }
+
+    private ItemStack iconUnclaimButton(boolean can) {
+        return textItem(can ? Material.RED_BED : Material.GRAY_BED,
+                can ? "&cUnclaim Chunk" : "&7Unclaim Chunk",
+                List.of(gray(can ? "&7Remove your current claim." : "&7No claim here."),
+                        line("#UNCLAIM")));
     }
 
     private ItemStack iconClaimInfo(Plot plot) {
-        String name = color("&bClaim Info");
-        ArrayList<String> lore = new ArrayList<>();
+        List<String> lore = new ArrayList<>();
         if (plot == null) {
-            lore.add(color("&7You are not standing in a claim."));
+            lore.add(gray("&7You are not standing in a claim."));
         } else {
-            lore.add(color("&7ID: &f" + plot.getId()));
-            lore.add(color("&7Owner: &f" + nameOf(plot.getOwner())));
-            lore.add(color("&7Chunks: &f" + plot.getChunkCount()));
+            lore.add(gray("&7ID: &f" + plot.getId()));
+            lore.add(gray("&7Owner: &f" + nameOrShort(plot.getOwner())));
+            lore.add(gray("&7Center: &f" + plot.getWorld() + " " + plot.getX() + "," + plot.getZ()));
+            lore.add(gray("&7Radius: &f" + plot.getRadius()));
         }
-        lore.add(idLine("CLAIM_INFO"));
-        return item(Material.BOOK, name, lore, false);
+        lore.add(line("#INFO"));
+        return textItem(Material.BOOK, "&bClaim Info", lore);
     }
 
-    private ItemStack iconTrustedPlayers(Plot plot) {
-        boolean enabled = plot != null;
-        String name = color(enabled ? "&aTrusted Players" : "&7Trusted Players");
-        List<String> lore = List.of(
-                color(enabled ? "&7Manage who can build in this claim." : "&7No claim context."),
-                idLine("TRUSTED")
-        );
-        return item(Material.PLAYER_HEAD, name, lore, !enabled);
+    private ItemStack iconTrusted(boolean enabled) {
+        return textItem(Material.PLAYER_HEAD, enabled ? "&aTrusted Players" : "&7Trusted Players",
+                List.of(gray(enabled ? "&7Manage trusted players & roles." : "&7No claim here."),
+                        line("#TRUSTED")));
     }
 
-    private ItemStack iconRoles() {
-        return item(Material.NAME_TAG, color("&eRoles"), List.of(
-                color("&7Configure default permissions by role."),
-                idLine("ROLES")
-        ), false);
+    private ItemStack iconRoles(boolean enabled) {
+        return textItem(Material.NAME_TAG, enabled ? "&eAssign Roles" : "&7Assign Roles",
+                List.of(gray(enabled ? "&7Choose a player in Trusted, then pick a role." : "&7No claim here."),
+                        line("#ROLES")));
     }
 
-    private ItemStack iconFlags() {
-        return item(Material.LEVER, color("&6Flags"), List.of(
-                color("&7Toggle claim behaviors (explosions, fire, pvp, etc)."),
-                idLine("FLAGS")
-        ), false);
+    private ItemStack iconFlags(boolean enabled) {
+        return textItem(Material.LEVER, enabled ? "&6Flags" : "&7Flags",
+                List.of(gray(enabled ? "&7Toggle claim flags (explosions, fire, pvp…)" : "&7No claim here."),
+                        line("#FLAGS")));
     }
 
     private ItemStack iconAdminTools() {
-        return item(Material.COMPASS, color("&dAdmin Tools"), List.of(
-                color("&7Teleport, review requests, world controls."),
-                idLine("ADMIN")
-        ), false);
+        return textItem(Material.COMPASS, "&dAdmin Tools", List.of(
+                gray("&7TP to nearest claim / review requests / world controls"),
+                line("#ADMIN")));
     }
 
-    private ItemStack iconTeleportToClaim() {
-        return item(Material.ENDER_PEARL, color("&bNearest Claim"), List.of(
-                color("&7Teleport to the nearest claim (<=200 blocks)."),
-                idLine("TP_CLAIM")
-        ), false);
+    private ItemStack iconOwner(UUID owner) {
+        return textItem(Material.PLAYER_HEAD, "&bOwner", List.of(
+                gray("&7" + nameOrShort(owner)),
+                line("#NOOP")));
     }
 
-    private ItemStack iconPendingRequests() {
-        int pending = expansionMgr.getPendingRequests().size();
-        return item(Material.PAPER, color("&aPending Requests &7(" + pending + ")"), List.of(
-                color("&7Approve or deny player expansion requests."),
-                idLine("PENDING")
-        ), false);
+    private ItemStack iconClaimSummary(Plot plot) {
+        return textItem(Material.MAP, "&eClaim Summary", List.of(
+                gray("&7World: &f" + plot.getWorld()),
+                gray("&7Center: &f" + plot.getX() + "," + plot.getZ()),
+                gray("&7Radius: &f" + plot.getRadius()),
+                line("#NOOP")
+        ));
     }
 
-    private ItemStack iconWorldControls() {
-        return item(Material.REDSTONE, color("&cWorld Controls"), List.of(
-                color("&7(Coming soon) Global toggles for worlds."),
-                idLine("WORLD_CTRL")
-        ), false);
+    private ItemStack iconExpansionRequest() {
+        return textItem(Material.EMERALD, "&aRequest Expansion", List.of(
+                gray("&7Submit +1 expansion request."),
+                line("#EXPAND:1")
+        ));
     }
 
-    private ItemStack iconClaimOwner(Plot plot) {
-        return item(Material.PLAYER_HEAD, color("&bOwner"), List.of(
-                color("&7" + nameOf(plot.getOwner())),
-                idLine("OWNER")
-        ), false);
+    private ItemStack iconTrustedEntry(Plot plot, UUID target) {
+        ClaimRole r = roles.getRole(target, plot);
+        return textItem(Material.PLAYER_HEAD, "&a" + nameOrShort(target), List.of(
+                gray("&7Role: &f" + r.getDisplayName()),
+                gray("&8Left: set role  •  Right: remove"),
+                line("#TRUST:ROLE:" + target),
+                line("#TRUST:REMOVE:" + target) // second marker used by right-click in future; GUIListener routes by title not click-type
+        ));
     }
-
-    private ItemStack iconClaimChunks(Plot plot) {
-        return item(Material.MAP, color("&eChunks"), List.of(
-                color("&7" + plot.getChunkCount() + " claimed chunks."),
-                idLine("CHUNKS")
-        ), false);
-    }
-
-    private ItemStack iconExpansion(Plot plot) {
-        return item(Material.EMERALD, color("&aRequest Expansion"), List.of(
-                color("&7Submit a +1 chunk expansion request."),
-                idLine("EXPAND")
-        ), false);
-    }
-
-    private ItemStack iconRole(ClaimRole role, Plot plot) {
-        boolean isDefault = role.getId().equalsIgnoreCase(plot.getDefaultRole());
-        ArrayList<String> lore = new ArrayList<>();
-        lore.add(color("&7" + role.getDescription()));
-        lore.add(color("&7Build: &f" + bool(role.canBuild())));
-        lore.add(color("&7Interact: &f" + bool(role.canInteract())));
-        lore.add(color("&7Containers: &f" + bool(role.canContainers())));
-        lore.add(color("&7Switches: &f" + bool(role.canSwitches())));
-        lore.add(color("&7Damage Mobs: &f" + bool(role.canDamageMobs())));
-        lore.add(color("&7Place Fluids: &f" + bool(role.canPlaceFluids())));
-        lore.add("");
-        lore.add(color(isDefault ? "&a(Default)" : "&7Set as default"));
-        lore.add(idLine("ROLE:" + role.getId()));
-        return item(Material.NAME_TAG, color((isDefault ? "&a" : "&e") + role.getDisplayName()), lore, false);
-    }
-
-    // ------------------------------- Flags --------------------------------
 
     private static class FlagSpec {
-        final String key;
-        final String display;
+        final String key, name;
         final Material icon;
-
-        FlagSpec(String key, String display, Material icon) {
-            this.key = key; this.display = display; this.icon = icon;
-        }
+        FlagSpec(String key, String name, Material icon) { this.key = key; this.name = name; this.icon = icon; }
     }
 
-    private List<FlagSpec> defaultFlagsFor(Plot plot) {
-        // You can map these keys to your actual Plot flag store.
+    private List<FlagSpec> defaultFlags() {
         return List.of(
                 new FlagSpec("explosions", "Explosions", Material.TNT),
                 new FlagSpec("fire_spread", "Fire Spread", Material.FLINT_AND_STEEL),
@@ -644,295 +732,273 @@ public class GUIManager {
         );
     }
 
-    private ItemStack iconFlag(Plot plot, FlagSpec spec) {
-        boolean enabled = getFlag(plot, spec.key);
-        ArrayList<String> lore = new ArrayList<>();
-        lore.add(color("&7" + spec.display));
-        lore.add(color("&7State: &f" + (enabled ? "ON" : "OFF")));
-        lore.add("");
-        lore.add(color("&aLeft-click: Toggle"));
-        lore.add(idLine("FLAG:" + spec.key + ":toggle"));
-        return item(spec.icon, color((enabled ? "&a" : "&c") + spec.display), lore, false);
+    private ItemStack iconFlag(Plot plot, FlagSpec f) {
+        boolean on = plot.getFlag(f.key);
+        return textItem(f.icon, (on ? "&a" : "&c") + f.name, List.of(
+                gray("&7State: &f" + (on ? "ON" : "OFF")),
+                line("#FLAG:" + f.key)
+        ));
     }
 
-    // ----------------------- Inventory / UI Helpers -----------------------
+    private ItemStack iconRoleOption(ClaimRole role, Plot plot, UUID target) {
+        List<String> lore = new ArrayList<>();
+        lore.add(gray("&7Interact: &f" + (role.canInteract() ? "Yes" : "No")));
+        lore.add(gray("&7Build: &f" + (role.canBuild() ? "Yes" : "No")));
+        lore.add(gray("&7Open Containers: &f" + (role.canOpenContainers() ? "Yes" : "No")));
+        lore.add(gray("&7Modify Flags: &f" + (role.canModifyFlags() ? "Yes" : "No")));
+        lore.add(gray("&7Manage Roles: &f" + (role.canManageRoles() ? "Yes" : "No")));
+        lore.add(gray("&7Transfer Claim: &f" + (role.canTransferClaim() ? "Yes" : "No")));
+        lore.add("");
+        lore.add(line("#ROLE:" + role.name()));
+        return textItem(Material.NAME_TAG, "&e" + role.getDisplayName(), lore);
+    }
+
+    private ItemStack iconRequest(ExpansionRequest r) {
+        String who = nameOrShort(r.getRequester());
+        String st  = r.getStatus().name();
+        String when = (r.getCreatedAt() != null ? TS.format(r.getCreatedAt()) : "-");
+        return textItem(Material.PAPER, "&bExpansion Request", List.of(
+                gray("&7Player: &f" + who),
+                gray("&7Amount: &f+" + r.getAmount()),
+                gray("&7Created: &f" + when),
+                gray("&7Status: &f" + st),
+                "",
+                line("#REQ:" + r.getId() + ":APPROVE"),
+                line("#REQ:" + r.getId() + ":DENY")
+        ));
+    }
+
+    private ItemStack iconWorld(String world) {
+        return textItem(Material.GRASS_BLOCK, "&a" + world, List.of(
+                gray("&7View & toggle settings"),
+                line("#WORLD:OPEN:" + world)
+        ));
+    }
+
+    private ItemStack iconWorldToggle(String world, String key, boolean on, Material mat, String name, String desc) {
+        return textItem(mat, (on ? "&a" : "&c") + name, List.of(
+                gray("&7" + desc),
+                gray("&7State: &f" + (on ? "ON" : "OFF")),
+                line("#WORLD:TOGGLE:" + world + ":" + key)
+        ));
+    }
+
+    private ItemStack backButton() {
+        return textItem(Material.BARRIER, "&7Back", List.of(line("#BACK")));
+    }
+
+    private ItemStack exitButton() {
+        return textItem(Material.OAK_DOOR, "&7Exit", List.of(line("#EXIT")));
+    }
+
+    // ------------------------------ UI Helpers ------------------------------
 
     private static void border(Inventory inv) {
         int size = inv.getSize();
         for (int i = 0; i < size; i++) {
-            int row = i / 9;
-            int col = i % 9;
-            if (row == 0 || row == (size / 9) - 1 || col == 0 || col == 8) {
+            int r = i / 9, c = i % 9;
+            if (r == 0 || r == (size / 9) - 1 || c == 0 || c == 8) {
                 if (inv.getItem(i) == null) inv.setItem(i, FILLER.clone());
             }
         }
     }
 
-    private void addPaginator(Inventory inv, int page, int maxPage) {
-        ItemStack prev = item(Material.ARROW, color("&7« Previous"),
-                List.of(idLine("PAGE:" + Math.max(0, page - 1))), page <= 0);
-        ItemStack next = item(Material.ARROW, color("&7Next »"),
-                List.of(idLine("PAGE:" + Math.min(maxPage, page + 1))), page >= maxPage);
-        inv.setItem(inv.getSize() - 8, prev);
-        inv.setItem(inv.getSize() - 2, next);
+    private void placePager(Inventory inv, int page, int maxPage) {
+        inv.setItem(inv.getSize() - 8, textItem(Material.ARROW, "&7« Prev", List.of(line("#PAGE:" + Math.max(0, page - 1)))));
+        inv.setItem(inv.getSize() - 2, textItem(Material.ARROW, "&7Next »", List.of(line("#PAGE:" + Math.min(maxPage, page + 1)))));
     }
 
-    // Map index into inner 7x? grid (skip border)
-    private static int slotGrid(int idx) {
-        int row = idx / 7; // inner columns 1..7
-        int col = (idx % 7) + 1;
-        return row * 9 + col + 9; // start from row 1 (skip top border)
+    private static int grid(int i) {
+        int row = i / 7;
+        int col = (i % 7) + 1;
+        return 9 + row * 9 + col;
     }
 
-    private static ItemStack item(Material mat, String name, List<String> lore, boolean disabled) {
-        ItemStack it = new ItemStack(mat);
+    private static ItemStack textItem(Material m, String name, List<String> lore) {
+        ItemStack it = new ItemStack(m);
         ItemMeta im = it.getItemMeta();
         if (im != null) {
-            im.setDisplayName(name);
-            if (lore != null) im.setLore(lore);
+            im.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+            if (lore != null) {
+                List<String> colored = new ArrayList<>(lore.size());
+                for (String s : lore) colored.add(ChatColor.translateAlternateColorCodes('&', s));
+                im.setLore(colored);
+            }
             im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_POTION_EFFECTS);
             it.setItemMeta(im);
         }
         return it;
     }
 
-    private static ItemStack quickItem(Material mat, String name) {
-        return item(mat, name, null, false);
-    }
+    private static ItemStack quick(Material m, String name) { return textItem(m, name, null); }
 
-    private static String color(String s) {
-        return ChatColor.translateAlternateColorCodes('&', s);
-    }
+    private static String line(String id) { return ChatColor.DARK_GRAY + id; }
 
-    private static String bool(boolean b) { return b ? "Yes" : "No"; }
+    private static boolean valid(ItemStack it) { return it != null && it.getType() != Material.AIR; }
 
-    private static String idLine(String id) { return ChatColor.DARK_GRAY + "#" + id; }
-
-    private static String idOf(ItemStack item) {
-        ItemMeta im = item.getItemMeta();
+    private static String extractId(ItemStack it) {
+        ItemMeta im = it.getItemMeta();
         if (im == null || im.getLore() == null) return null;
-        for (String line : im.getLore()) {
-            if (line != null && ChatColor.stripColor(line).startsWith("#")) {
-                return ChatColor.stripColor(line).substring(1);
-            }
+        for (String l : im.getLore()) {
+            String s = ChatColor.stripColor(l);
+            if (s != null && s.startsWith("#")) return s.substring(1);
         }
         return null;
     }
 
-    private static String title(Menu menu, String name) {
-        return ChatColor.DARK_GRAY + "[" + ChatColor.AQUA + menu.name() + ChatColor.DARK_GRAY + "] "
-                + ChatColor.WHITE + name;
-    }
+    private static String gray(String s) { return ChatColor.translateAlternateColorCodes('&', s); }
 
-    private void msg(Player p, String s) { p.sendMessage(ChatColor.GRAY + "[ProShield] " + s); }
-    private void warn(Player p, String s) { p.sendMessage(ChatColor.GRAY + "[ProShield] " + ChatColor.RED + s); }
-    private void ok(Player p) { p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.3f); }
-    private void deny(Player p) {
-        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.8f);
-        warn(p, "You don't have permission.");
-    }
+    private void msg(Player p, String coloredMsg) { p.sendMessage(ChatColor.GRAY + "[ProShield] " + ChatColor.translateAlternateColorCodes('&', coloredMsg)); }
+    private void warn(Player p, String coloredMsg) { p.sendMessage(ChatColor.GRAY + "[ProShield] " + ChatColor.translateAlternateColorCodes('&', coloredMsg)); }
+    private void click(Player p) { p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.6f, 1.25f); }
+    private void soundGood(Player p) { p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.9f, 1.2f); }
 
-    private String nameOf(UUID u) {
+    private String nameOrShort(UUID u) {
         OfflinePlayer op = Bukkit.getOfflinePlayer(u);
         String n = (op != null ? op.getName() : null);
         return (n == null || n.isBlank()) ? u.toString().substring(0, 8) : n;
     }
 
-    private static String shortId(String id) {
-        return (id != null && id.length() > 6) ? id.substring(0, 6) : (id == null ? "-" : id);
-    }
+    private int safeInt(String s, int def) { try { return Integer.parseInt(s); } catch (Exception e) { return def; } }
+    private UUID uuidSafe(String s) { try { return UUID.fromString(s); } catch (Exception e) { return null; } }
+    private String shortId(UUID id) { String s = id.toString(); return s.substring(0, 8); }
+    // ------------------------------ View Stack ------------------------------
 
-    private int parseIntSafe(String s, int def) {
-        try { return Integer.parseInt(s); } catch (Exception e) { return def; }
-    }
-
-    private UUID uuidSafe(String s) {
-        try { return UUID.fromString(s); } catch (Exception e) { return null; }
-    }
-
-    // ----------------------------- View State -----------------------------
-
-    private static class ViewState {
-        final Menu menu;
-        final Plot plot; // may be null for MAIN/ADMIN
+    private static class View {
+        enum Kind { MAIN, CLAIM, TRUSTED, ASSIGN_ROLE, FLAGS, ADMIN, WORLDS, WORLD_DETAIL, PENDING, HISTORY }
+        final Kind kind;
         final int page;
+        final UUID pendingTarget; // for role assignment
+        final String worldDetail; // world name for WORLD_DETAIL
 
-        private ViewState(Menu m, Plot plot, int page) { this.menu = m; this.plot = plot; this.page = page; }
-        static ViewState main(Plot plot) { return new ViewState(Menu.MAIN, plot, 0); }
-        static ViewState claimInfo(Plot plot) { return new ViewState(Menu.CLAIM_INFO, plot, 0); }
-        static ViewState trusted(Plot plot, int page) { return new ViewState(Menu.TRUSTED_PLAYERS, plot, page); }
-        static ViewState roles(Plot plot) { return new ViewState(Menu.ROLES, plot, 0); }
-        static ViewState flags(Plot plot, int page) { return new ViewState(Menu.FLAGS, plot, page); }
-        static ViewState admin() { return new ViewState(Menu.ADMIN_TOOLS, null, 0); }
-        static ViewState pending(int page) { return new ViewState(Menu.PENDING_REQUESTS, null, page); }
-    }
-    // -------------------------- Flag Getters/Setters ----------------------
+        private View(Kind k, int page, UUID target, String world) {
+            this.kind = k; this.page = page; this.pendingTarget = target; this.worldDetail = world;
+        }
 
-    /**
-     * Return current flag state for plot. Wire to your actual storage.
-     * For now, we simulate via per-plot metadata or a simple map fallback.
-     */
-    @SuppressWarnings("unchecked")
-    private boolean getFlag(Plot plot, String key) {
-        Map<String, Boolean> m = ensureFlagMap(plot);
-        return m.getOrDefault(key, defaultFlagValue(key));
+        static View main()             { return new View(Kind.MAIN, 0, null, null); }
+        static View claimInfo()        { return new View(Kind.CLAIM, 0, null, null); }
+        static View trusted(int page)  { return new View(Kind.TRUSTED, page, null, null); }
+        static View assignRole(UUID t) { return new View(Kind.ASSIGN_ROLE, 0, t, null); }
+        static View flags(int page)    { return new View(Kind.FLAGS, page, null, null); }
+        static View admin()            { return new View(Kind.ADMIN, 0, null, null); }
+        static View worlds(int page)   { return new View(Kind.WORLDS, page, null, null); }
+        static View worldDetail(String w) { return new View(Kind.WORLD_DETAIL, 0, null, w); }
+        static View pending(int page)  { return new View(Kind.PENDING, page, null, null); }
+        static View history()          { return new View(Kind.HISTORY, 0, null, null); }
     }
 
-    /**
-     * Toggle or cycle a flag. Returns new boolean value.
-     */
-    private boolean toggleFlag(Plot plot, String key, String action) {
-        Map<String, Boolean> m = ensureFlagMap(plot);
-        boolean current = m.getOrDefault(key, defaultFlagValue(key));
-        boolean next = !current; // simple toggle for now
-        m.put(key, next);
-        putFlagMap(plot, m);
-        return next;
+    private void push(Player p, View v) {
+        nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>()).push(v);
     }
 
-    private boolean defaultFlagValue(String key) {
-        // Defaults: protections ON by default (true), pvp OFF by default (false)
-        switch (key) {
-            case "explosions": return false;
-            case "fire_spread": return false;
-            case "pvp": return false;
-            case "mob_grief": return false;
-            case "leaf_decay": return true;
-            case "trample": return false;
-            case "containers": return true;
-            case "redstone": return true;
-            case "entry": return true;
-            case "exit": return true;
-            default: return false;
+    private View peek(Player p) {
+        Deque<View> d = nav.get(p.getUniqueId());
+        return (d == null || d.isEmpty()) ? null : d.peek();
+    }
+
+    private void setPendingTarget(Player p, UUID u) {
+        View top = peek(p);
+        if (top == null) return;
+        // replace top with same view + pending target (used to flow from Trusted to Assign Role)
+        pop(p);
+        nav.get(p.getUniqueId()).push(new View(top.kind, top.page, u, top.worldDetail));
+    }
+
+    private int pageFrom(View v) { return (v == null ? 0 : v.page); }
+
+    private void pop(Player p) {
+        Deque<View> d = nav.get(p.getUniqueId());
+        if (d != null && !d.isEmpty()) d.pop();
+    }
+
+    private void back(Player p) {
+        Deque<View> d = nav.get(p.getUniqueId());
+        if (d == null || d.isEmpty()) { p.closeInventory(); return; }
+        // pop current
+        d.pop();
+        if (d.isEmpty()) { p.closeInventory(); return; }
+        View prev = d.peek();
+        switch (prev.kind) {
+            case MAIN -> openMainMenu(p);
+            case CLAIM -> openClaimInfo(p);
+            case TRUSTED -> openTrusted(p, prev.page);
+            case ASSIGN_ROLE -> openAssignRole(p);
+            case FLAGS -> openFlags(p, prev.page);
+            case ADMIN -> openAdmin(p);
+            case WORLDS -> openWorldControls(p, prev.page);
+            case WORLD_DETAIL -> openWorldDetail(p, prev.worldDetail);
+            case PENDING -> openPending(p, prev.page);
+            case HISTORY -> openHistory(p);
         }
     }
 
-    // --------------------------- Flag Map Bridge --------------------------
+    // --------------------------- World Controls I/O ---------------------------
 
-    // If your Plot has native flag getters/setters, replace these with your API.
-    // Below we simulate by attaching a transient map to the Plot via PlotManager
-    // save/load calls (or your persistent storage if available).
+    private boolean defaultWorld(String key) {
+        if (WC_PVP.equalsIgnoreCase(key)) return true;        // PvP ON
+        if (WC_SAFEZONE.equalsIgnoreCase(key)) return false;  // SafeZone OFF
+        return false;
+    }
 
-    private Map<String, Boolean> ensureFlagMap(Plot plot) {
-        Map<String, Boolean> m = getFlagMap(plot);
-        if (m == null) {
-            m = new HashMap<>();
-            // seed defaults
-            for (FlagSpec fs : defaultFlagsFor(plot)) {
-                m.putIfAbsent(fs.key, defaultFlagValue(fs.key));
+    private String worldPath(String world, String key) { return "worlds." + world + "." + key; }
+
+    private boolean readWorldBool(String world, String key, boolean def) {
+        try {
+            if (!plugin.getConfig().isSet(worldPath(world, key))) return def;
+            return plugin.getConfig().getBoolean(worldPath(world, key), def);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    private void writeWorldBool(String world, String key, boolean value) {
+        try {
+            plugin.getConfig().set(worldPath(world, key), value);
+            plugin.saveConfig();
+        } catch (Exception ignored) {}
+    }
+
+    private Map<String, Boolean> readAllWorldBools(String world) {
+        Map<String, Boolean> map = new LinkedHashMap<>();
+        try {
+            if (plugin.getConfig().isConfigurationSection("worlds." + world)) {
+                for (String k : plugin.getConfig().getConfigurationSection("worlds." + world).getKeys(false)) {
+                    map.put(k, plugin.getConfig().getBoolean("worlds." + world + "." + k,
+                            defaultWorld(k)));
+                }
+            } else {
+                // If absent, seed with defaults
+                map.put(WC_PVP, defaultWorld(WC_PVP));
+                map.put(WC_SAFEZONE, defaultWorld(WC_SAFEZONE));
             }
-            putFlagMap(plot, m);
+        } catch (Exception e) {
+            map.put(WC_PVP, defaultWorld(WC_PVP));
+            map.put(WC_SAFEZONE, defaultWorld(WC_SAFEZONE));
         }
-        return m;
+        return map;
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Boolean> getFlagMap(Plot plot) {
-        // Hook into your real plot meta storage here.
-        // Placeholder: use plugin-side transient store keyed by plotId.
-        return FlagStore.INSTANCE.byPlotId.get(plot.getId());
+    // --------------------------- Nearest Claim Helper ---------------------------
+
+    private Plot nearestClaimTo(Location loc, int maxRange) {
+        if (loc == null) return null;
+        double best = Double.MAX_VALUE;
+        Plot bestPlot = null;
+        for (Plot p : plots.getPlots()) {
+            if (!p.getWorld().equalsIgnoreCase(loc.getWorld().getName())) continue;
+            Location c = centerOf(p, loc.getWorld());
+            double d = c.distance(loc);
+            if (d < best && d <= maxRange) { best = d; bestPlot = p; }
+        }
+        return bestPlot;
     }
 
-    private void putFlagMap(Plot plot, Map<String, Boolean> map) {
-        FlagStore.INSTANCE.byPlotId.put(plot.getId(), map);
-    }
-
-    // Lightweight process-local store (replace with your persistence)
-    private static final class FlagStore {
-        static final FlagStore INSTANCE = new FlagStore();
-        final Map<String, Map<String, Boolean>> byPlotId = new HashMap<>();
-    }
-
-    // ----------------------- Safe dependency accessors --------------------
-
-    private static MessagesUtil safeMessages(ProShield pl) {
-        try { return pl.getMessages(); } catch (Throwable t) { return new MessagesFallback(); }
-    }
-
-    private static PlotManager safePlotManager(ProShield pl) {
-        try { return pl.getPlotManager(); } catch (Throwable t) {
-            throw new IllegalStateException("PlotManager not available");
-        }
-    }
-
-    private static ClaimRoleManager safeRoleManager(ProShield pl) {
-        try { return pl.getRoleManager(); } catch (Throwable t) {
-            throw new IllegalStateException("ClaimRoleManager not available");
-        }
-    }
-
-    private static ExpansionRequestManager safeExpansionManager(ProShield pl) {
-        try { return pl.getExpansionRequestManager(); } catch (Throwable t) {
-            return new ExpansionFallback();
-        }
-    }
-
-    // ------------------------------ Fallbacks -----------------------------
-
-    private static class MessagesFallback extends MessagesUtil {
-        @Override public String get(String path, Object... replacements) {
-            return ChatColor.GRAY + "[" + path + "]";
-        }
-    }
-
-    /**
-     * Minimal fallback so dev servers can boot. Replace with your real manager.
-     */
-    private static class ExpansionFallback implements ExpansionRequestManager {
-        private final Map<String, ExpansionRequest> fake = new LinkedHashMap<>();
-
-        @Override public boolean createRequest(UUID owner, String plotId, int amount, String note) {
-            String id = UUID.randomUUID().toString();
-            fake.put(id, new SimpleReq(id, owner, plotId, amount, System.currentTimeMillis(), note, "PENDING"));
-            return true;
-        }
-
-        @Override public Collection<ExpansionRequest> getPendingRequests() {
-            return fake.values().stream().filter(r -> "PENDING".equals(r.getStatus())).collect(Collectors.toList());
-        }
-
-        @Override public ExpansionRequest getById(String id) { return fake.get(id); }
-
-        @Override public boolean approve(String id, UUID admin, String note) {
-            ExpansionRequest r = fake.get(id);
-            if (r == null) return false;
-            fake.put(id, ((SimpleReq) r).withStatus("APPROVED", note));
-            return true;
-        }
-
-        @Override public boolean deny(String id, UUID admin, String note) {
-            ExpansionRequest r = fake.get(id);
-            if (r == null) return false;
-            fake.put(id, ((SimpleReq) r).withStatus("DENIED", note));
-            return true;
-        }
-
-        private static class SimpleReq implements ExpansionRequest {
-            private final String id;
-            private final UUID owner;
-            private final String plotId;
-            private final int amount;
-            private final long createdAt;
-            private final String note;
-            private final String status;
-
-            SimpleReq(String id, UUID owner, String plotId, int amount, long createdAt, String note, String status) {
-                this.id = id; this.owner = owner; this.plotId = plotId; this.amount = amount;
-                this.createdAt = createdAt; this.note = note; this.status = status;
-            }
-
-            SimpleReq withStatus(String st, String note) {
-                return new SimpleReq(id, owner, plotId, amount, createdAt, note, st);
-            }
-
-            @Override public String getId() { return id; }
-            @Override public UUID getOwner() { return owner; }
-            @Override public String getPlotId() { return plotId; }
-            @Override public int getAmount() { return amount; }
-            @Override public long getCreatedAt() { return createdAt; }
-            @Override public String getNote() { return note; }
-            @Override public String getStatus() { return status; }
-        }
+    private Location centerOf(Plot p, World world) {
+        if (p == null || world == null) return null;
+        int x = p.getX();
+        int z = p.getZ();
+        int y = Math.max(world.getHighestBlockYAt(x, z), 64);
+        return new Location(world, x + 0.5, y + 1.0, z + 0.5);
     }
 }
-// =============================== EOF =========================================
+// ================================= EOF =========================================

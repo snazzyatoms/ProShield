@@ -1,6 +1,6 @@
 package com.snazzyatoms.proshield.compass;
 
-import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.GUIEntrypoint;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -16,12 +16,6 @@ import org.bukkit.inventory.meta.ItemMeta;
  * Fully synchronized with GUIManager (v1.2.6+).
  */
 public class CompassListener implements Listener {
-
-    private final ProShield plugin;
-
-    public CompassListener(ProShield plugin) {
-        this.plugin = plugin;
-    }
 
     /** Checks if an item is the ProShield Compass */
     private boolean isProShieldCompass(ItemStack item) {
@@ -44,7 +38,7 @@ public class CompassListener implements Listener {
         // Cancel vanilla compass behavior
         event.setCancelled(true);
 
-        // ✅ Updated for GUIManager v1.2.6+
-        plugin.getGuiManager().openMainMenu(player);
+        // ✅ Unified entrypoint for menu opening
+        GUIEntrypoint.openMain(player);
     }
 }

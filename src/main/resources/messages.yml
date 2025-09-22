@@ -1,9 +1,9 @@
 # ==========================================================
 # ProShield Messages
-# Version: 1.2.6 (Polished & Synced + Expanded)
+# Version: 1.2.6 (Polished, Synced & Expanded)
 # ----------------------------------------------------------
 # - Role display names + lore are now fully customizable
-# - All GUI buttons and lore now covered
+# - All GUI buttons, lore, errors, success & warnings covered
 # ==========================================================
 
 messages:
@@ -20,6 +20,22 @@ messages:
     bucket-empty: "&cYou cannot empty buckets here."
     bucket-fill: "&cYou cannot fill buckets here."
     pvp: "&cPvP is disabled in this claim."
+
+  # --- General Success ---
+  success:
+    claim-created: "&aClaim created successfully."
+    claim-removed: "&eClaim removed."
+    role-assigned: "&aAssigned &f{name} &ato role &f{role}&a."
+    trusted-removed: "&eRemoved &f{name} &efrom trusted players."
+    teleported: "&aTeleported to claim &f{id}&a."
+
+  # --- General Warnings ---
+  warn:
+    already-claimed: "&cThis chunk is already claimed."
+    no-claim-here: "&cNo claim found here."
+    unknown-role: "&cThat role does not exist."
+    no-nearby-claims: "&cNo nearby claims were found."
+    pick-player-first: "&cPlease select a player first."
 
   # --- Compass ---
   compass:
@@ -155,7 +171,7 @@ messages:
       world-controls-lore:
         - "&7Manage world-level flags."
 
-  # --- Role Display Names & Lore (NEW) ---
+  # --- Role Display Names & Lore ---
   roles:
     display:
       none: "&7None"

@@ -3,7 +3,6 @@ package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.compass.CompassManager; // 🔑 Import for COMPASS_NAME
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -30,16 +29,16 @@ public class GUIListener implements Listener {
     // =====================
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!(event.getWhoClicked() instanceof Player)) return;
         if (event.getClickedInventory() == null) return;
 
-        guiManager.handleClick(event, player);
+        guiManager.handleClick(event); // ✅ only event
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
-        guiManager.handleClose(player);
+        // Currently no cleanup needed — GUIManager v1.2.6 manages state itself.
+        // If you later add view-stack cleanup, pass the event into guiManager.
     }
 
     // =====================
@@ -57,7 +56,7 @@ public class GUIListener implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
-        // 🔑 Compare against CompassManager.COMPASS_NAME (with color support)
+        // 🔑 Compare against CompassManager.COMPASS_NAME
         String displayName = meta.getDisplayName();
         if (!CompassManager.COMPASS_NAME.equals(displayName)) {
             return;

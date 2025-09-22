@@ -724,7 +724,7 @@ public class GUIManager {
     }
 
     private ItemStack iconTrustedEntry(Plot plot, UUID target) {
-        ClaimRole role = roles.getRole(plot, target);
+        ClaimRole role = roles.someMethod(plot.getId());
         return textItem(Material.PLAYER_HEAD,
                 "&f" + nameOrShort(target) + " &7[" + role.getDisplayName() + "]",
                 List.of(line("TRUST:ROLE:" + target),
@@ -732,7 +732,7 @@ public class GUIManager {
     }
 
     private ItemStack iconRoleOption(ClaimRole r, Plot plot, UUID target) {
-        boolean has = roles.getRole(plot, target) == r;
+        boolean has = roles.someMethod(plot.getId());
         return textItem(Material.PAPER,
                 (has ? "&a" : "&7") + r.getDisplayName(),
                 List.of(line("ROLE:" + r.name())));

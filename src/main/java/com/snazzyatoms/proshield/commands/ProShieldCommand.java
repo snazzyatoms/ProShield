@@ -33,7 +33,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             if (sender instanceof Player player) {
                 if (player.hasPermission("proshield.player.access")) {
-                    // ✅ use central entrypoint
+                    // ✅ central entrypoint for main GUI
                     GUIEntrypoint.openMain(player);
                 } else {
                     messages.send(player, messages.getOrDefault("messages.error.no-permission", "&cNo permission."));
@@ -148,8 +148,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
 
             case "admin" -> {
                 if (sender instanceof Player player) {
-                    // 🔄 patched: use openAdmin() instead of openAdminTools()
-                    plugin.getGuiManager().openAdmin(player);
+                    // ✅ patched: delegate via central entrypoint
+                    GUIEntrypoint.openAdmin(player);
                 } else {
                     messages.send(sender, messages.getOrDefault("messages.error.player-only", "&cPlayers only."));
                 }

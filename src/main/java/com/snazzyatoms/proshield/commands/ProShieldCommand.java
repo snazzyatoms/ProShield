@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -60,6 +61,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ChatColor.GRAY + "/proshield reload - Reload plugin configs");
                 sender.sendMessage(ChatColor.GRAY + "/proshield debug - Toggle debug logging");
                 sender.sendMessage(ChatColor.GRAY + "/proshield bypass - Toggle admin bypass mode");
+                return true;
             }
 
             case "compass" -> {
@@ -83,6 +85,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     player.sendMessage(plugin.getMessagesUtil()
                             .getOrDefault("messages.compass.command-success", ChatColor.AQUA + "A ProShield Compass has been given to you."));
                 }
+                return true; // ✅ Make sure command is marked handled
             }
 
             case "admin" -> {
@@ -97,6 +100,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 guiManager.openAdmin(player);
+                return true;
             }
 
             case "reload" -> {
@@ -109,6 +113,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 plugin.loadMessagesConfig();
                 sender.sendMessage(plugin.getMessagesUtil()
                         .getOrDefault("messages.reloaded", ChatColor.GREEN + "ProShield configuration reloaded."));
+                return true;
             }
 
             case "debug" -> {
@@ -121,6 +126,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(plugin.isDebugEnabled()
                         ? plugin.getMessagesUtil().getOrDefault("messages.admin.debug-on", ChatColor.YELLOW + "Debug mode ENABLED")
                         : plugin.getMessagesUtil().getOrDefault("messages.admin.debug-off", ChatColor.RED + "Debug mode DISABLED"));
+                return true;
             }
 
             case "bypass" -> {
@@ -138,14 +144,14 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 player.sendMessage(now
                         ? plugin.getMessagesUtil().getOrDefault("messages.admin.bypass-on", ChatColor.GREEN + "Bypass enabled.")
                         : plugin.getMessagesUtil().getOrDefault("messages.admin.bypass-off", ChatColor.RED + "Bypass disabled."));
+                return true;
             }
 
             default -> {
                 sender.sendMessage(ChatColor.RED + "Unknown subcommand. Use /proshield help");
+                return true;
             }
         }
-
-        return true;
     }
 
     @Override

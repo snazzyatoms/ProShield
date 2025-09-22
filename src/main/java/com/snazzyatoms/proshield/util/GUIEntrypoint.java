@@ -25,7 +25,7 @@ public final class GUIEntrypoint {
         ProShield plugin = ProShield.getInstance();
         GUIManager gm = plugin.getGuiManager();
         if (gm != null) {
-            gm.openMainMenu(player);
+            gm.openMainMenu(player); // ✅ matches final GUIManager
         } else {
             player.sendMessage("§c[ProShield] GUI system not available.");
         }
@@ -36,7 +36,7 @@ public final class GUIEntrypoint {
         ProShield plugin = ProShield.getInstance();
         GUIManager gm = plugin.getGuiManager();
         if (gm != null) {
-            gm.openAdminTools(player);
+            gm.openAdmin(player); // ✅ patched: use openAdmin()
         } else {
             player.sendMessage("§c[ProShield] Admin GUI not available.");
         }

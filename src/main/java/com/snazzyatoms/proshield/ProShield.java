@@ -3,6 +3,7 @@ package com.snazzyatoms.proshield;
 
 import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
+import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
@@ -26,6 +27,7 @@ public class ProShield extends JavaPlugin {
     private ClaimRoleManager roleManager;
     private PlotManager plotManager;
     private ExpansionRequestManager expansionRequestManager;
+    private CompassManager compassManager;
 
     private final Set<UUID> bypassing = new HashSet<>();
     private boolean debugEnabled = false;
@@ -41,6 +43,9 @@ public class ProShield extends JavaPlugin {
         expansionRequestManager = new ExpansionRequestManager(this);
         guiManager = new GUIManager(this);
 
+        // Initialize CompassManager (handles compass creation/distribution)
+        compassManager = new CompassManager(this, guiManager);
+
         // Register GUI listener (handles clicks + compass right-click)
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
@@ -50,7 +55,7 @@ public class ProShield extends JavaPlugin {
         // Register /proshield command
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
-            ProShieldCommand dispatcher = new ProShieldCommand(this);
+            ProShieldCommand dispatcher = new ProShieldCommand(this, compassManager);
             cmd.setExecutor(dispatcher);
             cmd.setTabCompleter(dispatcher);
         }
@@ -93,6 +98,10 @@ public class ProShield extends JavaPlugin {
 
     public ExpansionRequestManager getExpansionRequestManager() {
         return expansionRequestManager;
+    }
+
+    public CompassManager getCompassManager() {
+        return compassManager;
     }
 
     public boolean isDebugEnabled() {

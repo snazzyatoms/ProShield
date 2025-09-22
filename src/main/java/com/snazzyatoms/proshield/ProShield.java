@@ -41,10 +41,10 @@ public class ProShield extends JavaPlugin {
         expansionRequestManager = new ExpansionRequestManager(this);
         guiManager = new GUIManager(this);
 
-        // Register GUI listener
+        // Register GUI listener (handles clicks + compass right-click)
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Register compass listener
+        // Register command dispatcher for fallback/admin commands
         new PlayerCommandDispatcher(this);
 
         // Register /proshield command

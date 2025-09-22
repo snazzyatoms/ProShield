@@ -19,7 +19,6 @@ commands:
       Note: All core features are GUI-driven. 
       Commands are only for fallback or admin tools.
     aliases: [ps, shield]
-    permission: proshield.player.access
 
 permissions:
   # --- Player Umbrella ---
@@ -103,7 +102,7 @@ permissions:
   # --- Quality-of-Life Permissions ---
   proshield.compass:
     description: Allow receiving/using the ProShield compass manually (/proshield compass)
-    default: op
+    default: true
 
   proshield.transfer:
     description: Allow transferring claim ownership (/proshield transfer)

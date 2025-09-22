@@ -928,7 +928,7 @@ public class GUIManager {
     private UUID uuidSafe(String s) { try { return UUID.fromString(s); } catch (Exception e) { return null; } }
     private String shortId(UUID id) { String s = id.toString(); return s.substring(0, 8); }
 
-    // ------------------------------ View Stack ------------------------------
+       // ------------------------------ View Stack ------------------------------
 
     private static class View {
         final String type;
@@ -959,6 +959,11 @@ public class GUIManager {
     private View peek(Player p) {
         Deque<View> st = nav.get(p.getUniqueId());
         return (st == null || st.isEmpty()) ? null : st.peek();
+    }
+
+    /** Set the pending target for Assign Role flow and push a view so back() works. */
+    public void setPendingTarget(Player p, UUID target) {
+        push(p, View.assignRole(target));
     }
 
     public void clearNav(Player p) {
@@ -998,7 +1003,7 @@ public class GUIManager {
         plugin.saveConfig();
     }
 
-    private Map<String, Boolean> readAllWorldBools(String world) {
+       private Map<String, Boolean> readAllWorldBools(String world) {
         Map<String, Boolean> map = new LinkedHashMap<>();
         if (plugin.getConfig().isConfigurationSection("worlds." + world)) {
             for (String k : plugin.getConfig().getConfigurationSection("worlds." + world).getKeys(false)) {
@@ -1019,4 +1024,5 @@ public class GUIManager {
         };
     }
 }
+
 // ================================= EOF =========================================

@@ -107,6 +107,9 @@ public class GUIManager {
             inv.setItem(26, iconAdminTools());
         }
 
+        // ✅ Exit button added
+        inv.setItem(8, exitButton());
+
         push(p, View.main());
         p.openInventory(inv);
         click(p);
@@ -128,6 +131,7 @@ public class GUIManager {
         }
 
         inv.setItem(31, backButton());
+        inv.setItem(32, exitButton()); // ✅ Exit added
         push(p, View.claimInfo());
         p.openInventory(inv);
         click(p);
@@ -159,6 +163,7 @@ public class GUIManager {
         }
 
         inv.setItem(49, backButton());
+        inv.setItem(50, exitButton()); // ✅ Exit added
         push(p, View.trusted(page));
         p.openInventory(inv);
         click(p);
@@ -189,6 +194,7 @@ public class GUIManager {
         }
 
         inv.setItem(40, backButton());
+        inv.setItem(41, exitButton()); // ✅ Exit added
         push(p, View.assignRole(peek.pendingTarget));
         p.openInventory(inv);
         click(p);
@@ -217,6 +223,7 @@ public class GUIManager {
         }
 
         inv.setItem(49, backButton());
+        inv.setItem(50, exitButton()); // ✅ Exit added
         push(p, View.flags(page));
         p.openInventory(inv);
         click(p);
@@ -242,6 +249,7 @@ public class GUIManager {
         )));
 
         inv.setItem(22, backButton());
+        inv.setItem(23, exitButton()); // ✅ Exit added
         push(p, View.admin());
         p.openInventory(inv);
         click(p);
@@ -264,6 +272,7 @@ public class GUIManager {
         }
 
         inv.setItem(49, backButton());
+        inv.setItem(50, exitButton()); // ✅ Exit added
         push(p, View.worlds(page));
         p.openInventory(inv);
         click(p);
@@ -294,10 +303,12 @@ public class GUIManager {
         }
 
         inv.setItem(40, backButton());
+        inv.setItem(41, exitButton()); // ✅ Exit added
         push(p, View.worldDetail(worldName));
         p.openInventory(inv);
         click(p);
     }
+
     // --------------------------- Expansion Requests ---------------------------
 
     public void openPending(Player p, int page) {
@@ -319,6 +330,7 @@ public class GUIManager {
         }
 
         inv.setItem(49, backButton());
+        inv.setItem(50, exitButton()); // ✅ Exit added
         push(p, View.pending(page));
         p.openInventory(inv);
         click(p);
@@ -338,6 +350,7 @@ public class GUIManager {
         }
 
         inv.setItem(49, backButton());
+        inv.setItem(50, exitButton()); // ✅ Exit added
         push(p, View.history());
         p.openInventory(inv);
         click(p);
@@ -383,13 +396,13 @@ public class GUIManager {
             ex.printStackTrace();
         }
     }
-
     // Claim Info is mostly read-only except the player expansion request button.
     private void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();
         if (!valid(it)) return;
         String id = extractId(it);
         if (id == null) return;
+
         if (id.startsWith("EXPAND:")) {
             handlePlayerExpansionRequestClick(p, e);
         } else if (id.equals("BACK")) {
@@ -632,7 +645,6 @@ public class GUIManager {
             p.closeInventory();
         }
     }
-
     public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();
         if (!valid(it)) return;
@@ -696,6 +708,7 @@ public class GUIManager {
         if (id.equals("BACK")) { back(p); return; }
         if (id.equals("EXIT")) { p.closeInventory(); return; }
     }
+
     // ------------------------------ Icon Builders ------------------------------
 
     private ItemStack iconClaimButton(boolean canClaim) {
@@ -756,7 +769,7 @@ public class GUIManager {
         return textItem(Material.LEVER,
                 enabled ? "&6Flags" : "&7Flags",
                 List.of(gray(enabled
-                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp…)")
+                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)"))
                         : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
                         line("#FLAGS")));
     }
@@ -815,19 +828,18 @@ public class GUIManager {
 
     private List<FlagSpec> defaultFlags() {
         return List.of(
+                new FlagSpec("safezone", "Safe Zone", Material.TOTEM_OF_UNDYING),
+                new FlagSpec("pvp", "PvP Allowed", Material.IRON_SWORD),
                 new FlagSpec("explosions", "Explosions", Material.TNT),
-                new FlagSpec("fire_spread", "Fire Spread", Material.FLINT_AND_STEEL),
-                new FlagSpec("pvp", "Player PvP", Material.IRON_SWORD),
-                new FlagSpec("mob_grief", "Mob Griefing", Material.CREEPER_HEAD),
-                new FlagSpec("leaf_decay", "Leaf Decay", Material.OAK_LEAVES),
-                new FlagSpec("trample", "Crop Trample", Material.WHEAT),
+                new FlagSpec("fire-spread", "Fire Spread", Material.FLINT_AND_STEEL),
+                new FlagSpec("block-break", "Block Break", Material.IRON_PICKAXE),
+                new FlagSpec("block-place", "Block Place", Material.STONE),
                 new FlagSpec("containers", "Container Protection", Material.CHEST),
-                new FlagSpec("redstone", "Redstone Use", Material.REDSTONE_TORCH),
-                new FlagSpec("entry", "Entry Allowed", Material.OAK_DOOR),
-                new FlagSpec("exit", "Exit Allowed", Material.DARK_OAK_DOOR)
+                new FlagSpec("ignite-flint", "Ignite (Flint & Steel)", Material.FLINT_AND_STEEL),
+                new FlagSpec("ignite-lava", "Ignite (Lava)", Material.LAVA_BUCKET),
+                new FlagSpec("ignite-lightning", "Ignite (Lightning)", Material.LIGHTNING_ROD)
         );
     }
-
     private ItemStack iconFlag(Plot plot, FlagSpec f) {
         boolean on = plot.getFlag(f.key);
         return textItem(f.icon, (on ? "&a" : "&c") + f.name, List.of(
@@ -884,6 +896,8 @@ public class GUIManager {
                 if (inv.getItem(i) == null) inv.setItem(i, FILLER.clone());
             }
         }
+        // Always put Exit button in bottom-right
+        inv.setItem(size - 1, textItem(Material.OAK_DOOR, "&7Exit", List.of(line("#EXIT"))));
     }
 
     private void placePager(Inventory inv, int page, int maxPage) {

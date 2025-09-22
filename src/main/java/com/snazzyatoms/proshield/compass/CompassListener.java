@@ -13,7 +13,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 /**
  * Opens the main ProShield GUI when a player right-clicks the ProShield Compass.
- * Fully synchronized with GUIManager (v1.2.5).
+ * Fully synchronized with GUIManager (v1.2.6+).
  */
 public class CompassListener implements Listener {
 
@@ -44,7 +44,7 @@ public class CompassListener implements Listener {
         // Cancel vanilla compass behavior
         event.setCancelled(true);
 
-        // Open Main Menu through GUIManager
-        plugin.getGuiManager().openMain(player);
+        // ✅ Updated for GUIManager v1.2.6+
+        plugin.getGuiManager().openMainMenu(player);
     }
 }

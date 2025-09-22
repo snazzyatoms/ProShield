@@ -6,6 +6,8 @@ import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.listeners.MobControlTasks;
+import com.snazzyatoms.proshield.plots.ClaimProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
@@ -45,10 +47,17 @@ public class ProShield extends JavaPlugin {
         // 🔑 Unified compass manager (handles join + give)
         compassManager = new CompassManager(this);
 
-        // Register GUI listener (handles clicks + compass right-click)
+        // =====================
+        // 📌 Listener registration
+        // =====================
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+        getServer().getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager), this);
+        // MobControlTasks self-registers its repeating tasks inside constructor
+        new MobControlTasks(this);
 
-        // Register /proshield command (with compass, admin, reload, etc.)
+        // =====================
+        // 📌 Command registration
+        // =====================
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
             ProShieldCommand dispatcher = new ProShieldCommand(this, compassManager);

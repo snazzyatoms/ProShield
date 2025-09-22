@@ -766,13 +766,17 @@ public class GUIManager {
     }
 
     private ItemStack iconFlags(boolean enabled) {
-        return textItem(Material.LEVER,
-                enabled ? "&6Flags" : "&7Flags",
-                List.of(gray(enabled
-                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)")
-                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
-                        line("#FLAGS")
-    }
+    return textItem(Material.LEVER,
+            enabled ? "&6Flags" : "&7Flags",
+            List.of(
+                    gray(enabled
+                            ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)")
+                            : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
+                    line("#FLAGS")
+            )
+    );
+}
+
 
     private ItemStack iconAdminTools() {
         return textItem(Material.COMPASS, "&dAdmin Tools", List.of(

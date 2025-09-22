@@ -42,17 +42,15 @@ public class ProShield extends JavaPlugin {
         roleManager = new ClaimRoleManager(this);
         expansionRequestManager = new ExpansionRequestManager(this);
         guiManager = new GUIManager(this);
-
-        // ✅ Initialize compass manager
         compassManager = new CompassManager(this);
 
-        // Register GUI listener (handles clicks + compass right-click)
+        // Register GUI listener (clicks + compass)
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Register command dispatcher for fallback/admin commands
+        // Register player dispatcher
         new PlayerCommandDispatcher(this);
 
-        // Register /proshield command
+        // Register /proshield
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
             ProShieldCommand dispatcher = new ProShieldCommand(this, compassManager);
@@ -65,16 +63,15 @@ public class ProShield extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // Save data safely
         if (plotManager != null) plotManager.saveAll();
         if (expansionRequestManager != null) expansionRequestManager.save();
 
         getLogger().info("[ProShield] Disabled cleanly.");
     }
 
-    /* -------------------
-     * Helpers & Getters
-     * ------------------- */
+    // -------------------
+    // Helpers & Getters
+    // -------------------
 
     public static ProShield getInstance() {
         return instance;
@@ -88,6 +85,10 @@ public class ProShield extends JavaPlugin {
         return guiManager;
     }
 
+    public CompassManager getCompassManager() {
+        return compassManager;
+    }
+
     public ClaimRoleManager getRoleManager() {
         return roleManager;
     }
@@ -98,10 +99,6 @@ public class ProShield extends JavaPlugin {
 
     public ExpansionRequestManager getExpansionRequestManager() {
         return expansionRequestManager;
-    }
-
-    public CompassManager getCompassManager() {
-        return compassManager;
     }
 
     public boolean isDebugEnabled() {

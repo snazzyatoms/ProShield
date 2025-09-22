@@ -33,14 +33,16 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player)) return;
         if (event.getClickedInventory() == null) return;
 
-        // ✅ All click routing handled by GUIManager
+        // ✅ Delegate all clicks to GUIManager
         guiManager.handleClick(event);
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player)) return;
-        // No explicit cleanup needed in v1.2.6 — GUIManager manages its own state.
+        if (!(event.getPlayer() instanceof Player player)) return;
+
+        // ✅ Clear nav stack to prevent stale back/exit issues
+        guiManager.clearNav(player);
     }
 
     // =====================

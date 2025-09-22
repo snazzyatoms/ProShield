@@ -7,6 +7,8 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -17,7 +19,7 @@ import java.util.Collections;
  * CompassManager (ProShield v1.2.6 FINAL + Synced)
  *
  * - Handles giving and managing the ProShield Compass for players
- * - Uses consistent naming so GUIListener can detect it
+ * - Detects right-clicks to open GUI
  * - Registers itself as a listener automatically
  */
 public class CompassManager implements Listener {
@@ -102,6 +104,31 @@ public class CompassManager implements Listener {
 
         if (giveOnJoin || autoReplace) {
             giveCompass(event.getPlayer());
+        }
+    }
+
+    /**
+     * Handles right-clicking the ProShield Compass to open GUI.
+     */
+    @EventHandler
+    public void onCompassUse(PlayerInteractEvent event) {
+        if (event.getItem() == null || event.getItem().getType() != Material.COMPASS) return;
+
+        ItemMeta meta = event.getItem().getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
+        if (!COMPASS_NAME.equals(meta.getDisplayName())) return;
+
+        Action action = event.getAction();
+        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
+
+        event.setCancelled(true); // prevent compass pointing behavior
+
+        Player player = event.getPlayer();
+        if (player.hasPermission("proshield.player.access")) {
+            plugin.getGuiManager().openMainMenu(player);
+        } else {
+            player.sendMessage(plugin.getMessagesUtil()
+                .getOrDefault("messages.error.no-permission", "§cYou do not have permission to use the ProShield Compass."));
         }
     }
 }

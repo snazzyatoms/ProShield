@@ -67,7 +67,7 @@ public class GUIListener implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
+        Player player = event.getPlayer();
         if (guiManager == null) return;
 
         Action action = event.getAction();

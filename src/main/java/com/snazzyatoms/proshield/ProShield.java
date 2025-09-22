@@ -1,7 +1,6 @@
 // src/main/java/com/snazzyatoms/proshield/ProShield.java
 package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.commands.PlayerCommandDispatcher;
 import com.snazzyatoms.proshield.commands.ProShieldCommand;
 import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
@@ -42,15 +41,14 @@ public class ProShield extends JavaPlugin {
         roleManager = new ClaimRoleManager(this);
         expansionRequestManager = new ExpansionRequestManager(this);
         guiManager = new GUIManager(this);
+
+        // 🔑 Unified compass manager (handles join + give)
         compassManager = new CompassManager(this);
 
-        // Register GUI listener (clicks + compass)
+        // Register GUI listener (handles clicks + compass right-click)
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
 
-        // Register player dispatcher
-        new PlayerCommandDispatcher(this);
-
-        // Register /proshield
+        // Register /proshield command (with compass, admin, reload, etc.)
         PluginCommand cmd = getCommand("proshield");
         if (cmd != null) {
             ProShieldCommand dispatcher = new ProShieldCommand(this, compassManager);
@@ -69,9 +67,9 @@ public class ProShield extends JavaPlugin {
         getLogger().info("[ProShield] Disabled cleanly.");
     }
 
-    // -------------------
-    // Helpers & Getters
-    // -------------------
+    // ==========================
+    // 🔧 Helpers & Getters
+    // ==========================
 
     public static ProShield getInstance() {
         return instance;
@@ -85,10 +83,6 @@ public class ProShield extends JavaPlugin {
         return guiManager;
     }
 
-    public CompassManager getCompassManager() {
-        return compassManager;
-    }
-
     public ClaimRoleManager getRoleManager() {
         return roleManager;
     }
@@ -99,6 +93,10 @@ public class ProShield extends JavaPlugin {
 
     public ExpansionRequestManager getExpansionRequestManager() {
         return expansionRequestManager;
+    }
+
+    public CompassManager getCompassManager() {
+        return compassManager;
     }
 
     public boolean isDebugEnabled() {

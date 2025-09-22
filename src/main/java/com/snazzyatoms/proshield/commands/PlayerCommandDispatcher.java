@@ -1,9 +1,9 @@
-// src/main/java/com/snazzyatoms/proshield/commands/PlayerCommandDispatcher.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
 import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.util.GUIEntrypoint;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -58,8 +58,11 @@ public class PlayerCommandDispatcher implements Listener {
         String displayName = meta.getDisplayName();
         if (!displayName.contains("ProShield")) return;
 
+        // Cancel vanilla compass behavior
         event.setCancelled(true);
-        plugin.getGuiManager().openMain(player);
+
+        // ✅ Use unified entrypoint
+        GUIEntrypoint.openMain(player);
     }
 
     /**
@@ -96,7 +99,7 @@ public class PlayerCommandDispatcher implements Listener {
      * Optional: Show claim info in chat (debug or fallback).
      */
     public void sendClaimInfo(Player player) {
-        Plot plot = plotManager.getPlotAt(player.getLocation()); // ✅ fixed
+        Plot plot = plotManager.getPlotAt(player.getLocation());
 
         if (plot == null) {
             messages.send(player, "&7You are in the wilderness.");

@@ -10,7 +10,7 @@ import java.util.*;
  * - Defines claim roles, hierarchy, and permissions
  * - v1.2.6: Display names + lore now check messages.yml first
  * - v1.2.6-polished: Added compatibility shims for GUIManager calls
- * - v1.2.6-enhanced: Supports multi-line lore + aliases
+ * - v1.2.6-enhanced: Supports multi-line lore + aliases (patched for MessagesUtil)
  */
 public enum ClaimRole {
 
@@ -60,12 +60,10 @@ public enum ClaimRole {
      * Role Logic
      * ------------------- */
 
-    /** Compare hierarchy (this >= other). */
     public boolean isAtLeast(ClaimRole other) {
         return this.rank >= other.rank;
     }
 
-    // Aliases for convenience (config, commands, etc.)
     private static final Map<String, ClaimRole> ALIASES = Map.ofEntries(
         Map.entry("visitor", VISITOR),
         Map.entry("member", MEMBER),
@@ -80,7 +78,6 @@ public enum ClaimRole {
         Map.entry("owner", OWNER)
     );
 
-    /** Resolve role by name or alias (case-insensitive). */
     public static ClaimRole fromName(String name) {
         if (name == null || name.isBlank()) return NONE;
         String key = name.trim().toLowerCase(Locale.ROOT);
@@ -92,11 +89,6 @@ public enum ClaimRole {
         }
     }
 
-    /**
-     * Get display-friendly name.
-     * Checks messages.yml (messages.roles.display.<role>) first.
-     * Falls back to title-cased enum name if not found.
-     */
     public String getDisplayName() {
         ProShield plugin = ProShield.getInstance();
         String key = "messages.roles.display." + this.name().toLowerCase(Locale.ROOT);
@@ -115,15 +107,13 @@ public enum ClaimRole {
     }
 
     /* -------------------
-     * Compatibility Shims (for GUIManager 1.2.6)
+     * GUI Compatibility
      * ------------------- */
 
-    /** GUI expects getId() */
     public String getId() {
         return this.name().toLowerCase(Locale.ROOT);
     }
 
-    /** GUI expects getDescription() (single-line fallback) */
     public String getDescription() {
         ProShield plugin = ProShield.getInstance();
         String key = "messages.roles.lore." + this.name().toLowerCase(Locale.ROOT);
@@ -134,26 +124,17 @@ public enum ClaimRole {
         return "Role: " + getDisplayName();
     }
 
-    /** Enhanced: Multi-line lore for GUIs */
+    /**
+     * Multi-line lore (safe fallback if MessagesUtil doesn’t support lists).
+     * Returns a single-element list if only description is available.
+     */
     public List<String> getLore() {
-        ProShield plugin = ProShield.getInstance();
-        String key = "messages.roles.lore." + this.name().toLowerCase(Locale.ROOT);
-        List<String> list = plugin.getMessagesUtil().getListOrNull(key);
-        if (list != null && !list.isEmpty()) {
-            return plugin.getMessagesUtil().color(list);
-        }
-        return List.of("Role: " + getDisplayName());
+        String desc = getDescription();
+        return List.of(desc);
     }
 
-    /** GUI expects canContainers() */
     public boolean canContainers() { return canOpenContainers; }
-
-    /** GUI expects canSwitches() */
     public boolean canSwitches() { return canInteract; }
-
-    /** GUI expects canDamageMobs() */
     public boolean canDamageMobs() { return this.rank >= MODERATOR.rank; }
-
-    /** GUI expects canPlaceFluids() */
     public boolean canPlaceFluids() { return this.rank >= TRUSTED.rank; }
 }

@@ -13,11 +13,14 @@ description: >
 
 commands:
   proshield:
-    description: Main ProShield command (opens GUI, help, or Admin Tools)
+    description: Main ProShield command (open GUI, get compass, or run admin tools)
     usage: |
-      /<command> [help|compass|admin|reload|debug|bypass]
-      Note: All core features are GUI-driven. 
-      Commands are only for fallback or admin tools.
+      /<command> help      - Show help menu
+      /<command> compass   - Get or open the ProShield Compass
+      /<command> admin     - Open Admin Tools GUI (requires permission)
+      /<command> reload    - Reload plugin configs
+      /<command> debug     - Toggle debug mode
+      /<command> bypass    - Toggle admin bypass mode
     aliases: [ps, shield]
 
 permissions:

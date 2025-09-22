@@ -1,6 +1,7 @@
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.util.GUIEntrypoint;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -32,8 +33,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             if (sender instanceof Player player) {
                 if (player.hasPermission("proshield.player.access")) {
-                    // 🔄 updated to match GUIManager v1.2.6+
-                    plugin.getGuiManager().openMainMenu(player);
+                    // ✅ use central entrypoint
+                    GUIEntrypoint.openMain(player);
                 } else {
                     messages.send(player, messages.getOrDefault("messages.error.no-permission", "&cNo permission."));
                 }

@@ -8,27 +8,23 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager (v1.2.6 FINAL-PATCHED2)
+ * ClaimRoleManager (v1.2.6 FINAL-SYNCED)
  *
- * - Centralized manager for role assignment inside claims
- * - Provides default role fallbacks
- * - Converts between stored String values in Plot and ClaimRole enum
+ * - Stores roles in Plot.trusted as lowercase string IDs
+ * - Converts safely between ClaimRole enum and stored IDs
+ * - Provides default role fallback
  * - Used by GUIManager + ClaimProtectionListener
  */
 public class ClaimRoleManager {
 
     private final ProShield plugin;
 
-    /**
-     * Primary constructor — preferred.
-     */
+    /** Preferred constructor */
     public ClaimRoleManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
-    /**
-     * Fallback no-arg constructor (uses ProShield.getInstance()).
-     */
+    /** Fallback constructor (uses ProShield.getInstance()) */
     public ClaimRoleManager() {
         this.plugin = ProShield.getInstance();
     }
@@ -37,26 +33,14 @@ public class ClaimRoleManager {
      * Role Assignment
      * ------------------------- */
 
-    /**
-     * Assign a role to a player in a claim.
-     *
-     * @param plot   Target claim
-     * @param player Target player UUID
-     * @param role   Role to assign
-     */
+    /** Assign a role to a player in a claim. */
     public void setRole(Plot plot, UUID player, ClaimRole role) {
         if (plot == null || player == null || role == null) return;
-        // ✅ Always store as lowercase string id
+        // Store role ID as string (lowercase)
         plot.getTrusted().put(player, role.getId());
     }
 
-    /**
-     * Get a player's role in a claim.
-     *
-     * @param plot   Target claim
-     * @param player Player UUID
-     * @return ClaimRole (defaults to ClaimRole.NONE if not found)
-     */
+    /** Get a player’s ClaimRole from a claim. */
     public ClaimRole getRole(Plot plot, UUID player) {
         if (plot == null || player == null) return ClaimRole.NONE;
         String stored = plot.getTrusted().get(player);
@@ -64,9 +48,7 @@ public class ClaimRoleManager {
         return ClaimRole.fromName(stored);
     }
 
-    /**
-     * Remove a player's role from a claim.
-     */
+    /** Remove a player from trusted map. */
     public void removeRole(Plot plot, UUID player) {
         if (plot == null || player == null) return;
         plot.getTrusted().remove(player);
@@ -76,25 +58,19 @@ public class ClaimRoleManager {
      * Defaults & Utility
      * ------------------------- */
 
-    /**
-     * Get the default role ID (string) for new trusted players.
-     */
+    /** Get default role ID for new trusted players (string). */
     public String getDefaultRoleId() {
         return plugin != null
                 ? plugin.getConfig().getString("roles.default", "member").toLowerCase(Locale.ROOT)
                 : "member";
     }
 
-    /**
-     * Get the default ClaimRole (as enum).
-     */
+    /** Get default ClaimRole (enum). */
     public ClaimRole getDefaultRole() {
         return ClaimRole.fromName(getDefaultRoleId());
     }
 
-    /**
-     * Get the raw stored role ID for a player in a claim.
-     */
+    /** Get stored role ID for a player in a claim (string). */
     public String getRoleId(Plot plot, UUID player) {
         if (plot == null || player == null) return "none";
         String stored = plot.getTrusted().get(player);

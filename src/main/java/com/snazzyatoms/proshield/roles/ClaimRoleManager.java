@@ -57,7 +57,7 @@ public class ClaimRoleManager {
         if (plot == null || playerId == null) return ClaimRole.NONE;
         if (plot.getOwner().equals(playerId)) return ClaimRole.OWNER;
 
-        String raw = plot.getTrusted().get(playerId);
+        ClaomRole raw = plot.getTrusted().get(playerId);
         return raw != null ? ClaimRole.fromName(raw) : ClaimRole.VISITOR;
     }
 

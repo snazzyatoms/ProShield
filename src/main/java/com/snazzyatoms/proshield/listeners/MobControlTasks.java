@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/listeners/MobControlTasks.java
 package com.snazzyatoms.proshield.listeners;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -48,7 +47,7 @@ public class MobControlTasks {
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     Plot plot = plots.getPlotAt(player.getLocation());
-                    if (plot == null || !plot.getFlag("safezone", cfg)) continue;
+                    if (plot == null || !plot.getFlag("safezone")) continue; // ✅ check per-plot flag
 
                     List<Entity> nearby = player.getNearbyEntities(radius, radius, radius);
                     for (Entity e : nearby) {
@@ -83,7 +82,7 @@ public class MobControlTasks {
                         if (!(entity instanceof Monster)) continue;
 
                         Plot plot = plots.getPlotAt(entity.getLocation());
-                        if (plot != null && plot.getFlag("safezone", cfg)) {
+                        if (plot != null && plot.getFlag("safezone")) { // ✅ per-plot safezone
                             entity.remove();
                             debug("Despawned " + entity.getType()
                                     + " inside safezone plot=" + plot.getId());
@@ -105,14 +104,14 @@ public class MobControlTasks {
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     Plot plot = plots.getPlotAt(player.getLocation());
-                    if (plot == null || !plot.getFlag("safezone", cfg)) continue;
+                    if (plot == null || !plot.getFlag("safezone")) continue; // ✅ per-plot safezone
 
                     List<Entity> nearby = player.getNearbyEntities(20, 10, 20);
                     for (Entity e : nearby) {
                         if (e instanceof Monster mob) {
                             if (mob.getTarget() instanceof Player target) {
                                 Plot targetPlot = plots.getPlotAt(target.getLocation());
-                                if (targetPlot != null && targetPlot.getFlag("safezone", cfg)) {
+                                if (targetPlot != null && targetPlot.getFlag("safezone")) {
                                     mob.setTarget(null);
                                     debug("Cleared target of " + mob.getType()
                                             + " on player=" + target.getName()

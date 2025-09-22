@@ -2,16 +2,17 @@ package com.snazzyatoms.proshield.roles;
 
 import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.*;
 
 /**
- * ClaimRoleManager (v1.2.6 FINAL)
+ * ClaimRoleManager (v1.2.6 FINAL SAFE)
  *
  * - Handles persistent storage of player roles inside plots
  * - Converts safely between String <-> ClaimRole
- * - All role names mapped via ClaimRole.fromName()
+ * - Skips invalid UUID strings (like "default") to avoid crashes
  */
 public class ClaimRoleManager {
 
@@ -44,13 +45,21 @@ public class ClaimRoleManager {
         if (!config.isConfigurationSection("roles")) return;
 
         for (String plotId : config.getConfigurationSection("roles").getKeys(false)) {
-            UUID plotUUID = UUID.fromString(plotId);
-            Map<UUID, ClaimRole> map = new HashMap<>();
+            UUID plotUUID = safeUUID(plotId);
+            if (plotUUID == null) {
+                Bukkit.getLogger().warning("[ProShield] Skipping invalid plot UUID in roles.yml: " + plotId);
+                continue;
+            }
 
+            Map<UUID, ClaimRole> map = new HashMap<>();
             for (String playerId : config.getConfigurationSection("roles." + plotId).getKeys(false)) {
-                UUID playerUUID = UUID.fromString(playerId);
+                UUID playerUUID = safeUUID(playerId);
+                if (playerUUID == null) {
+                    Bukkit.getLogger().warning("[ProShield] Skipping invalid player UUID in roles.yml: " + playerId);
+                    continue;
+                }
                 String roleName = config.getString("roles." + plotId + "." + playerId, "NONE");
-                ClaimRole role = ClaimRole.fromName(roleName); // ✅ String → ClaimRole
+                ClaimRole role = ClaimRole.fromName(roleName);
                 map.put(playerUUID, role);
             }
             roleCache.put(plotUUID, map);
@@ -68,9 +77,10 @@ public class ClaimRoleManager {
         Map<UUID, ClaimRole> map = plot.getTrusted();
         if (map != null) {
             for (Map.Entry<UUID, ClaimRole> e : map.entrySet()) {
-                String playerId = e.getKey().toString();
-                String roleName = e.getValue().name(); // ✅ ClaimRole → String
-                config.set("roles." + plotId + "." + playerId, roleName);
+                UUID playerId = e.getKey();
+                if (playerId == null) continue;
+                String roleName = e.getValue().name();
+                config.set("roles." + plotId + "." + playerId.toString(), roleName);
             }
         }
         plugin.saveConfig();
@@ -82,9 +92,20 @@ public class ClaimRoleManager {
             Map<UUID, ClaimRole> map = roleCache.get(plotId);
             config.set("roles." + plotId.toString(), null);
             for (Map.Entry<UUID, ClaimRole> e : map.entrySet()) {
-                config.set("roles." + plotId + "." + e.getKey(), e.getValue().name()); // ✅
+                UUID playerId = e.getKey();
+                if (playerId == null) continue;
+                config.set("roles." + plotId + "." + playerId.toString(), e.getValue().name());
             }
         }
         plugin.saveConfig();
+    }
+
+    /** Safely parse UUID or return null. */
+    private UUID safeUUID(String raw) {
+        try {
+            return UUID.fromString(raw);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

@@ -11,11 +11,12 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Collections;
+import java.util.List;
 
 /**
  * Handles giving and managing the ProShield Compass for players.
- * Fully synchronized with CompassListener + GUIManager (v1.2.5).
+ * Distribution only — opening GUI is handled in GUIListener.
+ * Synced with v1.2.6 GUI system + messages.yml.
  */
 public class CompassManager implements Listener {
 
@@ -30,13 +31,23 @@ public class CompassManager implements Listener {
 
     /**
      * Creates a correctly tagged ProShield Compass.
+     * Display name + lore pulled from messages.yml.
      */
     private ItemStack createCompass() {
         ItemStack compass = new ItemStack(Material.COMPASS);
         ItemMeta meta = compass.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§bProShield Compass");
-            meta.setLore(Collections.singletonList("§7Right-click to open ProShield menu"));
+            String name = plugin.getMessagesUtil().getOrDefault(
+                    "compass.display-name", "&bProShield Compass"
+            );
+            List<String> lore = plugin.getMessagesUtil().getListOrDefault(
+                    "compass.lore",
+                    List.of("&7Right-click to open the ProShield menu")
+            );
+            meta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', name));
+            meta.setLore(lore.stream()
+                    .map(s -> org.bukkit.ChatColor.translateAlternateColorCodes('&', s))
+                    .toList());
             compass.setItemMeta(meta);
         }
         return compass;
@@ -50,9 +61,14 @@ public class CompassManager implements Listener {
         for (ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType() != Material.COMPASS) continue;
             ItemMeta meta = item.getItemMeta();
-            if (meta != null && meta.hasDisplayName()
-                    && "§bProShield Compass".equals(meta.getDisplayName())) {
-                return true;
+            if (meta != null && meta.hasDisplayName()) {
+                String dn = org.bukkit.ChatColor.stripColor(meta.getDisplayName());
+                String expected = org.bukkit.ChatColor.stripColor(
+                        plugin.getMessagesUtil().getOrDefault("compass.display-name", "ProShield Compass")
+                );
+                if (dn != null && dn.equalsIgnoreCase(expected)) {
+                    return true;
+                }
             }
         }
         return false;

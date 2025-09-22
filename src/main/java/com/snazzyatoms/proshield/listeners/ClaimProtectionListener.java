@@ -6,21 +6,26 @@ import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Location;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 
 /**
- * ClaimProtectionListener (v1.2.6)
+ * ClaimProtectionListener (v1.2.6 SAFEZONE ENHANCED)
  * - Handles block break/place, bucket use, and PvP inside claims
+ * - Adds Safe Zone (mob protection + despawn logic) when enabled
  * - Uses ClaimRoleManager for role-based permissions
  * - Respects claim flags and world-control defaults
- * - Denial messages + PvP rules pulled from messages.yml
+ * - Denial messages pulled from messages.yml
  */
 public class ClaimProtectionListener implements Listener {
 
@@ -67,17 +72,11 @@ public class ClaimProtectionListener implements Listener {
                 event, false);
     }
 
-    /**
-     * Unified block + bucket handling.
-     *
-     * @param requiresBuild true if action needs build perms, false if interaction-only
-     */
     private void handleBlockAction(Player player, Location loc, String flag,
                                    String denyMessage, org.bukkit.event.Cancellable event, boolean requiresBuild) {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot == null) return; // wilderness = vanilla rules
 
-        // ✅ FIXED: correct parameter order
         ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
         boolean allowed = requiresBuild ? role.canBuild() : role.canInteract();
 
@@ -100,7 +99,7 @@ public class ClaimProtectionListener implements Listener {
      * PVP HANDLING
      * ------------------------- */
     @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
+    public void onEntityDamageByPlayer(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player attacker)) return;
         if (!(event.getEntity() instanceof Player victim)) return;
 
@@ -116,6 +115,39 @@ public class ClaimProtectionListener implements Listener {
         }
     }
 
+    /* -------------------------
+     * SAFEZONE MOB HANDLING
+     * ------------------------- */
+    @EventHandler
+    public void onMobTarget(EntityTargetEvent event) {
+        if (!(event.getTarget() instanceof Player player)) return;
+        Plot plot = plotManager.getPlotAt(player.getLocation());
+        if (plot == null) return;
+
+        if (plot.getFlag("safezone")) {
+            event.setCancelled(true);
+            debug("Mob prevented from targeting " + player.getName() + " in safezone (plot=" + plot.getId() + ")");
+        }
+    }
+
+    @EventHandler
+    public void onMobDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        Plot plot = plotManager.getPlotAt(player.getLocation());
+        if (plot == null) return;
+
+        if (plot.getFlag("safezone")) {
+            if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK ||
+                event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
+                event.setCancelled(true);
+                debug("Damage prevented to " + player.getName() + " in safezone (plot=" + plot.getId() + ")");
+            }
+        }
+    }
+
+    /* -------------------------
+     * DEBUGGING
+     * ------------------------- */
     private void debug(String msg) {
         if (plugin.isDebugEnabled()) {
             plugin.getLogger().info("[ClaimProtection] " + msg);

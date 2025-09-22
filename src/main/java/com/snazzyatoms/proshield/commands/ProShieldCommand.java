@@ -1,4 +1,3 @@
-// src/main/java/com/snazzyatoms/proshield/commands/ProShieldCommand.java
 package com.snazzyatoms.proshield.commands;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -33,7 +32,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             if (sender instanceof Player player) {
                 if (player.hasPermission("proshield.player.access")) {
-                    plugin.getGuiManager().openMain(player);
+                    // 🔄 updated to match GUIManager v1.2.6+
+                    plugin.getGuiManager().openMainMenu(player);
                 } else {
                     messages.send(player, messages.getOrDefault("messages.error.no-permission", "&cNo permission."));
                 }

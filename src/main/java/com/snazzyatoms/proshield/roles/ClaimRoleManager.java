@@ -1,85 +1,62 @@
-// src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
-import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
+import org.bukkit.configuration.ConfigurationSection;
 
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager
- * - Central API for managing trusted players' roles inside claims
- * - Provides conversion between stored strings and ClaimRole enum
- * - Used by GUIManager and command handlers
+ * Manages trusted player roles per plot.
  */
 public class ClaimRoleManager {
 
-    private final ProShield plugin;
+    // Map<PlotID, Map<PlayerUUID, ClaimRole>>
+    private final Map<UUID, Map<UUID, ClaimRole>> roles = new HashMap<>();
 
-    public ClaimRoleManager(ProShield plugin) {
-        this.plugin = plugin;
+    /** Get a player's role for a plot. Defaults to NONE if not set. */
+    public ClaimRole getRole(Plot plot, UUID playerId) {
+        if (plot == null || playerId == null) return ClaimRole.NONE;
+        Map<UUID, ClaimRole> map = roles.get(plot.getId());
+        return (map != null) ? map.getOrDefault(playerId, ClaimRole.NONE) : ClaimRole.NONE;
     }
 
-    /* -------------------------
-     * ROLE API
-     * ------------------------- */
-
-    /**
-     * Get the role of a player inside a given plot.
-     *
-     * @param plot   The claim/plot
-     * @param player The player's UUID
-     * @return ClaimRole (defaults to NONE if not trusted or invalid)
-     */
-    public ClaimRole getRole(Plot plot, UUID player) {
-        if (plot == null || player == null) return ClaimRole.NONE;
-        String raw = plot.getTrusted().get(player);
-        return ClaimRole.fromName(raw);
+    /** Assign a role to a player in a plot. */
+    public void setRole(Plot plot, UUID playerId, ClaimRole role) {
+        if (plot == null || playerId == null || role == null) return;
+        roles.computeIfAbsent(plot.getId(), k -> new HashMap<>()).put(playerId, role);
     }
 
-    /**
-     * Set the role of a player inside a given plot.
-     *
-     * @param plot   The claim/plot
-     * @param player The player's UUID
-     * @param role   The role to assign
-     */
-    public void setRole(Plot plot, UUID player, ClaimRole role) {
-        if (plot == null || player == null || role == null) return;
-        plot.getTrusted().put(player, role.name().toLowerCase(Locale.ROOT));
+    /** Load roles from config. */
+    public void load(ConfigurationSection section) {
+        roles.clear();
+        if (section == null) return;
+        for (String plotIdStr : section.getKeys(false)) {
+            UUID plotId = UUID.fromString(plotIdStr);
+            Map<UUID, ClaimRole> map = new HashMap<>();
+            ConfigurationSection sub = section.getConfigurationSection(plotIdStr);
+            if (sub != null) {
+                for (String playerIdStr : sub.getKeys(false)) {
+                    UUID playerId = UUID.fromString(playerIdStr);
+                    String roleStr = sub.getString(playerIdStr, "NONE");
+                    ClaimRole role = ClaimRole.fromName(roleStr);
+                    map.put(playerId, role);
+                }
+            }
+            roles.put(plotId, map);
+        }
     }
 
-    /**
-     * Remove a trusted player from a given plot.
-     *
-     * @param plot   The claim/plot
-     * @param player The player's UUID
-     */
-    public void removeTrusted(Plot plot, UUID player) {
-        if (plot == null || player == null) return;
-        plot.getTrusted().remove(player);
-    }
-
-    /**
-     * Check if a player has at least the given role inside a plot.
-     *
-     * @param plot   The claim/plot
-     * @param player The player's UUID
-     * @param needed The required minimum role
-     * @return true if player has >= role
-     */
-    public boolean hasRoleAtLeast(Plot plot, UUID player, ClaimRole needed) {
-        if (plot == null || player == null || needed == null) return false;
-        ClaimRole current = getRole(plot, player);
-        return current.ordinal() >= needed.ordinal();
-    }
-
-    /* -------------------------
-     * DEBUG / LOGGING
-     * ------------------------- */
-    public void debugRoles(Plot plot) {
-        if (plot == null) return;
-        plugin.getLogger().info("[ClaimRoleManager] Roles for plot " + plot.getId() + ": " + plot.getTrusted());
+    /** Save roles to config. */
+    public void save(ConfigurationSection section) {
+        if (section == null) return;
+        for (Map.Entry<UUID, Map<UUID, ClaimRole>> entry : roles.entrySet()) {
+            String plotIdStr = entry.getKey().toString();
+            ConfigurationSection sub = section.createSection(plotIdStr);
+            for (Map.Entry<UUID, ClaimRole> e : entry.getValue().entrySet()) {
+                sub.set(e.getKey().toString(), e.getValue().name());
+            }
+        }
     }
 }

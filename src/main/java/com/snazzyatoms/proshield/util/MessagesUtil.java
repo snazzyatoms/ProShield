@@ -9,7 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import java.util.*;
 
 /**
- * MessagesUtil (ProShield v1.2.6)
+ * MessagesUtil (ProShield v1.2.6-enhanced)
  *
  * Handles:
  *  - Loading and caching messages.yml values
@@ -64,13 +64,17 @@ public class MessagesUtil {
     public List<String> getList(String key) {
         List<String> list = config.getStringList(key);
         if (list == null || list.isEmpty()) return Collections.emptyList();
-        List<String> colored = new ArrayList<>();
-        for (String s : list) {
-            if (s != null && !s.isBlank()) {
-                colored.add(color(s));
-            }
-        }
-        return colored;
+        return colorList(list);
+    }
+
+    /**
+     * Get a list of messages, or null if not found.
+     * (Compatibility shim for ClaimRole#getLore)
+     */
+    public List<String> getListOrNull(String key) {
+        if (!config.contains(key)) return null;
+        List<String> list = config.getStringList(key);
+        return (list == null || list.isEmpty()) ? null : colorList(list);
     }
 
     /** Get all subkeys under a given path. */

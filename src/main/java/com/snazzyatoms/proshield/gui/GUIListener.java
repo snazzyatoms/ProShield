@@ -2,6 +2,7 @@
 package com.snazzyatoms.proshield.gui;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.compass.CompassManager; // 🔑 Import for COMPASS_NAME
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -56,8 +57,11 @@ public class GUIListener implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
 
-        String name = ChatColor.stripColor(meta.getDisplayName());
-        if (!"ProShield Compass".equalsIgnoreCase(name)) return;
+        // 🔑 Compare against CompassManager.COMPASS_NAME (with color support)
+        String displayName = meta.getDisplayName();
+        if (!CompassManager.COMPASS_NAME.equals(displayName)) {
+            return;
+        }
 
         // Cancel vanilla compass action
         event.setCancelled(true);

@@ -14,15 +14,16 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.Collections;
 
 /**
- * CompassManager (ProShield v1.2.6 FINAL)
+ * CompassManager (ProShield v1.2.6 FINAL + Synced)
  *
  * - Handles giving and managing the ProShield Compass for players
- * - Simplified: only depends on ProShield plugin (not GUIManager)
+ * - Uses consistent naming so GUIListener can detect it
  * - Registers itself as a listener automatically
  */
 public class CompassManager implements Listener {
 
     private final ProShield plugin;
+    public static final String COMPASS_NAME = "§bProShield Compass"; // 🔑 Single source of truth
 
     public CompassManager(ProShield plugin) {
         this.plugin = plugin;
@@ -36,8 +37,8 @@ public class CompassManager implements Listener {
         ItemStack compass = new ItemStack(Material.COMPASS);
         ItemMeta meta = compass.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§bProShield Compass");
-            meta.setLore(Collections.singletonList("§7Right-click to open ProShield menu"));
+            meta.setDisplayName(COMPASS_NAME);
+            meta.setLore(Collections.singletonList("§7Right-click to open the ProShield menu"));
             compass.setItemMeta(meta);
         }
         return compass;
@@ -52,7 +53,7 @@ public class CompassManager implements Listener {
             if (item == null || item.getType() != Material.COMPASS) continue;
             ItemMeta meta = item.getItemMeta();
             if (meta != null && meta.hasDisplayName()
-                    && "§bProShield Compass".equals(meta.getDisplayName())) {
+                    && COMPASS_NAME.equals(meta.getDisplayName())) {
                 return true;
             }
         }

@@ -225,76 +225,82 @@ public class GUIManager {
     // --------------------------- Admin & World Controls ---------------------------
 
     public void openAdmin(Player p) {
-        Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
-        border(inv);
+    Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
+    border(inv);
 
-        inv.setItem(11, textItem(Material.ENDER_PEARL, "&bNearest Claim", List.of(
-                gray("&7Teleport to nearest claim (≤200 blocks)."),
-                line("#ADMIN:TP_NEAREST")
-        )));
-        inv.setItem(13, textItem(Material.PAPER, "&aPending Requests", List.of(
-                gray("&7Approve or deny expansion requests."),
-                line("#ADMIN:PENDING")
-        )));
-        inv.setItem(15, textItem(Material.REDSTONE, "&cWorld Controls", List.of(
-                gray("&7Toggle per-world settings (PvP, Safe Zone, …)"),
-                line("#ADMIN:WORLD_CTRL")
-        )));
+    inv.setItem(10, textItem(Material.ENDER_PEARL, "&bNearest Claim", List.of(
+            gray("&7Teleport to nearest claim (≤200 blocks)."),
+            line("#ADMIN:TP_NEAREST")
+    )));
+    inv.setItem(12, textItem(Material.PAPER, "&aPending Requests", List.of(
+            gray("&7Approve or deny expansion requests."),
+            line("#ADMIN:PENDING")
+    )));
+    inv.setItem(14, textItem(Material.REDSTONE, "&cWorld Controls", List.of(
+            gray("&7Toggle per-world settings (PvP, Safe Zone, …)"),
+            line("#ADMIN:WORLD_CTRL")
+    )));
+    inv.setItem(16, textItem(Material.REPEATER, "&eReload Config", List.of(
+            gray("&7Reload ProShield configuration files."),
+            line("#ADMIN:RELOAD")
+    )));
 
-        inv.setItem(22, backButton());
-        inv.setItem(23, exitButton());
-        push(p, View.admin());
-        p.openInventory(inv);
-        click(p);
-    }
+    inv.setItem(22, backButton());
+    inv.setItem(23, exitButton());
+
+    push(p, View.admin());
+    p.openInventory(inv);
+    click(p);
+}
 
     public void openWorldControls(Player p, int pageIgnored) {
-        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World Controls"));
-        border(inv);
+    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World Controls"));
+    border(inv);
 
-        List<World> worlds = Bukkit.getWorlds();
-        int startSlotIndex = 0;
-        for (World w : worlds) {
-            String name = w.getName();
-            if (name.equalsIgnoreCase("world")) {
-                inv.setItem(grid(startSlotIndex++), iconWorld(name)); // interactive
-            } else {
-                inv.setItem(grid(startSlotIndex++), textItem(Material.BARRIER,
-                        "&c" + name,
-                        List.of(gray("Coming in a future update"))));
-            }
-            if (startSlotIndex >= 21) break;
+    List<World> worlds = Bukkit.getWorlds();
+    int slot = 10;
+    for (World w : worlds) {
+        String name = w.getName();
+        if (name.equalsIgnoreCase("world")) {
+            inv.setItem(slot++, iconWorld(name)); // interactive
+        } else {
+            inv.setItem(slot++, textItem(Material.BARRIER,
+                    "&c" + name,
+                    List.of(gray("Coming in a future update"))));
         }
-
-        inv.setItem(49, backButton());
-        inv.setItem(50, exitButton());
-        push(p, View.worlds(0));
-        p.openInventory(inv);
-        click(p);
+        if (slot >= 16) break;
     }
 
-    public void openWorldDetail(Player p, String worldName) {
-        Inventory inv = Bukkit.createInventory(p, SIZE_45, title("world-controls", "&8World: " + worldName));
-        border(inv);
+    inv.setItem(49, backButton());
+    inv.setItem(50, exitButton());
+    push(p, View.worlds(0));
+    p.openInventory(inv);
+    click(p);
+}
 
-        boolean pvp      = readWorldBool(worldName, WC_PVP, true);       // default ON
-        boolean safezone = readWorldBool(worldName, WC_SAFEZONE, false); // default OFF
+public void openWorldDetail(Player p, String worldName) {
+    Inventory inv = Bukkit.createInventory(p, SIZE_45, title("world-controls", "&8World: " + worldName));
+    border(inv);
 
-        inv.setItem(10, iconWorldToggle(worldName, WC_PVP, pvp,
-                Material.IRON_SWORD, "&ePvP", "&7Global player-versus-player damage"));
-        inv.setItem(12, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
-                Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
+    boolean pvp      = readWorldBool(worldName, WC_PVP, true);       // default ON
+    boolean safezone = readWorldBool(worldName, WC_SAFEZONE, false); // default OFF
 
-        // Reserved space for future toggles
-        inv.setItem(22, textItem(Material.PAPER, "&7More options",
-                List.of(gray("Coming in a future update"))));
+    inv.setItem(11, iconWorldToggle(worldName, WC_PVP, pvp,
+            Material.IRON_SWORD, "&ePvP", "&7Global player-versus-player damage"));
+    inv.setItem(13, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
+            Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
 
-        inv.setItem(40, backButton());
-        inv.setItem(41, exitButton());
-        push(p, View.worldDetail(worldName));
-        p.openInventory(inv);
-        click(p);
-    }
+    // Placeholders for future toggles
+    inv.setItem(15, textItem(Material.PAPER, "&7Explosions (soon)", List.of(gray("Coming in future update"))));
+    inv.setItem(22, textItem(Material.PAPER, "&7Fire Spread (soon)", List.of(gray("Coming in future update"))));
+
+    inv.setItem(40, backButton());
+    inv.setItem(41, exitButton());
+    push(p, View.worldDetail(worldName));
+    p.openInventory(inv);
+    click(p);
+}
+
 
     // --------------------------- Expansion Requests ---------------------------
 
@@ -531,6 +537,7 @@ public class GUIManager {
             openFlags(p, 0);
         }
     }
+
     public void handleAdminClick(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();
         if (!valid(it)) return;
@@ -554,6 +561,13 @@ public class GUIManager {
                         .replace("%id%", nearest.getId().toString()));
                 p.closeInventory();
             }
+            case "ADMIN:RELOAD" -> {
+                plugin.reloadConfig();
+                plugin.loadMessagesConfig();
+                msg(p, messages.getOrDefault("messages.success.reload", "&aProShield config reloaded."));
+                soundGood(p);
+                openAdmin(p);
+            }
             case "BACK" -> back(p);
             case "EXIT" -> p.closeInventory();
         }
@@ -572,13 +586,14 @@ public class GUIManager {
 
         if (id.startsWith("WORLD:OPEN:")) {
             String world = id.substring("WORLD:OPEN:".length());
-            if (!world.equalsIgnoreCase("world")) { // only overworld active
+            if (!world.equalsIgnoreCase("world")) {
                 warn(p, "&cThis world’s controls are coming in a future update.");
                 return;
             }
             openWorldDetail(p, world);
             return;
         }
+
         if (id.startsWith("WORLD:TOGGLE:")) {
             String[] parts = id.split(":", 4);
             if (parts.length < 4) return;
@@ -631,7 +646,6 @@ public class GUIManager {
         if (id.equals("BACK")) { back(p); return; }
         if (id.equals("EXIT")) { p.closeInventory(); return; }
 
-        // REQ:<uuid>:APPROVE or REQ:<uuid>:DENY
         if (id.startsWith("REQ:")) {
             String[] parts = id.split(":", 3);
             if (parts.length < 3) return;
@@ -666,11 +680,9 @@ public class GUIManager {
 
         if (id.equals("BACK")) { back(p); return; }
         if (id.equals("EXIT")) { p.closeInventory(); return; }
-        // read-only
     }
 
     public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
-        // Kept for compatibility: v1.2.6 doesn't collect free-text deny reasons in-GUI
         ItemStack it = e.getCurrentItem();
         if (!valid(it)) return;
         String id = extractId(it);

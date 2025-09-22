@@ -43,7 +43,7 @@ public class ProShield extends JavaPlugin {
         expansionRequestManager = new ExpansionRequestManager(this);
         guiManager = new GUIManager(this);
 
-        // ✅ Centralized Compass Manager
+        // ✅ Initialize compass manager
         compassManager = new CompassManager(this);
 
         // Register GUI listener (handles clicks + compass right-click)

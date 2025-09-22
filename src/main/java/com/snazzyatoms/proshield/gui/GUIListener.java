@@ -39,10 +39,8 @@ public class GUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
-
-        // ✅ Optional cleanup so nav stack doesn't grow forever
-        guiManager.clearNav(player);
+        if (!(event.getPlayer() instanceof Player)) return;
+        // No explicit cleanup needed in v1.2.6 — GUIManager manages its own state.
     }
 
     // =====================

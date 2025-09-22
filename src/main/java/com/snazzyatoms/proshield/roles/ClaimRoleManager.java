@@ -1,62 +1,93 @@
+// src/main/java/com/snazzyatoms/proshield/roles/ClaimRoleManager.java
 package com.snazzyatoms.proshield.roles;
 
+import com.snazzyatoms.proshield.ProShield;
 import com.snazzyatoms.proshield.plots.Plot;
-import org.bukkit.configuration.ConfigurationSection;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Manages trusted player roles per plot.
+ * ClaimRoleManager (v1.2.6 FINAL)
+ *
+ * - Centralized manager for role assignment inside claims
+ * - Provides default role fallbacks
+ * - Converts between stored String values in Plot and ClaimRole enum
+ * - Used by GUIManager + ClaimProtectionListener
  */
 public class ClaimRoleManager {
 
-    // Map<PlotID, Map<PlayerUUID, ClaimRole>>
-    private final Map<UUID, Map<UUID, ClaimRole>> roles = new HashMap<>();
+    private final ProShield plugin;
 
-    /** Get a player's role for a plot. Defaults to NONE if not set. */
-    public ClaimRole getRole(Plot plot, UUID playerId) {
-        if (plot == null || playerId == null) return ClaimRole.NONE;
-        Map<UUID, ClaimRole> map = roles.get(plot.getId());
-        return (map != null) ? map.getOrDefault(playerId, ClaimRole.NONE) : ClaimRole.NONE;
+    /**
+     * Primary constructor — preferred
+     */
+    public ClaimRoleManager(ProShield plugin) {
+        this.plugin = plugin;
     }
 
-    /** Assign a role to a player in a plot. */
-    public void setRole(Plot plot, UUID playerId, ClaimRole role) {
-        if (plot == null || playerId == null || role == null) return;
-        roles.computeIfAbsent(plot.getId(), k -> new HashMap<>()).put(playerId, role);
+    /**
+     * Fallback no-arg constructor (uses ProShield.getInstance()).
+     */
+    public ClaimRoleManager() {
+        this.plugin = ProShield.getInstance();
     }
 
-    /** Load roles from config. */
-    public void load(ConfigurationSection section) {
-        roles.clear();
-        if (section == null) return;
-        for (String plotIdStr : section.getKeys(false)) {
-            UUID plotId = UUID.fromString(plotIdStr);
-            Map<UUID, ClaimRole> map = new HashMap<>();
-            ConfigurationSection sub = section.getConfigurationSection(plotIdStr);
-            if (sub != null) {
-                for (String playerIdStr : sub.getKeys(false)) {
-                    UUID playerId = UUID.fromString(playerIdStr);
-                    String roleStr = sub.getString(playerIdStr, "NONE");
-                    ClaimRole role = ClaimRole.fromName(roleStr);
-                    map.put(playerId, role);
-                }
-            }
-            roles.put(plotId, map);
-        }
+    /* -------------------------
+     * Role Assignment
+     * ------------------------- */
+
+    /**
+     * Set a player's role in a claim.
+     *
+     * @param plot   Target claim
+     * @param player Target player UUID
+     * @param role   Role to assign
+     */
+    public void setRole(Plot plot, UUID player, ClaimRole role) {
+        if (plot == null || player == null || role == null) return;
+        plot.getTrusted().put(player, role.name().toLowerCase(Locale.ROOT));
     }
 
-    /** Save roles to config. */
-    public void save(ConfigurationSection section) {
-        if (section == null) return;
-        for (Map.Entry<UUID, Map<UUID, ClaimRole>> entry : roles.entrySet()) {
-            String plotIdStr = entry.getKey().toString();
-            ConfigurationSection sub = section.createSection(plotIdStr);
-            for (Map.Entry<UUID, ClaimRole> e : entry.getValue().entrySet()) {
-                sub.set(e.getKey().toString(), e.getValue().name());
-            }
-        }
+    /**
+     * Get a player's role in a claim.
+     *
+     * @param plot   Target claim
+     * @param player Player UUID
+     * @return ClaimRole (defaults to ClaimRole.NONE if not found)
+     */
+    public ClaimRole getRole(Plot plot, UUID player) {
+        if (plot == null || player == null) return ClaimRole.NONE;
+        String stored = plot.getTrusted().get(player);
+        if (stored == null) return ClaimRole.NONE;
+        return ClaimRole.fromName(stored);
+    }
+
+    /**
+     * Remove a player from a claim's trusted map.
+     */
+    public void removeRole(Plot plot, UUID player) {
+        if (plot == null || player == null) return;
+        plot.getTrusted().remove(player);
+    }
+
+    /* -------------------------
+     * Defaults & Utility
+     * ------------------------- */
+
+    /**
+     * Get the default role ID for new trusted players.
+     */
+    public String getDefaultRoleId() {
+        return plugin != null
+                ? plugin.getConfig().getString("roles.default", "member")
+                : "member";
+    }
+
+    /**
+     * Get the default ClaimRole (as enum).
+     */
+    public ClaimRole getDefaultRole() {
+        return ClaimRole.fromName(getDefaultRoleId());
     }
 }

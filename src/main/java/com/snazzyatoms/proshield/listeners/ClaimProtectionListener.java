@@ -77,7 +77,8 @@ public class ClaimProtectionListener implements Listener {
         Plot plot = plotManager.getPlotAt(loc);
         if (plot == null) return; // wilderness = vanilla rules
 
-        ClaimRole role = roleManager.getRole(player.getUniqueId(), plot);
+        // ✅ FIXED: correct parameter order
+        ClaimRole role = roleManager.getRole(plot, player.getUniqueId());
         boolean allowed = requiresBuild ? role.canBuild() : role.canInteract();
 
         if (!allowed) {

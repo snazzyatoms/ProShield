@@ -2,10 +2,12 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -25,14 +27,17 @@ public class Plot {
 
     private int radius;
 
+    // Claim creation timestamp
+    private final Instant createdAt = Instant.now();
+
     // Claim flags (simple key → boolean)
     private final Map<String, Boolean> flags = new HashMap<>();
 
     // Trusted players with roles
-    private final Map<UUID, String> trusted = new HashMap<>();
+    private final Map<UUID, ClaimRole> trusted = new HashMap<>();
 
-    // Default role for new trusted players (GUIManager expects this)
-    private String defaultRole = "member";
+    // Default role for new trusted players
+    private ClaimRole defaultRole = ClaimRole.MEMBER;
 
     public Plot(UUID owner, String world, int x, int z, UUID id, int radius) {
         this.owner = owner;
@@ -60,12 +65,13 @@ public class Plot {
     public String getWorld() { return world; }
     public int getX() { return x; }
     public int getZ() { return z; }
-
     public int getRadius() { return radius; }
     public void setRadius(int radius) { this.radius = Math.max(1, radius); }
 
     public Map<String, Boolean> getFlags() { return flags; }
-    public Map<UUID, String> getTrusted() { return trusted; }
+    public Map<UUID, ClaimRole> getTrusted() { return trusted; }
+
+    public Instant getCreatedAt() { return createdAt; }
 
     /* -------------------------
      * LEGACY SHIMS (to be removed in 2.0)
@@ -132,18 +138,19 @@ public class Plot {
         info.put("World", world);
         info.put("Center", x + ", " + z);
         info.put("Radius", String.valueOf(radius));
+        info.put("Created", createdAt.toString());
 
         // Trusted players
         if (trusted.isEmpty()) {
             info.put("Trusted", "None");
         } else {
             List<String> trustList = new ArrayList<>();
-            for (Map.Entry<UUID, String> entry : trusted.entrySet()) {
+            for (Map.Entry<UUID, ClaimRole> entry : trusted.entrySet()) {
                 OfflinePlayer t = Bukkit.getOfflinePlayer(entry.getKey());
                 String name = (t != null && t.getName() != null)
                         ? t.getName()
                         : entry.getKey().toString().substring(0, 8);
-                trustList.add(name + " (" + entry.getValue() + ")");
+                trustList.add(name + " (" + entry.getValue().getDisplayName() + ")");
             }
             info.put("Trusted", String.join(", ", trustList));
         }
@@ -161,29 +168,19 @@ public class Plot {
     /* -------------------------
      * COMPATIBILITY SHIMS (for GUIManager 1.2.6)
      * ------------------------- */
-
-    // GUI expects isOwner(uuid)
     public boolean isOwner(UUID uuid) {
         return uuid != null && uuid.equals(this.owner);
     }
 
-    // GUI expects chunk counts
     public int getChunkCount() {
         // Approximate chunks claimed by radius (circle area / 256)
         double area = Math.PI * (radius * radius);
         return (int) Math.max(1, area / 256.0);
     }
 
-    // GUI expects default role
-    public String getDefaultRole() {
-        return defaultRole;
-    }
+    public ClaimRole getDefaultRole() { return defaultRole; }
+    public void setDefaultRole(ClaimRole role) { this.defaultRole = (role != null ? role : ClaimRole.MEMBER); }
 
-    public void setDefaultRole(String roleId) {
-        this.defaultRole = (roleId != null ? roleId.toLowerCase(Locale.ROOT) : "member");
-    }
-
-    // GUI expects plot center Location
     public Location getCenter() {
         if (Bukkit.getWorld(world) == null) return null;
         return new Location(Bukkit.getWorld(world), x + 0.5, 64, z + 0.5);

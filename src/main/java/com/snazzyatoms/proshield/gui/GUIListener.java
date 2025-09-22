@@ -12,8 +12,9 @@ import org.bukkit.inventory.ItemStack;
 /**
  * GUIListener (ProShield v1.2.6 FINAL)
  *
- * - Routes clicks to the correct GUIManager handler
+ * - Routes ALL clicks into GUIManager.handleClick()
  * - Cancels vanilla inventory behavior inside ProShield GUIs
+ * - No manual routing duplication (keeps GUIManager and Listener in sync)
  */
 public class GUIListener implements Listener {
 
@@ -42,35 +43,11 @@ public class GUIListener implements Listener {
         // Always cancel vanilla actions inside ProShield menus
         event.setCancelled(true);
 
-        String title = event.getView().getTitle();
-
         try {
-            if (title.contains("ProShield Menu")) {
-                guiManager.handleMainClick(player, event);
-            } else if (title.contains("Claim Info")) {
-                guiManager.handleMainClick(player, event); // INFO handled in main handler
-            } else if (title.contains("Trusted")) {
-                guiManager.handleTrustedClick(player, event);
-            } else if (title.contains("Assign Role")) {
-                guiManager.handleAssignRoleClick(player, event);
-            } else if (title.contains("Flags")) {
-                guiManager.handleFlagsClick(player, event);
-            } else if (title.contains("Admin Tools")) {
-                guiManager.handleAdminClick(player, event);
-            } else if (title.contains("World Controls") && !title.contains("World:")) {
-                guiManager.handleWorldControlsClick(player, event);
-            } else if (title.contains("World:")) {
-                guiManager.handleWorldControlsClick(player, event);
-            } else if (title.contains("Expansion Requests")) {
-                guiManager.handleExpansionReviewClick(player, event);
-            } else if (title.contains("Expansion History")) {
-                guiManager.handleHistoryClick(player, event);
-            } else if (title.contains("Deny Reason")) {
-                guiManager.handleDenyReasonClick(player, event);
-            }
+            guiManager.handleClick(event); // ✅ Central router does all the work
         } catch (Exception ex) {
-            plugin.getLogger().warning("[GUIListener] Error handling click for " + player.getName()
-                    + " in GUI: " + ex.getMessage());
+            plugin.getLogger().warning("[GUIListener] Error handling click for "
+                    + player.getName() + " in GUI: " + ex.getMessage());
             ex.printStackTrace();
         }
     }
@@ -78,6 +55,6 @@ public class GUIListener implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player)) return;
-        // No explicit cleanup needed — GUIManager v1.2.6 uses View stack only
+        // No explicit cleanup needed — GUIManager v1.2.6 manages its own View stack
     }
 }

@@ -2,6 +2,7 @@
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.roles.ClaimRole;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -10,6 +11,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -71,12 +73,19 @@ public class PlotManager {
 
                 Plot plot = new Plot(owner, world, x, z, id, radius);
 
+                // --- CreatedAt ---
+                String createdStr = plotsConfig.getString("plots." + key + ".createdAt");
+                if (createdStr != null) {
+                    try {
+                        plot.getInfo().put("Created", createdStr); // GUI fallback
+                    } catch (Exception ignored) {}
+                }
+
                 // --- Flags ---
                 Map<String, Object> flags = plotsConfig.getConfigurationSection("plots." + key + ".flags") != null
                         ? plotsConfig.getConfigurationSection("plots." + key + ".flags").getValues(false)
                         : Collections.emptyMap();
 
-                // Ensure defaults are applied
                 for (String flag : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
                     boolean def = plugin.getConfig().getBoolean("flags.available." + flag + ".default", false);
                     boolean value = flags.containsKey(flag)
@@ -92,12 +101,13 @@ public class PlotManager {
                 if (plotsConfig.isList(base)) {
                     for (String s : plotsConfig.getStringList(base)) {
                         try {
-                            plot.getTrusted().put(UUID.fromString(s), defRole);
+                            plot.getTrusted().put(UUID.fromString(s), ClaimRole.fromName(defRole));
                         } catch (Exception ignored) {}
                     }
                 } else if (plotsConfig.isConfigurationSection(base)) {
                     for (String u : plotsConfig.getConfigurationSection(base).getKeys(false)) {
-                        String role = plotsConfig.getString(base + "." + u, defRole);
+                        String roleName = plotsConfig.getString(base + "." + u, defRole);
+                        ClaimRole role = ClaimRole.fromName(roleName);
                         try {
                             plot.getTrusted().put(UUID.fromString(u), role);
                         } catch (Exception ignored) {}
@@ -123,13 +133,14 @@ public class PlotManager {
             plotsConfig.set(base + ".z", plot.getZ());
             plotsConfig.set(base + ".owner", plot.getOwner().toString());
             plotsConfig.set(base + ".radius", plot.getRadius());
+            plotsConfig.set(base + ".createdAt", plot.getCreatedAt().toString());
 
             for (Map.Entry<String, Boolean> flag : plot.getFlags().entrySet()) {
                 plotsConfig.set(base + ".flags." + flag.getKey(), flag.getValue());
             }
 
-            for (Map.Entry<UUID, String> t : plot.getTrusted().entrySet()) {
-                plotsConfig.set(base + ".trusted." + t.getKey(), t.getValue());
+            for (Map.Entry<UUID, ClaimRole> t : plot.getTrusted().entrySet()) {
+                plotsConfig.set(base + ".trusted." + t.getKey(), t.getValue().name());
             }
         }
 
@@ -159,6 +170,11 @@ public class PlotManager {
         return plots.values();
     }
 
+    /** GUIManager expects this */
+    public Collection<Plot> getAllPlots() {
+        return plots.values();
+    }
+
     public Plot createPlot(UUID owner, Location center) {
         UUID id = UUID.randomUUID();
         String world = center.getWorld().getName();
@@ -168,7 +184,6 @@ public class PlotManager {
 
         Plot plot = new Plot(owner, world, x, z, id, radius);
 
-        // Apply default flags from config
         for (String flag : plugin.getConfig().getConfigurationSection("flags.available").getKeys(false)) {
             boolean def = plugin.getConfig().getBoolean("flags.available." + flag + ".default", false);
             plot.setFlag(flag, def);
@@ -230,26 +245,21 @@ public class PlotManager {
      * COMPATIBILITY SHIMS (for GUIManager 1.2.6)
      * ------------------------- */
 
-    /** GUI expects claimChunk(owner, location) */
     public Plot claimChunk(UUID owner, Location where) {
         if (where == null) return null;
         return createPlot(owner, where);
     }
 
-    /** GUI expects unclaim(plot) */
     public boolean unclaim(Plot plot) {
         if (plot == null) return false;
         deletePlot(plot.getId());
         return true;
     }
 
-    /** GUI expects save(plot) */
     public void save(Plot plot) {
-        // Just save everything for now (simple + safe)
         saveAll();
     }
 
-    /** GUI expects findNearestClaim(location, radius) */
     public Plot findNearestClaim(Location origin, int maxRadius) {
         if (origin == null) return null;
         Plot nearest = null;

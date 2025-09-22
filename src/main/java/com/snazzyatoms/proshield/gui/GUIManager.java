@@ -1,6 +1,6 @@
 // ========================== GUIManager.java (v1.2.6 POLISHED, feature-complete) ==========================
 // ProShield GUI Manager — consolidated, upgraded & complete (v1.2.4 → v1.2.6)
-// - Main Menu, Claim Info, Trusted (pagination), Assign Role (with multi-line lore from ClaimRole)
+// - Main Menu, Claim Info, Trusted (pagination removed), Assign Role (lore from ClaimRole)
 // - Claim Flags, Expansion Requests (submit/review/history)
 // - Admin Tools (World Controls, Pending, Teleport Nearest)
 // - Back/Exit navigation stack & title-based routing (works with GUIListener)
@@ -107,8 +107,8 @@ public class GUIManager {
             inv.setItem(26, iconAdminTools());
         }
 
-        // ✅ Exit button added
-        inv.setItem(8, exitButton());
+        // Exit (single)
+        inv.setItem(26 - 1, exitButton()); // slot 25
 
         push(p, View.main());
         p.openInventory(inv);
@@ -130,14 +130,16 @@ public class GUIManager {
             inv.setItem(15, iconExpansionRequest());
         }
 
+        // Back & Exit (single)
         inv.setItem(31, backButton());
-        inv.setItem(32, exitButton()); // ✅ Exit added
+        inv.setItem(32, exitButton());
+
         push(p, View.claimInfo());
         p.openInventory(inv);
         click(p);
     }
 
-    public void openTrusted(Player p, int page) {
+    public void openTrusted(Player p, int pageIgnored) {
         Plot plot = plots.getPlotAt(p.getLocation());
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("trusted", "&8Trusted Players"));
         border(inv);
@@ -149,22 +151,18 @@ public class GUIManager {
         } else {
             List<UUID> list = new ArrayList<>(plot.getTrusted().keySet());
             list.sort(Comparator.comparing(this::nameOrShort));
-            int pageSize = 28;
-            int maxPage  = Math.max(0, (list.size() - 1) / pageSize);
-            page = Math.max(0, Math.min(page, maxPage));
 
-            placePager(inv, page, maxPage);
-
-            int start = page * pageSize;
-            for (int i = 0; i < pageSize && start + i < list.size(); i++) {
-                UUID u = list.get(start + i);
+            // show up to 28 entries (4 rows × 7)
+            int max = Math.min(28, list.size());
+            for (int i = 0; i < max; i++) {
+                UUID u = list.get(i);
                 inv.setItem(grid(i), iconTrustedEntry(plot, u));
             }
         }
 
         inv.setItem(49, backButton());
-        inv.setItem(50, exitButton()); // ✅ Exit added
-        push(p, View.trusted(page));
+        inv.setItem(50, exitButton());
+        push(p, View.trusted(0));
         p.openInventory(inv);
         click(p);
     }
@@ -183,8 +181,8 @@ public class GUIManager {
         for (ClaimRole r : ClaimRole.values()) {
             if (r == ClaimRole.NONE) continue;
 
-            List<String> lore = new ArrayList<>(r.getLore()); // ✅ YAML-driven lore
-            lore.add(line("ROLE:" + r.name()));              // hidden click action
+            List<String> lore = new ArrayList<>(r.getLore());
+            lore.add(line("ROLE:" + r.name())); // hidden click action
 
             inv.setItem(i, textItem(Material.PAPER,
                     (roles.getRole(plot, peek.pendingTarget) == r ? "&a" : "&7") + r.getDisplayName(),
@@ -194,12 +192,12 @@ public class GUIManager {
         }
 
         inv.setItem(40, backButton());
-        inv.setItem(41, exitButton()); // ✅ Exit added
+        inv.setItem(41, exitButton());
         push(p, View.assignRole(peek.pendingTarget));
         p.openInventory(inv);
         click(p);
     }
-    public void openFlags(Player p, int page) {
+    public void openFlags(Player p, int pageIgnored) {
         Plot plot = plots.getPlotAt(p.getLocation());
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("flags", "&8Claim Flags"));
         border(inv);
@@ -210,21 +208,16 @@ public class GUIManager {
                     List.of(line("#NOOP"))));
         } else {
             List<FlagSpec> spec = defaultFlags();
-            int pageSize = 21;
-            int maxPage  = Math.max(0, (spec.size() - 1) / pageSize);
-            page = Math.max(0, Math.min(page, maxPage));
-            placePager(inv, page, maxPage);
-
-            int start = page * pageSize;
-            for (int i = 0; i < pageSize && start + i < spec.size(); i++) {
-                FlagSpec f = spec.get(start + i);
+            int max = Math.min(21, spec.size());
+            for (int i = 0; i < max; i++) {
+                FlagSpec f = spec.get(i);
                 inv.setItem(grid(i), iconFlag(plot, f));
             }
         }
 
         inv.setItem(49, backButton());
-        inv.setItem(50, exitButton()); // ✅ Exit added
-        push(p, View.flags(page));
+        inv.setItem(50, exitButton());
+        push(p, View.flags(0));
         p.openInventory(inv);
         click(p);
     }
@@ -249,31 +242,33 @@ public class GUIManager {
         )));
 
         inv.setItem(22, backButton());
-        inv.setItem(23, exitButton()); // ✅ Exit added
+        inv.setItem(23, exitButton());
         push(p, View.admin());
         p.openInventory(inv);
         click(p);
     }
 
-    public void openWorldControls(Player p, int page) {
+    public void openWorldControls(Player p, int pageIgnored) {
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World Controls"));
         border(inv);
 
         List<World> worlds = Bukkit.getWorlds();
-        int pageSize = 21;
-        int maxPage  = Math.max(0, (worlds.size() - 1) / pageSize);
-        page = Math.max(0, Math.min(page, maxPage));
-        placePager(inv, page, maxPage);
-
-        int start = page * pageSize;
-        for (int i = 0; i < pageSize && start + i < worlds.size(); i++) {
-            World w = worlds.get(start + i);
-            inv.setItem(grid(i), iconWorld(w.getName()));
+        int startSlotIndex = 0;
+        for (World w : worlds) {
+            String name = w.getName();
+            if (name.equalsIgnoreCase("world")) {
+                inv.setItem(grid(startSlotIndex++), iconWorld(name)); // interactive
+            } else {
+                inv.setItem(grid(startSlotIndex++), textItem(Material.BARRIER,
+                        "&c" + name,
+                        List.of(gray("Coming in a future update"))));
+            }
+            if (startSlotIndex >= 21) break;
         }
 
         inv.setItem(49, backButton());
-        inv.setItem(50, exitButton()); // ✅ Exit added
-        push(p, View.worlds(page));
+        inv.setItem(50, exitButton());
+        push(p, View.worlds(0));
         p.openInventory(inv);
         click(p);
     }
@@ -290,20 +285,12 @@ public class GUIManager {
         inv.setItem(12, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
                 Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
 
-        Map<String, Boolean> extras = readAllWorldBools(worldName);
-        int slot = 20;
-        for (Map.Entry<String, Boolean> e : extras.entrySet()) {
-            String key = e.getKey();
-            if (key.equalsIgnoreCase(WC_PVP) || key.equalsIgnoreCase(WC_SAFEZONE)) continue;
-            boolean val = e.getValue();
-            inv.setItem(slot, iconWorldToggle(worldName, key, val, Material.LEVER,
-                    "&6" + key, "&7Toggle " + key));
-            slot += (slot % 9 == 7) ? 3 : 1;
-            if (slot >= 33) break;
-        }
+        // Reserved space for future toggles
+        inv.setItem(22, textItem(Material.PAPER, "&7More options",
+                List.of(gray("Coming in a future update"))));
 
         inv.setItem(40, backButton());
-        inv.setItem(41, exitButton()); // ✅ Exit added
+        inv.setItem(41, exitButton());
         push(p, View.worldDetail(worldName));
         p.openInventory(inv);
         click(p);
@@ -311,27 +298,22 @@ public class GUIManager {
 
     // --------------------------- Expansion Requests ---------------------------
 
-    public void openPending(Player p, int page) {
+    public void openPending(Player p, int pageIgnored) {
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-requests", "&8Expansion Requests"));
         border(inv);
 
         List<ExpansionRequest> pending = new ArrayList<>(expansions.getPendingRequests());
         pending.sort(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed());
 
-        int pageSize = 21;
-        int maxPage  = Math.max(0, (pending.size() - 1) / pageSize);
-        page = Math.max(0, Math.min(page, maxPage));
-        placePager(inv, page, maxPage);
-
-        int start = page * pageSize;
-        for (int i = 0; i < pageSize && start + i < pending.size(); i++) {
-            ExpansionRequest r = pending.get(start + i);
+        int max = Math.min(21, pending.size());
+        for (int i = 0; i < max; i++) {
+            ExpansionRequest r = pending.get(i);
             inv.setItem(grid(i), iconRequest(r));
         }
 
         inv.setItem(49, backButton());
-        inv.setItem(50, exitButton()); // ✅ Exit added
-        push(p, View.pending(page));
+        inv.setItem(50, exitButton());
+        push(p, View.pending(0));
         p.openInventory(inv);
         click(p);
     }
@@ -350,12 +332,11 @@ public class GUIManager {
         }
 
         inv.setItem(49, backButton());
-        inv.setItem(50, exitButton()); // ✅ Exit added
+        inv.setItem(50, exitButton());
         push(p, View.history());
         p.openInventory(inv);
         click(p);
     }
-
     // ----------------------------- Central Click Router -----------------------------
 
     /** Routes clicks by inventory title keywords into specific handlers. */
@@ -396,6 +377,7 @@ public class GUIManager {
             ex.printStackTrace();
         }
     }
+
     // Claim Info is mostly read-only except the player expansion request button.
     private void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();
@@ -479,7 +461,7 @@ public class GUIManager {
             String roleName = id.substring("ROLE:".length());
             ClaimRole role = ClaimRole.fromName(roleName);
             if (role == ClaimRole.NONE) { warn(p, messages.getOrDefault("messages.error.unknown-role", "&cUnknown role.")); return; }
-            roles.setRole(plot, peek.pendingTarget, role); // correct signature
+            roles.setRole(plot, peek.pendingTarget, role);
             plots.save(plot);
             msg(p, messages.getOrDefault("messages.success.role-assigned", "&aAssigned &f%player% &ato &f%role%")
                     .replace("%player%", nameOrShort(peek.pendingTarget))
@@ -509,15 +491,12 @@ public class GUIManager {
             plots.save(plot);
             msg(p, messages.getOrDefault("messages.success.trust-removed", "&eRemoved &f%player% &efrom trusted.")
                     .replace("%player%", nameOrShort(target)));
-            openTrusted(p, pageFrom(peek(p)));
+            openTrusted(p, 0);
         } else if (id.startsWith("TRUST:ROLE:")) {
             UUID target = uuidSafe(id.substring("TRUST:ROLE:".length()));
             if (target == null) return;
             setPendingTarget(p, target);
             openAssignRole(p);
-        } else if (id.startsWith("PAGE:")) {
-            int page = safeInt(id.substring("PAGE:".length()), 0);
-            openTrusted(p, page);
         } else if (id.equals("BACK")) {
             back(p);
         } else if (id.equals("EXIT")) {
@@ -531,10 +510,6 @@ public class GUIManager {
         String id = extractId(it);
         if (id == null) return;
 
-        if (id.startsWith("PAGE:")) {
-            openFlags(p, safeInt(id.substring(5), 0));
-            return;
-        }
         if (id.equals("BACK")) { back(p); return; }
         if (id.equals("EXIT")) { p.closeInventory(); return; }
 
@@ -553,10 +528,9 @@ public class GUIManager {
             msg(p, messages.getOrDefault("messages.success.flag-toggled", "&b%flag% &7→ %state%")
                     .replace("%flag%", key)
                     .replace("%state%", plot.getFlag(key) ? on : off));
-            openFlags(p, pageFrom(peek(p)));
+            openFlags(p, 0);
         }
     }
-
     public void handleAdminClick(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();
         if (!valid(it)) return;
@@ -569,7 +543,7 @@ public class GUIManager {
             case "ADMIN:PENDING" -> openPending(p, 0);
             case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
             case "ADMIN:TP_NEAREST" -> {
-                Plot nearest = plots.findNearestClaim(p.getLocation(), 200); // PlotManager shim
+                Plot nearest = plots.findNearestClaim(p.getLocation(), 200);
                 if (nearest == null) {
                     warn(p, messages.getOrDefault("messages.error.no-nearby-claims", "&cNo nearby claims."));
                     return;
@@ -593,15 +567,15 @@ public class GUIManager {
 
         if (!p.hasPermission("proshield.admin")) { deny(p); return; }
 
-        if (id.startsWith("PAGE:")) {
-            openWorldControls(p, safeInt(id.substring(5), 0));
-            return;
-        }
         if (id.equals("BACK")) { back(p); return; }
         if (id.equals("EXIT")) { p.closeInventory(); return; }
 
         if (id.startsWith("WORLD:OPEN:")) {
             String world = id.substring("WORLD:OPEN:".length());
+            if (!world.equalsIgnoreCase("world")) { // only overworld active
+                warn(p, "&cThis world’s controls are coming in a future update.");
+                return;
+            }
             openWorldDetail(p, world);
             return;
         }
@@ -645,6 +619,7 @@ public class GUIManager {
             p.closeInventory();
         }
     }
+
     public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();
         if (!valid(it)) return;
@@ -653,10 +628,6 @@ public class GUIManager {
 
         if (!p.hasPermission("proshield.admin")) { deny(p); return; }
 
-        if (id.startsWith("PAGE:")) {
-            openPending(p, safeInt(id.substring(5), 0));
-            return;
-        }
         if (id.equals("BACK")) { back(p); return; }
         if (id.equals("EXIT")) { p.closeInventory(); return; }
 
@@ -675,14 +646,14 @@ public class GUIManager {
                         .replace("%id%", shortId(req.getId())));
                 Player requester = Bukkit.getPlayer(req.getRequester());
                 if (requester != null) requester.sendMessage(gray(messages.getOrDefault("messages.notify.expand-approved", "&aYour expansion request was approved.")));
-                openPending(p, pageFrom(peek(p)));
+                openPending(p, 0);
             } else if (action.equals("DENY")) {
                 expansions.denyRequest(req, p.getUniqueId(), "Denied via GUI");
                 msg(p, messages.getOrDefault("messages.success.request-denied", "&cDenied &f%id%&c.")
                         .replace("%id%", shortId(req.getId())));
                 Player requester = Bukkit.getPlayer(req.getRequester());
                 if (requester != null) requester.sendMessage(gray(messages.getOrDefault("messages.notify.expand-denied", "&cYour expansion request was denied.")));
-                openPending(p, pageFrom(peek(p)));
+                openPending(p, 0);
             }
         }
     }
@@ -766,17 +737,13 @@ public class GUIManager {
     }
 
     private ItemStack iconFlags(boolean enabled) {
-    return textItem(Material.LEVER,
-            enabled ? "&6Flags" : "&7Flags",
-            List.of(
-                    gray(enabled
-                            ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)")
-                            : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
-                    line("#FLAGS")
-            )
-    );
-}
-
+        return textItem(Material.LEVER,
+                enabled ? "&6Flags" : "&7Flags",
+                List.of(gray(enabled
+                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)")
+                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
+                        line("#FLAGS")));
+    }
 
     private ItemStack iconAdminTools() {
         return textItem(Material.COMPASS, "&dAdmin Tools", List.of(
@@ -844,6 +811,7 @@ public class GUIManager {
                 new FlagSpec("ignite-lightning", "Ignite (Lightning)", Material.LIGHTNING_ROD)
         );
     }
+
     private ItemStack iconFlag(Plot plot, FlagSpec f) {
         boolean on = plot.getFlag(f.key);
         return textItem(f.icon, (on ? "&a" : "&c") + f.name, List.of(
@@ -889,7 +857,6 @@ public class GUIManager {
     private ItemStack exitButton() {
         return textItem(Material.OAK_DOOR, "&7Exit", List.of(line("#EXIT")));
     }
-
     // ------------------------------ UI Helpers ------------------------------
 
     private static void border(Inventory inv) {
@@ -900,13 +867,7 @@ public class GUIManager {
                 if (inv.getItem(i) == null) inv.setItem(i, FILLER.clone());
             }
         }
-        // Always put Exit button in bottom-right
-        inv.setItem(size - 1, textItem(Material.OAK_DOOR, "&7Exit", List.of(line("#EXIT"))));
-    }
-
-    private void placePager(Inventory inv, int page, int maxPage) {
-        inv.setItem(inv.getSize() - 8, textItem(Material.ARROW, "&7« Prev", List.of(line("#PAGE:" + Math.max(0, page - 1)))));
-        inv.setItem(inv.getSize() - 2, textItem(Material.ARROW, "&7Next »", List.of(line("#PAGE:" + Math.min(maxPage, page + 1)))));
+        // (No auto-exit here to avoid duplicates)
     }
 
     private static int grid(int i) {
@@ -1000,30 +961,31 @@ public class GUIManager {
         return (st == null || st.isEmpty()) ? null : st.peek();
     }
 
+    public void clearNav(Player p) {
+        Deque<View> st = nav.get(p.getUniqueId());
+        if (st != null) st.clear();
+    }
+
     private void back(Player p) {
         Deque<View> st = nav.get(p.getUniqueId());
-        if (st == null || st.size() <= 1) { p.closeInventory(); return; }
+        if (st == null || st.size() <= 1) { p.closeInventory(); clearNav(p); return; }
         st.pop();
         View prev = st.peek();
-        if (prev == null) { p.closeInventory(); return; }
+        if (prev == null) { p.closeInventory(); clearNav(p); return; }
         switch (prev.type) {
             case "MAIN"       -> openMainMenu(p);
             case "CLAIMINFO"  -> openClaimInfo(p);
-            case "TRUSTED"    -> openTrusted(p, prev.page);
+            case "TRUSTED"    -> openTrusted(p, 0);
             case "ASSIGNROLE" -> openAssignRole(p);
-            case "FLAGS"      -> openFlags(p, prev.page);
+            case "FLAGS"      -> openFlags(p, 0);
             case "ADMIN"      -> openAdmin(p);
-            case "WORLDS"     -> openWorldControls(p, prev.page);
+            case "WORLDS"     -> openWorldControls(p, 0);
             case "WORLDDETAIL"-> openWorldDetail(p, prev.world);
-            case "PENDING"    -> openPending(p, prev.page);
+            case "PENDING"    -> openPending(p, 0);
             case "HISTORY"    -> openHistory(p);
-            default           -> p.closeInventory();
+            default           -> { p.closeInventory(); clearNav(p); }
         }
     }
-
-    private int pageFrom(View v) { return (v != null ? v.page : 0); }
-
-    private void setPendingTarget(Player p, UUID t) { push(p, View.assignRole(t)); }
 
     // --------------------------- World Controls I/O ---------------------------
 

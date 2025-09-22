@@ -8,7 +8,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * ClaimRoleManager (v1.2.6 FINAL-PATCHED)
+ * ClaimRoleManager (v1.2.6 FINAL-PATCHED2)
  *
  * - Centralized manager for role assignment inside claims
  * - Provides default role fallbacks
@@ -20,7 +20,7 @@ public class ClaimRoleManager {
     private final ProShield plugin;
 
     /**
-     * Primary constructor — preferred
+     * Primary constructor — preferred.
      */
     public ClaimRoleManager(ProShield plugin) {
         this.plugin = plugin;
@@ -38,7 +38,7 @@ public class ClaimRoleManager {
      * ------------------------- */
 
     /**
-     * Set a player's role in a claim.
+     * Assign a role to a player in a claim.
      *
      * @param plot   Target claim
      * @param player Target player UUID
@@ -46,7 +46,8 @@ public class ClaimRoleManager {
      */
     public void setRole(Plot plot, UUID player, ClaimRole role) {
         if (plot == null || player == null || role == null) return;
-        plot.getTrusted().put(player, role.getId()); // ✅ use getId() instead of name().toLowerCase()
+        // ✅ Always store as lowercase string id
+        plot.getTrusted().put(player, role.getId());
     }
 
     /**
@@ -59,12 +60,12 @@ public class ClaimRoleManager {
     public ClaimRole getRole(Plot plot, UUID player) {
         if (plot == null || player == null) return ClaimRole.NONE;
         String stored = plot.getTrusted().get(player);
-        if (stored == null) return ClaimRole.NONE;
+        if (stored == null || stored.isBlank()) return ClaimRole.NONE;
         return ClaimRole.fromName(stored);
     }
 
     /**
-     * Remove a player from a claim's trusted map.
+     * Remove a player's role from a claim.
      */
     public void removeRole(Plot plot, UUID player) {
         if (plot == null || player == null) return;
@@ -80,7 +81,7 @@ public class ClaimRoleManager {
      */
     public String getDefaultRoleId() {
         return plugin != null
-                ? plugin.getConfig().getString("roles.default", "member")
+                ? plugin.getConfig().getString("roles.default", "member").toLowerCase(Locale.ROOT)
                 : "member";
     }
 
@@ -92,7 +93,7 @@ public class ClaimRoleManager {
     }
 
     /**
-     * Helper: Get the stored role ID for a player in a plot.
+     * Get the raw stored role ID for a player in a claim.
      */
     public String getRoleId(Plot plot, UUID player) {
         if (plot == null || player == null) return "none";

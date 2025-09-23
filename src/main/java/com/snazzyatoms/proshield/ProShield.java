@@ -37,22 +37,25 @@ public class ProShield extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        // =====================
+        // 📌 Core init
+        // =====================
         saveDefaultConfig();
-        messages = new MessagesUtil(this);
-        plotManager = new PlotManager(this);
-        roleManager = new ClaimRoleManager(this);
-        expansionRequestManager = new ExpansionRequestManager(this);
-        guiManager = new GUIManager(this);
 
-        // 🔑 Unified compass manager (handles join + give)
-        compassManager = new CompassManager(this);
+        messages                = new MessagesUtil(this);
+        plotManager             = new PlotManager(this);
+        roleManager             = new ClaimRoleManager(this);
+        expansionRequestManager = new ExpansionRequestManager(this);
+        guiManager              = new GUIManager(this);
+        compassManager          = new CompassManager(this); // handles join + give
 
         // =====================
         // 📌 Listener registration
         // =====================
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         getServer().getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager), this);
-        // MobControlTasks self-registers its repeating tasks inside constructor
+
+        // Mob control tasks self-register inside constructor
         new MobControlTasks(this);
 
         // =====================
@@ -63,6 +66,8 @@ public class ProShield extends JavaPlugin {
             ProShieldCommand dispatcher = new ProShieldCommand(this, compassManager);
             cmd.setExecutor(dispatcher);
             cmd.setTabCompleter(dispatcher);
+        } else {
+            getLogger().warning("[ProShield] Command /proshield not found in plugin.yml!");
         }
 
         getLogger().info("[ProShield] Enabled v" + getDescription().getVersion());

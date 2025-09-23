@@ -41,8 +41,22 @@ public class GUIListener implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
 
-        // ✅ Clear nav stack to prevent stale back/exit issues
-        guiManager.clearNav(player);
+        // ✅ Delay check to see if another ProShield menu was opened
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            String title = player.getOpenInventory().getTitle().toLowerCase();
+
+            // If player is NOT inside a ProShield GUI anymore → clear nav
+            if (!(title.contains("proshield")
+                    || title.contains("claim")
+                    || title.contains("trusted")
+                    || title.contains("role")
+                    || title.contains("flag")
+                    || title.contains("admin")
+                    || title.contains("world")
+                    || title.contains("expansion"))) {
+                guiManager.clearNav(player);
+            }
+        }, 1L);
     }
 
     // =====================

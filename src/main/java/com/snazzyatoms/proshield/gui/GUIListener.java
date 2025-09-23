@@ -53,7 +53,8 @@ public class GUIListener implements Listener {
                     || title.contains("flag")
                     || title.contains("admin")
                     || title.contains("world")
-                    || title.contains("expansion"))) {
+                    || title.contains("expansion")
+                    || title.contains("deny reason"))) { // 🔑 added for deny reason GUI
                 guiManager.clearNav(player);
             }
         }, 1L);

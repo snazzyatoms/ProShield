@@ -33,6 +33,9 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player)) return;
         if (event.getClickedInventory() == null) return;
 
+        // ✅ Cancel vanilla behavior instantly
+        event.setCancelled(true);
+
         // ✅ Delegate all clicks to GUIManager
         guiManager.handleClick(event);
     }

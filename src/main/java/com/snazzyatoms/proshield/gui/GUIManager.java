@@ -222,7 +222,7 @@ public class GUIManager {
         click(p);
     }
 
-           // --------------------------- Admin & World Controls ---------------------------
+               // --------------------------- Admin & World Controls ---------------------------
 
     public void openAdmin(Player p) {
         Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
@@ -280,67 +280,73 @@ public class GUIManager {
     }
 
     public void openWorldDetail(Player p, String worldName) {
-    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World: " + worldName));
-    border(inv);
+        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World: " + worldName));
+        border(inv);
 
-    // Live toggles
-    boolean pvp            = readWorldBool(worldName, WC_PVP, true);
-    boolean safezone       = readWorldBool(worldName, WC_SAFEZONE, false);
-    boolean explosions     = readWorldBool(worldName, "explosions", false);
-    boolean fireSpread     = readWorldBool(worldName, "fire-spread", false);
-    boolean blockBreak     = readWorldBool(worldName, "block-break", true);
-    boolean blockPlace     = readWorldBool(worldName, "block-place", true);
-    boolean containers     = readWorldBool(worldName, "containers", true);
-    boolean igniteFlint    = readWorldBool(worldName, "ignite-flint", true);
-    boolean igniteLava     = readWorldBool(worldName, "ignite-lava", true);
-    boolean igniteLightning= readWorldBool(worldName, "ignite-lightning", true);
+        // Live toggles
+        boolean pvp             = readWorldBool(worldName, WC_PVP, true);
+        boolean safezone        = readWorldBool(worldName, WC_SAFEZONE, false);
+        boolean explosions      = readWorldBool(worldName, "explosions", true);
+        boolean fireSpread      = readWorldBool(worldName, "fire-spread", true);
+        boolean fireBurn        = readWorldBool(worldName, "fire-burn", true);
+        boolean blockBreak      = readWorldBool(worldName, "block-break", true);
+        boolean blockPlace      = readWorldBool(worldName, "block-place", true);
+        boolean containers      = readWorldBool(worldName, "containers", true);
+        boolean bucketUse       = readWorldBool(worldName, "bucket-use", true);
+        boolean mobSpawn        = readWorldBool(worldName, "mob-spawn", true);
+        boolean mobDamage       = readWorldBool(worldName, "mob-damage", true);
+        boolean igniteFlint     = readWorldBool(worldName, "ignite-flint", true);
+        boolean igniteLava      = readWorldBool(worldName, "ignite-lava", true);
+        boolean igniteLightning = readWorldBool(worldName, "ignite-lightning", true);
 
-    // 🔥 Newly added toggles
-    boolean bucketUse      = readWorldBool(worldName, "bucket-use", false);
-    boolean mobSpawn       = readWorldBool(worldName, "mob-spawn", true);
-    boolean mobDamage      = readWorldBool(worldName, "mob-damage", true);
-    boolean fireBurn       = readWorldBool(worldName, "fire-burn", false);
+        // Row 2
+        inv.setItem(10, iconWorldToggle(worldName, WC_PVP, pvp,
+                Material.IRON_SWORD, "&ePvP", "&7Global player-versus-player damage"));
+        inv.setItem(11, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
+                Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
+        inv.setItem(12, iconWorldToggle(worldName, "explosions", explosions,
+                Material.TNT, "&cExplosions", "&7Enable/Disable explosions in world"));
+        inv.setItem(13, iconWorldToggle(worldName, "fire-spread", fireSpread,
+                Material.FLINT_AND_STEEL, "&6Fire Spread", "&7Enable/Disable fire spread in world"));
+        inv.setItem(14, iconWorldToggle(worldName, "fire-burn", fireBurn,
+                Material.CAMPFIRE, "&6Fire Burn", "&7Allow blocks to burn when ignited"));
+        inv.setItem(15, iconWorldToggle(worldName, "block-break", blockBreak,
+                Material.IRON_PICKAXE, "&9Block Break", "&7Allow players to break blocks"));
+        inv.setItem(16, iconWorldToggle(worldName, "block-place", blockPlace,
+                Material.STONE, "&9Block Place", "&7Allow players to place blocks"));
 
-    // Row 2
-    inv.setItem(10, iconWorldToggle(worldName, WC_PVP, pvp,
-            Material.IRON_SWORD, "&ePvP", "&7Global player-versus-player damage"));
-    inv.setItem(11, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
-            Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
-    inv.setItem(12, iconWorldToggle(worldName, "explosions", explosions,
-            Material.TNT, "&cExplosions", "&7Enable/Disable explosions in world"));
-    inv.setItem(13, iconWorldToggle(worldName, "fire-spread", fireSpread,
-            Material.FLINT_AND_STEEL, "&6Fire Spread", "&7Enable/Disable fire spread in world"));
-    inv.setItem(14, iconWorldToggle(worldName, "block-break", blockBreak,
-            Material.IRON_PICKAXE, "&9Block Break", "&7Allow players to break blocks"));
-    inv.setItem(15, iconWorldToggle(worldName, "block-place", blockPlace,
-            Material.STONE, "&9Block Place", "&7Allow players to place blocks"));
-    inv.setItem(16, iconWorldToggle(worldName, "containers", containers,
-            Material.CHEST, "&bContainers", "&7Allow players to open/use containers"));
+        // Row 3
+        inv.setItem(19, iconWorldToggle(worldName, "containers", containers,
+                Material.CHEST, "&bContainers", "&7Allow players to open/use containers"));
+        inv.setItem(20, iconWorldToggle(worldName, "bucket-use", bucketUse,
+                Material.BUCKET, "&9Bucket Use", "&7Allow players to use buckets"));
+        inv.setItem(21, iconWorldToggle(worldName, "mob-spawn", mobSpawn,
+                Material.SKELETON_SPAWN_EGG, "&cMob Spawning", "&7Enable/Disable hostile mob spawns"));
+        inv.setItem(22, iconWorldToggle(worldName, "mob-damage", mobDamage,
+                Material.ZOMBIE_HEAD, "&cMob Damage", "&7Enable/Disable mob damage to players"));
 
-    // Row 3 (new toggles)
-    inv.setItem(19, iconWorldToggle(worldName, "bucket-use", bucketUse,
-            Material.BUCKET, "&9Bucket Use", "&7Allow players to use buckets"));
-    inv.setItem(20, iconWorldToggle(worldName, "mob-spawn", mobSpawn,
-            Material.SKELETON_SPAWN_EGG, "&cMob Spawning", "&7Enable/Disable hostile mob spawns"));
-    inv.setItem(21, iconWorldToggle(worldName, "mob-damage", mobDamage,
-            Material.ZOMBIE_HEAD, "&cMob Damage", "&7Enable/Disable mob damage to players"));
-    inv.setItem(22, iconWorldToggle(worldName, "fire-burn", fireBurn,
-            Material.CAMPFIRE, "&6Fire Burn", "&7Allow blocks to burn when ignited"));
+        // Row 4
+        inv.setItem(28, iconWorldToggle(worldName, "ignite-flint", igniteFlint,
+                Material.FLINT_AND_STEEL, "&6Ignite (Flint)", "&7Allow fire starting with flint & steel"));
+        inv.setItem(29, iconWorldToggle(worldName, "ignite-lava", igniteLava,
+                Material.LAVA_BUCKET, "&6Ignite (Lava)", "&7Allow fire starting with lava"));
+        inv.setItem(30, iconWorldToggle(worldName, "ignite-lightning", igniteLightning,
+                Material.LIGHTNING_ROD, "&6Ignite (Lightning)", "&7Allow fire starting by lightning"));
 
-    // Row 4
-    inv.setItem(28, iconWorldToggle(worldName, "ignite-flint", igniteFlint,
-            Material.FLINT_AND_STEEL, "&6Ignite (Flint)", "&7Allow fire starting with flint & steel"));
-    inv.setItem(29, iconWorldToggle(worldName, "ignite-lava", igniteLava,
-            Material.LAVA_BUCKET, "&6Ignite (Lava)", "&7Allow fire starting with lava"));
-    inv.setItem(30, iconWorldToggle(worldName, "ignite-lightning", igniteLightning,
-            Material.LIGHTNING_ROD, "&6Ignite (Lightning)", "&7Allow fire starting by lightning"));
+        // Reminder row (row 6)
+        inv.setItem(53, textItem(Material.BOOK, "&e⚠ Reload Required?",
+                List.of(
+                        gray("&7Most changes apply instantly."),
+                        ChatColor.YELLOW + "Use &nReload Config&r " + ChatColor.YELLOW + "in Admin Tools",
+                        gray("&7if toggles don’t apply immediately.")
+                )));
 
-    inv.setItem(49, backButton());
-    inv.setItem(50, exitButton());
-    push(p, View.worldDetail(worldName));
-    p.openInventory(inv);
-    click(p);
-}
+        inv.setItem(49, backButton());
+        inv.setItem(50, exitButton());
+        push(p, View.worldDetail(worldName));
+        p.openInventory(inv);
+        click(p);
+    }
 
 
 
@@ -613,30 +619,46 @@ public void handleAdminClick(Player p, InventoryClickEvent e) {
     }
 }
 
-    public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
+        public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();
         if (!valid(it)) return;
         String id = extractId(it);
         if (id == null) return;
 
-        if (id.equals("BACK")) { back(p); return; }
-        if (id.equals("EXIT")) { p.closeInventory(); return; }
+        if (id.equals("BACK")) { 
+            back(p); 
+            return; 
+        }
+        if (id.equals("EXIT")) { 
+            p.closeInventory(); 
+            return; 
+        }
 
         if (id.startsWith("WORLD:OPEN:")) {
             String world = id.substring("WORLD:OPEN:".length());
             openWorldDetail(p, world);
+
         } else if (id.startsWith("WORLD:TOGGLE:")) {
             String[] parts = id.split(":");
             if (parts.length == 4) {
                 String world = parts[2];
-                String key = parts[3];
+                String key   = parts[3];
+
                 boolean cur = readWorldBool(world, key, defaultWorld(key));
                 writeWorldBool(world, key, !cur);
-                msg(p, "&eToggled &f" + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
-                openWorldDetail(p, world); // refresh instantly
+
+                String state = !cur ? 
+                    messages.getOrDefault("messages.state.on", "&aON") : 
+                    messages.getOrDefault("messages.state.off", "&cOFF");
+
+                msg(p, ChatColor.YELLOW + "Toggled &f" + key + " &7→ " + state);
+
+                // Refresh instantly so admin sees updated states
+                openWorldDetail(p, world);
             }
         }
     }
+
 
 
 public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {

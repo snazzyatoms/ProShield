@@ -43,18 +43,25 @@ public class GUIListener implements Listener {
 
         // ✅ Delay check to see if another ProShield menu was opened
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            String title = player.getOpenInventory().getTitle().toLowerCase();
+            String title = player.getOpenInventory().getTitle();
+            if (title == null) {
+                guiManager.clearNav(player);
+                return;
+            }
 
-            // If player is NOT inside a ProShield GUI anymore → clear nav
-            if (!(title.contains("proshield")
-                    || title.contains("claim")
-                    || title.contains("trusted")
-                    || title.contains("role")
-                    || title.contains("flag")
-                    || title.contains("admin")
-                    || title.contains("world")
-                    || title.contains("expansion")
-                    || title.contains("deny reason"))) { // 🔑 added for deny reason GUI
+            String low = title.toLowerCase();
+            boolean isProShieldMenu =
+                    low.contains("proshield") ||
+                    low.contains("claim") ||
+                    low.contains("trusted") ||
+                    low.contains("role") ||
+                    low.contains("flag") ||
+                    low.contains("admin") ||
+                    low.contains("world") ||
+                    low.contains("expansion") ||
+                    low.contains("deny reason");
+
+            if (!isProShieldMenu) {
                 guiManager.clearNav(player);
             }
         }, 1L);

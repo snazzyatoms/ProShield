@@ -343,7 +343,7 @@ public class GUIManager {
         click(p);
     }
 
-    // ----------------------------- Central Click Router -----------------------------
+        // ----------------------------- Central Click Router -----------------------------
 
     /** Routes clicks by inventory title keywords into specific handlers. */
     public void handleClick(InventoryClickEvent e) {
@@ -386,187 +386,274 @@ public class GUIManager {
         }
     }
 
-       // ----------------------------- Central Click Router -----------------------------
+   // ----------------------------- Click Handlers -----------------------------
 
-    /** Routes clicks by inventory title keywords into specific handlers. */
-    public void handleClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        String title = e.getView().getTitle();
-        if (title == null) return;
+public void handleMainClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
 
-        String low = ChatColor.stripColor(title).toLowerCase(Locale.ROOT);
-
-        // Always cancel default behavior inside our GUIs
-        e.setCancelled(true);
-
-        try {
-            if (low.contains("proshield menu") || low.contains("main")) {
-                handleMainClick(p, e);
-            } else if (low.contains("claim info")) {
-                handleMainClick(p, e);
-                handlePlayerExpansionRequestClick(p, e); // ✅ replaces missing method
-            } else if (low.contains("trusted")) {
-                handleTrustedClick(p, e);
-            } else if (low.contains("assign role")) {
-                handleAssignRoleClick(p, e);
-            } else if (low.contains("claim flags") || low.contains("flags")) {
-                handleFlagsClick(p, e);
-            } else if (low.contains("admin tools") || low.equals("admin")) {
-                handleAdminClick(p, e);
-            } else if (low.contains("world:")) {
-                handleWorldControlsClick(p, e);
-            } else if (low.contains("world controls")) {
-                handleWorldControlsClick(p, e);
-            } else if (low.contains("expansion requests")) {
-                handleExpansionReviewClick(p, e);
-            } else if (low.contains("expansion history")) {
-                handleHistoryClick(p, e);
-            } else if (low.contains("deny reason")) {
-                handleDenyReasonClick(p, e);
+    switch (id) {
+        case "CLAIM" -> {
+            Plot here = plots.getPlotAt(p.getLocation());
+            if (here != null) {
+                warn(p, messages.getOrDefault("messages.error.already-claimed", "&cThis chunk is already claimed."));
+                return;
             }
-        } catch (Throwable ex) {
-            plugin.getLogger().warning("[GUIManager] Click routing error: " + ex.getMessage());
-            ex.printStackTrace();
+            Plot created = plots.createPlot(p.getUniqueId(), p.getLocation());
+            if (created != null) {
+                msg(p, messages.getOrDefault("messages.success.claim-created", "&aClaim created."));
+                openClaimInfo(p);
+            } else {
+                warn(p, messages.getOrDefault("messages.error.claim-failed", "&cUnable to create claim here."));
+            }
         }
-    }
-
-    // ----------------------------- Click Handlers -----------------------------
-
-    public void handleMainClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
-
-        switch (id) {
-            case "CLAIM" -> {
-                Plot here = plots.getPlotAt(p.getLocation());
-                if (here != null) {
-                    warn(p, messages.getOrDefault("messages.error.already-claimed", "&cThis chunk is already claimed."));
-                    return;
-                }
-                Plot created = plots.createPlot(p.getUniqueId(), p.getLocation());
-                if (created != null) {
-                    msg(p, messages.getOrDefault("messages.success.claim-created", "&aClaim created."));
-                    openClaimInfo(p);
-                } else {
-                    warn(p, messages.getOrDefault("messages.error.claim-failed", "&cUnable to create claim here."));
-                }
+        case "UNCLAIM" -> {
+            Plot here = plots.getPlotAt(p.getLocation());
+            if (here == null) {
+                warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here."));
+                return;
             }
-            case "UNCLAIM" -> {
-                Plot here = plots.getPlotAt(p.getLocation());
-                if (here == null) {
-                    warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here."));
-                    return;
-                }
-                if (!here.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
-                    deny(p); return;
-                }
-                plots.deletePlot(here.getId());
-                msg(p, messages.getOrDefault("messages.success.claim-removed", "&eClaim removed."));
-                openMainMenu(p);
+            if (!here.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
+                deny(p); return;
             }
-            case "INFO" -> openClaimInfo(p);
-            case "TRUSTED" -> openTrusted(p, 0);
-            case "ROLES" -> msg(p, messages.getOrDefault("messages.info.roles-howto", "&7Open &fTrusted&7, click a player, then choose a role."));
-            case "FLAGS" -> openFlags(p, 0);
-            case "ADMIN" -> {
-                if (!p.hasPermission("proshield.admin")) { deny(p); return; }
-                openAdmin(p);
-            }
-            case "BACK" -> back(p);
-            case "EXIT" -> p.closeInventory();
+            plots.deletePlot(here.getId());
+            msg(p, messages.getOrDefault("messages.success.claim-removed", "&eClaim removed."));
+            openMainMenu(p);
         }
+        case "INFO" -> openClaimInfo(p);
+        case "TRUSTED" -> openTrusted(p, 0);
+        case "ROLES" -> msg(p, messages.getOrDefault("messages.info.roles-howto", "&7Open &fTrusted&7, click a player, then choose a role."));
+        case "FLAGS" -> openFlags(p, 0);
+        case "ADMIN" -> {
+            if (!p.hasPermission("proshield.admin")) { deny(p); return; }
+            openAdmin(p);
+        }
+        case "BACK" -> back(p);
+        case "EXIT" -> p.closeInventory();
     }
+}
 
-    public void handleAssignRoleClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
+public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
 
-        Plot plot = plots.getPlotAt(p.getLocation());
-        if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
 
-        View peek = peek(p);
-        if (peek == null || peek.pendingTarget == null) { warn(p, messages.getOrDefault("messages.error.pick-player-first", "&cPick a player first.")); return; }
+    if (id.startsWith("EXPAND:")) {
+        int amt = safeInt(id.substring("EXPAND:".length()), 1);
+        expansions.submitRequest(p, amt);
+        msg(p, "&aExpansion request submitted for +" + amt);
+        openClaimInfo(p);
+    }
+}
 
+public void handleAssignRoleClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    Plot plot = plots.getPlotAt(p.getLocation());
+    if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
+
+    View peek = peek(p);
+    if (peek == null || peek.pendingTarget == null) { warn(p, messages.getOrDefault("messages.error.pick-player-first", "&cPick a player first.")); return; }
+
+    if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+
+    if (id.startsWith("ROLE:")) {
+        String roleName = id.substring("ROLE:".length());
+        ClaimRole role = ClaimRole.fromName(roleName);
+        if (role == ClaimRole.NONE) { warn(p, messages.getOrDefault("messages.error.unknown-role", "&cUnknown role.")); return; }
+        roles.setRole(plot, peek.pendingTarget, role);
+        plots.save(plot);
+        msg(p, messages.getOrDefault("messages.success.role-assigned", "&aAssigned &f%player% &ato &f%role%")
+                .replace("%player%", nameOrShort(peek.pendingTarget))
+                .replace("%role%", role.getDisplayName()));
+        back(p);
+    } else if (id.equals("BACK")) {
+        back(p);
+    } else if (id.equals("EXIT")) {
+        p.closeInventory();
+    }
+}
+
+public void handleTrustedClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    Plot plot = plots.getPlotAt(p.getLocation());
+    if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
+
+    if (id.startsWith("TRUST:REMOVE:")) {
         if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+        UUID target = uuidSafe(id.substring("TRUST:REMOVE:".length()));
+        if (target == null) return;
+        plot.getTrusted().remove(target);
+        plots.save(plot);
+        msg(p, messages.getOrDefault("messages.success.trust-removed", "&eRemoved &f%player% &efrom trusted.")
+                .replace("%player%", nameOrShort(target)));
+        openTrusted(p, 0);
+    } else if (id.startsWith("TRUST:ROLE:")) {
+        UUID target = uuidSafe(id.substring("TRUST:ROLE:".length()));
+        if (target == null) return;
+        setPendingTarget(p, target);
+        openAssignRole(p);
+    } else if (id.equals("NEXT")) {
+        View v = peek(p);
+        openTrusted(p, (v != null ? v.page + 1 : 0));
+    } else if (id.equals("PREV")) {
+        View v = peek(p);
+        int page = (v != null ? Math.max(0, v.page - 1) : 0);
+        openTrusted(p, page);
+    } else if (id.equals("BACK")) {
+        back(p);
+    } else if (id.equals("EXIT")) {
+        p.closeInventory();
+    }
+}
 
-        if (id.startsWith("ROLE:")) {
-            String roleName = id.substring("ROLE:".length());
-            ClaimRole role = ClaimRole.fromName(roleName);
-            if (role == ClaimRole.NONE) { warn(p, messages.getOrDefault("messages.error.unknown-role", "&cUnknown role.")); return; }
-            roles.setRole(plot, peek.pendingTarget, role);
-            plots.save(plot);
-            msg(p, messages.getOrDefault("messages.success.role-assigned", "&aAssigned &f%player% &ato &f%role%")
-                    .replace("%player%", nameOrShort(peek.pendingTarget))
-                    .replace("%role%", role.getDisplayName()));
-            back(p);
-        } else if (id.equals("BACK")) {
-            back(p);
-        } else if (id.equals("EXIT")) {
-            p.closeInventory();
+public void handleFlagsClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
+
+    Plot plot = plots.getPlotAt(p.getLocation());
+    if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
+
+    if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+
+    if (id.startsWith("FLAG:")) {
+        String key = id.substring("FLAG:".length());
+        boolean cur = plot.getFlag(key);
+        plot.setFlag(key, !cur);
+        plots.save(plot);
+        String on = messages.getOrDefault("messages.state.on", "&aON");
+        String off = messages.getOrDefault("messages.state.off", "&cOFF");
+        msg(p, messages.getOrDefault("messages.success.flag-toggled", "&b%flag% &7→ %state%")
+                .replace("%flag%", key)
+                .replace("%state%", plot.getFlag(key) ? on : off));
+        openFlags(p, 0);
+    }
+}
+
+public void handleAdminClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    switch (id) {
+        case "ADMIN:TP_NEAREST" -> {
+            // Teleport nearest claim (≤200 blocks)
+            Plot nearest = plots.findNearestPlot(p.getLocation(), 200);
+            if (nearest == null) {
+                warn(p, "&cNo claim found within 200 blocks.");
+                return;
+            }
+            Location loc = new Location(Bukkit.getWorld(nearest.getWorld()), nearest.getX() << 4, p.getLocation().getY(), nearest.getZ() << 4);
+            p.teleport(loc);
+            soundGood(p);
+        }
+        case "ADMIN:PENDING" -> openPending(p, 0);
+        case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
+        case "ADMIN:RELOAD" -> {
+            plugin.reloadConfig();
+            msg(p, "&aConfiguration reloaded.");
+            openAdmin(p);
+        }
+        case "BACK" -> back(p);
+        case "EXIT" -> p.closeInventory();
+    }
+}
+
+public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
+
+    if (id.startsWith("WORLD:OPEN:")) {
+        String world = id.substring("WORLD:OPEN:".length());
+        openWorldDetail(p, world);
+    } else if (id.startsWith("WORLD:TOGGLE:")) {
+        String[] parts = id.split(":");
+        if (parts.length == 4) {
+            String world = parts[2];
+            String key = parts[3];
+            boolean cur = readWorldBool(world, key, defaultWorld(key));
+            writeWorldBool(world, key, !cur);
+            msg(p, "&eToggled &f" + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
+            openWorldDetail(p, world); // refresh menu
         }
     }
+}
 
-    public void handleTrustedClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
+public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
 
-        Plot plot = plots.getPlotAt(p.getLocation());
-        if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
 
-        if (id.startsWith("TRUST:REMOVE:")) {
-            if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
-            UUID target = uuidSafe(id.substring("TRUST:REMOVE:".length()));
-            if (target == null) return;
-            plot.getTrusted().remove(target);
-            plots.save(plot);
-            msg(p, messages.getOrDefault("messages.success.trust-removed", "&eRemoved &f%player% &efrom trusted.")
-                    .replace("%player%", nameOrShort(target)));
-            openTrusted(p, 0);
-        } else if (id.startsWith("TRUST:ROLE:")) {
-            UUID target = uuidSafe(id.substring("TRUST:ROLE:".length()));
-            if (target == null) return;
-            setPendingTarget(p, target);
-            openAssignRole(p);
-        } else if (id.equals("BACK")) {
-            back(p);
-        } else if (id.equals("EXIT")) {
-            p.closeInventory();
+    if (id.startsWith("REQ:")) {
+        String[] parts = id.split(":");
+        if (parts.length >= 3) {
+            UUID reqId = uuidSafe(parts[1]);
+            if (reqId == null) return;
+            ExpansionRequest req = expansions.getById(reqId);
+            if (req == null) return;
+
+            if (parts[2].equals("APPROVE")) {
+                req.approve();
+                msg(p, "&aExpansion request approved.");
+            } else if (parts[2].equals("DENY")) {
+                req.deny();
+                msg(p, "&cExpansion request denied.");
+            }
+            openPending(p, 0); // refresh
         }
     }
+}
 
-    public void handleFlagsClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
+public void handleHistoryClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
 
-        if (id.equals("BACK")) { back(p); return; }
-        if (id.equals("EXIT")) { p.closeInventory(); return; }
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
+}
 
-        Plot plot = plots.getPlotAt(p.getLocation());
-        if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
+public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
 
-        if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
+    // In future: handle deny reasons here
+}
 
-        if (id.startsWith("FLAG:")) {
-            String key = id.substring("FLAG:".length());
-            boolean cur = plot.getFlag(key);
-            plot.setFlag(key, !cur);
-            plots.save(plot);
-            String on = messages.getOrDefault("messages.state.on", "&aON");
-            String off = messages.getOrDefault("messages.state.off", "&cOFF");
-            msg(p, messages.getOrDefault("messages.success.flag-toggled", "&b%flag% &7→ %state%")
-                    .replace("%flag%", key)
-                    .replace("%state%", plot.getFlag(key) ? on : off));
-            openFlags(p, 0);
-        }
-    }
+// ------------------------------ Icon Builder ------------------------------
 
     private ItemStack iconClaimButton(boolean canClaim) {
         return textItem(

@@ -4,6 +4,7 @@
 # ----------------------------------------------------------
 # - Role display names + lore are now fully customizable
 # - All GUI buttons, lore, errors, success & warnings covered
+# - Placeholders standardized: %player%, %role%, %flag%, %state%
 # ==========================================================
 
 messages:
@@ -25,9 +26,9 @@ messages:
   success:
     claim-created: "&aClaim created successfully."
     claim-removed: "&eClaim removed."
-    role-assigned: "&aAssigned &f{name} &ato role &f{role}&a."
-    trusted-removed: "&eRemoved &f{name} &efrom trusted players."
-    teleported: "&aTeleported to claim &f{id}&a."
+    role-assigned: "&aAssigned &f%player% &ato role &f%role%&a."
+    trusted-removed: "&eRemoved &f%player% &efrom trusted players."
+    teleported: "&aTeleported to claim &f%id%&a."
 
   # --- General Warnings ---
   warn:
@@ -58,20 +59,20 @@ messages:
   show-wilderness: true
   admin-flag-chat: true
   enter-own: "&aYou entered your claim."
-  enter-other: "&aYou entered {owner}'s claim."
+  enter-other: "&aYou entered %player%'s claim."
   leave-own: "&cYou left your claim."
-  leave-other: "&cYou left {owner}'s claim."
+  leave-other: "&cYou left %player%'s claim."
   wilderness: "&7You entered the wilderness."
 
   # --- Expansion Requests (Player) ---
   expansion:
-    request-sent: "&eYour expansion request for +{blocks} blocks has been sent to admins."
-    approved: "&aYour claim expansion (+{blocks} blocks) was approved!"
-    denied: "&cYour expansion request was denied: {reason}"
+    request-sent: "&eYour expansion request for +%blocks% blocks has been sent to admins."
+    approved: "&aYour claim expansion (+%blocks% blocks) was approved!"
+    denied: "&cYour expansion request was denied: %reason%"
     disabled: "&cExpansion requests are disabled by the server."
     cooldown-title: "&cCooldown Active"
-    cooldown-active: "&7You can request again in &f{hours}h {minutes}m&7."
-    expired: "&eYour expansion request has expired after {days} days without review."
+    cooldown-active: "&7You can request again in &f%hours%h %minutes%m&7."
+    expired: "&eYour expansion request has expired after %days% days without review."
 
   # --- Expansion Review (Admin GUI) ---
   expansion-admin:
@@ -90,13 +91,16 @@ messages:
 
   # --- World Controls ---
   world-controls:
-    toggle: "&eWorld control &f{flag} &eis now {state}."
+    toggle: "&eWorld control &f%flag% &eis now %state%."
     enabled: "&aENABLED"
     disabled: "&cDISABLED"
     pvp: "&fGlobal PvP"
     pvp-lore:
       - "&7Toggle PvP across the entire world"
-    toggled: "&eWorld control &f{flag} &eis now {state}"
+    containers: "&fContainers"
+    containers-lore:
+      - "&7Toggle whether containers can be opened"
+    toggled: "&eWorld control &f%flag% &eis now %state%"
 
   # --- GUI Navigation ---
   gui:
@@ -141,20 +145,24 @@ messages:
       admin-tools: "&cAdmin Tools"
       admin-tools-lore:
         - "&7Admin-only controls."
+      bungee-coming-soon: "&dBungee Support (Coming Soon)"
+      bungee-coming-soon-lore:
+        - "&7Planned for version 2.0 or later."
+        - "&7Synchronize multiple servers/worlds via BungeeCord."
 
     # --- Role GUI ---
     roles:
       assign-hint: "&aLeft-click: Assign new role"
       untrust-hint: "&cRight-click: Untrust"
-      untrusted: "&cUntrusted &f{name}"
-      assigned: "&aAssigned &f{name} &ato role &f{role}&a."
+      untrusted: "&cUntrusted &f%player%"
+      assigned: "&aAssigned &f%player% &ato role &f%role%&a."
 
     # --- Flags Menu ---
     flags:
-      pvp: "&fPvP: {state}"
+      pvp: "&fPvP: %state%"
       pvp-lore:
         - "&7Toggle PvP inside this claim"
-      toggled: "&eToggled &f{flag} &eto {state}"
+      toggled: "&eToggled &f%flag% &eto %state%"
 
     # --- Admin Tools Menu ---
     admin:
@@ -224,7 +232,7 @@ help:
     - "&bTrusted Players &7→ Manage roles & access"
     - "&bClaim Flags &7→ Toggle protections"
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
-    - "&7Expansion requests have a cooldown of &f{cooldown-hours}h &7(default)."
+    - "&7Expansion requests have a cooldown of &f%cooldown-hours%h &7(default)."
     - "&7All features are GUI-driven. Commands are only needed if something breaks."
 
   admin:

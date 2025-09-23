@@ -506,13 +506,6 @@ public void handleTrustedClick(Player p, InventoryClickEvent e) {
         if (target == null) return;
         setPendingTarget(p, target);
         openAssignRole(p);
-    } else if (id.equals("NEXT")) {
-        View v = peek(p);
-        openTrusted(p, (v != null ? v.page + 1 : 0));
-    } else if (id.equals("PREV")) {
-        View v = peek(p);
-        int page = (v != null ? Math.max(0, v.page - 1) : 0);
-        openTrusted(p, page);
     } else if (id.equals("BACK")) {
         back(p);
     } else if (id.equals("EXIT")) {
@@ -556,7 +549,6 @@ public void handleAdminClick(Player p, InventoryClickEvent e) {
 
     switch (id) {
         case "ADMIN:TP_NEAREST" -> {
-            // Teleport nearest claim (≤200 blocks)
             Plot nearest = plots.findNearestPlot(p.getLocation(), 200);
             if (nearest == null) {
                 warn(p, "&cNo claim found within 200 blocks.");
@@ -598,7 +590,7 @@ public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
             boolean cur = readWorldBool(world, key, defaultWorld(key));
             writeWorldBool(world, key, !cur);
             msg(p, "&eToggled &f" + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
-            openWorldDetail(p, world); // refresh menu
+            openWorldDetail(p, world);
         }
     }
 }
@@ -627,7 +619,7 @@ public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
                 req.deny();
                 msg(p, "&cExpansion request denied.");
             }
-            openPending(p, 0); // refresh
+            openPending(p, 0);
         }
     }
 }

@@ -231,3 +231,31 @@ gui:
     world-controls:
       title: "&cWorld Controls"
       size: 45
+
+# ==========================================================
+# 🌍 Per-World Controls
+# These are synced with the World Controls GUI.
+# Nether/End are placeholders for future updates.
+# ==========================================================
+
+worlds:
+  world:
+    pvp: true
+    safezone: false
+    explosions: true
+    fire-spread: true
+    block-break: true
+    block-place: true
+    bucket-use: true
+    mob-spawn: true
+    mob-damage: true
+    fire-burn: true
+    ignite-flint: true
+    ignite-lava: true
+    ignite-lightning: true
+
+  world_nether:
+    placeholder: true   # Coming soon
+
+  world_the_end:
+    placeholder: true   # Coming soon

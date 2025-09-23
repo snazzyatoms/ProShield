@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * ExpansionRequestManager (ProShield v1.2.6-polished)
+ * ExpansionRequestManager (ProShield v1.2.6)
  *
  * Handles:
  *  - Creating new expansion requests
@@ -319,5 +319,11 @@ public class ExpansionRequestManager {
                 denyRequest(req, reviewer, reason);
             }
         } catch (IllegalArgumentException ignored) {}
+    }
+
+    /** GUI expects submitRequest(Player, int) */
+    public ExpansionRequest submitRequest(org.bukkit.entity.Player player, int amount) {
+        if (player == null) return null;
+        return createRequest(player.getUniqueId(), amount);
     }
 }

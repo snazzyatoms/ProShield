@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/plots/PlotManager.java
 package com.snazzyatoms.proshield.plots;
 
 import com.snazzyatoms.proshield.ProShield;
@@ -274,6 +275,11 @@ public class PlotManager {
             }
         }
         return nearest;
+    }
+
+    /** GUIManager expects findNearestPlot, delegate to findNearestClaim */
+    public Plot findNearestPlot(Location origin, int maxRadius) {
+        return findNearestClaim(origin, maxRadius);
     }
 
     /* -------------------------

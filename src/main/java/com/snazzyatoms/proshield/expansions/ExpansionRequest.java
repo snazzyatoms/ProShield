@@ -1,3 +1,4 @@
+// src/main/java/com/snazzyatoms/proshield/expansions/ExpansionRequest.java
 package com.snazzyatoms.proshield.expansions;
 
 import java.time.Instant;
@@ -128,5 +129,22 @@ public class ExpansionRequest {
             e.printStackTrace();
             return null;
         }
+    }
+
+    /* -------------------
+     * Compatibility Shims (for GUIManager 1.2.6)
+     * ------------------- */
+
+    /** Shortcut used in GUIManager to approve a request */
+    public void approve() {
+        this.status = Status.APPROVED;
+        this.reviewedAt = Instant.now();
+        this.denialReason = null;
+    }
+
+    /** Shortcut used in GUIManager to deny a request */
+    public void deny() {
+        this.status = Status.DENIED;
+        this.reviewedAt = Instant.now();
     }
 }

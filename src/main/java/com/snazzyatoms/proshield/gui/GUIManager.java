@@ -868,20 +868,23 @@ public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
         ));
     }
 
-    private ItemStack iconWorld(String world) {
-        return textItem(Material.GRASS_BLOCK, "&a" + world, List.of(
-                gray("&7View & toggle settings"),
-                line("WORLD:OPEN:" + world)
-        ));
-    }
+   private ItemStack iconWorld(String world) {
+    return textItem(Material.GRASS_BLOCK, "&a" + world, List.of(
+            gray("&7View & toggle settings"),
+            /* BEFORE: line("WORLD:OPEN:" + world) */
+            line("#WORLD:OPEN:" + world)   // ✅ add leading '#'
+    ));
+}
 
-    private ItemStack iconWorldToggle(String world, String key, boolean on, Material mat, String name, String desc) {
-        return textItem(mat, (on ? "&a" : "&c") + name, List.of(
-                gray("&7" + desc),
-                gray("&7State: &f" + (on ? "ON" : "OFF")),
-                line("WORLD:TOGGLE:" + world + ":" + key)
-        ));
-    }
+private ItemStack iconWorldToggle(String world, String key, boolean on, Material mat, String name, String desc) {
+    return textItem(mat, (on ? "&a" : "&c") + name, List.of(
+            gray("&7" + desc),
+            gray("&7State: &f" + (on ? "ON" : "OFF")),
+            /* BEFORE: line("WORLD:TOGGLE:" + world + ":" + key) */
+            line("#WORLD:TOGGLE:" + world + ":" + key) // ✅ add leading '#'
+    ));
+}
+
 
     private ItemStack iconRequest(ExpansionRequest r) {
         String who = nameOrShort(r.getRequester());

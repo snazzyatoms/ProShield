@@ -1005,13 +1005,22 @@ public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
         return map;
     }
 
-    private boolean defaultWorld(String key) {
-        return switch (key.toLowerCase(Locale.ROOT)) {
-            case "pvp" -> true;
-            case "safezone" -> false;
-            default -> false;
-        };
-    }
+   private boolean defaultWorld(String key) {
+    return switch (key.toLowerCase(Locale.ROOT)) {
+        case "pvp" -> true;
+        case "safezone" -> false;
+        case "explosions" -> true;
+        case "fire-spread" -> true;
+        case "block-break" -> true;
+        case "block-place" -> true;
+        case "containers" -> true;
+        case "ignite-flint" -> true;
+        case "ignite-lava" -> true;
+        case "ignite-lightning" -> true;
+        default -> false;
+    };
+}
+
 }
 
 // ================================= EOF =========================================

@@ -222,7 +222,7 @@ public class GUIManager {
         click(p);
     }
 
-        // --------------------------- Admin & World Controls ---------------------------
+           // --------------------------- Admin & World Controls ---------------------------
 
     public void openAdmin(Player p) {
         Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
@@ -237,7 +237,7 @@ public class GUIManager {
                 line("#ADMIN:PENDING")
         )));
         inv.setItem(14, textItem(Material.REDSTONE, "&cWorld Controls", List.of(
-                gray("&7Toggle per-world settings (PvP, Safe Zone, …)"),
+                gray("&7Toggle per-world settings (PvP, Safe Zone, Explosions, …)"),
                 line("#ADMIN:WORLD_CTRL")
         )));
         inv.setItem(16, textItem(Material.REPEATER, "&eReload Config", List.of(
@@ -245,8 +245,15 @@ public class GUIManager {
                 line("#ADMIN:RELOAD")
         )));
 
-        inv.setItem(22, backButton());
-        inv.setItem(23, exitButton());
+        // Future note about Bungee support
+        inv.setItem(22, textItem(Material.BEACON, "&dBungee Support (Coming Soon)", List.of(
+                gray("&7Planned for version 2.0 or later."),
+                gray("&7Synchronize multiple servers/worlds via BungeeCord."),
+                line("#NOOP")
+        )));
+
+        inv.setItem(25, backButton());
+        inv.setItem(26, exitButton());
 
         push(p, View.admin());
         p.openInventory(inv);
@@ -261,13 +268,7 @@ public class GUIManager {
         int slot = 10;
         for (World w : worlds) {
             String name = w.getName();
-            if (name.equalsIgnoreCase("world")) {
-                inv.setItem(slot++, iconWorld(name)); // interactive
-            } else {
-                inv.setItem(slot++, textItem(Material.BARRIER,
-                        "&c" + name,
-                        List.of(gray("Coming in a future update"))));
-            }
+            inv.setItem(slot++, iconWorld(name));
             if (slot >= 16) break;
         }
 
@@ -279,27 +280,49 @@ public class GUIManager {
     }
 
     public void openWorldDetail(Player p, String worldName) {
-        Inventory inv = Bukkit.createInventory(p, SIZE_45, title("world-controls", "&8World: " + worldName));
+        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World: " + worldName));
         border(inv);
 
-        boolean pvp      = readWorldBool(worldName, WC_PVP, true);       // default ON
-        boolean safezone = readWorldBool(worldName, WC_SAFEZONE, false); // default OFF
+        // Live toggles
+        boolean pvp            = readWorldBool(worldName, WC_PVP, true);
+        boolean safezone       = readWorldBool(worldName, WC_SAFEZONE, false);
+        boolean explosions     = readWorldBool(worldName, "explosions", false);
+        boolean fireSpread     = readWorldBool(worldName, "fire-spread", false);
+        boolean blockBreak     = readWorldBool(worldName, "block-break", true);
+        boolean blockPlace     = readWorldBool(worldName, "block-place", true);
+        boolean containers     = readWorldBool(worldName, "containers", true);
+        boolean igniteFlint    = readWorldBool(worldName, "ignite-flint", true);
+        boolean igniteLava     = readWorldBool(worldName, "ignite-lava", true);
+        boolean igniteLightning= readWorldBool(worldName, "ignite-lightning", true);
 
-        inv.setItem(11, iconWorldToggle(worldName, WC_PVP, pvp,
+        inv.setItem(10, iconWorldToggle(worldName, WC_PVP, pvp,
                 Material.IRON_SWORD, "&ePvP", "&7Global player-versus-player damage"));
-        inv.setItem(13, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
+        inv.setItem(11, iconWorldToggle(worldName, WC_SAFEZONE, safezone,
                 Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
+        inv.setItem(12, iconWorldToggle(worldName, "explosions", explosions,
+                Material.TNT, "&cExplosions", "&7Enable/Disable explosions in world"));
+        inv.setItem(13, iconWorldToggle(worldName, "fire-spread", fireSpread,
+                Material.FLINT_AND_STEEL, "&6Fire Spread", "&7Enable/Disable fire spread in world"));
+        inv.setItem(14, iconWorldToggle(worldName, "block-break", blockBreak,
+                Material.IRON_PICKAXE, "&9Block Break", "&7Allow players to break blocks"));
+        inv.setItem(15, iconWorldToggle(worldName, "block-place", blockPlace,
+                Material.STONE, "&9Block Place", "&7Allow players to place blocks"));
+        inv.setItem(16, iconWorldToggle(worldName, "containers", containers,
+                Material.CHEST, "&bContainers", "&7Allow players to open/use containers"));
+        inv.setItem(19, iconWorldToggle(worldName, "ignite-flint", igniteFlint,
+                Material.FLINT_AND_STEEL, "&6Ignite (Flint)", "&7Allow fire starting with flint & steel"));
+        inv.setItem(20, iconWorldToggle(worldName, "ignite-lava", igniteLava,
+                Material.LAVA_BUCKET, "&6Ignite (Lava)", "&7Allow fire starting with lava"));
+        inv.setItem(21, iconWorldToggle(worldName, "ignite-lightning", igniteLightning,
+                Material.LIGHTNING_ROD, "&6Ignite (Lightning)", "&7Allow fire starting by lightning"));
 
-        // Placeholders for future toggles
-        inv.setItem(15, textItem(Material.PAPER, "&7Explosions (soon)", List.of(gray("Coming in future update"))));
-        inv.setItem(22, textItem(Material.PAPER, "&7Fire Spread (soon)", List.of(gray("Coming in future update"))));
-
-        inv.setItem(40, backButton());
-        inv.setItem(41, exitButton());
+        inv.setItem(49, backButton());
+        inv.setItem(50, exitButton());
         push(p, View.worldDetail(worldName));
         p.openInventory(inv);
         click(p);
     }
+
 
     // --------------------------- Expansion Requests ---------------------------
 
@@ -570,30 +593,31 @@ public void handleAdminClick(Player p, InventoryClickEvent e) {
     }
 }
 
-public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
-    ItemStack it = e.getCurrentItem();
-    if (!valid(it)) return;
-    String id = extractId(it);
-    if (id == null) return;
+    public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
+        ItemStack it = e.getCurrentItem();
+        if (!valid(it)) return;
+        String id = extractId(it);
+        if (id == null) return;
 
-    if (id.equals("BACK")) { back(p); return; }
-    if (id.equals("EXIT")) { p.closeInventory(); return; }
+        if (id.equals("BACK")) { back(p); return; }
+        if (id.equals("EXIT")) { p.closeInventory(); return; }
 
-    if (id.startsWith("WORLD:OPEN:")) {
-        String world = id.substring("WORLD:OPEN:".length());
-        openWorldDetail(p, world);
-    } else if (id.startsWith("WORLD:TOGGLE:")) {
-        String[] parts = id.split(":");
-        if (parts.length == 4) {
-            String world = parts[2];
-            String key = parts[3];
-            boolean cur = readWorldBool(world, key, defaultWorld(key));
-            writeWorldBool(world, key, !cur);
-            msg(p, "&eToggled &f" + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
+        if (id.startsWith("WORLD:OPEN:")) {
+            String world = id.substring("WORLD:OPEN:".length());
             openWorldDetail(p, world);
+        } else if (id.startsWith("WORLD:TOGGLE:")) {
+            String[] parts = id.split(":");
+            if (parts.length == 4) {
+                String world = parts[2];
+                String key = parts[3];
+                boolean cur = readWorldBool(world, key, defaultWorld(key));
+                writeWorldBool(world, key, !cur);
+                msg(p, "&eToggled &f" + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
+                openWorldDetail(p, world); // refresh instantly
+            }
         }
     }
-}
+
 
 public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();

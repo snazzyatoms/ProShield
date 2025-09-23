@@ -386,6 +386,50 @@ public class GUIManager {
         }
     }
 
+       // ----------------------------- Central Click Router -----------------------------
+
+    /** Routes clicks by inventory title keywords into specific handlers. */
+    public void handleClick(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player p)) return;
+        String title = e.getView().getTitle();
+        if (title == null) return;
+
+        String low = ChatColor.stripColor(title).toLowerCase(Locale.ROOT);
+
+        // Always cancel default behavior inside our GUIs
+        e.setCancelled(true);
+
+        try {
+            if (low.contains("proshield menu") || low.contains("main")) {
+                handleMainClick(p, e);
+            } else if (low.contains("claim info")) {
+                handleMainClick(p, e);
+                handlePlayerExpansionRequestClick(p, e); // ✅ replaces missing method
+            } else if (low.contains("trusted")) {
+                handleTrustedClick(p, e);
+            } else if (low.contains("assign role")) {
+                handleAssignRoleClick(p, e);
+            } else if (low.contains("claim flags") || low.contains("flags")) {
+                handleFlagsClick(p, e);
+            } else if (low.contains("admin tools") || low.equals("admin")) {
+                handleAdminClick(p, e);
+            } else if (low.contains("world:")) {
+                handleWorldControlsClick(p, e);
+            } else if (low.contains("world controls")) {
+                handleWorldControlsClick(p, e);
+            } else if (low.contains("expansion requests")) {
+                handleExpansionReviewClick(p, e);
+            } else if (low.contains("expansion history")) {
+                handleHistoryClick(p, e);
+            } else if (low.contains("deny reason")) {
+                handleDenyReasonClick(p, e);
+            }
+        } catch (Throwable ex) {
+            plugin.getLogger().warning("[GUIManager] Click routing error: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
     // ----------------------------- Click Handlers -----------------------------
 
     public void handleMainClick(Player p, InventoryClickEvent e) {
@@ -523,163 +567,6 @@ public class GUIManager {
             openFlags(p, 0);
         }
     }
-
-    public void handleAdminClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
-
-        if (!p.hasPermission("proshield.admin")) { deny(p); return; }
-
-        switch (id) {
-            case "ADMIN:PENDING" -> openPending(p, 0);
-            case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
-            case "ADMIN:TP_NEAREST" -> {
-                Plot nearest = plots.findNearestClaim(p.getLocation(), 200);
-                if (nearest == null) {
-                    warn(p, messages.getOrDefault("messages.error.no-nearby-claims", "&cNo nearby claims."));
-                    return;
-                }
-                Location dest = nearest.getCenter();
-                if (dest != null) p.teleport(dest);
-                msg(p, messages.getOrDefault("messages.success.tp-nearest", "&aTeleported to claim &f%id%")
-                        .replace("%id%", nearest.getId().toString()));
-                p.closeInventory();
-            }
-            case "ADMIN:RELOAD" -> {
-                plugin.reloadConfig();
-                plugin.loadMessagesConfig();
-                msg(p, messages.getOrDefault("messages.success.reload", "&aProShield config reloaded."));
-                soundGood(p);
-                openAdmin(p);
-            }
-            case "BACK" -> back(p);
-            case "EXIT" -> p.closeInventory();
-        }
-    }
-
-    public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
-
-        if (!p.hasPermission("proshield.admin")) { deny(p); return; }
-
-        if (id.equals("BACK")) { back(p); return; }
-        if (id.equals("EXIT")) { p.closeInventory(); return; }
-
-        if (id.startsWith("WORLD:OPEN:")) {
-            String world = id.substring("WORLD:OPEN:".length());
-            if (!world.equalsIgnoreCase("world")) {
-                warn(p, "&cThis world’s controls are coming in a future update.");
-                return;
-            }
-            openWorldDetail(p, world);
-            return;
-        }
-
-        if (id.startsWith("WORLD:TOGGLE:")) {
-            String[] parts = id.split(":", 4);
-            if (parts.length < 4) return;
-            String world = parts[2];
-            String key   = parts[3];
-            boolean cur  = readWorldBool(world, key, defaultWorld(key));
-            writeWorldBool(world, key, !cur);
-            String on = messages.getOrDefault("messages.state.on", "&aON");
-            String off = messages.getOrDefault("messages.state.off", "&cOFF");
-            msg(p, messages.getOrDefault("messages.success.world-flag-toggled", "&b%world%.%key% &7→ %state%")
-                    .replace("%world%", world)
-                    .replace("%key%", key)
-                    .replace("%state%", !cur ? on : off));
-            openWorldDetail(p, world);
-        }
-    }
-
-    public void handlePlayerExpansionRequestClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
-
-        if (id.startsWith("EXPAND:")) {
-            int amount = safeInt(id.substring("EXPAND:".length()), 1);
-            ExpansionRequest created = expansions.createRequest(p.getUniqueId(), amount);
-            if (created != null) {
-                msg(p, messages.getOrDefault("messages.success.expand-submitted", "&aExpansion request submitted (&f+%n%&a).")
-                        .replace("%n%", String.valueOf(amount)));
-                soundGood(p);
-            } else {
-                warn(p, messages.getOrDefault("messages.error.expand-already-pending", "&cYou may already have a pending request."));
-            }
-            openClaimInfo(p);
-        } else if (id.equals("BACK")) {
-            back(p);
-        } else if (id.equals("EXIT")) {
-            p.closeInventory();
-        }
-    }
-
-    public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
-
-        if (!p.hasPermission("proshield.admin")) { deny(p); return; }
-
-        if (id.equals("BACK")) { back(p); return; }
-        if (id.equals("EXIT")) { p.closeInventory(); return; }
-
-        if (id.startsWith("REQ:")) {
-            String[] parts = id.split(":", 3);
-            if (parts.length < 3) return;
-            UUID reqId = uuidSafe(parts[1]);
-            String action = parts[2];
-            ExpansionRequest req = (reqId != null) ? expansions.getById(reqId) : null;
-            if (req == null) { warn(p, messages.getOrDefault("messages.error.request-not-found", "&cRequest not found.")); return; }
-
-            if (action.equals("APPROVE")) {
-                expansions.approveRequest(req, p.getUniqueId());
-                msg(p, messages.getOrDefault("messages.success.request-approved", "&aApproved &f%id%&a.")
-                        .replace("%id%", shortId(req.getId())));
-                Player requester = Bukkit.getPlayer(req.getRequester());
-                if (requester != null) requester.sendMessage(gray(messages.getOrDefault("messages.notify.expand-approved", "&aYour expansion request was approved.")));
-                openPending(p, 0);
-            } else if (action.equals("DENY")) {
-                expansions.denyRequest(req, p.getUniqueId(), "Denied via GUI");
-                msg(p, messages.getOrDefault("messages.success.request-denied", "&cDenied &f%id%&c.")
-                        .replace("%id%", shortId(req.getId())));
-                Player requester = Bukkit.getPlayer(req.getRequester());
-                if (requester != null) requester.sendMessage(gray(messages.getOrDefault("messages.notify.expand-denied", "&cYour expansion request was denied.")));
-                openPending(p, 0);
-            }
-        }
-    }
-
-    public void handleHistoryClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
-
-        if (id.equals("BACK")) { back(p); return; }
-        if (id.equals("EXIT")) { p.closeInventory(); return; }
-    }
-
-    public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
-
-        if (id.equals("BACK")) { back(p); return; }
-        if (id.equals("EXIT")) { p.closeInventory(); return; }
-    }
-
-
-    // ------------------------------ Icon Builders ------------------------------
 
     private ItemStack iconClaimButton(boolean canClaim) {
         return textItem(

@@ -238,21 +238,25 @@ gui:
 # Nether/End are placeholders for future updates.
 # ==========================================================
 
-worlds:
-  world:
-    pvp: true
-    safezone: false
-    explosions: true
-    fire-spread: true
-    block-break: true
-    block-place: true
-    bucket-use: true
-    mob-spawn: true
-    mob-damage: true
-    fire-burn: true
-    ignite-flint: true
-    ignite-lava: true
-    ignite-lightning: true
+protection:
+  world-controls:
+    enabled: true
+    defaults:
+      pvp: true
+      safezone: false
+      explosions: true
+      fire-spread: true
+      fire-burn: true
+      block-break: true
+      block-place: true
+      containers: true
+      bucket-use: true
+      mob-spawn: true
+      mob-damage: true
+      ignite-flint: true
+      ignite-lava: true
+      ignite-lightning: true
+
 
   world_nether:
     placeholder: true   # Coming soon

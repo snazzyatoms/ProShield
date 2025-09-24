@@ -1114,7 +1114,7 @@ private void replaceTop(Player p, View v) {
         if (st != null) st.clear();
     }
 
-    private void back(Player p) {
+   private void back(Player p) {
     Deque<View> st = nav.get(p.getUniqueId());
     if (st == null || st.size() <= 1) {
         p.closeInventory();
@@ -1129,22 +1129,24 @@ private void replaceTop(Player p, View v) {
         return;
     }
     switch (prev.type) {
-        case "MAIN"        -> openMainMenu(p);
-        case "CLAIMINFO"   -> openClaimInfo(p);
-        case "TRUSTED"     -> openTrusted(p, 0);
-        case "ASSIGNROLE"  -> openAssignRole(p);
-        case "FLAGS"       -> openFlags(p, 0);
-        case "ADMIN"       -> openAdmin(p);
-        case "WORLDS"      -> openWorldControls(p, 0);
-        case "WORLDDETAIL" -> openWorldDetail(p, prev.world);
-        case "PENDING"     -> openPending(p, 0);
-        case "HISTORY"     -> openHistory(p);
-        default            -> {
+        case "MAIN"           -> openMainMenu(p);
+        case "CLAIMINFO"      -> openClaimInfo(p);
+        case "TRUSTED"        -> openTrusted(p, 0);
+        case "ASSIGNROLE"     -> openAssignRole(p);
+        case "FLAGS"          -> openFlags(p, 0);
+        case "ADMIN"          -> openAdmin(p);
+        case "WORLDS"         -> openWorldControls(p, 0);
+        case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
+        case "PENDING"        -> openPending(p, prev.page);
+        case "HISTORY"        -> openHistory(p);
+        case "EXPANSION_MENU" -> openClaimInfo(p);   // ✅ new case
+        default               -> {
             p.closeInventory();
             clearNav(p);
         }
     }
 }
+
 
 
     // --------------------------- World Controls I/O ---------------------------

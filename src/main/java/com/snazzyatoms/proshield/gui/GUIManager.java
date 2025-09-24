@@ -264,11 +264,6 @@ public void openWorldControls(Player p, int pageIgnored) {
 
 // 🚫 REMOVED duplicate openPending(Player p, int page) here
 
-/** Opens the Pending Requests menu (Admin view). */
-public void openPending(Player p, int page) {
-    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("pending", "&8Pending Expansion Requests"));
-    border(inv);
-
     List<ExpansionRequest> pending = expansions.getAllPending();
     int start = page * 28;
     int end = Math.min(start + 28, pending.size());

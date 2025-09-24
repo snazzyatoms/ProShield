@@ -593,9 +593,15 @@ public void handleFlagsClick(Player p, InventoryClickEvent e) {
     if (id.equals("EXIT")) { p.closeInventory(); return; }
 
     Plot plot = plots.getPlotAt(p.getLocation());
-    if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
+    if (plot == null) {
+        warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here."));
+        return;
+    }
 
-    if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
+    if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) {
+        deny(p);
+        return;
+    }
 
     if (id.startsWith("FLAG:")) {
         String key = id.substring("FLAG:".length());
@@ -609,9 +615,8 @@ public void handleFlagsClick(Player p, InventoryClickEvent e) {
                 .replace("%flag%", key)
                 .replace("%state%", plot.getFlag(key) ? on : off));
 
-        // ✅ Refresh using replaceTop instead of stacking
-        replaceTop(p, View.flags(0));
-        openFlags(p, 0);
+        // ✅ FIX: just refresh without touching nav stack
+        openFlagsNoPush(p);
     }
 }
 

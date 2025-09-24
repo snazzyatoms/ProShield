@@ -36,7 +36,7 @@ public class GUIListener implements Listener {
         // ✅ Cancel vanilla behavior inside all ProShield GUIs
         event.setCancelled(true);
 
-        // ✅ Delegate to GUIManager (routes by title)
+        // ✅ Delegate to GUIManager (routes by title + view stack)
         guiManager.handleClick(event);
     }
 
@@ -54,7 +54,7 @@ public class GUIListener implements Listener {
 
             String low = ChatColor.stripColor(title).toLowerCase();
 
-            // ✅ Expanded checks to sync with GUIManager titles
+            // ✅ Expanded checks synced with GUIManager + messages.yml titles
             boolean isProShieldMenu =
                     low.contains("proshield") ||
                     low.contains("main") ||
@@ -63,10 +63,10 @@ public class GUIListener implements Listener {
                     low.contains("assign role") ||
                     low.contains("flags") ||
                     low.contains("admin") ||
-                    low.contains("world") ||
-                    low.contains("expansion") ||
-                    low.contains("history") ||
-                    low.contains("deny reason");
+                    low.contains("world controls") ||
+                    low.contains("expansion requests") ||
+                    low.contains("expansion history") ||
+                    low.contains("deny reasons");
 
             if (!isProShieldMenu) {
                 guiManager.clearNav(player);

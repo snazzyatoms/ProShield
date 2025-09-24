@@ -5,6 +5,7 @@
 # - Role display names + lore are now fully customizable
 # - All GUI buttons, lore, errors, success & warnings covered
 # - Placeholders standardized: %player%, %role%, %flag%, %state%
+# - Added expansion menu support + crop trample
 # ==========================================================
 
 messages:
@@ -115,6 +116,7 @@ messages:
     titles:
       main: "&6ProShield Menu"
       claim-info: "&eClaim Info"
+      expansion-menu: "&aExpansion Menu"       # ✅ NEW
       trusted: "&bTrusted Players"
       assign-role: "&bAssign Role"
       flags: "&eClaim Flags"
@@ -143,7 +145,7 @@ messages:
         - "&7Toggle protection flags for this claim."
       request-expansion: "&aRequest Expansion"
       request-expansion-lore:
-        - "&7Submit an expansion request."
+        - "&7Open the expansion menu."
       admin-tools: "&cAdmin Tools"
       admin-tools-lore:
         - "&7Admin-only controls."
@@ -151,6 +153,12 @@ messages:
       bungee-coming-soon-lore:
         - "&7Planned for version 2.0 or later."
         - "&7Synchronize multiple servers/worlds via BungeeCord."
+
+    # --- Expansion Menu (Player GUI) ---
+    expansion-menu:
+      option: "&a+%blocks% Blocks"
+      option-lore:
+        - "&7Request expansion of +%blocks% blocks"
 
     # --- Flags Menu ---
     flags:

@@ -115,30 +115,6 @@ public class GUIManager {
         click(p);
     }
 
-    public void openClaimInfo(Player p) {
-        Plot plot = plots.getPlotAt(p.getLocation());
-        Inventory inv = Bukkit.createInventory(p, SIZE_36, title("claim-info", "&8Claim Info"));
-        border(inv);
-
-        if (plot == null) {
-            inv.setItem(13, textItem(Material.BOOK,
-                    messages.getOrDefault("messages.gui.no-claim", "&7No claim here."),
-                    List.of(line("#NOOP"))));
-        } else {
-            inv.setItem(11, iconOwner(plot.getOwner()));
-            inv.setItem(13, iconClaimSummary(plot));
-            inv.setItem(15, iconExpansionRequest());
-        }
-
-        // Back & Exit (single)
-        inv.setItem(31, backButton());
-        inv.setItem(32, exitButton());
-
-        push(p, View.claimInfo());
-        p.openInventory(inv);
-        click(p);
-    }
-
     public void openTrusted(Player p, int pageIgnored) {
         Plot plot = plots.getPlotAt(p.getLocation());
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("trusted", "&8Trusted Players"));

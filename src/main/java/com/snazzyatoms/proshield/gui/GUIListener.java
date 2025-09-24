@@ -64,9 +64,11 @@ public class GUIListener implements Listener {
                     low.contains("flags") ||
                     low.contains("admin") ||
                     low.contains("world controls") ||
-                    low.contains("expansion requests") ||
+                    low.contains("world:") ||                // ✅ world detail views
+                    low.contains("expansion menu") ||        // ✅ new expansion request menu
+                    low.contains("pending") ||               // ✅ pending requests
                     low.contains("expansion history") ||
-                    low.contains("deny reasons");
+                    low.contains("deny reason");             // ✅ singular
 
             if (!isProShieldMenu) {
                 guiManager.clearNav(player);

@@ -445,7 +445,8 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     inv.setItem(32, exitButton());
 
     // ✅ Expansion menu should replace top cleanly (no duplicate Claim Info)
-    replaceTop(p, View.custom("EXPANSION_MENU", 0, null, null));
+    replaceTop(p, View.expansionMenu());
+
 
     p.openInventory(inv);
     click(p);
@@ -1068,26 +1069,29 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
        // ------------------------------ View Stack ------------------------------
 
     private static class View {
-        final String type;
-        final int page;
-        final String world;
-        final UUID pendingTarget;
+    final String type;
+    final int page;
+    final String world;
+    final UUID pendingTarget;
 
-        private View(String type, int page, String world, UUID target) {
-            this.type = type; this.page = page; this.world = world; this.pendingTarget = target;
-        }
-
-        static View main()               { return new View("MAIN", 0, null, null); }
-        static View claimInfo()          { return new View("CLAIMINFO", 0, null, null); }
-        static View trusted(int page)    { return new View("TRUSTED", page, null, null); }
-        static View assignRole(UUID t)   { return new View("ASSIGNROLE", 0, null, t); }
-        static View flags(int page)      { return new View("FLAGS", page, null, null); }
-        static View admin()              { return new View("ADMIN", 0, null, null); }
-        static View worlds(int page)     { return new View("WORLDS", page, null, null); }
-        static View worldDetail(String w){ return new View("WORLDDETAIL", 0, w, null); }
-        static View pending(int page)    { return new View("PENDING", page, null, null); }
-        static View history()            { return new View("HISTORY", 0, null, null); }
+    private View(String type, int page, String world, UUID target) {
+        this.type = type; this.page = page; this.world = world; this.pendingTarget = target;
     }
+
+    static View main()               { return new View("MAIN", 0, null, null); }
+    static View claimInfo()          { return new View("CLAIMINFO", 0, null, null); }
+    static View trusted(int page)    { return new View("TRUSTED", page, null, null); }
+    static View assignRole(UUID t)   { return new View("ASSIGNROLE", 0, null, t); }
+    static View flags(int page)      { return new View("FLAGS", page, null, null); }
+    static View admin()              { return new View("ADMIN", 0, null, null); }
+    static View worlds(int page)     { return new View("WORLDS", page, null, null); }
+    static View worldDetail(String w){ return new View("WORLDDETAIL", 0, w, null); }
+    static View pending(int page)    { return new View("PENDING", page, null, null); }
+    static View history()            { return new View("HISTORY", 0, null, null); }
+
+    // ✅ New helper for Expansion Menu
+    static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
+}
 
     private void push(Player p, View v) {
         nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>()).push(v);

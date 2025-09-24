@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>ProShield</name>
-    <description>ProShield - Lightweight land claim & protection plugin for Paper/Spigot.</description>
+    <description>ProShield - Lightweight land claim &amp; protection plugin for Paper/Spigot.</description>
     <url>https://github.com/snazzyatoms/proshield</url>
 
     <!-- ==================== Properties ==================== -->

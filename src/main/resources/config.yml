@@ -1,20 +1,15 @@
 # ==========================================================
 # ProShield Configuration
-# Version: 1.2.6 (Synced + Multilingual, Safezone Spawn Fix)
+# Version: 1.2.6 (Synced + Polished)
 # ----------------------------------------------------------
-# - Claims are safe zones by default (PvP disabled inside)
-# - Wilderness = vanilla baseline (PvP enabled, no safezone)
-# - Expansion request steps synced with GUI (16/32/64)
-# - Messages moved to /languages/messages_xx.yml for localization
-# - Language toggle added for community translation support
-# - Hostile mob spawns are blocked in safezones
+# - Claims safezones by default (PvP disabled)
+# - Wilderness = vanilla baseline (PvP on, no safezone)
+# - Expansion requests synced with GUI (16/32/64)
+# - Flags & World Controls synced with GUIManager
 # ==========================================================
 
 settings:
-  language: "en"   # 🌍 Language code (en, de, es, fr, pt-BR, ru, ja, zh_cn, etc.)
-                   # ⚠️ Disclaimer: Translations are machine-assisted and may not be perfect.
-                   # You are free to edit the /languages/messages_xx.yml files to better fit your community.
-
+  language: "en"
   give-compass-on-join: true
   compass-despawn-delay: 600
   compass-auto-replace: false
@@ -37,7 +32,7 @@ claims:
     enabled: true
     show-in-gui: true
     max-increase: 100
-    step-options: [16, 32, 64]  # synced with GUIManager
+    step-options: [16, 32, 64]
     cooldown-hours: 6
     expire-days: 30
 
@@ -75,7 +70,7 @@ protection:
     despawn-interval-seconds: 30
     prevent-damage: true
     prevent-targeting: true
-    prevent-spawn: true      # ✅ NEW: blocks hostile mob spawns in safezones
+    prevent-spawn: true
     protect-pets: true
     protect-passive: true
 
@@ -84,23 +79,6 @@ protection:
       item-frames: false
       armor-stands: false
       vehicles: false
-
-  world-controls:
-    enabled: true
-    defaults:
-      block-break: false
-      block-place: false
-      bucket-use: false
-      explosions: false
-      mob-spawn: false
-      mob-damage: false
-      fire-burn: false
-      fire-spread: false
-      ignite-flint: false
-      ignite-lava: false
-      ignite-lightning: false
-      pvp: true         # ✅ PvP allowed in wilderness
-      safezone: false   # ✅ wilderness not safe
 
 roles:
   default: member
@@ -142,14 +120,13 @@ flags:
       name: "&bSafe Zone"
       description:
         - "&7Prevents hostile targeting, damage & spawns"
-        - "&7Repels & despawns hostiles (if enabled)"
-      default: true     # ✅ claims auto-safezone
+      default: true
 
     pvp:
       name: "&cPvP Allowed"
       description:
-        - "&7Toggle whether players can PvP in this claim"
-      default: false    # ✅ PvP disabled in claims
+        - "&7Toggle PvP inside this claim"
+      default: false
 
     block-break:
       name: "&fBlock Break"
@@ -166,7 +143,7 @@ flags:
     containers:
       name: "&6Containers"
       description:
-        - "&7Allow trusted players to open chests, barrels, etc."
+        - "&7Allow trusted players to open containers"
       default: true
 
     explosions:
@@ -178,13 +155,13 @@ flags:
     fire-spread:
       name: "&6Fire Spread"
       description:
-        - "&7Allow fire to spread between blocks"
+        - "&7Allow fire to spread"
       default: true
 
     ignite-flint:
       name: "&6Ignite (Flint & Steel)"
       description:
-        - "&7Allow players to ignite blocks with flint & steel"
+        - "&7Allow ignition with flint & steel"
       default: true
 
     ignite-lava:
@@ -199,67 +176,37 @@ flags:
         - "&7Allow lightning to ignite blocks"
       default: true
 
-gui:
-  menus:
-    main:
-      title: "&6ProShield Menu"
-      size: 45
-    roles:
-      title: "&bTrusted Players"
-      size: 45
-    assign-role:
-      title: "&bAssign Role"
-      size: 45
-    flags:
-      title: "&eClaim Flags"
-      size: 45
-    admin-tools:
-      title: "&cAdmin Tools"
-      size: 45
-    expansion-requests:
-      title: "&eExpansion Requests"
-      size: 45
-    deny-reasons:
-      title: "&cDeny Reasons"
-      size: 27
-    player-expansion:
-      title: "&aRequest Expansion"
-      size: 27
-    expansion-history:
-      title: "&7Expansion History"
-      size: 54
-    world-controls:
-      title: "&cWorld Controls"
-      size: 45
+    crop-trample:   # 🌾 NEW
+      name: "&aCrop Trample"
+      description:
+        - "&7Toggle farmland trampling in this claim"
+      default: true
 
 # ==========================================================
 # 🌍 Per-World Controls
-# These are synced with the World Controls GUI.
-# Nether/End are placeholders for future updates.
+# Synced with GUIManager (World Controls section)
+# Nether/End placeholders for future
 # ==========================================================
-
-protection:
-  world-controls:
-    enabled: true
-    defaults:
-      pvp: true
-      safezone: false
-      explosions: true
-      fire-spread: true
-      fire-burn: true
-      block-break: true
-      block-place: true
-      containers: true
-      bucket-use: true
-      mob-spawn: true
-      mob-damage: true
-      ignite-flint: true
-      ignite-lava: true
-      ignite-lightning: true
-
+worlds:
+  world:
+    pvp: true
+    safezone: false
+    explosions: true
+    fire-spread: true
+    fire-burn: true
+    block-break: true
+    block-place: true
+    containers: true
+    bucket-use: true
+    mob-spawn: true
+    mob-damage: true
+    ignite-flint: true
+    ignite-lava: true
+    ignite-lightning: true
+    crop-trample: true
 
   world_nether:
-    placeholder: true   # Coming soon
+    placeholder: true
 
   world_the_end:
-    placeholder: true   # Coming soon
+    placeholder: true

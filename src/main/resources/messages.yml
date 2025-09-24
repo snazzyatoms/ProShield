@@ -21,22 +21,25 @@ messages:
     bucket-empty: "&cYou cannot empty buckets here."
     bucket-fill: "&cYou cannot fill buckets here."
     pvp: "&cPvP is disabled in this claim."
+    pick-player-first: "&cPick a player first."
+    unknown-role: "&cThat role does not exist."
+    already-claimed: "&cThis chunk is already claimed."
+    no-claim: "&cNo claim here."
+    claim-failed: "&cUnable to create claim here."
 
   # --- General Success ---
   success:
     claim-created: "&aClaim created successfully."
     claim-removed: "&eClaim removed."
     role-assigned: "&aAssigned &f%player% &ato role &f%role%&a."
-    trusted-removed: "&eRemoved &f%player% &efrom trusted players."
+    trust-removed: "&eRemoved &f%player% &efrom trusted players."
     teleported: "&aTeleported to claim &f%id%&a."
+    flag-toggled: "&b%flag% &7→ %state%"
 
-  # --- General Warnings ---
-  warn:
-    already-claimed: "&cThis chunk is already claimed."
-    no-claim-here: "&cNo claim found here."
-    unknown-role: "&cThat role does not exist."
-    no-nearby-claims: "&cNo nearby claims were found."
-    pick-player-first: "&cPlease select a player first."
+  # --- State Text ---
+  state:
+    on: "&aON"
+    off: "&cOFF"
 
   # --- Compass ---
   compass:
@@ -77,8 +80,8 @@ messages:
   # --- Expansion Review (Admin GUI) ---
   expansion-admin:
     lore:
-      approve: "&aLeft-click: Approve this expansion"
-      deny: "&cRight-click: Deny and choose a reason"
+      approve: "&aClick: Approve this expansion"
+      deny: "&cClick: Deny and choose a reason"
       info: "&7Use the deny reasons menu for detailed denial messages."
 
   # --- Deny reasons ---
@@ -94,13 +97,12 @@ messages:
     toggle: "&eWorld control &f%flag% &eis now %state%."
     enabled: "&aENABLED"
     disabled: "&cDISABLED"
-    pvp: "&fGlobal PvP"
-    pvp-lore:
-      - "&7Toggle PvP across the entire world"
-    containers: "&fContainers"
-    containers-lore:
-      - "&7Toggle whether containers can be opened"
-    toggled: "&eWorld control &f%flag% &eis now %state%"
+    titles:
+      world-list: "&cWorld Controls"
+      world-detail: "&8World: %world%"
+    placeholders:
+      nether: "&cWorld_Nether (Coming Soon)"
+      end: "&cWorld_The_End (Coming Soon)"
 
   # --- GUI Navigation ---
   gui:
@@ -112,25 +114,25 @@ messages:
       - "&7Close this menu safely"
     titles:
       main: "&6ProShield Menu"
+      claim-info: "&eClaim Info"
       trusted: "&bTrusted Players"
       assign-role: "&bAssign Role"
       flags: "&eClaim Flags"
       admin: "&cAdmin Tools"
       world-controls: "&cWorld Controls"
-      deny-reasons: "&cDeny Reasons"
-      request-expansion: "&aRequest Expansion"
       expansion-requests: "&eExpansion Requests"
       expansion-history: "&7Expansion History"
+      deny-reasons: "&cDeny Reasons"
 
     # --- Main Menu Buttons ---
     main:
-      claim-land: "&aClaim Land"
+      claim-land: "&aClaim Chunk"
       claim-land-lore:
-        - "&7Claim the chunk you are standing in."
+        - "&7Create a new claim centered here."
       claim-info: "&eClaim Info"
       claim-info-lore:
         - "&7View details about this claim"
-      unclaim-land: "&cUnclaim Land"
+      unclaim-land: "&cUnclaim Chunk"
       unclaim-land-lore:
         - "&7Remove your current claim."
       trusted-players: "&bTrusted Players"
@@ -141,7 +143,7 @@ messages:
         - "&7Toggle protection flags for this claim."
       request-expansion: "&aRequest Expansion"
       request-expansion-lore:
-        - "&7Request to expand your claim."
+        - "&7Submit an expansion request."
       admin-tools: "&cAdmin Tools"
       admin-tools-lore:
         - "&7Admin-only controls."
@@ -150,34 +152,19 @@ messages:
         - "&7Planned for version 2.0 or later."
         - "&7Synchronize multiple servers/worlds via BungeeCord."
 
-    # --- Role GUI ---
-    roles:
-      assign-hint: "&aLeft-click: Assign new role"
-      untrust-hint: "&cRight-click: Untrust"
-      untrusted: "&cUntrusted &f%player%"
-      assigned: "&aAssigned &f%player% &ato role &f%role%&a."
-
     # --- Flags Menu ---
     flags:
-      pvp: "&fPvP: %state%"
-      pvp-lore:
-        - "&7Toggle PvP inside this claim"
-      toggled: "&eToggled &f%flag% &eto %state%"
-
-    # --- Admin Tools Menu ---
-    admin:
-      reload: "&eReload Config"
-      reload-lore:
-        - "&7Reloads all configuration files."
-      debug: "&cToggle Debug"
-      debug-lore:
-        - "&7Enable/disable debug mode."
-      bypass: "&aToggle Bypass"
-      bypass-lore:
-        - "&7Enable/disable admin bypass."
-      world-controls: "&dWorld Controls"
-      world-controls-lore:
-        - "&7Manage world-level flags."
+      pvp: "&fPvP Allowed"
+      safezone: "&dSafe Zone"
+      explosions: "&cExplosions"
+      fire-spread: "&6Fire Spread"
+      block-break: "&9Block Break"
+      block-place: "&9Block Place"
+      containers: "&bContainers"
+      crop-trample: "&aCrop Trample"
+      ignite-flint: "&6Ignite (Flint & Steel)"
+      ignite-lava: "&6Ignite (Lava)"
+      ignite-lightning: "&6Ignite (Lightning)"
 
   # --- Role Display Names & Lore ---
   roles:
@@ -228,23 +215,21 @@ help:
   player:
     - "&3&lProShield &7— Player Guide"
     - "&aRight-click your ProShield Compass &7→ Open the main menu"
-    - "&bMain Menu &7→ Claim Land, Info, Unclaim, Trusted Players, Claim Flags"
+    - "&bMain Menu &7→ Claim, Info, Unclaim, Trusted, Flags"
     - "&bTrusted Players &7→ Manage roles & access"
     - "&bClaim Flags &7→ Toggle protections"
     - "&aRequest Expansion &7→ Ask admins to expand your claim (if enabled)"
     - "&7Expansion requests have a cooldown of &f%cooldown-hours%h &7(default)."
-    - "&7All features are GUI-driven. Commands are only needed if something breaks."
 
   admin:
     - "&c&lProShield — Admin Guide"
     - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, World Controls"
-    - "&7Expansion Requests and World Controls require higher permissions."
-    - "&7Note: All actions are GUI-driven. Use commands only if GUI is unavailable."
-    - "&7Fallback commands (admins only):"
+    - "&7Expansion Requests and World Controls require permissions."
+    - "&7Commands are fallback only if GUI fails."
     - "&f/proshield reload &7→ Reload configs"
     - "&f/proshield debug &7→ Toggle debug mode"
     - "&f/proshield bypass &7→ Toggle admin bypass"
-    - "&f/proshield admin &7→ Open Admin Tools GUI (same as compass)"
+    - "&f/proshield admin &7→ Open Admin Tools GUI"
 
   senior:
     - "&4&lSenior Admin Tools"

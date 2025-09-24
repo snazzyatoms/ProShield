@@ -371,90 +371,138 @@ private void openWorldDetail(Player p, String worldName) {
 
 
 
-    // --------------------------- Expansion Requests ---------------------------
+    // ---------------------------- Claim Info & Expansion -----------------------------
 
-    public void openPending(Player p, int pageIgnored) {
-        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-requests", "&8Expansion Requests"));
-        border(inv);
+public void openClaimInfo(Player p) {
+    Plot plot = plots.getPlotAt(p.getLocation());
+    Inventory inv = Bukkit.createInventory(p, SIZE_36, title("claim-info", "&8Claim Info"));
+    border(inv);
 
-        List<ExpansionRequest> pending = new ArrayList<>(expansions.getPendingRequests());
-        pending.sort(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed());
-
-        int max = Math.min(21, pending.size());
-        for (int i = 0; i < max; i++) {
-            ExpansionRequest r = pending.get(i);
-            inv.setItem(grid(i), iconRequest(r));
-        }
-
-        inv.setItem(49, backButton());
-        inv.setItem(50, exitButton());
-        push(p, View.pending(0));
-        p.openInventory(inv);
-        click(p);
+    if (plot == null) {
+        inv.setItem(13, textItem(Material.BOOK,
+                messages.getOrDefault("messages.gui.no-claim", "&7No claim here."),
+                List.of(line("#NOOP"))));
+    } else {
+        inv.setItem(11, iconOwner(plot.getOwner()));
+        inv.setItem(13, iconClaimSummary(plot));
+        inv.setItem(15, iconExpansionRequest());
     }
 
-    public void openHistory(Player p) {
-        Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-history", "&8Expansion History"));
-        border(inv);
+    // Back & Exit
+    inv.setItem(31, backButton());
+    inv.setItem(32, exitButton());
 
-        List<ExpansionRequest> history = expansions.getAllRequests(); // includes all states
-        history.sort(Comparator.comparing(ExpansionRequest::getCreatedAt).reversed());
+    push(p, View.claimInfo());
+    p.openInventory(inv);
+    click(p);
+}
 
-        int i = 0;
-        for (ExpansionRequest r : history) {
-            if (i >= 28) break;
-            inv.setItem(grid(i++), iconRequest(r));
-        }
+/** Opens a selectable expansion request menu (configurable step-options). */
+public void openExpansionRequestMenu(Player p, Plot plot) {
+    Inventory inv = Bukkit.createInventory(p, SIZE_36, title("expansion-menu", "&8Request Expansion"));
+    border(inv);
 
-        inv.setItem(49, backButton());
-        inv.setItem(50, exitButton());
-        push(p, View.history());
-        p.openInventory(inv);
-        click(p);
+    // Pull options from config.yml
+    List<Integer> steps = plugin.getConfig().getIntegerList("claims.expansion.step-options");
+    if (steps.isEmpty()) steps = List.of(5, 10, 15, 20, 25, 30); // fallback
+
+    int slot = 10;
+    for (int amt : steps) {
+        inv.setItem(slot++, textItem(Material.EMERALD,
+                "&a+ " + amt + " Blocks",
+                List.of(
+                        gray("&7Request expansion of +" + amt + " blocks."),
+                        line("#EXPAND:" + amt)
+                )));
+        if (slot % 9 == 7) slot += 2; // skip borders
     }
+
+    inv.setItem(31, backButton());
+    inv.setItem(32, exitButton());
+
+    push(p, new View("EXPANDMENU", 0, null, null));
+    p.openInventory(inv);
+    click(p);
+}
+
+private ItemStack iconExpansionRequest() {
+    return textItem(Material.EMERALD, "&aRequest Expansion", List.of(
+            gray(messages.getOrDefault("messages.lore.expand", "&7Open the expansion menu.")),
+            line("#EXPAND:MENU")
+    ));
+}
+
+/** Handles clicks inside Claim Info + Expansion Menu */
+public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
+
+    // Expansion menu opener
+    if (id.equals("EXPAND:MENU")) {
+        Plot plot = plots.getPlotAt(p.getLocation());
+        if (plot == null) { warn(p, "&cNo claim here."); return; }
+        openExpansionRequestMenu(p, plot);
+        return;
+    }
+
+    // Actual expansion request submission
+    if (id.startsWith("EXPAND:")) {
+        int amt = safeInt(id.substring("EXPAND:".length()), 1);
+        expansions.submitRequest(p, amt);
+        msg(p, "&aExpansion request submitted for +" + amt + " blocks.");
+        openClaimInfo(p);
+    }
+}
 
         // ----------------------------- Central Click Router -----------------------------
 
-    /** Routes clicks by inventory title keywords into specific handlers. */
-    public void handleClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        String title = e.getView().getTitle();
-        if (title == null) return;
+/** Routes clicks by inventory title keywords into specific handlers. */
+public void handleClick(InventoryClickEvent e) {
+    if (!(e.getWhoClicked() instanceof Player p)) return;
+    String title = e.getView().getTitle();
+    if (title == null) return;
 
-        String low = ChatColor.stripColor(title).toLowerCase(Locale.ROOT);
+    String low = ChatColor.stripColor(title).toLowerCase(Locale.ROOT);
 
-        // Always cancel default behavior inside our GUIs
-        e.setCancelled(true);
+    // Always cancel default behavior inside our GUIs
+    e.setCancelled(true);
 
-        try {
-            if (low.contains("proshield menu") || low.contains("main")) {
-                handleMainClick(p, e);
-            } else if (low.contains("claim info")) {
-                handleMainClaimInfoClickOrPlayerRequest(p, e);
-            } else if (low.contains("trusted")) {
-                handleTrustedClick(p, e);
-            } else if (low.contains("assign role")) {
-                handleAssignRoleClick(p, e);
-            } else if (low.contains("claim flags") || low.contains("flags")) {
-                handleFlagsClick(p, e);
-            } else if (low.contains("admin tools") || low.equals("admin")) {
-                handleAdminClick(p, e);
-            } else if (low.contains("world:")) {
-                handleWorldControlsClick(p, e);
-            } else if (low.contains("world controls")) {
-                handleWorldControlsClick(p, e);
-            } else if (low.contains("expansion requests")) {
-                handleExpansionReviewClick(p, e);
-            } else if (low.contains("expansion history")) {
-                handleHistoryClick(p, e);
-            } else if (low.contains("deny reason")) {
-                handleDenyReasonClick(p, e);
-            }
-        } catch (Throwable ex) {
-            plugin.getLogger().warning("[GUIManager] Click routing error: " + ex.getMessage());
-            ex.printStackTrace();
+    try {
+        if (low.contains("proshield menu") || low.contains("main")) {
+            handleMainClick(p, e);
+        } else if (low.contains("claim info")) {
+            handleMainClaimInfoClickOrPlayerRequest(p, e);
+        } else if (low.contains("expansion menu")) {   // ✅ NEW
+            handleMainClaimInfoClickOrPlayerRequest(p, e);
+        } else if (low.contains("trusted")) {
+            handleTrustedClick(p, e);
+        } else if (low.contains("assign role")) {
+            handleAssignRoleClick(p, e);
+        } else if (low.contains("claim flags") || low.contains("flags")) {
+            handleFlagsClick(p, e);
+        } else if (low.contains("admin tools") || low.equals("admin")) {
+            handleAdminClick(p, e);
+        } else if (low.contains("world:")) {
+            handleWorldControlsClick(p, e);
+        } else if (low.contains("world controls")) {
+            handleWorldControlsClick(p, e);
+        } else if (low.contains("expansion requests")) {
+            handleExpansionReviewClick(p, e);
+        } else if (low.contains("expansion history")) {
+            handleHistoryClick(p, e);
+        } else if (low.contains("deny reason")) {
+            handleDenyReasonClick(p, e);
         }
+    } catch (Throwable ex) {
+        plugin.getLogger().warning("[GUIManager] Click routing error: " + ex.getMessage());
+        ex.printStackTrace();
     }
+}
 
    // ----------------------------- Click Handlers -----------------------------
 
@@ -1044,25 +1092,42 @@ private void replaceTop(Player p, View v) {
     }
 
     private void back(Player p) {
-        Deque<View> st = nav.get(p.getUniqueId());
-        if (st == null || st.size() <= 1) { p.closeInventory(); clearNav(p); return; }
-        st.pop();
-        View prev = st.peek();
-        if (prev == null) { p.closeInventory(); clearNav(p); return; }
-        switch (prev.type) {
-            case "MAIN"       -> openMainMenu(p);
-            case "CLAIMINFO"  -> openClaimInfo(p);
-            case "TRUSTED"    -> openTrusted(p, 0);
-            case "ASSIGNROLE" -> openAssignRole(p);
-            case "FLAGS"      -> openFlags(p, 0);
-            case "ADMIN"      -> openAdmin(p);
-            case "WORLDS"     -> openWorldControls(p, 0);
-            case "WORLDDETAIL"-> openWorldDetail(p, prev.world);
-            case "PENDING"    -> openPending(p, 0);
-            case "HISTORY"    -> openHistory(p);
-            default           -> { p.closeInventory(); clearNav(p); }
+    Deque<View> st = nav.get(p.getUniqueId());
+    if (st == null || st.size() <= 1) {
+        p.closeInventory();
+        clearNav(p);
+        return;
+    }
+    st.pop();
+    View prev = st.peek();
+    if (prev == null) {
+        p.closeInventory();
+        clearNav(p);
+        return;
+    }
+    switch (prev.type) {
+        case "MAIN"        -> openMainMenu(p);
+        case "CLAIMINFO"   -> openClaimInfo(p);
+        case "EXPANDMENU"  -> {                        // ✅ NEW
+            Plot plot = plots.getPlotAt(p.getLocation());
+            if (plot != null) openExpansionRequestMenu(p, plot);
+            else openClaimInfo(p);
+        }
+        case "TRUSTED"     -> openTrusted(p, 0);
+        case "ASSIGNROLE"  -> openAssignRole(p);
+        case "FLAGS"       -> openFlags(p, 0);
+        case "ADMIN"       -> openAdmin(p);
+        case "WORLDS"      -> openWorldControls(p, 0);
+        case "WORLDDETAIL" -> openWorldDetail(p, prev.world);
+        case "PENDING"     -> openPending(p, 0);
+        case "HISTORY"     -> openHistory(p);
+        default            -> {
+            p.closeInventory();
+            clearNav(p);
         }
     }
+}
+
 
     // --------------------------- World Controls I/O ---------------------------
 

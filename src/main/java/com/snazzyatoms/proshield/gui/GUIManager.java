@@ -264,24 +264,29 @@ public void openWorldControls(Player p, int pageIgnored) {
 
 /** Opens the Pending Requests menu (Admin view). */
 public void openPending(Player p, int page) {
-    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-requests", "&8Pending Requests"));
+    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("pending", "&8Pending Expansion Requests"));
     border(inv);
 
-    List<ExpansionRequest> list = new ArrayList<>(expansions.getAllPending());
-    int max = Math.min(21, list.size());
+    List<ExpansionRequest> pending = expansions.getAllPending();
+    int start = page * 28;
+    int end = Math.min(start + 28, pending.size());
 
-    for (int i = 0; i < max; i++) {
-        ExpansionRequest r = list.get(i);
-        inv.setItem(grid(i), iconRequest(r));
+    int slot = 10;
+    for (int i = start; i < end; i++) {
+        ExpansionRequest req = pending.get(i);
+        inv.setItem(slot++, iconRequest(req));
+        if (slot % 9 == 7) slot += 2;
     }
 
     inv.setItem(49, backButton());
     inv.setItem(50, exitButton());
 
-    replaceTop(p, View.pending(page));
+    // ✅ push properly so BACK/EXIT works
+    push(p, View.pending(page));
     p.openInventory(inv);
     click(p);
 }
+
 
 /** Opens Expansion Request history (per-player). */
 public void openHistory(Player p) {
@@ -410,7 +415,8 @@ public void openClaimInfo(Player p) {
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    push(p, View.claimInfo());
+    // ✅ Replace top instead of stacking duplicates
+    replaceTop(p, View.claimInfo());
     p.openInventory(inv);
     click(p);
 }
@@ -438,17 +444,39 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    push(p, new View("EXPANDMENU", 0, null, null));
+    // ✅ Expansion menu should replace top cleanly (no duplicate Claim Info)
+    replaceTop(p, View.custom("EXPANSION_MENU", 0, null, null));
+
     p.openInventory(inv);
     click(p);
 }
 
-private ItemStack iconExpansionRequest() {
-    return textItem(Material.EMERALD, "&aRequest Expansion", List.of(
-            gray(messages.getOrDefault("messages.lore.expand", "&7Open the expansion menu.")),
-            line("#EXPAND:MENU")
-    ));
+
+/** Opens the Pending Requests menu (Admin view). */
+public void openPending(Player p, int page) {
+    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("pending", "&8Pending Expansion Requests"));
+    border(inv);
+
+    List<ExpansionRequest> pending = expansions.getAllPending();
+    int start = page * 28;
+    int end = Math.min(start + 28, pending.size());
+
+    int slot = 10;
+    for (int i = start; i < end; i++) {
+        ExpansionRequest req = pending.get(i);
+        inv.setItem(slot++, iconRequest(req));
+        if (slot % 9 == 7) slot += 2;
+    }
+
+    inv.setItem(49, backButton());
+    inv.setItem(50, exitButton());
+
+    // ✅ FIX: push built-in View.pending so Back/Exit work
+    push(p, View.pending(page));
+    p.openInventory(inv);
+    click(p);
 }
+
 
 /** Handles clicks inside Claim Info + Expansion Menu */
 public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
@@ -1103,11 +1131,6 @@ private void replaceTop(Player p, View v) {
     switch (prev.type) {
         case "MAIN"        -> openMainMenu(p);
         case "CLAIMINFO"   -> openClaimInfo(p);
-        case "EXPANDMENU"  -> {                        // ✅ NEW
-            Plot plot = plots.getPlotAt(p.getLocation());
-            if (plot != null) openExpansionRequestMenu(p, plot);
-            else openClaimInfo(p);
-        }
         case "TRUSTED"     -> openTrusted(p, 0);
         case "ASSIGNROLE"  -> openAssignRole(p);
         case "FLAGS"       -> openFlags(p, 0);

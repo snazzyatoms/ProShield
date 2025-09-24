@@ -222,7 +222,7 @@ public class GUIManager {
         click(p);
     }
 
-               // --------------------------- Admin & World Controls ---------------------------
+              // --------------------------- Admin & World Controls ---------------------------
 
 public void openAdmin(Player p) {
     Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
@@ -329,9 +329,11 @@ private void openWorldDetailNoPush(Player p, String worldName) {
     boolean igniteFlint     = readWorldBool(worldName, "ignite-flint", true);
     boolean igniteLava      = readWorldBool(worldName, "ignite-lava", true);
     boolean igniteLightning = readWorldBool(worldName, "ignite-lightning", true);
+    boolean cropTrample     = readWorldBool(worldName, "crop-trample", true);
 
     inv.setItem(10, iconWorldToggle(worldName, WC_PVP, pvp, Material.IRON_SWORD, "&ePvP", "&7Global player-versus-player damage"));
     inv.setItem(11, iconWorldToggle(worldName, WC_SAFEZONE, safezone, Material.TOTEM_OF_UNDYING, "&dSafe Zone", "&7Disable combat & damage in world"));
+    inv.setItem(31, iconWorldToggle(worldName, "crop-trample", cropTrample, Material.WHEAT, "&aCrop Trample", "&7Allow/Disallow trampling of farmland"));
     inv.setItem(12, iconWorldToggle(worldName, "explosions", explosions, Material.TNT, "&cExplosions", "&7Enable/Disable explosions in world"));
     inv.setItem(13, iconWorldToggle(worldName, "fire-spread", fireSpread, Material.FLINT_AND_STEEL, "&6Fire Spread", "&7Enable/Disable fire spread in world"));
     inv.setItem(14, iconWorldToggle(worldName, "fire-burn", fireBurn, Material.CAMPFIRE, "&6Fire Burn", "&7Allow blocks to burn when ignited"));
@@ -357,6 +359,13 @@ private void openWorldDetailNoPush(Player p, String worldName) {
     inv.setItem(50, exitButton());
     p.openInventory(inv);
     click(p);
+}
+
+// ---------------------- World Detail Wrapper ----------------------
+/** Opens a world detail view and pushes it on the nav stack */
+private void openWorldDetail(Player p, String worldName) {
+    openWorldDetailNoPush(p, worldName); // show inventory
+    push(p, View.worldDetail(worldName)); // record nav stack
 }
 
 
@@ -845,20 +854,21 @@ public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
         FlagSpec(String key, String name, Material icon) { this.key = key; this.name = name; this.icon = icon; }
     }
 
-    private List<FlagSpec> defaultFlags() {
-        return List.of(
-                new FlagSpec("safezone", "Safe Zone", Material.TOTEM_OF_UNDYING),
-                new FlagSpec("pvp", "PvP Allowed", Material.IRON_SWORD),
-                new FlagSpec("explosions", "Explosions", Material.TNT),
-                new FlagSpec("fire-spread", "Fire Spread", Material.FLINT_AND_STEEL),
-                new FlagSpec("block-break", "Block Break", Material.IRON_PICKAXE),
-                new FlagSpec("block-place", "Block Place", Material.STONE),
-                new FlagSpec("containers", "Container Protection", Material.CHEST),
-                new FlagSpec("ignite-flint", "Ignite (Flint & Steel)", Material.FLINT_AND_STEEL),
-                new FlagSpec("ignite-lava", "Ignite (Lava)", Material.LAVA_BUCKET),
-                new FlagSpec("ignite-lightning", "Ignite (Lightning)", Material.LIGHTNING_ROD)
-        );
-    }
+   private List<FlagSpec> defaultFlags() {
+    return List.of(
+            new FlagSpec("safezone", "Safe Zone", Material.TOTEM_OF_UNDYING),
+            new FlagSpec("pvp", "PvP Allowed", Material.IRON_SWORD),
+            new FlagSpec("explosions", "Explosions", Material.TNT),
+            new FlagSpec("fire-spread", "Fire Spread", Material.FLINT_AND_STEEL),
+            new FlagSpec("block-break", "Block Break", Material.IRON_PICKAXE),
+            new FlagSpec("block-place", "Block Place", Material.STONE),
+            new FlagSpec("containers", "Container Protection", Material.CHEST),
+            new FlagSpec("crop-trample", "Crop Trample", Material.WHEAT),   // 🌾 NEW FLAG
+            new FlagSpec("ignite-flint", "Ignite (Flint & Steel)", Material.FLINT_AND_STEEL),
+            new FlagSpec("ignite-lava", "Ignite (Lava)", Material.LAVA_BUCKET),
+            new FlagSpec("ignite-lightning", "Ignite (Lightning)", Material.LIGHTNING_ROD)
+    );
+}
 
     private ItemStack iconFlag(Plot plot, FlagSpec f) {
         boolean on = plot.getFlag(f.key);
@@ -1089,6 +1099,7 @@ private void replaceTop(Player p, View v) {
         case "ignite-flint" -> true;
         case "ignite-lava" -> true;
         case "ignite-lightning" -> true;
+        case "crop-trample" -> true;
         default -> false;
     };
 }

@@ -222,7 +222,7 @@ public class GUIManager {
         click(p);
     }
 
-              // --------------------------- Admin & World Controls ---------------------------
+                           // --------------------------- Admin & World Controls ---------------------------
 
 public void openAdmin(Player p) {
     Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
@@ -282,6 +282,48 @@ public void openWorldControls(Player p, int pageIgnored) {
     inv.setItem(50, exitButton());
 
     replaceTop(p, View.worlds(0));
+    p.openInventory(inv);
+    click(p);
+}
+
+/** Opens the Pending Requests menu (Admin view). */
+public void openPending(Player p, int page) {
+    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-requests", "&8Pending Requests"));
+    border(inv);
+
+    List<ExpansionRequest> list = new ArrayList<>(expansions.getAllPending());
+    int max = Math.min(21, list.size());
+
+    for (int i = 0; i < max; i++) {
+        ExpansionRequest r = list.get(i);
+        inv.setItem(grid(i), iconRequest(r));
+    }
+
+    inv.setItem(49, backButton());
+    inv.setItem(50, exitButton());
+
+    replaceTop(p, View.pending(page));
+    p.openInventory(inv);
+    click(p);
+}
+
+/** Opens Expansion Request history (per-player). */
+public void openHistory(Player p) {
+    Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-history", "&8Expansion History"));
+    border(inv);
+
+    List<ExpansionRequest> list = new ArrayList<>(expansions.getAllByPlayer(p.getUniqueId()));
+    int max = Math.min(21, list.size());
+
+    for (int i = 0; i < max; i++) {
+        ExpansionRequest r = list.get(i);
+        inv.setItem(grid(i), iconRequest(r));
+    }
+
+    inv.setItem(49, backButton());
+    inv.setItem(50, exitButton());
+
+    replaceTop(p, View.history());
     p.openInventory(inv);
     click(p);
 }

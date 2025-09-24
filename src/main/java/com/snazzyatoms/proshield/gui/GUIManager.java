@@ -554,23 +554,6 @@ public void handleMainClick(Player p, InventoryClickEvent e) {
     }
 }
 
-public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
-    ItemStack it = e.getCurrentItem();
-    if (!valid(it)) return;
-    String id = extractId(it);
-    if (id == null) return;
-
-    if (id.equals("BACK")) { back(p); return; }
-    if (id.equals("EXIT")) { p.closeInventory(); return; }
-
-    if (id.startsWith("EXPAND:")) {
-        int amt = safeInt(id.substring("EXPAND:".length()), 1);
-        expansions.submitRequest(p, amt);
-        msg(p, "&aExpansion request submitted for +" + amt);
-        openClaimInfo(p);
-    }
-}
-
 public void handleAssignRoleClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
     if (!valid(it)) return;
@@ -874,13 +857,6 @@ public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
                 gray("&7Center: &f" + plot.getX() + "," + plot.getZ()),
                 gray("&7Radius: &f" + plot.getRadius()),
                 line("#NOOP")
-        ));
-    }
-
-    private ItemStack iconExpansionRequest() {
-        return textItem(Material.EMERALD, "&aRequest Expansion", List.of(
-                gray(messages.getOrDefault("messages.lore.expand", "&7Submit +1 expansion request.")),
-                line("#EXPAND:1")
         ));
     }
 

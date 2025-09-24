@@ -6,6 +6,7 @@ import com.snazzyatoms.proshield.roles.ClaimRole;
 import com.snazzyatoms.proshield.roles.ClaimRoleManager;
 import com.snazzyatoms.proshield.util.MessagesUtil;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -13,17 +14,21 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.projectiles.ProjectileSource;
 
 /**
- * ClaimProtectionListener (v1.2.6 + Safezone Spawn Block)
+ * ClaimProtectionListener (v1.2.6 + Safezone Spawn Block + Crop Trample Protection)
  * - Handles block/bucket/PvP logic
  * - Cancels mob targeting & mob damage inside safezones
  * - Cancels hostile mob spawns inside safezones
+ * - Cancels farmland trampling by players & mobs (crop protection)
  */
 public class ClaimProtectionListener implements Listener {
 
@@ -83,6 +88,41 @@ public class ClaimProtectionListener implements Listener {
             messages.send(player, denyMessage);
             debug("Denied " + flag + " for " + player.getName()
                     + " (role=" + role + ", flag=" + flag + ", plot=" + plot.getId() + ")");
+        }
+    }
+
+    /* -------------------------
+     * CROP TRAMPLE PROTECTION
+     * ------------------------- */
+    @EventHandler
+    public void onPlayerTrample(PlayerInteractEvent event) {
+        if (event.getAction() != Action.PHYSICAL) return;
+        if (event.getClickedBlock() == null || event.getClickedBlock().getType() != Material.FARMLAND) return;
+
+        Location loc = event.getClickedBlock().getLocation();
+        Plot plot = plotManager.getPlotAt(loc);
+        if (plot == null) return;
+
+        if (!plot.getFlag("crop-trample")) {
+            event.setCancelled(true);
+            messages.send(event.getPlayer(),
+                    messages.getOrDefault("messages.error.crop-trample", "&cYou cannot trample crops here."));
+            debug("Prevented crop trample by " + event.getPlayer().getName() + " in plot " + plot.getId());
+        }
+    }
+
+    @EventHandler
+    public void onEntityTrample(EntityChangeBlockEvent event) {
+        if (event.getBlock() == null || event.getBlock().getType() != Material.FARMLAND) return;
+        if (!(event.getEntity() instanceof LivingEntity)) return;
+
+        Location loc = event.getBlock().getLocation();
+        Plot plot = plotManager.getPlotAt(loc);
+        if (plot == null) return;
+
+        if (!plot.getFlag("crop-trample")) {
+            event.setCancelled(true);
+            debug("Prevented crop trample by " + event.getEntity().getType() + " in plot " + plot.getId());
         }
     }
 

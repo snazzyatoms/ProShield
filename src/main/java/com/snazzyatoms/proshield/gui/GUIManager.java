@@ -385,7 +385,7 @@ public void openClaimInfo(Player p) {
     } else {
         inv.setItem(11, iconOwner(plot.getOwner()));
         inv.setItem(13, iconClaimSummary(plot));
-        inv.setItem(15, iconExpansionRequest());
+        inv.setItem(15, iconExpansionRequest()); // opens expansion menu now
     }
 
     // Back & Exit
@@ -458,6 +458,7 @@ public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEven
         openClaimInfo(p);
     }
 }
+
 
         // ----------------------------- Central Click Router -----------------------------
 

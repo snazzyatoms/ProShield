@@ -650,7 +650,7 @@ public void handleAdminClick(Player p, InventoryClickEvent e) {
     }
 }
 
-       public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
+public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
     if (!valid(it)) return;
     String id = extractId(it);
@@ -672,18 +672,18 @@ public void handleAdminClick(Player p, InventoryClickEvent e) {
             boolean cur = readWorldBool(world, key, defaultWorld(key));
             writeWorldBool(world, key, !cur);
 
-            String state = !cur ?
-                messages.getOrDefault("messages.state.on", "&aON") :
-                messages.getOrDefault("messages.state.off", "&cOFF");
+            String state = !cur
+                ? messages.getOrDefault("messages.state.on", "&aON")
+                : messages.getOrDefault("messages.state.off", "&cOFF");
 
             msg(p, ChatColor.YELLOW + "Toggled &f" + key + " &7→ " + state);
 
-            // ✅ Refresh using replaceTop
-            replaceTop(p, View.worldDetail(world));
-            openWorldDetail(p, world);
+            // ✅ FIX: just refresh without touching nav stack
+            openWorldDetailNoPush(p, world);
         }
     }
 }
+
 
 
 

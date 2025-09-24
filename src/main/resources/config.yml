@@ -4,7 +4,7 @@
 # ----------------------------------------------------------
 # - Claims safezones by default (PvP disabled)
 # - Wilderness = vanilla baseline (PvP on, no safezone)
-# - Expansion requests synced with GUI (16/32/64)
+# - Expansion requests synced with GUI (step-options dynamic)
 # - Flags & World Controls synced with GUIManager
 # ==========================================================
 
@@ -32,7 +32,7 @@ claims:
     enabled: true
     show-in-gui: true
     max-increase: 100
-    step-options: [16, 32, 64]
+    step-options: [5, 10, 15, 20, 25, 30]  # ✅ synced with expansion menu fallback
     cooldown-hours: 6
     expire-days: 30
 
@@ -117,9 +117,10 @@ roles:
 flags:
   available:
     safezone:
-      name: "&bSafe Zone"
+      name: "&dSafe Zone"
       description:
         - "&7Prevents hostile targeting, damage & spawns"
+        - "&7Repels & despawns hostiles (if enabled)"
       default: true
 
     pvp:

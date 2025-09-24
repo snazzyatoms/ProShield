@@ -845,6 +845,13 @@ public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
         );
     }
 
+    private ItemStack iconExpansionRequest() {
+    return textItem(Material.DIAMOND, "&bRequest Expansion", List.of(
+            gray("&7Open the expansion request menu."),
+            line("#EXPAND:MENU")
+    ));
+}
+
     private ItemStack iconClaimInfo(Plot plot) {
         List<String> lore = new ArrayList<>();
         if (plot == null) {

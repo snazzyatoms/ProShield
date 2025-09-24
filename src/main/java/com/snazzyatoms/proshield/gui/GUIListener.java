@@ -33,10 +33,10 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player)) return;
         if (event.getClickedInventory() == null) return;
 
-        // ✅ Cancel vanilla behavior instantly
+        // ✅ Cancel vanilla behavior inside all ProShield GUIs
         event.setCancelled(true);
 
-        // ✅ Delegate all clicks to GUIManager
+        // ✅ Delegate to GUIManager (routes by title)
         guiManager.handleClick(event);
     }
 
@@ -44,7 +44,7 @@ public class GUIListener implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
 
-        // ✅ Delay check to see if another ProShield menu was opened
+        // ✅ Delay one tick so we know if another ProShield menu opened
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             String title = player.getOpenInventory().getTitle();
             if (title == null) {
@@ -52,16 +52,20 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            String low = title.toLowerCase();
+            String low = ChatColor.stripColor(title).toLowerCase();
+
+            // ✅ Expanded checks to sync with GUIManager titles
             boolean isProShieldMenu =
                     low.contains("proshield") ||
-                    low.contains("claim") ||
+                    low.contains("main") ||
+                    low.contains("claim info") ||
                     low.contains("trusted") ||
-                    low.contains("role") ||
-                    low.contains("flag") ||
+                    low.contains("assign role") ||
+                    low.contains("flags") ||
                     low.contains("admin") ||
                     low.contains("world") ||
                     low.contains("expansion") ||
+                    low.contains("history") ||
                     low.contains("deny reason");
 
             if (!isProShieldMenu) {

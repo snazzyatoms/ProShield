@@ -1073,7 +1073,14 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
 
        // ------------------------------ View Stack ------------------------------
 
-    // ========================
+    // =============================
+// 📌 Navigation: go back method
+// =============================
+private void back(Player p) {
+    // ... your back() code here ...
+}
+
+// ========================
 // 📌 Navigation View Class
 // ========================
 private static class View {
@@ -1111,6 +1118,8 @@ private static class View {
                 + (page != 0 ? "[p" + page + "]" : "");
     }
 }
+} // <-- THIS is the final brace for GUIManager
+
  // ✅ New helper for Expansion Menu
     static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
 }

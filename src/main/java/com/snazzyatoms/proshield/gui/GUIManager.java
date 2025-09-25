@@ -762,8 +762,14 @@ public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
     String id = extractId(it);
     if (id == null) return;
 
-    if (id.equals("BACK")) { back(p); return; }
-    if (id.equals("EXIT")) { p.closeInventory(); return; }
+    if (id.equals("BACK")) { 
+        back(p); 
+        return; 
+    }
+    if (id.equals("EXIT")) { 
+        p.closeInventory(); 
+        return; 
+    }
 
     if (id.startsWith("REQ:")) {
         String[] parts = id.split(":");
@@ -781,8 +787,7 @@ public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
                 msg(p, "&cExpansion request denied.");
             }
 
-            // ✅ refresh without stacking duplicates
-            replaceTop(p, View.pending(0));
+            // ✅ Just refresh without stacking duplicates
             openPending(p, 0);
         }
     }

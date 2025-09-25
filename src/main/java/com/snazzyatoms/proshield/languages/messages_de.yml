@@ -1,7 +1,18 @@
 # ==========================================================
-# ProShield Messages (German)
-# Version: 1.2.6
+# ProShield Nachrichten
+# Version: 1.2.6 (Polished, Synced & Expanded)
+# ----------------------------------------------------------
+# - Rollennamen und Beschreibungen sind jetzt vollständig anpassbar
+# - Alle GUI-Buttons, Beschreibungen, Fehler, Erfolge und Warnungen sind abgedeckt
+# - Platzhalter standardisiert: %player%, %role%, %flag%, %state%
+# - Erweiterungsmenü-Unterstützung + Ernteschaden hinzugefügt
+# ----------------------------------------------------------
+# Hinweis:
+# Wenn Sie Fehler oder Ungenauigkeiten in der Übersetzung finden,
+# bearbeiten Sie bitte die Datei `messages.yml` auf Ihrem Server.
+# Diese Datei ist mit den Sprachpaketen synchronisiert und kann jederzeit angepasst werden.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

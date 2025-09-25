@@ -407,13 +407,20 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
 
     int slot = 10;
     for (int amt : steps) {
-        inv.setItem(slot++, textItem(Material.EMERALD,
+        if (slot >= inv.getSize()) {
+            plugin.getLogger().warning("[ProShield][GUI] ExpansionMenu ran out of slots! steps=" + steps + " slot=" + slot);
+            break; // 🚫 stop if slot goes outside inventory
+        }
+
+        inv.setItem(slot, textItem(Material.EMERALD,
                 "&a+ " + amt + " Blocks",
                 List.of(
                         gray("&7Request expansion of +" + amt + " blocks."),
                         line("#EXPAND:" + amt)
                 )));
-        if (slot % 9 == 7) slot += 2;
+        slot++;
+
+        if (slot % 9 == 7) slot += 2; // skip border column
     }
 
     inv.setItem(31, backButton());
@@ -425,11 +432,12 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
         push(p, View.expansionMenu());
     }
 
-    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> OpenExpansionMenu | Stack now: " + st);
+    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> OpenExpansionMenu | Steps=" + steps + " | FinalSlot=" + slot);
 
     p.openInventory(inv);
     click(p);
 }
+
 
 
 

@@ -1098,6 +1098,7 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
     static View history()            { return new View("HISTORY", 0, null, null); }
     static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
 
+    // 🔑 This goes **inside** View, not outside
     @Override
     public String toString() {
         return type

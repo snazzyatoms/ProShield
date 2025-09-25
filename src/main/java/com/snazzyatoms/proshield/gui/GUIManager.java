@@ -457,34 +457,6 @@ public void openPending(Player p, int page) {
 }
 
 
-/** Handles clicks inside Claim Info + Expansion Menu */
-public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
-    ItemStack it = e.getCurrentItem();
-    if (!valid(it)) return;
-    String id = extractId(it);
-    if (id == null) return;
-
-    if (id.equals("BACK")) { back(p); return; }
-    if (id.equals("EXIT")) { p.closeInventory(); return; }
-
-    // Expansion menu opener
-    if (id.equals("EXPAND:MENU")) {
-        Plot plot = plots.getPlotAt(p.getLocation());
-        if (plot == null) { warn(p, "&cNo claim here."); return; }
-        openExpansionRequestMenu(p, plot);
-        return;
-    }
-
-    // Actual expansion request submission
-    if (id.startsWith("EXPAND:")) {
-        int amt = safeInt(id.substring("EXPAND:".length()), 1);
-        expansions.submitRequest(p, amt);
-        msg(p, "&aExpansion request submitted for +" + amt + " blocks.");
-        openClaimInfo(p);
-    }
-}
-
-
         // ----------------------------- Central Click Router -----------------------------
 
 

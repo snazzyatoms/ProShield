@@ -419,17 +419,13 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // ✅ Hybrid logic: push if Claim Info is below, otherwise replaceTop
-    View peek = peek(p);
-    if (peek != null && "CLAIMINFO".equals(peek.type)) {
-        push(p, View.expansionMenu());
-    } else {
-        replaceTop(p, View.expansionMenu());
-    }
+    // 🔑 Always push Expansion Menu on top of stack
+    push(p, View.expansionMenu());
 
     p.openInventory(inv);
     click(p);
 }
+
 
 
 /** Opens the Pending Requests menu (Admin view). */

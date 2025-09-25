@@ -417,13 +417,12 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
         if (slot % 9 == 7) slot += 2;
     }
 
+    // Back & Exit
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // 🔑 Replace instead of push, avoids duplicate stacking
-    // ✅ correct
-push(p, View.expansionMenu());
-
+    // ✅ Push instead of replaceTop so Back returns to Claim Info
+    push(p, View.expansionMenu());
 
     p.openInventory(inv);
     click(p);

@@ -420,9 +420,8 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // ✅ Expansion menu should replace top cleanly (no duplicate Claim Info)
-    replaceTop(p, View.expansionMenu());
-
+    // ✅ FIX: Expansion menu should push so Back/Exit return to Claim Info
+    push(p, View.expansionMenu());
 
     p.openInventory(inv);
     click(p);

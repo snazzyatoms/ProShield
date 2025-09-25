@@ -529,8 +529,7 @@ public void handleClick(InventoryClickEvent e) {
         ex.printStackTrace();
     }
 }
-
-   // ----------------------------- Click Handlers -----------------------------
+// ----------------------------- Click Handlers -----------------------------
 
 public void handleMainClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
@@ -640,6 +639,41 @@ public void handleTrustedClick(Player p, InventoryClickEvent e) {
     }
 }
 
+/** Handles clicks inside Claim Info (only opens Expansion Menu now). */
+public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
+
+    if (id.equals("EXPAND:MENU")) {
+        Plot plot = plots.getPlotAt(p.getLocation());
+        if (plot == null) { warn(p, "&cNo claim here."); return; }
+        openExpansionRequestMenu(p, plot);
+    }
+}
+
+/** Handles clicks inside the Expansion Request Menu (Player). */
+public void handleExpansionMenuClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.equals("BACK")) { back(p); return; }
+    if (id.equals("EXIT")) { p.closeInventory(); return; }
+
+    if (id.startsWith("EXPAND:")) {
+        int amt = safeInt(id.substring("EXPAND:".length()), 1);
+        expansions.submitRequest(p, amt);
+        msg(p, "&aExpansion request submitted for +" + amt + " blocks.");
+        openClaimInfo(p); // bounce back after request
+    }
+}
+
 public void handleFlagsClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
     if (!valid(it)) return;
@@ -676,7 +710,6 @@ public void handleFlagsClick(Player p, InventoryClickEvent e) {
         openFlagsNoPush(p);
     }
 }
-
 
 public void handleAdminClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
@@ -741,10 +774,6 @@ public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
     }
 }
 
-
-
-
-
 public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
     if (!valid(it)) return;
@@ -777,7 +806,6 @@ public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
     }
 }
 
-
 public void handleHistoryClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
     if (!valid(it)) return;
@@ -798,6 +826,7 @@ public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
     if (id.equals("EXIT")) { p.closeInventory(); return; }
     // In future: handle deny reasons here
 }
+
 
 // ------------------------------ Icon Builder ------------------------------
 

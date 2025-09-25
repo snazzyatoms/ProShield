@@ -40,6 +40,9 @@ public class GUIListener implements Listener {
         guiManager.handleClick(event);
     }
 
+    // =====================
+    // 📌 GUI close handling
+    // =====================
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
@@ -47,10 +50,7 @@ public class GUIListener implements Listener {
         // ✅ Delay one tick so we know if another ProShield menu opened
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             String title = player.getOpenInventory().getTitle();
-            if (title == null) {
-                guiManager.clearNav(player);
-                return;
-            }
+            if (title == null) return; // don’t wipe nav blindly
 
             String low = ChatColor.stripColor(title).toLowerCase();
 
@@ -65,13 +65,13 @@ public class GUIListener implements Listener {
                     low.contains("admin") ||
                     low.contains("world controls") ||
                     low.contains("world:") ||                // ✅ world detail views
-                    low.contains("expansion menu") ||        // ✅ new expansion request menu
+                    low.contains("expansion menu") ||        // ✅ expansion request menu
                     low.contains("pending") ||               // ✅ pending requests
                     low.contains("expansion history") ||
                     low.contains("deny reason");             // ✅ singular
 
             if (!isProShieldMenu) {
-                guiManager.clearNav(player);
+                guiManager.clearNav(player); // only clear if *no* ProShield menu open
             }
         }, 1L);
     }

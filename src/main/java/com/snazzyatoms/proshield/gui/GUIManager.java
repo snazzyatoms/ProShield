@@ -1071,68 +1071,18 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
     private UUID uuidSafe(String s) { try { return UUID.fromString(s); } catch (Exception e) { return null; } }
     private String shortId(UUID id) { String s = id.toString(); return s.substring(0, 8); }
 
-       // ------------------------------ View Stack ------------------------------
-
-    // =============================
-// 📌 Navigation: go back method
-// =============================
-private void back(Player p) {
-    // ... your back() code here ...
-}
-
-// ========================
-// 📌 Navigation View Class
-// ========================
-private static class View {
-    final String type;
-    final int page;
-    final String world;
-    final UUID pendingTarget;
-
-    private View(String type, int page, String world, UUID target) {
-        this.type = type;
-        this.page = page;
-        this.world = world;
-        this.pendingTarget = target;
-    }
-
-    // ---- Factory methods for different menus ----
-    static View main()               { return new View("MAIN", 0, null, null); }
-    static View claimInfo()          { return new View("CLAIMINFO", 0, null, null); }
-    static View trusted(int page)    { return new View("TRUSTED", page, null, null); }
-    static View assignRole(UUID t)   { return new View("ASSIGNROLE", 0, null, t); }
-    static View flags(int page)      { return new View("FLAGS", page, null, null); }
-    static View admin()              { return new View("ADMIN", 0, null, null); }
-    static View worlds(int page)     { return new View("WORLDS", page, null, null); }
-    static View worldDetail(String w){ return new View("WORLDDETAIL", 0, w, null); }
-    static View pending(int page)    { return new View("PENDING", page, null, null); }
-    static View history()            { return new View("HISTORY", 0, null, null); }
-    static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
-
-    // ---- Debug-friendly output ----
-    @Override
-    public String toString() {
-        return type
-                + (world != null ? "(" + world + ")" : "")
-                + (pendingTarget != null ? ":" + pendingTarget : "")
-                + (page != 0 ? "[p" + page + "]" : "");
-    }
-}
-} // <-- THIS is the final brace for GUIManager
-
- // ✅ New helper for Expansion Menu
-    static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
-}
+    // ------------------------------ View Stack ------------------------------
 
     private void push(Player p, View v) {
         nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>()).push(v);
     }
-/** Replace the top of the nav stack instead of stacking duplicates */
-private void replaceTop(Player p, View v) {
-    Deque<View> st = nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
-    if (!st.isEmpty()) st.pop(); // remove current
-    st.push(v);                  // push new
-}
+
+    /** Replace the top of the nav stack instead of stacking duplicates */
+    private void replaceTop(Player p, View v) {
+        Deque<View> st = nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
+        if (!st.isEmpty()) st.pop(); // remove current
+        st.push(v);                  // push new
+    }
 
     private View peek(Player p) {
         Deque<View> st = nav.get(p.getUniqueId());
@@ -1149,55 +1099,94 @@ private void replaceTop(Player p, View v) {
         if (st != null) st.clear();
     }
 
- private void back(Player p) {
-    Deque<View> st = nav.get(p.getUniqueId());
-    if (st == null || st.size() <= 1) {
-        plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Stack empty, closing");
-        p.closeInventory();
-        clearNav(p);
-        return;
-    }
-
-    // Remove current view and peek previous
-    View current = st.pop();
-    View prev = st.peek();
-
-    if (prev == null) {
-        plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | No previous, closing");
-        p.closeInventory();
-        clearNav(p);
-        return;
-    }
-
-    plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
-            " -> Back | From " + current + " to " + prev + " | Stack now: " + st);
-
-    switch (prev.type) {
-        case "MAIN"           -> openMainMenu(p);
-        case "CLAIMINFO"      -> openClaimInfo(p);
-        case "TRUSTED"        -> openTrusted(p, prev.page);
-        case "ASSIGNROLE"     -> openAssignRole(p);
-        case "FLAGS"          -> openFlags(p, prev.page);
-        case "ADMIN"          -> openAdmin(p);
-        case "WORLDS"         -> openWorldControls(p, prev.page);
-        case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
-        case "PENDING"        -> openPending(p, prev.page);
-        case "HISTORY"        -> openHistory(p);
-        case "EXPANSION_MENU" -> openClaimInfo(p); // 🔑 back from expansion → claim info
-        default -> {
-            plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
-                    " -> Back | Unknown view " + prev.type + ", closing");
+    // =============================
+    // 📌 Navigation: go back method
+    // =============================
+    private void back(Player p) {
+        Deque<View> st = nav.get(p.getUniqueId());
+        if (st == null || st.size() <= 1) {
+            plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Stack empty, closing");
             p.closeInventory();
             clearNav(p);
+            return;
+        }
+
+        // Remove current view
+        View current = st.pop();
+        View prev = st.peek();
+
+        if (prev == null) {
+            plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | No previous, closing");
+            p.closeInventory();
+            clearNav(p);
+            return;
+        }
+
+        plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
+                " -> Back | From " + current + " to " + prev + " | Stack now: " + st);
+
+        switch (prev.type) {
+            case "MAIN"           -> openMainMenu(p);
+            case "CLAIMINFO"      -> openClaimInfo(p);
+            case "TRUSTED"        -> openTrusted(p, prev.page);
+            case "ASSIGNROLE"     -> openAssignRole(p);
+            case "FLAGS"          -> openFlags(p, prev.page);
+            case "ADMIN"          -> openAdmin(p);
+            case "WORLDS"         -> openWorldControls(p, prev.page);
+            case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
+            case "PENDING"        -> openPending(p, prev.page);
+            case "HISTORY"        -> openHistory(p);
+            case "EXPANSION_MENU" -> openClaimInfo(p); // back from expansion → claim info
+            default -> {
+                plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
+                        " -> Back | Unknown view " + prev.type + ", closing");
+                p.closeInventory();
+                clearNav(p);
+            }
         }
     }
-}
 
+    // ========================
+    // 📌 Navigation View Class
+    // ========================
+    private static class View {
+        final String type;
+        final int page;
+        final String world;
+        final UUID pendingTarget;
 
+        private View(String type, int page, String world, UUID target) {
+            this.type = type;
+            this.page = page;
+            this.world = world;
+            this.pendingTarget = target;
+        }
 
+        // ---- Factory methods for different menus ----
+        static View main()               { return new View("MAIN", 0, null, null); }
+        static View claimInfo()          { return new View("CLAIMINFO", 0, null, null); }
+        static View trusted(int page)    { return new View("TRUSTED", page, null, null); }
+        static View assignRole(UUID t)   { return new View("ASSIGNROLE", 0, null, t); }
+        static View flags(int page)      { return new View("FLAGS", page, null, null); }
+        static View admin()              { return new View("ADMIN", 0, null, null); }
+        static View worlds(int page)     { return new View("WORLDS", page, null, null); }
+        static View worldDetail(String w){ return new View("WORLDDETAIL", 0, w, null); }
+        static View pending(int page)    { return new View("PENDING", page, null, null); }
+        static View history()            { return new View("HISTORY", 0, null, null); }
+        static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
 
+        // ---- Debug-friendly output ----
+        @Override
+        public String toString() {
+            return type
+                    + (world != null ? "(" + world + ")" : "")
+                    + (pendingTarget != null ? ":" + pendingTarget : "")
+                    + (page != 0 ? "[p" + page + "]" : "");
+        }
+    }
+} // <--- FINAL closing brace for GUIManager
 
-    // --------------------------- World Controls I/O ---------------------------
+// --------------------------- World Controls I/O ---------------------------
 
     private boolean readWorldBool(String world, String key, boolean def) {
         return plugin.getConfig().getBoolean("worlds." + world + "." + key, def);

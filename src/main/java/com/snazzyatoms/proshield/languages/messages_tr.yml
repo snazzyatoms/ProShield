@@ -1,7 +1,18 @@
 # ==========================================================
-# ProShield Mesajlar (Türkçe)
-# Version: 1.2.6 (Polished, Synced & Expanded)
+# ProShield Mesajları
+# Sürüm: 1.2.6 (Polished, Synced & Expanded)
+# ----------------------------------------------------------
+# - Rol görüntü adları + açıklamaları tamamen özelleştirilebilir
+# - Tüm GUI düğmeleri, açıklamalar, hatalar, başarılar & uyarılar dâhil
+# - Yer tutucular standartlaştırıldı: %player%, %role%, %flag%, %state%
+# - Genişletme menüsü desteği + ürün ezme eklendi
+# ----------------------------------------------------------
+# NOT:
+# Eğer kendi dil dosyanızda çeviri hataları veya eksiklikler bulursanız,
+# lütfen sunucunuzdaki `messages.yml` dosyasını düzenleyin.
+# Bu dosya her dil paketiyle senkronize edilmiştir ve özelleştirilebilir.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

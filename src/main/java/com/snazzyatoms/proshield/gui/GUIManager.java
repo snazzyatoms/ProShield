@@ -264,27 +264,6 @@ public void openWorldControls(Player p, int pageIgnored) {
 
 // 🚫 REMOVED duplicate openPending(Player p, int page) here
 
-    List<ExpansionRequest> pending = expansions.getAllPending();
-    int start = page * 28;
-    int end = Math.min(start + 28, pending.size());
-
-    int slot = 10;
-    for (int i = start; i < end; i++) {
-        ExpansionRequest req = pending.get(i);
-        inv.setItem(slot++, iconRequest(req));
-        if (slot % 9 == 7) slot += 2;
-    }
-
-    inv.setItem(49, backButton());
-    inv.setItem(50, exitButton());
-
-    // ✅ push properly so BACK/EXIT works
-    push(p, View.pending(page));
-    p.openInventory(inv);
-    click(p);
-}
-
-
 /** Opens Expansion Request history (per-player). */
 public void openHistory(Player p) {
     Inventory inv = Bukkit.createInventory(p, SIZE_54, title("expansion-history", "&8Expansion History"));

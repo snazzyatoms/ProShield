@@ -477,8 +477,8 @@ public void handleClick(InventoryClickEvent e) {
             handleMainClick(p, e);
         } else if (low.contains("claim info")) {
             handleMainClaimInfoClickOrPlayerRequest(p, e);
-        } else if (low.contains("expansion menu")) {   // ✅ now points to new handler
-            handleExpansionMenuClick(p, e);
+        } else if (low.contains("expansion menu") || low.contains("request expansion")) {
+            handleExpansionMenuClick(p, e);   // ✅ now properly routed
         } else if (low.contains("trusted")) {
             handleTrustedClick(p, e);
         } else if (low.contains("assign role")) {
@@ -503,6 +503,7 @@ public void handleClick(InventoryClickEvent e) {
         ex.printStackTrace();
     }
 }
+
 
 public void handleMainClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();

@@ -428,6 +428,7 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
 
 
 
+
 /** Opens the Pending Requests menu (Admin view). */
 public void openPending(Player p, int page) {
     Inventory inv = Bukkit.createInventory(p, SIZE_54, title("pending", "&8Pending Expansion Requests"));

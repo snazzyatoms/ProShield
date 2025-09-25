@@ -421,7 +421,9 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     inv.setItem(32, exitButton());
 
     // 🔑 Replace instead of push, avoids duplicate stacking
-    replaceTop(p, View.expansionMenu());
+    // ✅ correct
+push(p, View.expansionMenu());
+
 
     p.openInventory(inv);
     click(p);

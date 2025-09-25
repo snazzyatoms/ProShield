@@ -402,7 +402,6 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     Inventory inv = Bukkit.createInventory(p, SIZE_36, title("expansion-menu", "&8Request Expansion"));
     border(inv);
 
-    // Pull options from config.yml
     List<Integer> steps = plugin.getConfig().getIntegerList("claims.expansion.step-options");
     if (steps.isEmpty()) steps = List.of(5, 10, 15, 20, 25, 30);
 
@@ -420,11 +419,8 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // ✅ FIX: only push if not already at top
-    View peek = peek(p);
-    if (peek == null || !"EXPANSION_MENU".equals(peek.type)) {
-        push(p, View.expansionMenu());
-    }
+    // 🔑 Replace instead of push, avoids duplicate stacking
+    replaceTop(p, View.expansionMenu());
 
     p.openInventory(inv);
     click(p);

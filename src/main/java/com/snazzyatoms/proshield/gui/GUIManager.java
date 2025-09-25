@@ -1099,51 +1099,51 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
     }
 
     // =============================
-    // 📌 Navigation: go back method
-    // =============================
-    private void back(Player p) {
-        Deque<View> st = nav.get(p.getUniqueId());
-        if (st == null || st.size() <= 1) {
-            plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Stack empty, closing");
-            p.closeInventory();
-            clearNav(p);
-            return;
-        }
+// 📌 Navigation: go back method
+// =============================
+private void back(Player p) {
+    Deque<View> st = nav.get(p.getUniqueId());
 
-        // Remove current view
-        View current = st.pop();
-        View prev = st.peek();
+    if (st == null || st.size() <= 1) {
+        plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Stack empty, forcing Claim Info");
+        // 🚑 Safety net: fallback to Claim Info instead of just closing
+        openClaimInfo(p);
+        return;
+    }
 
-        if (prev == null) {
-            plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | No previous, closing");
-            p.closeInventory();
-            clearNav(p);
-            return;
-        }
+    // Remove current view
+    View current = st.pop();
+    View prev = st.peek();
 
-        plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
-                " -> Back | From " + current + " to " + prev + " | Stack now: " + st);
+    if (prev == null) {
+        plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | No previous, forcing Claim Info");
+        openClaimInfo(p);
+        return;
+    }
 
-        switch (prev.type) {
-            case "MAIN"           -> openMainMenu(p);
-            case "CLAIMINFO"      -> openClaimInfo(p);
-            case "TRUSTED"        -> openTrusted(p, prev.page);
-            case "ASSIGNROLE"     -> openAssignRole(p);
-            case "FLAGS"          -> openFlags(p, prev.page);
-            case "ADMIN"          -> openAdmin(p);
-            case "WORLDS"         -> openWorldControls(p, prev.page);
-            case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
-            case "PENDING"        -> openPending(p, prev.page);
-            case "HISTORY"        -> openHistory(p);
-            case "EXPANSION_MENU" -> openClaimInfo(p); // back from expansion → claim info
-            default -> {
-                plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
-                        " -> Back | Unknown view " + prev.type + ", closing");
-                p.closeInventory();
-                clearNav(p);
-            }
+    plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
+            " -> Back | From " + current + " to " + prev + " | Stack now: " + st);
+
+    switch (prev.type) {
+        case "MAIN"           -> openMainMenu(p);
+        case "CLAIMINFO"      -> openClaimInfo(p);
+        case "TRUSTED"        -> openTrusted(p, prev.page);
+        case "ASSIGNROLE"     -> openAssignRole(p);
+        case "FLAGS"          -> openFlags(p, prev.page);
+        case "ADMIN"          -> openAdmin(p);
+        case "WORLDS"         -> openWorldControls(p, prev.page);
+        case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
+        case "PENDING"        -> openPending(p, prev.page);
+        case "HISTORY"        -> openHistory(p);
+        case "EXPANSION_MENU" -> openClaimInfo(p); // back from expansion → claim info
+        default -> {
+            plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
+                    " -> Back | Unknown view " + prev.type + ", forcing Claim Info");
+            openClaimInfo(p);
         }
     }
+}
+
 
     // ========================
     // 📌 Navigation View Class

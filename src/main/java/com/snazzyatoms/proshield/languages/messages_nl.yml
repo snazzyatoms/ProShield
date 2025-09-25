@@ -1,7 +1,13 @@
 # ==========================================================
-# ProShield Messages (Dutch - Netherlands)
-# Version: 1.2.6 (Polished, Synced & Expanded)
+# ProShield Berichten
+# Versie: 1.2.6 (Verfijnd, Gesynchroniseerd & Uitgebreid)
+# ----------------------------------------------------------
+# LET OP: Dit bestand bevat alle berichten die spelers te zien krijgen.
+# - Je kunt de tekst, kleuren (& codes) en formuleringen vrij aanpassen.
+# - Als een vertaling onnauwkeurig of vreemd klinkt, pas het hier aan.
+# - Wijzig GEEN config.yml voor berichten — alleen dit bestand.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

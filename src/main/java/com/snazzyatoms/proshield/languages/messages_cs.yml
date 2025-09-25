@@ -1,7 +1,18 @@
 # ==========================================================
-# ProShield Messages (Czech)
-# Version: 1.2.6
+# ProShield Zprávy
+# Verze: 1.2.6 (Polished, Synced & Expanded)
+# ----------------------------------------------------------
+# - Názvy rolí a jejich popisy jsou nyní plně přizpůsobitelné
+# - Všechny GUI tlačítka, popisy, chyby, úspěchy a varování jsou pokryty
+# - Zástupné symboly standardizovány: %player%, %role%, %flag%, %state%
+# - Přidána podpora rozšiřujícího menu + pošlapávání plodin
+# ----------------------------------------------------------
+# Poznámka:
+# Pokud zjistíte chyby nebo nepřesnosti v překladu,
+# upravte prosím soubor `messages.yml` na svém serveru.
+# Tento soubor je synchronizován s jazykovými balíčky a můžete jej kdykoliv změnit.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

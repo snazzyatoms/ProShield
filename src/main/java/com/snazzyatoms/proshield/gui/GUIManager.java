@@ -1080,7 +1080,10 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
     final UUID pendingTarget;
 
     private View(String type, int page, String world, UUID target) {
-        this.type = type; this.page = page; this.world = world; this.pendingTarget = target;
+        this.type = type; 
+        this.page = page; 
+        this.world = world; 
+        this.pendingTarget = target;
     }
 
     static View main()               { return new View("MAIN", 0, null, null); }
@@ -1093,6 +1096,16 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
     static View worldDetail(String w){ return new View("WORLDDETAIL", 0, w, null); }
     static View pending(int page)    { return new View("PENDING", page, null, null); }
     static View history()            { return new View("HISTORY", 0, null, null); }
+    static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
+
+    @Override
+    public String toString() {
+        return type
+                + (world != null ? "(" + world + ")" : "")
+                + (pendingTarget != null ? ":" + pendingTarget : "")
+                + (page != 0 ? "[p" + page + "]" : "");
+    }
+}
 
     // ✅ New helper for Expansion Menu
     static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
@@ -1123,7 +1136,7 @@ private void replaceTop(Player p, View v) {
         if (st != null) st.clear();
     }
 
-   private void back(Player p) {
+ private void back(Player p) {
     Deque<View> st = nav.get(p.getUniqueId());
     if (st == null || st.size() <= 1) {
         plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Stack empty, closing");
@@ -1132,16 +1145,19 @@ private void replaceTop(Player p, View v) {
         return;
     }
 
-    st.pop();
+    // Remove current view and peek previous
+    View current = st.pop();
     View prev = st.peek();
-    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Now at: " 
-            + (prev == null ? "null" : prev.type));
 
     if (prev == null) {
+        plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | No previous, closing");
         p.closeInventory();
         clearNav(p);
         return;
     }
+
+    plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
+            " -> Back | From " + current + " to " + prev + " | Stack now: " + st);
 
     switch (prev.type) {
         case "MAIN"           -> openMainMenu(p);
@@ -1154,14 +1170,16 @@ private void replaceTop(Player p, View v) {
         case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
         case "PENDING"        -> openPending(p, prev.page);
         case "HISTORY"        -> openHistory(p);
-        case "EXPANSION_MENU" -> openClaimInfo(p);   // ✅ back from expansion → claim info
-        default               -> {
-            plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Unknown type, closing");
+        case "EXPANSION_MENU" -> openClaimInfo(p); // 🔑 back from expansion → claim info
+        default -> {
+            plugin.getLogger().info("[ProShield][NAV] " + p.getName() +
+                    " -> Back | Unknown view " + prev.type + ", closing");
             p.closeInventory();
             clearNav(p);
         }
     }
 }
+
 
 
 

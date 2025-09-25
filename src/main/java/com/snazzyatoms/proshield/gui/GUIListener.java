@@ -64,12 +64,13 @@ public class GUIListener implements Listener {
                     low.contains("flags") ||
                     low.contains("admin") ||
                     low.contains("world controls") ||
-                    low.contains("world:") ||                // ✅ world detail views
-                    low.contains("expansion menu") ||        // ✅ player expansion menu
-                    low.contains("expansion requests") ||    // ✅ admin expansion requests
-                    low.contains("pending") ||               // ✅ pending requests
+                    low.contains("world:") ||                
+                    low.contains("expansion menu") ||        // Player expansion menu
+                    low.contains("request expansion") ||     // 🔑 messages.yml fallback
+                    low.contains("expansion requests") ||    // Admin requests
+                    low.contains("pending") ||
                     low.contains("expansion history") ||
-                    low.contains("deny reason");             // ✅ singular
+                    low.contains("deny reason");
 
             if (!isProShieldMenu) {
                 guiManager.clearNav(player); // only clear if *no* ProShield menu open

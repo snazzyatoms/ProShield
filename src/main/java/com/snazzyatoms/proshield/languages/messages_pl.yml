@@ -1,7 +1,13 @@
 # ==========================================================
-# ProShield Messages (Polski - Poland)
-# Version: 1.2.6 (Polished, Synced & Expanded)
+# ProShield Wiadomości
+# Wersja: 1.2.6 (Dopracowana, Zsynchronizowana i Rozszerzona)
+# ----------------------------------------------------------
+# UWAGA: Ten plik zawiera wszystkie wiadomości wyświetlane graczom.
+# - Możesz dowolnie edytować tekst, kolory (& kody) oraz sformułowania.
+# - Jeśli tłumaczenie brzmi nienaturalnie lub jest niedokładne, popraw je tutaj.
+# - NIE edytuj pliku config.yml w tym celu — tylko ten plik.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

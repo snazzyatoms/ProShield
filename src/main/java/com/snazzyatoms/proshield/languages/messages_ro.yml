@@ -1,7 +1,13 @@
 # ==========================================================
-# ProShield Mesaje (Română)
-# Version: 1.2.6 (Polished, Synced & Expanded)
+# ProShield Mesaje
+# Versiunea: 1.2.6 (Polisată, Sincronizată & Extinsă)
+# ----------------------------------------------------------
+# ATENȚIE: Acest fișier conține toate mesajele afișate jucătorilor.
+# - Poți edita liber textul, culorile (& codurile) și formulările.
+# - Dacă o traducere pare ciudată sau incorectă, o poți corecta aici.
+# - NU edita fișierul config.yml pentru mesaje — doar acest fișier.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

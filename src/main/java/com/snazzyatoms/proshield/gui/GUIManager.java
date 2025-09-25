@@ -402,6 +402,7 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     Inventory inv = Bukkit.createInventory(p, SIZE_36, title("expansion-menu", "&8Request Expansion"));
     border(inv);
 
+    // Pull options from config.yml
     List<Integer> steps = plugin.getConfig().getIntegerList("claims.expansion.step-options");
     if (steps.isEmpty()) steps = List.of(5, 10, 15, 20, 25, 30);
 
@@ -633,8 +634,14 @@ public void handleExpansionMenuClick(Player p, InventoryClickEvent e) {
     String id = extractId(it);
     if (id == null) return;
 
-    if (id.equals("BACK")) { back(p); return; }
-    if (id.equals("EXIT")) { p.closeInventory(); return; }
+    if (id.equals("BACK")) { 
+        back(p); 
+        return; 
+    }
+    if (id.equals("EXIT")) { 
+        p.closeInventory(); 
+        return; 
+    }
 
     if (id.startsWith("EXPAND:")) {
         int amt = safeInt(id.substring("EXPAND:".length()), 1);
@@ -643,6 +650,7 @@ public void handleExpansionMenuClick(Player p, InventoryClickEvent e) {
         openClaimInfo(p); // bounce back after request
     }
 }
+
 
 public void handleFlagsClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();
@@ -1127,13 +1135,14 @@ private void replaceTop(Player p, View v) {
         case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
         case "PENDING"        -> openPending(p, prev.page);
         case "HISTORY"        -> openHistory(p);
-        case "EXPANSION_MENU" -> openClaimInfo(p);   // ✅ new case
+        case "EXPANSION_MENU" -> openClaimInfo(p);   // ✅ back from expansion → claim info
         default               -> {
             p.closeInventory();
             clearNav(p);
         }
     }
 }
+
 
 
 

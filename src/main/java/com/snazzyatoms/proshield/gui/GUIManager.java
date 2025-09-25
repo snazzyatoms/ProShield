@@ -1126,30 +1126,37 @@ private void replaceTop(Player p, View v) {
    private void back(Player p) {
     Deque<View> st = nav.get(p.getUniqueId());
     if (st == null || st.size() <= 1) {
+        plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Stack empty, closing");
         p.closeInventory();
         clearNav(p);
         return;
     }
+
     st.pop();
     View prev = st.peek();
+    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Now at: " 
+            + (prev == null ? "null" : prev.type));
+
     if (prev == null) {
         p.closeInventory();
         clearNav(p);
         return;
     }
+
     switch (prev.type) {
         case "MAIN"           -> openMainMenu(p);
         case "CLAIMINFO"      -> openClaimInfo(p);
-        case "TRUSTED"        -> openTrusted(p, 0);
+        case "TRUSTED"        -> openTrusted(p, prev.page);
         case "ASSIGNROLE"     -> openAssignRole(p);
-        case "FLAGS"          -> openFlags(p, 0);
+        case "FLAGS"          -> openFlags(p, prev.page);
         case "ADMIN"          -> openAdmin(p);
-        case "WORLDS"         -> openWorldControls(p, 0);
+        case "WORLDS"         -> openWorldControls(p, prev.page);
         case "WORLDDETAIL"    -> openWorldDetail(p, prev.world);
         case "PENDING"        -> openPending(p, prev.page);
         case "HISTORY"        -> openHistory(p);
         case "EXPANSION_MENU" -> openClaimInfo(p);   // ✅ back from expansion → claim info
         default               -> {
+            plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> Back | Unknown type, closing");
             p.closeInventory();
             clearNav(p);
         }

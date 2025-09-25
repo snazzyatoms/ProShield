@@ -1111,10 +1111,7 @@ private static class View {
                 + (page != 0 ? "[p" + page + "]" : "");
     }
 }
-
-
-
-    // ✅ New helper for Expansion Menu
+ // ✅ New helper for Expansion Menu
     static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
 }
 

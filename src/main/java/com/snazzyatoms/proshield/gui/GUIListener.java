@@ -65,7 +65,8 @@ public class GUIListener implements Listener {
                     low.contains("admin") ||
                     low.contains("world controls") ||
                     low.contains("world:") ||                // ✅ world detail views
-                    low.contains("expansion menu") ||        // ✅ expansion request menu
+                    low.contains("expansion menu") ||        // ✅ player expansion menu
+                    low.contains("expansion requests") ||    // ✅ admin expansion requests
                     low.contains("pending") ||               // ✅ pending requests
                     low.contains("expansion history") ||
                     low.contains("deny reason");             // ✅ singular

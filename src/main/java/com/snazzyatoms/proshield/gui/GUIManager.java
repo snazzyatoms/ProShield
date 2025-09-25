@@ -404,7 +404,7 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
 
     // Pull options from config.yml
     List<Integer> steps = plugin.getConfig().getIntegerList("claims.expansion.step-options");
-    if (steps.isEmpty()) steps = List.of(5, 10, 15, 20, 25, 30); // fallback
+    if (steps.isEmpty()) steps = List.of(5, 10, 15, 20, 25, 30);
 
     int slot = 10;
     for (int amt : steps) {
@@ -414,14 +414,17 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
                         gray("&7Request expansion of +" + amt + " blocks."),
                         line("#EXPAND:" + amt)
                 )));
-        if (slot % 9 == 7) slot += 2; // skip borders
+        if (slot % 9 == 7) slot += 2;
     }
 
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // ✅ FIX: Expansion menu should push so Back/Exit return to Claim Info
-    push(p, View.expansionMenu());
+    // ✅ FIX: only push if not already at top
+    View peek = peek(p);
+    if (peek == null || !"EXPANSION_MENU".equals(peek.type)) {
+        push(p, View.expansionMenu());
+    }
 
     p.openInventory(inv);
     click(p);

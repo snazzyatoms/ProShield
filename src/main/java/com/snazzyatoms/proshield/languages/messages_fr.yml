@@ -1,7 +1,18 @@
 # ==========================================================
-# ProShield Messages (French)
-# Version: 1.2.6
+# ProShield Messages
+# Version : 1.2.6 (Affiné, Synchronisé et Étendu)
+# ----------------------------------------------------------
+# - Les noms et descriptions des rôles sont désormais entièrement personnalisables
+# - Tous les boutons de l’interface, descriptions, erreurs, succès et avertissements inclus
+# - Variables standardisées : %player%, %role%, %flag%, %state%
+# - Ajout du support du menu d’expansion + piétinement des cultures
+# ----------------------------------------------------------
+# Remarque :
+# Si vous trouvez des erreurs ou imprécisions dans la traduction,
+# veuillez modifier le fichier `messages.yml` sur votre serveur.
+# Ce fichier est synchronisé avec les packs de langues et peut être ajusté à tout moment.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

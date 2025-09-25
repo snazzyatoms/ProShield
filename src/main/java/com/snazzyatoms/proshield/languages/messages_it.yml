@@ -1,7 +1,18 @@
 # ==========================================================
-# ProShield Messages (Italian)
-# Version: 1.2.6
+# ProShield Messaggi
+# Versione: 1.2.6 (Ottimizzato, Sincronizzato e Ampliato)
+# ----------------------------------------------------------
+# - I nomi e le descrizioni dei ruoli ora sono completamente personalizzabili
+# - Tutti i pulsanti GUI, descrizioni, errori, successi e avvisi inclusi
+# - Segnaposto standardizzati: %player%, %role%, %flag%, %state%
+# - Aggiunto supporto al menu espansione + calpestamento colture
+# ----------------------------------------------------------
+# Nota:
+# Se trovi errori o problemi nella traduzione,
+# modifica il file `messages.yml` sul tuo server.
+# Questo file è sincronizzato con i pacchetti lingua e può essere modificato in qualsiasi momento.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

@@ -1073,19 +1073,23 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
 
        // ------------------------------ View Stack ------------------------------
 
-    private static class View {
+    // ========================
+// 📌 Navigation View Class
+// ========================
+private static class View {
     final String type;
     final int page;
     final String world;
     final UUID pendingTarget;
 
     private View(String type, int page, String world, UUID target) {
-        this.type = type; 
-        this.page = page; 
-        this.world = world; 
+        this.type = type;
+        this.page = page;
+        this.world = world;
         this.pendingTarget = target;
     }
 
+    // ---- Factory methods for different menus ----
     static View main()               { return new View("MAIN", 0, null, null); }
     static View claimInfo()          { return new View("CLAIMINFO", 0, null, null); }
     static View trusted(int page)    { return new View("TRUSTED", page, null, null); }
@@ -1098,7 +1102,7 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
     static View history()            { return new View("HISTORY", 0, null, null); }
     static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }
 
-    // 🔑 This goes **inside** View, not outside
+    // ---- Debug-friendly output ----
     @Override
     public String toString() {
         return type
@@ -1107,6 +1111,7 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
                 + (page != 0 ? "[p" + page + "]" : "");
     }
 }
+
 
     // ✅ New helper for Expansion Menu
     static View expansionMenu()      { return new View("EXPANSION_MENU", 0, null, null); }

@@ -419,19 +419,18 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // 🔑 Correct push order: CLAIMINFO stays below, then EXPANSION_MENU on top
+    // 🔑 Hybrid push: only push EXPANSION_MENU if CLAIMINFO is already below it
     Deque<View> st = nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
-    if (st.isEmpty() || !"CLAIMINFO".equals(st.peek().type)) {
-        push(p, View.claimInfo());
+    if (st.isEmpty() || !"EXPANSION_MENU".equals(st.peek().type)) {
+        push(p, View.expansionMenu());
     }
-    push(p, View.expansionMenu());
 
-    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> OpenExpansionMenu | Stack now: "
-            + nav.get(p.getUniqueId()));
+    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> OpenExpansionMenu | Stack now: " + st);
 
     p.openInventory(inv);
     click(p);
 }
+
 
 
 

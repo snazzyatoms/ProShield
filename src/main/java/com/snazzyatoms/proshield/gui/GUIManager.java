@@ -530,6 +530,48 @@ public void handleClick(InventoryClickEvent e) {
     }
 }
 // ----------------------------- Click Handlers -----------------------------
+    /** Routes clicks by inventory title keywords into specific handlers. */
+public void handleClick(InventoryClickEvent e) {
+    if (!(e.getWhoClicked() instanceof Player p)) return;
+    String title = e.getView().getTitle();
+    if (title == null) return;
+
+    String low = ChatColor.stripColor(title).toLowerCase(Locale.ROOT);
+
+    // Always cancel default behavior inside our GUIs
+    e.setCancelled(true);
+
+    try {
+        if (low.contains("proshield menu") || low.contains("main")) {
+            handleMainClick(p, e);
+        } else if (low.contains("claim info")) {
+            handleMainClaimInfoClickOrPlayerRequest(p, e);
+        } else if (low.contains("expansion menu")) {   // ✅ now points to new handler
+            handleExpansionMenuClick(p, e);
+        } else if (low.contains("trusted")) {
+            handleTrustedClick(p, e);
+        } else if (low.contains("assign role")) {
+            handleAssignRoleClick(p, e);
+        } else if (low.contains("claim flags") || low.contains("flags")) {
+            handleFlagsClick(p, e);
+        } else if (low.contains("admin tools") || low.equals("admin")) {
+            handleAdminClick(p, e);
+        } else if (low.contains("world:")) {
+            handleWorldControlsClick(p, e);
+        } else if (low.contains("world controls")) {
+            handleWorldControlsClick(p, e);
+        } else if (low.contains("pending expansion requests") || low.contains("pending")) {
+            handleExpansionReviewClick(p, e);
+        } else if (low.contains("expansion history")) {
+            handleHistoryClick(p, e);
+        } else if (low.contains("deny reason")) {
+            handleDenyReasonClick(p, e);
+        }
+    } catch (Throwable ex) {
+        plugin.getLogger().warning("[GUIManager] Click routing error: " + ex.getMessage());
+        ex.printStackTrace();
+    }
+}
 
 public void handleMainClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();

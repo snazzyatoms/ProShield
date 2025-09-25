@@ -2,11 +2,12 @@
 # ProShield Messages
 # Version: 1.2.6 (Polished, Synced & Expanded)
 # ----------------------------------------------------------
-# - Role display names + lore are now fully customizable
-# - All GUI buttons, lore, errors, success & warnings covered
-# - Placeholders standardized: %player%, %role%, %flag%, %state%
-# - Added expansion menu support + crop trample
+# NOTE: This file controls all player-facing messages.
+# - You can freely edit text, colors (& codes), and phrasing.
+# - If translations are incorrect or awkward, edit here.
+# - Do NOT edit config.yml for messages — only this file.
 # ==========================================================
+
 
 messages:
   prefix: "&3[ProShield]&r "

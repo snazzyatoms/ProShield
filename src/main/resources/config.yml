@@ -15,6 +15,17 @@ settings:
   compass-auto-replace: false
   ops-have-full-access: true
 
+  # ----------------------
+  # Debug Toggles
+  # ----------------------
+  debug:
+    menus: false          # log GUI navigation & back/exit actions
+    claims: false         # log claim create/remove/transfer events
+    roles: false          # log role assignment/removal
+    flags: false          # log flag toggles
+    expansions: false     # log expansion requests & admin review
+    world-controls: false # log world toggle changes
+
 claims:
   default-radius: 50
   min-y: 0

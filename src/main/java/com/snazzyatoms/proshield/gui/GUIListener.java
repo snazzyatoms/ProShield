@@ -65,15 +65,18 @@ public class GUIListener implements Listener {
                     low.contains("admin") ||
                     low.contains("world controls") ||
                     low.contains("world:") ||                
-                    low.contains("expansion menu") ||        // Player expansion menu
-                    low.contains("request expansion") ||     // 🔑 messages.yml fallback
-                    low.contains("expansion requests") ||    // Admin requests
+                    low.contains("expansion menu") ||     // Player expansion menu
+                    low.contains("request expansion") ||  // 🔑 messages.yml fallback
+                    low.contains("expansion requests") || // Admin requests
                     low.contains("pending") ||
                     low.contains("expansion history") ||
                     low.contains("deny reason");
 
             if (!isProShieldMenu) {
-                guiManager.clearNav(player); // only clear if *no* ProShield menu open
+                guiManager.clearNav(player);
+                if (plugin.getConfig().getBoolean("settings.debug.menus", false)) {
+                    plugin.getLogger().info("[ProShield][DEBUG] Cleared nav for " + player.getName());
+                }
             }
         }, 1L);
     }
@@ -104,5 +107,9 @@ public class GUIListener implements Listener {
 
         // ✅ Open GUI
         guiManager.openMainMenu(player);
+
+        if (plugin.getConfig().getBoolean("settings.debug.menus", false)) {
+            plugin.getLogger().info("[ProShield][DEBUG] " + player.getName() + " opened Main Menu via compass.");
+        }
     }
 }

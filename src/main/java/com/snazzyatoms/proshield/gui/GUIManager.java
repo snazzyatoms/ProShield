@@ -407,42 +407,33 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
 
     int slot = 10;
     for (int amt : steps) {
-        if (slot >= inv.getSize()) {
-            plugin.getLogger().warning("[ProShield][GUI] ExpansionMenu ran out of slots! steps=" + steps + " slot=" + slot);
-            break; // 🚫 stop if slot goes outside inventory
-        }
-
-        inv.setItem(slot, textItem(Material.EMERALD,
+        inv.setItem(slot++, textItem(Material.EMERALD,
                 "&a+ " + amt + " Blocks",
                 List.of(
                         gray("&7Request expansion of +" + amt + " blocks."),
                         line("#EXPAND:" + amt)
                 )));
-        slot++;
-
-        if (slot % 9 == 7) slot += 2; // skip border column
+        if (slot % 9 == 7) slot += 2;
     }
 
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // 🔑 Hybrid push: only push EXPANSION_MENU if CLAIMINFO is already below it
+    // ✅ Force Claim Info below Expansion Menu if missing
     Deque<View> st = nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
-    if (st.isEmpty() || !"EXPANSION_MENU".equals(st.peek().type)) {
-        push(p, View.expansionMenu());
+    if (st.isEmpty() || !"CLAIMINFO".equals(st.peek().type)) {
+        push(p, View.claimInfo()); // make sure Claim Info is always beneath
     }
+    push(p, View.expansionMenu());
 
-    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> OpenExpansionMenu | Steps=" + steps + " | FinalSlot=" + slot);
+    plugin.getLogger().info("[ProShield][NAV] " + p.getName()
+            + " -> OpenExpansionMenu | Steps=" + steps
+            + " | FinalSlot=" + slot
+            + " | Stack now: " + st);
 
     p.openInventory(inv);
     click(p);
 }
-
-
-
-
-
-
 
 /** Opens the Pending Requests menu (Admin view). */
 public void openPending(Player p, int page) {

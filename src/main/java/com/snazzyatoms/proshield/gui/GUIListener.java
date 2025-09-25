@@ -62,9 +62,10 @@ public class GUIListener implements Listener {
                     low.contains("trusted") ||
                     low.contains("assign role") ||
                     low.contains("flags") ||
+                    low.contains("admin tools") ||   // 🔑 explicit match
                     low.contains("admin") ||
                     low.contains("world controls") ||
-                    low.contains("world:") ||                
+                    low.contains("world:") ||
                     low.contains("expansion menu") ||     // Player expansion menu
                     low.contains("request expansion") ||  // 🔑 messages.yml fallback
                     low.contains("expansion requests") || // Admin requests
@@ -74,6 +75,7 @@ public class GUIListener implements Listener {
 
             if (!isProShieldMenu) {
                 guiManager.clearNav(player);
+
                 if (plugin.getConfig().getBoolean("settings.debug.menus", false)) {
                     plugin.getLogger().info("[ProShield][DEBUG] Cleared nav for " + player.getName());
                 }

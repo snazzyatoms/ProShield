@@ -402,7 +402,6 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
     Inventory inv = Bukkit.createInventory(p, SIZE_36, title("expansion-menu", "&8Request Expansion"));
     border(inv);
 
-    // Pull options from config.yml
     List<Integer> steps = plugin.getConfig().getIntegerList("claims.expansion.step-options");
     if (steps.isEmpty()) steps = List.of(5, 10, 15, 20, 25, 30);
 
@@ -417,21 +416,23 @@ public void openExpansionRequestMenu(Player p, Plot plot) {
         if (slot % 9 == 7) slot += 2;
     }
 
-    // Back & Exit
     inv.setItem(31, backButton());
     inv.setItem(32, exitButton());
 
-    // ✅ Hybrid nav: ensure Expansion sits above ClaimInfo
-    replaceTop(p, View.expansionMenu());
-    push(p, View.claimInfo());
+    // 🔑 Correct push order: CLAIMINFO stays below, then EXPANSION_MENU on top
+    Deque<View> st = nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
+    if (st.isEmpty() || !"CLAIMINFO".equals(st.peek().type)) {
+        push(p, View.claimInfo());
+    }
+    push(p, View.expansionMenu());
 
-    // 🔍 Debug logging
-    plugin.getLogger().info("[ProShield][NAV] " + p.getName() 
-            + " -> OpenExpansionMenu | Stack now: EXPANSION_MENU > CLAIMINFO");
+    plugin.getLogger().info("[ProShield][NAV] " + p.getName() + " -> OpenExpansionMenu | Stack now: "
+            + nav.get(p.getUniqueId()));
 
     p.openInventory(inv);
     click(p);
 }
+
 
 
 

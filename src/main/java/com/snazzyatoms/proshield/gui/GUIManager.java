@@ -1071,7 +1071,7 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
     private UUID uuidSafe(String s) { try { return UUID.fromString(s); } catch (Exception e) { return null; } }
     private String shortId(UUID id) { String s = id.toString(); return s.substring(0, 8); }
 
-    // ------------------------------ View Stack ------------------------------
+        // ------------------------------ View Stack ------------------------------
 
     private void push(Player p, View v) {
         nav.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>()).push(v);
@@ -1185,6 +1185,7 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
         }
     }
 } // <--- FINAL closing brace for GUIManager
+
 
 // --------------------------- World Controls I/O ---------------------------
 

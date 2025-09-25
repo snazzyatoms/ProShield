@@ -1183,8 +1183,7 @@ private ItemStack iconWorldToggle(String world, String key, boolean on, Material
                     + (pendingTarget != null ? ":" + pendingTarget : "")
                     + (page != 0 ? "[p" + page + "]" : "");
         }
-    }
-} // <--- FINAL closing brace for GUIManager
+    } // <--- FINAL closing brace for GUIManager
 
 
 // --------------------------- World Controls I/O ---------------------------

@@ -26,6 +26,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
+            // Default behavior: show info
             sender.sendMessage(ChatColor.YELLOW + "ProShield v" + plugin.getDescription().getVersion());
             sender.sendMessage(ChatColor.GRAY + "Usage: /proshield <reload|debug|bypass>");
             return true;
@@ -34,7 +35,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "reload" -> {
-                if (!sender.hasPermission("proshield.reload")) {
+                if (!sender.hasPermission("proshield.admin.reload")) {
                     sender.sendMessage(ChatColor.RED + "You don’t have permission to reload ProShield.");
                     return true;
                 }
@@ -45,7 +46,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
             }
 
             case "debug" -> {
-                if (!sender.hasPermission("proshield.debug")) {
+                if (!sender.hasPermission("proshield.admin.debug")) {
                     sender.sendMessage(ChatColor.RED + "You don’t have permission to toggle debug.");
                     return true;
                 }
@@ -58,7 +59,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ChatColor.RED + "Only players can use bypass.");
                     return true;
                 }
-                if (!player.hasPermission("proshield.bypass")) {
+                if (!player.hasPermission("proshield.admin.bypass")) {
                     player.sendMessage(ChatColor.RED + "You don’t have permission to bypass claims.");
                     return true;
                 }
@@ -76,9 +77,9 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> list = new ArrayList<>();
         if (args.length == 1) {
-            if (sender.hasPermission("proshield.reload")) list.add("reload");
-            if (sender.hasPermission("proshield.debug")) list.add("debug");
-            if (sender.hasPermission("proshield.bypass")) list.add("bypass");
+            if (sender.hasPermission("proshield.admin.reload")) list.add("reload");
+            if (sender.hasPermission("proshield.admin.debug")) list.add("debug");
+            if (sender.hasPermission("proshield.admin.bypass")) list.add("bypass");
         }
         return list;
     }

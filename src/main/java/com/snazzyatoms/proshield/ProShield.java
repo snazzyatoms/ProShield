@@ -148,11 +148,16 @@ public class ProShield extends JavaPlugin {
         return bypassing;
     }
 
-    /** Reload everything cleanly */
+    /**
+     * Reload everything cleanly:
+     * - config.yml
+     * - language manager
+     * - messages util
+     */
     public void reloadAll() {
         reloadConfig();
         if (languageManager != null) languageManager.reload();
         if (messages != null) messages.reload();
-        // Reload others here if needed
+        getLogger().info("[ProShield] Configuration & languages reloaded.");
     }
 }

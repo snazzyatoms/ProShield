@@ -15,6 +15,7 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -41,6 +42,7 @@ public class ProShield extends JavaPlugin {
         // 📌 Core init
         // =====================
         saveDefaultConfig();
+        generateMessagesFile(); // ensure messages.yml or localized messages_xx.yml exists
 
         messages                = new MessagesUtil(this);
         plotManager             = new PlotManager(this);
@@ -142,5 +144,19 @@ public class ProShield extends JavaPlugin {
     /** Reload messages.yml safely */
     public void loadMessagesConfig() {
         messages.reload();
+    }
+
+    /**
+     * Ensure messages.yml (or localized messages_xx.yml) exists in plugin folder.
+     */
+    private void generateMessagesFile() {
+        String lang = getConfig().getString("settings.language", "en").toLowerCase();
+        String fileName = lang.equals("en") ? "messages.yml" : "messages_" + lang + ".yml";
+
+        File langFile = new File(getDataFolder(), fileName);
+        if (!langFile.exists()) {
+            saveResource(fileName, false); // Copies from plugin JAR into /plugins/ProShield/
+            getLogger().info("[ProShield] Generated " + fileName + " for language: " + lang);
+        }
     }
 }

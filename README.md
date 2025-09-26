@@ -15,8 +15,7 @@
 - 🔒 **Protection System** – Prevent griefing: block break/place, containers, fire spread, TNT/creeper explosions, entity grief, and more — all toggleable in the GUI.  
 - 🌐 **Multilingual Support** – 20+ languages included, fully customizable via `messages.yml`.  
 - 👥 **Trust System** – Manage trusted players from the GUI. Add/remove access with a click.  
-- 🎭 **Claim Roles** *(since 1.2.1)* – Assign role-based access: Visitor, Member, Builder, Container, Moderator, Manager, Owner. Fully configurable.  
-- 🎒 **Keep Items in Claims** *(1.2.2+)* – Prevent items dropped inside claims from despawning (toggled in GUI).  
+- 🎭 **Claim Roles** *(since 1.2.1)* – Assign role-based access: Visitor, Member, Builder, Container, Moderator, Manager, Owner. Fully configurable.    
 - 🔄 **Ownership Transfer** *(1.2.3)* – Transfer claim ownership directly from the GUI.  
 - ✨ **Claim Borders Preview** *(1.2.3)* – Visualize claim boundaries before confirming.  
 - 🖥️ **Intuitive GUIs** – Every feature is available in menus: Claims, Flags, Roles, Expansions, Admin Tools.  

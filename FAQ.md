@@ -15,7 +15,7 @@ If your issue isn’t listed, please [open a GitHub issue](https://github.com/sn
 ## ✅ General
 
 **Q: What Minecraft versions are supported?**  
-A: ProShield supports **1.18 → 1.21** on **Spigot and Paper**.  
+A: ProShield supports **1.18 → 1.21+** on **Spigot and Paper**.  
 Newer versions will be tested as they release.
 
 ---

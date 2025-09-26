@@ -1,120 +1,114 @@
 # 🛡️ ProShield
 *A lightweight, polished land & plot protection plugin for Spigot & Paper servers.*
 
-> Perfect for **Survival** or **SMP communities**, ProShield provides simple claiming, intuitive GUIs, and powerful admin tools — without the heavy bloat of larger region plugins.
+> Perfect for **Survival** or **SMP communities**, ProShield provides **multilingual support (20+ languages)**, intuitive GUIs, and powerful admin tools — without the heavy bloat of larger region plugins.  
+> Everything is designed to be fully manageable through the **GUI menus**, so commands are entirely optional.
 
 ---
 
 ## ✨ Features
 
-- 🏡 **Land Claiming** – Protect chunks with one command or the ProShield Compass GUI.  
-- ❌ **Unclaiming** – Release land instantly when no longer needed.  
-- 🔒 **Protection System** – Prevent griefing: block break/place, containers, interactions, fire spread, TNT/creeper explosions, entity grief, and more.  
-- 👥 **Trust System** – To allow friends access.  
-- 🎭 **Claim Roles** *(since 1.2.1)* – Define access levels: Visitor, Member, Builder, Container, Moderator, Manager, Owner.  
-- 🎒 **Keep Items in Claims** *(1.2.2+)* – Prevent items dropped in claims from despawning (configurable).  
-- 🔄 **Ownership Transfer** *(1.2.3)* – Owners can transfer claims to another player.  
-- ✨ **Claim Borders Preview** *(1.2.3)* – Visualize boundaries before confirming.  
-- 🖥️ **GUI Menus** – Clean & intuitive for claims, flags, roles, expansions, and admin tools.  
-- ⏪ **Back & Exit Buttons** *(improved 1.2.5)* – Consistent across all menus.  
-- 🧭 **ProShield Compass** – Right-click to open GUI (auto-given if enabled).  
-- 🕒 **Claim Expiry** – Auto-remove claims from inactive players (optional).  
-- ⚡ **Configurable Protections** – Containers, doors, buttons, buckets, mobs, explosions, fire, Enderman teleport.  
-- 🛑 **Spawn Guard** *(1.2.4)* – Block claiming around spawn radius.  
-- 🧟 **Mob Control** *(enhanced 1.2.5)* – Repel mobs, despawn hostiles, block targeting in safezones.  
-- 📈 **Expansion Requests** *(1.2.5)* – Players request expansions, admins approve/deny via GUI.  
-- 📜 **Expansion History** *(1.2.5)* – Paginated GUI to view past requests.  
-- 🌍 **World Controls** *(1.2.5)* – Admin GUI toggles global protections (fire, explosions, mobs).  
-- 🔧 **Reload & Debug Tools** *(improved 1.2.5)* – Reload configs/messages via GUI or command.  
+- 🏡 **Land Claiming** – Claim chunks instantly via the **ProShield Compass GUI** (no commands required).  
+- ❌ **Unclaiming** – Release land through the GUI with a single click.  
+- 🔒 **Protection System** – Prevent griefing: block break/place, containers, fire spread, TNT/creeper explosions, entity grief, and more — all toggleable in the GUI.  
+- 🌐 **Multilingual Support** – Ships with 20+ language packs. Server owners can switch easily in `config.yml`.  
+- 👥 **Trust System** – Manage trusted players from the GUI. Add/remove access with a click.  
+- 🎭 **Claim Roles** *(since 1.2.1)* – Assign role-based access: Visitor, Member, Builder, Container, Moderator, Manager, Owner. Fully configurable.  
+- 🎒 **Keep Items in Claims** *(1.2.2+)* – Prevent items dropped inside claims from despawning (toggled in GUI).  
+- 🔄 **Ownership Transfer** *(1.2.3)* – Transfer claim ownership directly from the GUI.  
+- ✨ **Claim Borders Preview** *(1.2.3)* – Visualize claim boundaries before confirming.  
+- 🖥️ **Intuitive GUIs** – Every feature is available in menus: Claims, Flags, Roles, Expansions, Admin Tools.  
+- ⏪ **Back & Exit Buttons** *(improved 1.2.5)* – Consistent navigation across all menus.  
+- 🧭 **ProShield Compass** – Right-click to open the menu instantly (auto-given if enabled).  
+- 🕒 **Claim Expiry** – Automatically remove claims from inactive players (optional, configurable).  
+- ⚡ **Configurable Protections** – Doors, buttons, buckets, mobs, explosions, fire spread, container access, etc. All manageable in the GUI.  
+- 🛑 **Spawn Guard** *(1.2.4)* – Prevent claiming near spawn radius.  
+- 🧟 **Mob Control** *(enhanced 1.2.5)* – Repel mobs from claim borders, despawn hostile mobs, and block targeting inside safezones.  
+- 📈 **Expansion Requests** *(1.2.5)* – Players request claim expansions directly in the GUI.  
+- 📜 **Expansion History** *(1.2.5)* – Paginated GUI showing past approvals/denials.  
+- 🌍 **World Controls** *(1.2.5)* – Admin-only GUI to toggle global protections (PvP, explosions, mob damage, fire, crops, etc.).  
+- 🔧 **Reload & Debug Tools** *(improved 1.2.5)* – Admins can reload configs/messages directly through the GUI.  
 - 🎨 **Refined GUIs** *(1.2.6)* –  
-  - Removed placeholder `#` tags.  
-  - Synced titles with `messages.yml`.  
-  - Back/Exit buttons now consistent.  
-- 🧭 **Compass Sync** *(1.2.6)* – Unified CompassManager + GUIListener.  
-- 🌾 **New Claim Flag** *(1.2.6)* – Crop Trample toggle.  
-- 🪐 **World Placeholders** *(1.2.6)* – Nether & End reserved in GUI.  
-- 🛠️ **Bug Fixes** *(1.2.6)* – Fixed Admin Tools submenus (Reload, World Controls, Expansion Requests).  
+  - Removed all placeholder `#` tags  
+  - Synced menu titles with `messages.yml`  
+  - Unified Back/Exit buttons across all menus  
+- 🧭 **Compass Sync** *(1.2.6)* – Unified CompassManager + GUIListener, ensuring consistent behavior.  
+- 🌾 **New Claim Flag** *(1.2.6)* – Toggle **Crop Trample** in claims.  
+- 🪐 **World Placeholders** *(1.2.6)* – Nether & End reserved in the World Controls menu.  
+- 🛠️ **Bug Fixes** *(1.2.6)* – Fixed Admin Tools submenus (Reload, World Controls, Pending Requests).  
 
 ---
 
 ## ⚠️ Migration Notes (→ v1.2.6)
 
-If upgrading from **v1.2.5 or earlier**, you **must regenerate your configs** to sync new features.
+If upgrading from **v1.2.5 or earlier**, you **must regenerate configs** to sync with new features.
 
-**What changed:**  
-- Back/Exit buttons finalized  
-- Nether/End placeholders in world controls  
+**What changed in 1.2.6:**  
+- Back/Exit buttons finalized across all menus  
+- Nether/End placeholders in World Controls  
 - Crop Trample flag added  
-- Expansion requests cooldown/expiry  
+- Expansion cooldown/expiry synced with GUI  
 
 **Steps:**  
 1. ⛔ Stop your server  
 2. 📂 Backup + delete `/plugins/ProShield/`  
-3. ▶️ Restart → new configs generated  
-4. 📝 Reapply custom changes  
+3. ▶️ Restart → new configs will be generated  
+4. 📝 Reapply your custom changes  
 
 ---
 
-## 🏡 Getting Started
+## 🏡 Getting Started (GUI First!)
 
-### 🔹 Option 1: ProShield Compass (GUI)
-- Given automatically on join *(if enabled)*.  
-- Or via `/proshield compass`.  
-- **Right-click** to open menu:  
-  - Slot 11 → Claim land  
-  - Slot 13 → Claim Info  
-  - Slot 15 → Unclaim  
-  - Slot 16 → Trusted Players (roles)  
-  - Slot 28 → Claim Flags  
-  - Slot 30 → Request Expansion  
-  - Slot 32 → Admin Tools *(if permissioned)*  
+### 🔹 The ProShield Compass
+- Automatically given on join *(if enabled)*  
+- Or via `/proshield compass`  
+- **Right-click** to open GUI:  
+  - Claim land (slot 11)  
+  - View Claim Info (slot 13)  
+  - Unclaim (slot 15)  
+  - Manage Trusted Players + Roles (slot 16)  
+  - Claim Flags (slot 28)  
+  - Request Expansion (slot 30)  
+  - Admin Tools *(slot 32, if permitted)*  
 
-### 🔹 Option 2: Commands
-- `/proshield claim` – Claim current chunk  
-- `/proshield unclaim` – Remove your claim  
-- `/proshield info` – View claim info  
-- `/proshield trust <player> [role]` – Grant access  
-- `/proshield untrust <player>` – Remove trust  
-- `/proshield trusted` – List trusted players  
-
-💡 **Tip:** Compass GUI = simplicity. Commands = precision.
+💡 All features are accessible through **GUIs**. Commands exist, but they’re optional.
 
 ---
 
 ## 🔑 Permissions
 
-| Node                             | Description                                     | Default |
-|----------------------------------|-------------------------------------------------|---------|
-| `proshield.player.access`        | Core player access (claims, compass, GUI)       | ✅ true |
-| `proshield.compass`              | Receive/use compass                             | ✅ true |
-| `proshield.player.claim`         | Create/manage own claims                        | ✅ true |
-| `proshield.unlimited`            | Ignore claim limits                             | ❌ op   |
-| `proshield.admin`                | Access admin tools GUI & commands               | ❌ op   |
-| `proshield.admin.reload`         | Reload configs via command/GUI                  | ❌ op   |
-| `proshield.admin.debug`          | Toggle debug logging                            | ❌ op   |
-| `proshield.admin.expansions`     | Approve/Deny expansion requests                 | ❌ op   |
-| `proshield.admin.worldcontrols`  | Manage world-level flags                        | ❌ op   |
-| `proshield.admin.bypass`         | Toggle bypass protection                        | ❌ op   |
+| Node                             | Description                                      | Default |
+|----------------------------------|--------------------------------------------------|---------|
+| `proshield.player.access`        | Core player access (claims, compass, GUI)        | ✅ true |
+| `proshield.compass`              | Receive/use the ProShield compass                | ✅ true |
+| `proshield.player.claim`         | Create/manage own claims                         | ✅ true |
+| `proshield.unlimited`            | Ignore max-claim limits                          | ❌ op   |
+| `proshield.admin`                | Access Admin Tools GUI & commands                | ❌ op   |
+| `proshield.admin.reload`         | Reload configs/messages (GUI or command)         | ❌ op   |
+| `proshield.admin.debug`          | Toggle debug logging                             | ❌ op   |
+| `proshield.admin.expansions`     | Review & manage claim expansions                 | ❌ op   |
+| `proshield.admin.worldcontrols`  | Manage world-level protections (via GUI)         | ❌ op   |
+| `proshield.admin.bypass`         | Toggle bypass protection                         | ❌ op   |
 
 ---
 
 ## 📖 Documentation
 - 📜 [CHANGELOG.md](CHANGELOG.md) – Full version history  
-- ❓ [FAQ.md](FAQ.md) – Common questions & troubleshooting  
+- ❓ [FAQ.md](FAQ.md) – Common troubleshooting  
 
 ---
 
 ## 🚀 Roadmap
-ProShield **2.0** (in development 🚧):  
+ProShield **2.0** (coming soon 🚧):  
 - 🏘️ Towns & Shops  
 - 💰 Economy Integration  
-- ⚙️ Per-player permission overrides  
-- 🎨 Entry/Exit messages  
-- 🗺️ Dynmap/BlueMap overlays  
+- ⚙️ Per-player permission overrides (fine-tuned via GUI)  
+- 🎨 Entry/Exit claim messages  
+- 🗺️ Dynmap / BlueMap overlays  
+- 🌐 **Bungee Support** *(planned for 2.0 or later)*  
 
 👉 See progress: [ROADMAP-2.0.md](ROADMAP-2.0.md)  
 
 ---
 
-💡 *ProShield is ideal for small to medium SMP servers that want strong protection, easy setup, and admin control — without heavy region plugins.*  
-
+💡 *ProShield is ideal for small to medium SMP servers that want strong protection, multilingual support, and admin control — all fully managed through intuitive GUIs.*  

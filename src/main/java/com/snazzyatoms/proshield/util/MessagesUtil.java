@@ -5,7 +5,9 @@ import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.File;
 import java.util.*;
 
 /**
@@ -13,15 +15,17 @@ import java.util.*;
  *
  * Handles:
  *  - Loading and caching messages.yml values
+ *  - Language selection from config.yml
+ *  - Fallback to English if key missing
  *  - Color formatting (& → § codes)
- *  - Safe fallback lookups
  *  - Utility for lists and optional values
  *  - Debug logging
  */
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private FileConfiguration config;
+    private FileConfiguration langConfig;     // active language file
+    private FileConfiguration fallbackConfig; // English fallback
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
@@ -33,9 +37,26 @@ public class MessagesUtil {
      * ------------------- */
 
     public void reload() {
-        plugin.saveDefaultConfig(); // ensures config exists
-        plugin.reloadConfig();
-        this.config = plugin.getConfig();
+        // Determine language
+        String lang = plugin.getConfig().getString("settings.language", "en").toLowerCase();
+        String fileName = lang.equals("en") ? "messages.yml" : "messages_" + lang + ".yml";
+
+        // Ensure files exist (ProShield.java already savesResource, but double-check)
+        File langFile = new File(plugin.getDataFolder(), fileName);
+        if (!langFile.exists()) {
+            plugin.saveResource(fileName, false);
+        }
+
+        File fallbackFile = new File(plugin.getDataFolder(), "messages.yml");
+        if (!fallbackFile.exists()) {
+            plugin.saveResource("messages.yml", false);
+        }
+
+        // Load configs
+        langConfig = YamlConfiguration.loadConfiguration(langFile);
+        fallbackConfig = YamlConfiguration.loadConfiguration(fallbackFile);
+
+        debug("Loaded language: " + fileName);
     }
 
     /* -------------------
@@ -44,14 +65,20 @@ public class MessagesUtil {
 
     /** Get a colored message by key, with fallback. */
     public String getOrDefault(String key, String fallback) {
-        String raw = config.getString(key, fallback);
+        String raw = langConfig.getString(key);
+        if (raw == null || raw.isBlank()) {
+            raw = fallbackConfig.getString(key, fallback);
+        }
         if (raw == null || raw.isBlank()) raw = fallback;
         return color(raw);
     }
 
     /** Get a message by key, or null if not found. */
     public String getOrNull(String key) {
-        String raw = config.getString(key, null);
+        String raw = langConfig.getString(key);
+        if (raw == null || raw.isBlank()) {
+            raw = fallbackConfig.getString(key, null);
+        }
         return (raw == null || raw.isBlank()) ? null : color(raw);
     }
 
@@ -62,9 +89,11 @@ public class MessagesUtil {
 
     /** Get a list of messages by key. */
     public List<String> getList(String key) {
-        List<String> list = config.getStringList(key);
-        if (list == null || list.isEmpty()) return Collections.emptyList();
-        return colorList(list);
+        List<String> list = langConfig.getStringList(key);
+        if (list == null || list.isEmpty()) {
+            list = fallbackConfig.getStringList(key);
+        }
+        return (list == null || list.isEmpty()) ? Collections.emptyList() : colorList(list);
     }
 
     /**
@@ -72,15 +101,19 @@ public class MessagesUtil {
      * (Compatibility shim for ClaimRole#getLore)
      */
     public List<String> getListOrNull(String key) {
-        if (!config.contains(key)) return null;
-        List<String> list = config.getStringList(key);
+        List<String> list = langConfig.getStringList(key);
+        if (list == null || list.isEmpty()) {
+            list = fallbackConfig.getStringList(key);
+        }
         return (list == null || list.isEmpty()) ? null : colorList(list);
     }
 
     /** Get all subkeys under a given path. */
     public Set<String> getKeys(String path) {
-        if (config.isConfigurationSection(path)) {
-            return config.getConfigurationSection(path).getKeys(false);
+        if (langConfig.isConfigurationSection(path)) {
+            return langConfig.getConfigurationSection(path).getKeys(false);
+        } else if (fallbackConfig.isConfigurationSection(path)) {
+            return fallbackConfig.getConfigurationSection(path).getKeys(false);
         }
         return Collections.emptySet();
     }

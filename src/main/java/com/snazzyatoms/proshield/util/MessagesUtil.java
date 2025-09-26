@@ -2,21 +2,18 @@
 package com.snazzyatoms.proshield.util;
 
 import com.snazzyatoms.proshield.ProShield;
+import com.snazzyatoms.proshield.languages.LanguageManager;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
 import java.util.*;
 
 /**
- * MessagesUtil (ProShield v1.2.6-enhanced)
+ * MessagesUtil (ProShield v1.2.6.1)
  *
  * Handles:
- *  - Loading and caching messages.yml values
- *  - Language selection from config.yml
- *  - Fallback to English if key missing
+ *  - Delegates to LanguageManager for loading active language
+ *  - Fallbacks handled inside LanguageManager
  *  - Color formatting (& → § codes)
  *  - Utility for lists and optional values
  *  - Debug logging
@@ -24,12 +21,11 @@ import java.util.*;
 public class MessagesUtil {
 
     private final ProShield plugin;
-    private FileConfiguration langConfig;     // active language file
-    private FileConfiguration fallbackConfig; // English fallback
+    private final LanguageManager langs;
 
     public MessagesUtil(ProShield plugin) {
         this.plugin = plugin;
-        reload();
+        this.langs = plugin.getLanguageManager();
     }
 
     /* -------------------
@@ -37,26 +33,7 @@ public class MessagesUtil {
      * ------------------- */
 
     public void reload() {
-        // Determine language
-        String lang = plugin.getConfig().getString("settings.language", "en").toLowerCase();
-        String fileName = lang.equals("en") ? "messages.yml" : "messages_" + lang + ".yml";
-
-        // Ensure files exist (ProShield.java already savesResource, but double-check)
-        File langFile = new File(plugin.getDataFolder(), fileName);
-        if (!langFile.exists()) {
-            plugin.saveResource(fileName, false);
-        }
-
-        File fallbackFile = new File(plugin.getDataFolder(), "messages.yml");
-        if (!fallbackFile.exists()) {
-            plugin.saveResource("messages.yml", false);
-        }
-
-        // Load configs
-        langConfig = YamlConfiguration.loadConfiguration(langFile);
-        fallbackConfig = YamlConfiguration.loadConfiguration(fallbackFile);
-
-        debug("Loaded language: " + fileName);
+        langs.reload(); // delegate reload to LanguageManager
     }
 
     /* -------------------
@@ -64,58 +41,25 @@ public class MessagesUtil {
      * ------------------- */
 
     /** Get a colored message by key, with fallback. */
-    public String getOrDefault(String key, String fallback) {
-        String raw = langConfig.getString(key);
-        if (raw == null || raw.isBlank()) {
-            raw = fallbackConfig.getString(key, fallback);
-        }
-        if (raw == null || raw.isBlank()) raw = fallback;
-        return color(raw);
-    }
-
-    /** Get a message by key, or null if not found. */
-    public String getOrNull(String key) {
-        String raw = langConfig.getString(key);
-        if (raw == null || raw.isBlank()) {
-            raw = fallbackConfig.getString(key, null);
-        }
-        return (raw == null || raw.isBlank()) ? null : color(raw);
-    }
-
-    /** Get a message by key, with empty string fallback. */
     public String get(String key) {
-        return getOrDefault(key, "");
+        return langs.get(key);
     }
 
     /** Get a list of messages by key. */
     public List<String> getList(String key) {
-        List<String> list = langConfig.getStringList(key);
-        if (list == null || list.isEmpty()) {
-            list = fallbackConfig.getStringList(key);
-        }
-        return (list == null || list.isEmpty()) ? Collections.emptyList() : colorList(list);
+        return langs.getList(key);
     }
 
-    /**
-     * Get a list of messages, or null if not found.
-     * (Compatibility shim for ClaimRole#getLore)
-     */
-    public List<String> getListOrNull(String key) {
-        List<String> list = langConfig.getStringList(key);
-        if (list == null || list.isEmpty()) {
-            list = fallbackConfig.getStringList(key);
-        }
-        return (list == null || list.isEmpty()) ? null : colorList(list);
+    /** Get a colored + formatted message with placeholders. */
+    public String format(String key, Map<String, String> placeholders) {
+        return langs.format(key, placeholders);
     }
 
     /** Get all subkeys under a given path. */
     public Set<String> getKeys(String path) {
-        if (langConfig.isConfigurationSection(path)) {
-            return langConfig.getConfigurationSection(path).getKeys(false);
-        } else if (fallbackConfig.isConfigurationSection(path)) {
-            return fallbackConfig.getConfigurationSection(path).getKeys(false);
-        }
-        return Collections.emptySet();
+        return langs.raw().isConfigurationSection(path)
+                ? langs.raw().getConfigurationSection(path).getKeys(false)
+                : Collections.emptySet();
     }
 
     /* -------------------

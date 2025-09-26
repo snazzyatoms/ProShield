@@ -14,6 +14,7 @@ import java.util.*;
  * Handles:
  *  - Delegates to LanguageManager for loading active language
  *  - Fallbacks handled inside LanguageManager
+ *  - Backwards-compatibility shims (getOrDefault, getOrNull)
  *  - Color formatting (& → § codes)
  *  - Utility for lists and optional values
  *  - Debug logging
@@ -40,7 +41,7 @@ public class MessagesUtil {
      * Core Getters
      * ------------------- */
 
-    /** Get a colored message by key, with fallback. */
+    /** Get a colored message by key (no fallback). */
     public String get(String key) {
         return langs.get(key);
     }
@@ -60,6 +61,23 @@ public class MessagesUtil {
         return langs.raw().isConfigurationSection(path)
                 ? langs.raw().getConfigurationSection(path).getKeys(false)
                 : Collections.emptySet();
+    }
+
+    /* -------------------
+     * Backwards Compatibility Helpers
+     * ------------------- */
+
+    /** Get a message with fallback value if missing. */
+    public String getOrDefault(String key, String fallback) {
+        String value = langs.get(key);
+        if (value == null || value.isBlank()) return color(fallback);
+        return value;
+    }
+
+    /** Get a message or null if not found. */
+    public String getOrNull(String key) {
+        String value = langs.get(key);
+        return (value == null || value.isBlank()) ? null : value;
     }
 
     /* -------------------

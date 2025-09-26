@@ -5,7 +5,7 @@
 # - Role display names + lore fully customizable
 # - All GUI buttons, lore, errors, success & warnings covered
 # - Placeholders: %player%, %role%, %flag%, %state%
-# - Synced with GUIManager & GUIListener (v1.2.6)
+# - Synced with GUIManager & GUIListener (v1.2.6.1)
 # ==========================================================
 
 messages:

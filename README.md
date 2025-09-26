@@ -81,21 +81,6 @@ If upgrading from **v1.2.5 or earlier**, you **must regenerate your configs** to
 
 ---
 
-## ⌨️ Commands
-/proshield - Main help command
-/proshield claim - Claim your current chunk
-/proshield unclaim - Remove your claim
-/proshield info - Show claim info
-/proshield trust <p> - Trust player with optional role
-/proshield untrust <p> - Remove trust
-/proshield trusted - List trusted players
-/proshield compass - Get the ProShield compass
-/proshield admin - Open Admin Tools GUI
-/proshield reload - Reload configs + messages
-/proshield debug - Toggle debug
-/proshield bypass - Toggle admin bypass
----
-
 ## 🔑 Permissions
 
 | Node                             | Description                                     | Default |

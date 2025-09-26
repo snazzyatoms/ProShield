@@ -224,18 +224,18 @@ public class GUIManager {
     Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
     border(inv);
 
-    inv.setItem(12, textItem(Material.PAPER, "&aPending Requests", List.of(
-            gray("&7Approve or deny expansion requests."),
-            line("ADMIN:PENDING")
-    )));
-    inv.setItem(14, textItem(Material.REDSTONE, "&cWorld Controls", List.of(
-            gray("&7Toggle per-world settings (PvP, Safe Zone, Explosions, …)"),
-            line("ADMIN:WORLD_CTRL")
-    )));
-    inv.setItem(16, textItem(Material.REPEATER, "&eReload Config", List.of(
-            gray("&7Reload ProShield configuration files."),
-            line("ADMIN:RELOAD")
-    )));
+    inv.setItem(12, textItem(Material.PAPER, "&aPending Requests",
+    List.of(gray("&7Approve or deny expansion requests.")),
+    "ADMIN:PENDING"
+));
+inv.setItem(14, textItem(Material.REDSTONE, "&cWorld Controls",
+    List.of(gray("&7Toggle per-world settings (PvP, Safe Zone, Explosions, …)")),
+    "ADMIN:WORLD_CTRL"
+));
+inv.setItem(16, textItem(Material.REPEATER, "&eReload Config",
+    List.of(gray("&7Reload ProShield configuration files.")),
+    "ADMIN:RELOAD"
+));
 
     // Placeholder for future feature
     inv.setItem(22, textItem(Material.BEACON, "&dBungee Support (Coming Soon)", List.of(
@@ -802,80 +802,85 @@ public class GUIManager {
     // ------------------------------ Icon Builder ------------------------------
 
     private ItemStack iconClaimButton(boolean canClaim) {
-        return textItem(
-                canClaim ? Material.LIME_BED : Material.GRAY_BED,
-                canClaim ? "&aClaim Chunk" : "&7Claim Chunk",
-                List.of(gray(canClaim
-                        ? messages.getOrDefault("messages.lore.claim", "&7Create a new claim centered here.")
-                        : messages.getOrDefault("messages.lore.already-claimed", "&7Already claimed.")),
-                        line("CLAIM"))
-        );
-    }
+    return textItem(
+        canClaim ? Material.LIME_BED : Material.GRAY_BED,
+        canClaim ? "&aClaim Chunk" : "&7Claim Chunk",
+        List.of(gray(canClaim
+                ? messages.getOrDefault("messages.lore.claim", "&7Create a new claim centered here.")
+                : messages.getOrDefault("messages.lore.already-claimed", "&7Already claimed."))),
+        "CLAIM"
+    );
+}
 
-    private ItemStack iconUnclaimButton(boolean canUnclaim) {
-        return textItem(
-                canUnclaim ? Material.RED_BED : Material.GRAY_BED,
-                canUnclaim ? "&cUnclaim Chunk" : "&7Unclaim Chunk",
-                List.of(gray(canUnclaim
-                        ? messages.getOrDefault("messages.lore.unclaim", "&7Remove your current claim.")
-                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
-                        line("UNCLAIM"))
-        );
-    }
+private ItemStack iconUnclaimButton(boolean canUnclaim) {
+    return textItem(
+        canUnclaim ? Material.RED_BED : Material.GRAY_BED,
+        canUnclaim ? "&cUnclaim Chunk" : "&7Unclaim Chunk",
+        List.of(gray(canUnclaim
+                ? messages.getOrDefault("messages.lore.unclaim", "&7Remove your current claim.")
+                : messages.getOrDefault("messages.lore.no-claim", "&7No claim here."))),
+        "UNCLAIM"
+    );
+}
 
-    private ItemStack iconExpansionRequest() {
-        return textItem(Material.DIAMOND, "&bRequest Expansion", List.of(
-                gray("&7Open the expansion request menu."),
-                line("EXPAND:MENU")
-        ));
-    }
 
-    private ItemStack iconClaimInfo(Plot plot) {
-        List<String> lore = new ArrayList<>();
-        if (plot == null) {
-            lore.add(gray(messages.getOrDefault("messages.lore.no-claim", "&7You are not standing in a claim.")));
-        } else {
-            lore.add(gray("&7ID: &f" + plot.getId()));
-            lore.add(gray("&7Owner: &f" + nameOrShort(plot.getOwner())));
-            lore.add(gray("&7Center: &f" + plot.getWorld() + " " + plot.getX() + "," + plot.getZ()));
-            lore.add(gray("&7Radius: &f" + plot.getRadius()));
-        }
-        lore.add(line("INFO"));
-        return textItem(Material.BOOK, "&bClaim Info", lore);
+   private ItemStack iconExpansionRequest() {
+    return textItem(Material.DIAMOND, "&bRequest Expansion",
+        List.of(gray("&7Open the expansion request menu.")),
+        "EXPAND:MENU"
+    );
+}
+
+
+   private ItemStack iconClaimInfo(Plot plot) {
+    List<String> lore = new ArrayList<>();
+    if (plot == null) {
+        lore.add(gray(messages.getOrDefault("messages.lore.no-claim", "&7You are not standing in a claim.")));
+    } else {
+        lore.add(gray("&7ID: &f" + plot.getId()));
+        lore.add(gray("&7Owner: &f" + nameOrShort(plot.getOwner())));
+        lore.add(gray("&7Center: &f" + plot.getWorld() + " " + plot.getX() + "," + plot.getZ()));
+        lore.add(gray("&7Radius: &f" + plot.getRadius()));
     }
+    return textItem(Material.BOOK, "&bClaim Info", lore, "INFO");
+}
+
 
     private ItemStack iconTrusted(boolean enabled) {
-        return textItem(Material.PLAYER_HEAD,
-                enabled ? "&aTrusted Players" : "&7Trusted Players",
-                List.of(gray(enabled
-                        ? messages.getOrDefault("messages.lore.trusted", "&7Manage trusted players & roles.")
-                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
-                        line("TRUSTED")));
-    }
+    return textItem(Material.PLAYER_HEAD,
+        enabled ? "&aTrusted Players" : "&7Trusted Players",
+        List.of(gray(enabled
+                ? messages.getOrDefault("messages.lore.trusted", "&7Manage trusted players & roles.")
+                : messages.getOrDefault("messages.lore.no-claim", "&7No claim here."))),
+        "TRUSTED"
+    );
+}
+
 
     private ItemStack iconRoles(boolean enabled) {
-        return textItem(Material.NAME_TAG,
-                enabled ? "&eAssign Roles" : "&7Assign Roles",
-                List.of(gray(enabled
-                        ? messages.getOrDefault("messages.lore.roles", "&7Choose a player in Trusted, then pick a role.")
-                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
-                        line("ROLES")));
-    }
+    return textItem(Material.NAME_TAG,
+        enabled ? "&eAssign Roles" : "&7Assign Roles",
+        List.of(gray(enabled
+                ? messages.getOrDefault("messages.lore.roles", "&7Choose a player in Trusted, then pick a role.")
+                : messages.getOrDefault("messages.lore.no-claim", "&7No claim here."))),
+        "ROLES"
+    );
+}
 
-    private ItemStack iconFlags(boolean enabled) {
-        return textItem(Material.LEVER,
-                enabled ? "&6Flags" : "&7Flags",
-                List.of(gray(enabled
-                        ? messages.getOrDefault("messages.lore.flags", "&7Toggle claim flags (explosions, fire, pvp, safezone…)")
-                        : messages.getOrDefault("messages.lore.no-claim", "&7No claim here.")),
-                        line("FLAGS")));
-    }
+    private ItemStack iconFlag(Plot plot, FlagSpec f) {
+    boolean on = plot.getFlag(f.key);
+    return textItem(f.icon, (on ? "&a" : "&c") + f.name,
+        List.of(gray("&7State: &f" + (on ? "ON" : "OFF"))),
+        "FLAG:" + f.key
+    );
+}
 
     private ItemStack iconAdminTools() {
-        return textItem(Material.COMPASS, "&dAdmin Tools", List.of(
-                gray(messages.getOrDefault("messages.lore.admin", "&7TP to nearest claim / review requests / world controls")),
-                line("ADMIN")));
-    }
+    return textItem(Material.COMPASS, "&dAdmin Tools",
+        List.of(gray(messages.getOrDefault("messages.lore.admin", "&7TP to nearest claim / review requests / world controls"))),
+        "ADMIN"
+    );
+}
 
     private ItemStack iconOwner(UUID owner) {
         return textItem(Material.PLAYER_HEAD, "&bOwner", List.of(
@@ -892,16 +897,16 @@ public class GUIManager {
         ));
     }
 
-    private ItemStack iconTrustedEntry(Plot plot, UUID target) {
-        ClaimRole r = roles.getRole(plot, target);
-        return textItem(Material.PLAYER_HEAD,
-                "&f" + nameOrShort(target) + " &7[" + r.getDisplayName() + "]",
-                List.of(
-                        gray(messages.getOrDefault("messages.lore.trusted-entry", "&8Left: set role  •  Right: remove")),
-                        line("TRUST:ROLE:" + target),
-                        line("TRUST:REMOVE:" + target)
-                ));
-    }
+   private ItemStack iconTrustedEntry(Plot plot, UUID target) {
+    ClaimRole r = roles.getRole(plot, target);
+    return textItem(Material.PLAYER_HEAD,
+        "&f" + nameOrShort(target) + " &7[" + r.getDisplayName() + "]",
+        List.of(
+            gray(messages.getOrDefault("messages.lore.trusted-entry", "&8Left: set role  •  Right: remove"))
+        ),
+        "TRUST:ROLE:" + target // still clean, no #
+    );
+}
 
     private static class FlagSpec {
         final String key, name;
@@ -934,42 +939,41 @@ public class GUIManager {
     }
 
     private ItemStack iconWorld(String world) {
-        return textItem(Material.GRASS_BLOCK, "&a" + world, List.of(
-                gray("&7View & toggle settings"),
-                line("WORLD:OPEN:" + world)
-        ));
-    }
+    return textItem(Material.GRASS_BLOCK, "&a" + world,
+        List.of(gray("&7View & toggle settings")),
+        "WORLD:OPEN:" + world
+    );
+}
 
-    private ItemStack iconWorldToggle(String world, String key, boolean on, Material mat, String name, String desc) {
-        return textItem(mat, (on ? "&a" : "&c") + name, List.of(
-                gray("&7" + desc),
-                gray("&7State: &f" + (on ? "ON" : "OFF")),
-                line("WORLD:TOGGLE:" + world + ":" + key)
-        ));
-    }
+private ItemStack iconWorldToggle(String world, String key, boolean on, Material mat, String name, String desc) {
+    return textItem(mat, (on ? "&a" : "&c") + name,
+        List.of(gray("&7" + desc), gray("&7State: &f" + (on ? "ON" : "OFF"))),
+        "WORLD:TOGGLE:" + world + ":" + key
+    );
+}
+
 
     private ItemStack iconRequest(ExpansionRequest r) {
-        String who = nameOrShort(r.getRequester());
-        String st  = r.getStatus().name();
-        String when = (r.getCreatedAt() != null ? TS.format(r.getCreatedAt()) : "-");
-        return textItem(Material.PAPER, "&bExpansion Request", List.of(
-                gray("&7Player: &f" + who),
-                gray("&7Amount: &f+" + r.getAmount()),
-                gray("&7Created: &f" + when),
-                gray("&7Status: &f" + st),
-                "",
-                line("REQ:" + r.getId() + ":APPROVE"),
-                line("REQ:" + r.getId() + ":DENY")
-        ));
-    }
+    String who = nameOrShort(r.getRequester());
+    String st  = r.getStatus().name();
+    String when = (r.getCreatedAt() != null ? TS.format(r.getCreatedAt()) : "-");
+    return textItem(Material.PAPER, "&bExpansion Request", List.of(
+        gray("&7Player: &f" + who),
+        gray("&7Amount: &f+" + r.getAmount()),
+        gray("&7Created: &f" + when),
+        gray("&7Status: &f" + st)
+    ), "REQ:" + r.getId());
+}
+
 
     private ItemStack backButton() {
-        return textItem(Material.ARROW, "&7Back", List.of(line("BACK")));
-    }
+    return textItem(Material.ARROW, "&7Back", List.of(gray("&7Return to previous menu")), "BACK");
+}
 
-    private ItemStack exitButton() {
-        return textItem(Material.OAK_DOOR, "&7Exit", List.of(line("EXIT")));
-    }
+private ItemStack exitButton() {
+    return textItem(Material.OAK_DOOR, "&7Exit", List.of(gray("&7Close this menu")), "EXIT");
+}
+
 
     // ------------------------------ UI Helpers ------------------------------
 
@@ -989,21 +993,40 @@ public class GUIManager {
         return 9 + row * 9 + col;
     }
 
-    private static ItemStack textItem(Material m, String name, List<String> lore) {
-        ItemStack it = new ItemStack(m);
-        ItemMeta im = it.getItemMeta();
-        if (im != null) {
-            im.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
-            if (lore != null) {
-                List<String> colored = new ArrayList<>(lore.size());
-                for (String s : lore) colored.add(ChatColor.translateAlternateColorCodes('&', s));
-                im.setLore(colored);
-            }
-            im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_POTION_EFFECTS);
-            it.setItemMeta(im);
+    // === New clean item builder with metadata ===
+private static ItemStack textItem(Material m, String name, List<String> lore, String actionId) {
+    ItemStack it = new ItemStack(m);
+    ItemMeta im = it.getItemMeta();
+    if (im != null) {
+        im.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+        if (lore != null) {
+            List<String> colored = new ArrayList<>(lore.size());
+            for (String s : lore) colored.add(ChatColor.translateAlternateColorCodes('&', s));
+            im.setLore(colored);
         }
-        return it;
+        if (actionId != null) {
+            im.getPersistentDataContainer().set(
+                new NamespacedKey("proshield", "action"),
+                PersistentDataType.STRING,
+                actionId
+            );
+        }
+        im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_POTION_EFFECTS);
+        it.setItemMeta(im);
     }
+    return it;
+}
+
+// === Extract the action silently ===
+private static String extractId(ItemStack it) {
+    if (it == null) return null;
+    ItemMeta im = it.getItemMeta();
+    if (im == null) return null;
+    return im.getPersistentDataContainer().get(
+        new NamespacedKey("proshield", "action"),
+        PersistentDataType.STRING
+    );
+}
 
     private static ItemStack quick(Material m, String name) { return textItem(m, name, null); }
     private static String line(String id) { return ChatColor.DARK_GRAY + "#" + id; }

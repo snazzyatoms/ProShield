@@ -2,7 +2,9 @@
 *A lightweight, polished land & plot protection plugin for Spigot & Paper servers.*
 
 > Perfect for **Survival** or **SMP communities**, ProShield provides **multilingual support (20+ languages)**, intuitive GUIs, and powerful admin tools — without the heavy bloat of larger region plugins.  
-> Everything is designed to be fully manageable through the **GUI menus**, so commands are entirely optional.
+> Every feature is designed to be fully manageable through the **GUI menus**, so commands are entirely optional.  
+
+💡 **Multilingual & Customizable:** ProShield ships with 20+ languages by default. All messages, titles, and GUI text are stored in `messages.yml`, meaning **server owners can fine-tune, polish, or rewrite their language pack at any time** — no developer intervention required. Total flexibility, your server, your style.  
 
 ---
 
@@ -11,7 +13,7 @@
 - 🏡 **Land Claiming** – Claim chunks instantly via the **ProShield Compass GUI** (no commands required).  
 - ❌ **Unclaiming** – Release land through the GUI with a single click.  
 - 🔒 **Protection System** – Prevent griefing: block break/place, containers, fire spread, TNT/creeper explosions, entity grief, and more — all toggleable in the GUI.  
-- 🌐 **Multilingual Support** – Ships with 20+ language packs. Server owners can switch easily in `config.yml`.  
+- 🌐 **Multilingual Support** – 20+ languages included, fully customizable via `messages.yml`.  
 - 👥 **Trust System** – Manage trusted players from the GUI. Add/remove access with a click.  
 - 🎭 **Claim Roles** *(since 1.2.1)* – Assign role-based access: Visitor, Member, Builder, Container, Moderator, Manager, Owner. Fully configurable.  
 - 🎒 **Keep Items in Claims** *(1.2.2+)* – Prevent items dropped inside claims from despawning (toggled in GUI).  

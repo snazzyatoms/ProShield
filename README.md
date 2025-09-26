@@ -10,7 +10,7 @@
 - 🏡 **Land Claiming** – Protect chunks with one command or the ProShield Compass GUI.  
 - ❌ **Unclaiming** – Release land instantly when no longer needed.  
 - 🔒 **Protection System** – Prevent griefing: block break/place, containers, interactions, fire spread, TNT/creeper explosions, entity grief, and more.  
-- 👥 **Trust System** – `/proshield trust <player>` to allow friends access.  
+- 👥 **Trust System** – To allow friends access.  
 - 🎭 **Claim Roles** *(since 1.2.1)* – Define access levels: Visitor, Member, Builder, Container, Moderator, Manager, Owner.  
 - 🎒 **Keep Items in Claims** *(1.2.2+)* – Prevent items dropped in claims from despawning (configurable).  
 - 🔄 **Ownership Transfer** *(1.2.3)* – Owners can transfer claims to another player.  

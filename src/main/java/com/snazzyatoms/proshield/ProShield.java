@@ -6,6 +6,7 @@ import com.snazzyatoms.proshield.compass.CompassManager;
 import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
 import com.snazzyatoms.proshield.gui.GUIListener;
 import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.languages.LanguageManager;
 import com.snazzyatoms.proshield.listeners.MobControlTasks;
 import com.snazzyatoms.proshield.plots.ClaimProtectionListener;
 import com.snazzyatoms.proshield.plots.PlotManager;
@@ -15,7 +16,6 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -24,6 +24,7 @@ public class ProShield extends JavaPlugin {
 
     private static ProShield instance;
 
+    private LanguageManager languageManager;
     private MessagesUtil messages;
     private GUIManager guiManager;
     private ClaimRoleManager roleManager;
@@ -42,14 +43,17 @@ public class ProShield extends JavaPlugin {
         // 📌 Core init
         // =====================
         saveDefaultConfig();
-        generateMessagesFile(); // ensure messages.yml or localized messages_xx.yml exists
+
+        // Load language system
+        languageManager = new LanguageManager(this);
+        languageManager.reload();
 
         messages                = new MessagesUtil(this);
         plotManager             = new PlotManager(this);
         roleManager             = new ClaimRoleManager(this);
         expansionRequestManager = new ExpansionRequestManager(this);
         guiManager              = new GUIManager(this);
-        compassManager          = new CompassManager(this); // handles join + give
+        compassManager          = new CompassManager(this);
 
         // =====================
         // 📌 Listener registration
@@ -57,8 +61,7 @@ public class ProShield extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         getServer().getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager), this);
 
-        // Mob control tasks self-register inside constructor
-        new MobControlTasks(this);
+        new MobControlTasks(this); // registers its own tasks
 
         // =====================
         // 📌 Command registration
@@ -115,6 +118,10 @@ public class ProShield extends JavaPlugin {
         return compassManager;
     }
 
+    public LanguageManager getLanguageManager() {
+        return languageManager;
+    }
+
     public boolean isDebugEnabled() {
         return debugEnabled;
     }
@@ -141,22 +148,11 @@ public class ProShield extends JavaPlugin {
         return bypassing;
     }
 
-    /** Reload messages.yml safely */
-    public void loadMessagesConfig() {
-        messages.reload();
-    }
-
-    /**
-     * Ensure messages.yml (or localized messages_xx.yml) exists in plugin folder.
-     */
-    private void generateMessagesFile() {
-        String lang = getConfig().getString("settings.language", "en").toLowerCase();
-        String fileName = lang.equals("en") ? "messages.yml" : "messages_" + lang + ".yml";
-
-        File langFile = new File(getDataFolder(), fileName);
-        if (!langFile.exists()) {
-            saveResource(fileName, false); // Copies from plugin JAR into /plugins/ProShield/
-            getLogger().info("[ProShield] Generated " + fileName + " for language: " + lang);
-        }
+    /** Reload everything cleanly */
+    public void reloadAll() {
+        reloadConfig();
+        if (languageManager != null) languageManager.reload();
+        if (messages != null) messages.reload();
+        // Reload others here if needed
     }
 }

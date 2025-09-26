@@ -220,7 +220,6 @@ public class GUIManager {
     }
 
     // --------------------------- Admin & World Controls ---------------------------
-
     public void openAdmin(Player p) {
     Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
     border(inv);
@@ -253,8 +252,7 @@ public class GUIManager {
 
     if (debugMenus) plugin.getLogger().info("[ProShield][DEBUG] Opened Admin Tools for " + p.getName());
 }
-r().info("[ProShield][DEBUG] Opened Admin Tools for " + p.getName());
-}
+
 
     public void openWorldControls(Player p, int pageIgnored) {
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World Controls"));

@@ -1,5 +1,5 @@
 // src/main/java/com/snazzyatoms/proshield/languages/LanguageManager.java
-package com.snazzyatoms.proshield.i18n;
+package com.snazzyatoms.proshield.languages;
 
 import com.snazzyatoms.proshield.ProShield;
 import org.bukkit.ChatColor;

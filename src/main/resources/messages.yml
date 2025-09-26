@@ -2,15 +2,14 @@
 # ProShield Messages
 # Version: 1.2.6 (Polished, Synced & Expanded)
 # ----------------------------------------------------------
-# - Role display names + lore are now fully customizable
+# - Role display names + lore fully customizable
 # - All GUI buttons, lore, errors, success & warnings covered
-# - Placeholders standardized: %player%, %role%, %flag%, %state%
-# - Added expansion menu support + crop trample
+# - Placeholders: %player%, %role%, %flag%, %state%
+# - Synced with GUIManager & GUIListener (v1.2.6)
 # ==========================================================
 
 messages:
   prefix: "&3[ProShield]&r "
-  debug-prefix: "&8[Debug]&r "
 
   # --- General Errors ---
   error:
@@ -52,10 +51,7 @@ messages:
 
   # --- Admin / System ---
   reloaded: "&aProShield configuration reloaded."
-
   admin:
-    debug-on: "&eDebug mode: &aENABLED"
-    debug-off: "&eDebug mode: &cDISABLED"
     bypass-on: "&aBypass enabled."
     bypass-off: "&cBypass disabled."
 
@@ -99,8 +95,8 @@ messages:
     enabled: "&aENABLED"
     disabled: "&cDISABLED"
     titles:
-      world-list: "&cWorld Controls"
-      world-detail: "&8World: %world%"
+      world-list: "&cWorld Controls"       # ↳ used in GUIManager.openWorldControls
+      world-detail: "&8World: %world%"     # ↳ used in GUIManager.openWorldDetail
     placeholders:
       nether: "&cWorld_Nether (Coming Soon)"
       end: "&cWorld_The_End (Coming Soon)"
@@ -113,18 +109,20 @@ messages:
     exit-button: "&cExit"
     exit-lore:
       - "&7Close this menu safely"
+
+    # ✅ All titles aligned with GUIListener + GUIManager
     titles:
-      main: "&6ProShield Menu"
-      claim-info: "&eClaim Info"
-      expansion-menu: "&aExpansion Menu"       # ✅ NEW
-      trusted: "&bTrusted Players"
-      assign-role: "&bAssign Role"
-      flags: "&eClaim Flags"
-      admin: "&cAdmin Tools"
-      world-controls: "&cWorld Controls"
-      expansion-requests: "&eExpansion Requests"
-      expansion-history: "&7Expansion History"
-      deny-reasons: "&cDeny Reasons"
+      main: "&6ProShield Menu"             # ↳ Main menu
+      claim-info: "&eClaim Info"           # ↳ Claim details
+      expansion-menu: "&aExpansion Menu"   # ↳ Player expansion request
+      trusted: "&bTrusted Players"         # ↳ Trusted list
+      assign-role: "&bAssign Role"         # ↳ Assign role
+      flags: "&eClaim Flags"               # ↳ Claim flags
+      admin: "&cAdmin Tools"               # ↳ Admin main menu
+      world-controls: "&cWorld Controls"   # ↳ Per-world settings
+      expansion-requests: "&eExpansion Requests"  # ↳ Admin pending
+      expansion-history: "&7Expansion History"    # ↳ Player history
+      deny-reasons: "&cDeny Reasons"              # ↳ Admin deny reasons
 
     # --- Main Menu Buttons ---
     main:
@@ -231,11 +229,10 @@ help:
 
   admin:
     - "&c&lProShield — Admin Guide"
-    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, World Controls"
+    - "&cAdmin Tools GUI &7→ Reload, World Controls, Expansion Requests"
     - "&7Expansion Requests and World Controls require permissions."
     - "&7Commands are fallback only if GUI fails."
     - "&f/proshield reload &7→ Reload configs"
-    - "&f/proshield debug &7→ Toggle debug mode"
     - "&f/proshield bypass &7→ Toggle admin bypass"
     - "&f/proshield admin &7→ Open Admin Tools GUI"
 

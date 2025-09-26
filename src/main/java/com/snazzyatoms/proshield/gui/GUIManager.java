@@ -227,10 +227,14 @@ public class GUIManager {
                 "ADMIN:WORLD_CTRL"
         ));
         inv.setItem(16, textItem(
-                Material.REPEATER, "&eReload Config",
-                List.of(gray("&7Reload ProShield configuration files.")),
-                "ADMIN:RELOAD"
-        ));
+        Material.REPEATER, "&eReload Config & Language",
+        List.of(
+            gray("&7Reloads ProShield configuration &"),
+            gray("&7active language/message files.")
+        ),
+        "ADMIN:RELOAD"
+));
+
 
         // Placeholder for future feature (no action)
         inv.setItem(22, textItem(Material.BEACON, "&dBungee Support (Coming Soon)", List.of(
@@ -699,23 +703,31 @@ public class GUIManager {
     }
 
     public void handleAdminClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
 
-        switch (id) {
-            case "ADMIN:PENDING"    -> openPending(p, 0);
-            case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
-            case "ADMIN:RELOAD"     -> {
-                plugin.reloadConfig();
-                msg(p, "&aConfiguration reloaded.");
-                openAdmin(p);
+    switch (id) {
+        case "ADMIN:PENDING"    -> openPending(p, 0);
+        case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
+        case "ADMIN:RELOAD"     -> {
+            if (!p.hasPermission("proshield.admin.reload")) {
+                deny(p);
+                return;
             }
-            case "BACK"             -> back(p);
-            case "EXIT"             -> p.closeInventory();
+            long start = System.currentTimeMillis();
+            plugin.reloadAll(); // reloads config + languages + messages
+            long took = System.currentTimeMillis() - start;
+
+            msg(p, "&aConfiguration & language files reloaded in " + took + "ms.");
+            openAdmin(p);
         }
+        case "BACK"             -> back(p);
+        case "EXIT"             -> p.closeInventory();
     }
+}
+
 
     public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();

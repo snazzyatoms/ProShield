@@ -222,41 +222,39 @@ public class GUIManager {
     // --------------------------- Admin & World Controls ---------------------------
 
     public void openAdmin(Player p) {
-        Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
-        border(inv);
+    Inventory inv = Bukkit.createInventory(p, SIZE_27, title("admin", "&8Admin Tools"));
+    border(inv);
 
-        inv.setItem(10, textItem(Material.ENDER_PEARL, "&bNearest Claim", List.of(
-                gray("&7Teleport to nearest claim (≤200 blocks)."),
-                "ADMIN:TP_NEAREST"
-        )));
-        inv.setItem(12, textItem(Material.PAPER, "&aPending Requests", List.of(
-                gray("&7Approve or deny expansion requests."),
-                "ADMIN:PENDING"
-        )));
-        inv.setItem(14, textItem(Material.REDSTONE, "&cWorld Controls", List.of(
-                gray("&7Toggle per-world settings (PvP, Safe Zone, Explosions, …)"),
-                "ADMIN:WORLD_CTRL"
-        )));
-        inv.setItem(16, textItem(Material.REPEATER, "&eReload Config", List.of(
-                gray("&7Reload ProShield configuration files."),
-                "ADMIN:RELOAD"
-        )));
+    inv.setItem(12, textItem(Material.PAPER, "&aPending Requests", List.of(
+            gray("&7Approve or deny expansion requests."),
+            line("ADMIN:PENDING")
+    )));
+    inv.setItem(14, textItem(Material.REDSTONE, "&cWorld Controls", List.of(
+            gray("&7Toggle per-world settings (PvP, Safe Zone, Explosions, …)"),
+            line("ADMIN:WORLD_CTRL")
+    )));
+    inv.setItem(16, textItem(Material.REPEATER, "&eReload Config", List.of(
+            gray("&7Reload ProShield configuration files."),
+            line("ADMIN:RELOAD")
+    )));
 
-        // Placeholder for future feature
-        inv.setItem(22, textItem(Material.BEACON, "&dBungee Support (Coming Soon)", List.of(
-                gray("&7Planned for version 2.0 or later."),
-                gray("&7Synchronize multiple servers/worlds via BungeeCord.")
-        )));
+    // Placeholder for future feature
+    inv.setItem(22, textItem(Material.BEACON, "&dBungee Support (Coming Soon)", List.of(
+            gray("&7Planned for version 2.0 or later."),
+            gray("&7Synchronize multiple servers/worlds via BungeeCord.")
+    )));
 
-        inv.setItem(25, backButton());
-        inv.setItem(26, exitButton());
+    inv.setItem(25, backButton());
+    inv.setItem(26, exitButton());
 
-        replaceTop(p, View.admin());
-        p.openInventory(inv);
-        click(p);
+    replaceTop(p, View.admin());
+    p.openInventory(inv);
+    click(p);
 
-        if (debugMenus) plugin.getLogger().info("[ProShield][DEBUG] Opened Admin Tools for " + p.getName());
-    }
+    if (debugMenus) plugin.getLogger().info("[ProShield][DEBUG] Opened Admin Tools for " + p.getName());
+}
+r().info("[ProShield][DEBUG] Opened Admin Tools for " + p.getName());
+}
 
     public void openWorldControls(Player p, int pageIgnored) {
         Inventory inv = Bukkit.createInventory(p, SIZE_54, title("world-controls", "&8World Controls"));
@@ -702,33 +700,24 @@ public class GUIManager {
     }
 
     public void handleAdminClick(Player p, InventoryClickEvent e) {
-        ItemStack it = e.getCurrentItem();
-        if (!valid(it)) return;
-        String id = extractId(it);
-        if (id == null) return;
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
 
-        switch (id) {
-            case "ADMIN:TP_NEAREST" -> {
-                Plot nearest = plots.findNearestPlot(p.getLocation(), 200);
-                if (nearest == null) {
-                    warn(p, "&cNo claim found within 200 blocks.");
-                    return;
-                }
-                Location loc = new Location(Bukkit.getWorld(nearest.getWorld()), nearest.getX() << 4, p.getLocation().getY(), nearest.getZ() << 4);
-                p.teleport(loc);
-                soundGood(p);
-            }
-            case "ADMIN:PENDING" -> openPending(p, 0);
-            case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
-            case "ADMIN:RELOAD" -> {
-                plugin.reloadConfig();
-                msg(p, "&aConfiguration reloaded.");
-                openAdmin(p);
-            }
-            case "BACK" -> back(p);
-            case "EXIT" -> p.closeInventory();
+    switch (id) {
+        case "ADMIN:PENDING" -> openPending(p, 0);
+        case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
+        case "ADMIN:RELOAD" -> {
+            plugin.reloadConfig();
+            msg(p, "&aConfiguration reloaded.");
+            openAdmin(p);
         }
+        case "BACK" -> back(p);
+        case "EXIT" -> p.closeInventory();
     }
+}
+
 
     public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
         ItemStack it = e.getCurrentItem();

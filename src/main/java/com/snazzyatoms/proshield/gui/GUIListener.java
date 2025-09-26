@@ -56,22 +56,21 @@ public class GUIListener implements Listener {
 
             // ✅ Expanded checks synced with GUIManager + messages.yml titles
             boolean isProShieldMenu =
-                    low.contains("proshield") ||
+                    low.contains("proshield menu") ||
                     low.contains("main") ||
                     low.contains("claim info") ||
-                    low.contains("trusted") ||
+                    low.contains("trusted players") ||
                     low.contains("assign role") ||
-                    low.contains("flags") ||
-                    low.contains("admin tools") ||   // 🔑 explicit match
-                    low.contains("admin") ||
+                    low.contains("claim flags") ||
+                    low.contains("admin tools") ||        // explicit
                     low.contains("world controls") ||
-                    low.contains("world:") ||
-                    low.contains("expansion menu") ||     // Player expansion menu
-                    low.contains("request expansion") ||  // 🔑 messages.yml fallback
-                    low.contains("expansion requests") || // Admin requests
-                    low.contains("pending") ||
+                    low.contains("world:") ||             // per-world detail views
+                    low.contains("expansion menu") || 
+                    low.contains("request expansion") ||
+                    low.contains("expansion requests") ||
+                    low.contains("pending expansion requests") ||
                     low.contains("expansion history") ||
-                    low.contains("deny reason");
+                    low.contains("deny reasons");
 
             if (!isProShieldMenu) {
                 guiManager.clearNav(player);

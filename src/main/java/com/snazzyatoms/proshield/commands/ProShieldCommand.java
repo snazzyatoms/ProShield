@@ -28,7 +28,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             // Default behavior: show info
             sender.sendMessage(ChatColor.YELLOW + "ProShield v" + plugin.getDescription().getVersion());
-            sender.sendMessage(ChatColor.GRAY + "Usage: /proshield <reload|debug|bypass>");
+            sender.sendMessage(ChatColor.GRAY + "Usage: /" + label + " <reload|debug|bypass>");
             return true;
         }
 
@@ -40,9 +40,9 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 long start = System.currentTimeMillis();
-                plugin.reloadAll();
+                plugin.reloadAll(); // ✅ reload config + language manager + messages
                 long took = System.currentTimeMillis() - start;
-                sender.sendMessage(ChatColor.GREEN + "[ProShield] Reloaded in " + took + "ms.");
+                sender.sendMessage(ChatColor.GREEN + "[ProShield] Reloaded configuration & languages in " + took + "ms.");
             }
 
             case "debug" -> {
@@ -51,7 +51,8 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 plugin.toggleDebug();
-                sender.sendMessage(ChatColor.AQUA + "Debug mode: " + (plugin.isDebugEnabled() ? "enabled" : "disabled"));
+                sender.sendMessage(ChatColor.AQUA + "Debug mode: " +
+                        (plugin.isDebugEnabled() ? "enabled" : "disabled"));
             }
 
             case "bypass" -> {
@@ -67,7 +68,7 @@ public class ProShieldCommand implements CommandExecutor, TabCompleter {
                 player.sendMessage(ChatColor.YELLOW + "Bypass " + (nowBypassing ? "enabled" : "disabled") + ".");
             }
 
-            default -> sender.sendMessage(ChatColor.RED + "Unknown subcommand. Usage: /proshield <reload|debug|bypass>");
+            default -> sender.sendMessage(ChatColor.RED + "Unknown subcommand. Usage: /" + label + " <reload|debug|bypass>");
         }
 
         return true;

@@ -1198,23 +1198,25 @@ private Map<String, Boolean> readAllWorldBools(String world) {
 }
 
 /** Provides default values for world-control keys (when not present in config). */
-private boolean defaultWorld(String key) {
-    return switch (key.toLowerCase(Locale.ROOT)) {
-        case "pvp"              -> true;
-        case "safezone"         -> false;
-        case "explosions"       -> true;
-        case "fire-spread"      -> true;
-        case "fire-burn"        -> true;
-        case "block-break"      -> true;
-        case "block-place"      -> true;
-        case "containers"       -> true;
-        case "bucket-use"       -> true;
-        case "mob-spawn"        -> true;
-        case "mob-damage"       -> true;
-        case "ignite-flint"     -> true;
-        case "ignite-lava"      -> true;
-        case "ignite-lightning" -> true;
-        case "crop-trample"     -> true;
-        default                 -> false; // safe fallback
-    };
-}
+    private boolean defaultWorld(String key) {
+        return switch (key.toLowerCase(Locale.ROOT)) {
+            case "pvp"              -> true;
+            case "safezone"         -> false;
+            case "explosions"       -> true;
+            case "fire-spread"      -> true;
+            case "fire-burn"        -> true;
+            case "block-break"      -> true;
+            case "block-place"      -> true;
+            case "containers"       -> true;
+            case "bucket-use"       -> true;
+            case "mob-spawn"        -> true;
+            case "mob-damage"       -> true;
+            case "ignite-flint"     -> true;
+            case "ignite-lava"      -> true;
+            case "ignite-lightning" -> true;
+            case "crop-trample"     -> true;
+            default                 -> false; // safe fallback
+        };
+    }
+} // ← add this to close GUIManager
+

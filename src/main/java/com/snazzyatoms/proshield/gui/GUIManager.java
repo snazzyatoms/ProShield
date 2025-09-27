@@ -835,10 +835,10 @@ public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
             return;
         }
         if (e.isRightClick()) {
-            expansions.deny(reqId, "Denied by admin");
+            expansions.deny(reqId, p.getUniqueId(), "Denied by admin");
             msg(p, "&cDenied expansion request from &f" + nameOrShort(req.getRequester()));
         } else {
-            expansions.approve(reqId);
+            expansions.approve(reqId, p.getUniqueId(), "Approved by admin");
             msg(p, "&aApproved expansion request for &f" + nameOrShort(req.getRequester()));
         }
         openPending(p, 0);
@@ -848,6 +848,7 @@ public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
         p.closeInventory();
     }
 }
+
 
 public void handleHistoryClick(Player p, InventoryClickEvent e) {
     ItemStack it = e.getCurrentItem();

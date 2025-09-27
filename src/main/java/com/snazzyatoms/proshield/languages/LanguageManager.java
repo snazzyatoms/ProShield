@@ -14,12 +14,12 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * LanguageManager (ProShield v1.2.6.2)
+ * LanguageManager (ProShield v1.2.6.3)
  *
- * - Looks for language files INSIDE the jar at: localization/messages_<code>.yml
- * - Extracts them to the plugin data folder: /plugins/ProShield/localization/messages_<code>.yml
- * - Always loads English (messages_en.yml) as a fallback
- * - Safe getters with fallback + color translation (& -> §)
+ * - Only manages /localization/messages_<code>.yml files
+ * - No more plain messages.yml confusion
+ * - Extracts from JAR → /plugins/ProShield/localization/
+ * - Always loads English as fallback
  */
 public class LanguageManager {
 
@@ -32,7 +32,7 @@ public class LanguageManager {
 
     private FileConfiguration activeCfg;     // selected language
     private FileConfiguration fallbackCfg;   // English
-    private String activeLanguage = FALLBACK; // the language actually loaded
+    private String activeLanguage = FALLBACK;
 
     public LanguageManager(ProShield plugin) {
         this.plugin = plugin;
@@ -45,12 +45,11 @@ public class LanguageManager {
 
     /** Reload according to config settings.language and refresh caches. */
     public void reload() {
-        // Ensure data folder exists
         if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdirs();
 
         String requested = normalize(plugin.getConfig().getString("settings.language", FALLBACK));
 
-        // Load active language (with graceful fallback to English)
+        // Load active language (fallback → English)
         this.activeCfg = loadOrExtract(requested);
         if (this.activeCfg == null) {
             plugin.getLogger().warning("[ProShield][Lang] Could not load '" + requested + "'. Falling back to English.");
@@ -60,19 +59,18 @@ public class LanguageManager {
             this.activeLanguage = requested;
         }
 
-        // Always load English fallback too
+        // Load English fallback
         this.fallbackCfg = loadOrExtract(FALLBACK);
         if (this.fallbackCfg == null) {
-            // Should never happen if messages_en.yml is in the JAR, but guard anyway
             plugin.getLogger().warning("[ProShield][Lang] English fallback missing. Some keys may be empty.");
-            this.fallbackCfg = new YamlConfiguration(); // empty
+            this.fallbackCfg = new YamlConfiguration();
         }
 
         plugin.getLogger().info(ChatColor.GREEN + "[ProShield] Loaded language: " + this.activeLanguage
                 + " (" + PREFIX + this.activeLanguage + EXT + ")");
     }
 
-    /** Language code currently in use (e.g., "en", "fr", "pt_br"). */
+    /** Language code currently in use (e.g., "en", "fr", "pl"). */
     public String getActiveLanguage() {
         return activeLanguage;
     }
@@ -116,30 +114,23 @@ public class LanguageManager {
 
     private String normalize(String code) {
         if (code == null || code.isBlank()) return FALLBACK;
-        // Normalize language codes to lowercase and prefer underscore (pt_br, zh_cn, etc.)
         return code.trim().toLowerCase(Locale.ROOT).replace('-', '_');
     }
 
     /**
-     * Load a language file; if it isn't extracted yet, try to extract it from the JAR.
-     * Looks for a matching file in the JAR at: localization/messages_<code>.yml
-     * Returns a loaded YamlConfiguration, or null if neither disk nor JAR had the file.
+     * Load a language file; if not extracted yet, copy it from the JAR.
      */
     private FileConfiguration loadOrExtract(String code) {
-        // Where it will live on disk (keep same subfolder so saveResource is 1:1)
         String jarPath  = JAR_DIR + "/" + PREFIX + code + EXT;
         File   outFile  = new File(plugin.getDataFolder(), jarPath);
 
-        // If not present on disk, try to extract from JAR (support a couple name variants)
         if (!outFile.exists()) {
             if (!outFile.getParentFile().exists()) outFile.getParentFile().mkdirs();
 
-            // Check if the exact resource exists in the JAR
             if (hasResource(jarPath)) {
-                plugin.saveResource(jarPath, false); // copies to /plugins/ProShield/localization/messages_<code>.yml
+                plugin.saveResource(jarPath, false);
                 plugin.getLogger().info("[ProShield][Lang] Extracted: " + jarPath);
             } else {
-                // Try variants (pt-br <-> pt_br)
                 String altUnderscore = JAR_DIR + "/" + PREFIX + code.replace('-', '_') + EXT;
                 String altHyphen     = JAR_DIR + "/" + PREFIX + code.replace('_', '-') + EXT;
 
@@ -147,7 +138,6 @@ public class LanguageManager {
                 if (hasResource(altUnderscore)) {
                     plugin.saveResource(altUnderscore, false);
                     plugin.getLogger().info("[ProShield][Lang] Extracted: " + altUnderscore + " (variant)");
-                    // Adjust outFile to where it was written
                     outFile = new File(plugin.getDataFolder(), altUnderscore);
                     extracted = true;
                 } else if (hasResource(altHyphen)) {
@@ -164,11 +154,9 @@ public class LanguageManager {
             }
         }
 
-        // Load from disk
         return YamlConfiguration.loadConfiguration(outFile);
     }
 
-    /** Check if a resource exists inside the plugin JAR. */
     private boolean hasResource(String path) {
         try (InputStream is = plugin.getResource(path)) {
             return is != null;

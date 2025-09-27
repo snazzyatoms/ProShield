@@ -15,6 +15,12 @@ settings:
   compass-auto-replace: false
   ops-have-full-access: true
 
+  # Auto-clean language files on reload:
+  # If true → keeps ONLY active + English fallback.
+  # If false → keeps ALL extracted languages (multi-language editing/testing).
+  language-auto-clean: true
+
+
   # ----------------------
   # Debug Toggles
   # ----------------------

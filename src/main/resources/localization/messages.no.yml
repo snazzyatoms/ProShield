@@ -1,0 +1,242 @@
+# ==========================================================
+# ProShield Messages — Norsk (Hybrid)
+# Version: 1.2.6.1
+# ----------------------------------------------------------
+# HYBRID-pakke: Norsk oversettelse + engelsk fallback.
+# Community kan fritt justere eller forbedre tekstene.
+# Nøkler samsvarer nøyaktig med engelsk master.
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- Generelle Feil ---
+  error:
+    player-only: "&cKun spillere kan bruke denne handlingen."
+    no-permission: "&cDu har ikke tillatelse til dette."
+    inventory-full: "&cInventaret ditt er fullt. Tøm en plass først."
+    block-break: "&cDu kan ikke ødelegge blokker her."
+    block-place: "&cDu kan ikke plassere blokker her."
+    bucket-empty: "&cDu kan ikke tømme bøtter her."
+    bucket-fill: "&cDu kan ikke fylle bøtter her."
+    pvp: "&cPvP er deaktivert i dette området."
+    pick-player-first: "&cVelg en spiller først."
+    unknown-role: "&cDenne rollen finnes ikke."
+    already-claimed: "&cDenne chunken er allerede claimet."
+    no-claim: "&cIngen claim her."
+    claim-failed: "&cKunne ikke opprette claim her."
+
+  # --- Generell Suksess ---
+  success:
+    claim-created: "&aClaim opprettet."
+    claim-removed: "&eClaim fjernet."
+    role-assigned: "&aTildelt &f%player% &arollen &f%role%&a."
+    trust-removed: "&eFjernet &f%player% &efra betrodde spillere."
+    teleported: "&aTeleportert til claim &f%id%&a."
+    flag-toggled: "&b%flag% &7→ %state%"
+
+  # --- Tilstand ---
+  state:
+    on: "&aPÅ"
+    off: "&cAV"
+
+  # --- Kompass ---
+  compass:
+    command-success: "&aDu har fått et ProShield-kompass."
+    already-have: "&eDu har allerede et ProShield-kompass."
+    lore:
+      - "&7Høyreklikk for å åpne ProShield-menyen"
+      - "&7Administrer dine claims, flagg & betrodde spillere"
+
+  # --- Admin / System ---
+  reloaded: "&aProShield-konfigurasjon lastet inn på nytt."
+
+  admin:
+    debug-on: "&eDebug-modus: &aAKTIVERT"
+    debug-off: "&eDebug-modus: &cDEAKTIVERT"
+    bypass-on: "&aBypass aktivert."
+    bypass-off: "&cBypass deaktivert."
+
+  # --- Claim / Region Overganger ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aDu gikk inn i din claim."
+  enter-other: "&aDu gikk inn i %player%s claim."
+  leave-own: "&cDu forlot din claim."
+  leave-other: "&cDu forlot %player%s claim."
+  wilderness: "&7Du gikk inn i villmarken."
+
+  # --- Utvidelsesforespørsler (Spiller) ---
+  expansion:
+    request-sent: "&eDin forespørsel om +%blocks% blokker er sendt til adminene."
+    approved: "&aDin claim-utvidelse (+%blocks% blokker) ble godkjent!"
+    denied: "&cDin forespørsel ble avslått: %reason%"
+    disabled: "&cUtvidelsesforespørsler er deaktivert på serveren."
+    cooldown-title: "&cNedkjøling aktiv"
+    cooldown-active: "&7Du kan be igjen om &f%hours%t %minutes%m&7."
+    expired: "&eDin forespørsel utløp etter %days% dager uten svar."
+
+  # --- Utvidelsesvurdering (Admin GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&aKlikk: Godkjenn utvidelsen"
+      deny: "&cKlikk: Avslå og velg en grunn"
+      info: "&7Bruk avslagsmenyen for detaljerte meldinger."
+
+  # --- Avslagsgrunner ---
+  deny-reasons:
+    too-large: "&cForespurt utvidelse er for stor."
+    abusive: "&cForespørselen ble avslått på grunn av misbruk."
+    overlap: "&cOmrådet overlapper med en eksisterende claim."
+    custom-1: "&cIkke nok spilletid for denne utvidelsen."
+    custom-2: "&cDin claim har allerede nådd maks størrelse."
+
+  # --- Verdenskontroller ---
+  world-controls:
+    toggle: "&eVerdenskontroll &f%flag% &eer nå %state%."
+    enabled: "&aAKTIVERT"
+    disabled: "&cDEAKTIVERT"
+    titles:
+      world-list: "&cVerdenskontroller"
+      world-detail: "&8Verden: %world%"
+    placeholders:
+      nether: "&cWorld_Nether (Kommer snart)"
+      end: "&cWorld_The_End (Kommer snart)"
+
+  # --- GUI Navigasjon ---
+  gui:
+    back-button: "&eTilbake"
+    back-lore:
+      - "&7Gå tilbake til forrige meny"
+    exit-button: "&cLukk"
+    exit-lore:
+      - "&7Lukk denne menyen trygt"
+    titles:
+      main: "&6ProShield-meny"
+      claim-info: "&eClaim Info"
+      expansion-menu: "&aUtvidelsesmeny"
+      trusted: "&bBetrodde Spillere"
+      assign-role: "&bTildel Rolle"
+      flags: "&eClaim-flagg"
+      admin: "&cAdmin-verktøy"
+      world-controls: "&cVerdenskontroller"
+      expansion-requests: "&eUtvidelsesforespørsler"
+      expansion-history: "&7Utvidelseshistorikk"
+      deny-reasons: "&cAvslagsgrunner"
+
+    main:
+      claim-land: "&aClaim Chunk"
+      claim-land-lore:
+        - "&7Opprett en ny claim her."
+      claim-info: "&eClaim Info"
+      claim-info-lore:
+        - "&7Se detaljer om denne claimen"
+      unclaim-land: "&cUnclaim Chunk"
+      unclaim-land-lore:
+        - "&7Fjern din nåværende claim."
+      trusted-players: "&bBetrodde Spillere"
+      trusted-players-lore:
+        - "&7Administrer spillere & roller."
+      claim-flags: "&eClaim-flagg"
+      claim-flags-lore:
+        - "&7Skru på/av beskyttelse."
+      request-expansion: "&aBe om Utvidelse"
+      request-expansion-lore:
+        - "&7Åpne utvidelsesmenyen."
+      admin-tools: "&cAdmin-verktøy"
+      admin-tools-lore:
+        - "&7Kun for admins."
+      bungee-coming-soon: "&dBungee-støtte (Kommer snart)"
+      bungee-coming-soon-lore:
+        - "&7Planlagt for versjon 2.0."
+        - "&7Synkroniser flere servere via BungeeCord."
+
+    expansion-menu:
+      option: "&a+%blocks% Blokker"
+      option-lore:
+        - "&7Be om utvidelse på +%blocks% blokker"
+
+    flags:
+      pvp: "&fPvP Tillatt"
+      safezone: "&dTrygg Sone"
+      explosions: "&cEksplosjoner"
+      fire-spread: "&6Brannspredning"
+      block-break: "&9Ødelegg Blokker"
+      block-place: "&9Plasser Blokker"
+      containers: "&bBeholdere"
+      crop-trample: "&aTråkke Ned Avlinger"
+      ignite-flint: "&6Tenn (Flint & Stål)"
+      ignite-lava: "&6Tenn (Lava)"
+      ignite-lightning: "&6Tenn (Lyn)"
+
+  # --- Roller ---
+  roles:
+    display:
+      none: "&7Ingen"
+      visitor: "&7Besøkende"
+      member: "&aMedlem"
+      trusted: "&bBetrodd"
+      builder: "&2Bygger"
+      container: "&3Container"
+      moderator: "&eModerator"
+      manager: "&6Manager"
+      owner: "&cEier"
+    lore:
+      visitor:
+        - "&7Standardrolle for ikke-betrodd spillere"
+        - "&cKan ikke bygge eller åpne beholdere"
+      member:
+        - "&7Grunnleggende rolle"
+        - "&aKan åpne beholdere"
+        - "&cKan ikke bygge eller endre flagg"
+      trusted:
+        - "&7Avansert betrodd rolle"
+        - "&aFull tilgang unntatt eierhandlinger"
+      builder:
+        - "&7Byggerrolle"
+        - "&aKan bygge & ødelegge blokker"
+        - "&cKan ikke endre flagg"
+      container:
+        - "&7Lagerrolle"
+        - "&aKan kun åpne beholdere"
+        - "&cKan ikke bygge eller ødelegge"
+      moderator:
+        - "&7Moderatorrolle"
+        - "&aKan administrere roller & flagg"
+        - "&cKan ikke overføre eierskap"
+      manager:
+        - "&7Managerrolle"
+        - "&aKan administrere alt og overføre eierskap"
+      owner:
+        - "&cClaim-eier"
+        - "&aFull kontroll"
+
+# ==========================================================
+# Hjelpesider
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Spillerhåndbok"
+    - "&aHøyreklikk med ProShield-kompasset &7→ Åpne hovedmenyen"
+    - "&bHovedmeny &7→ Claim, Info, Unclaim, Betrodd, Flagg"
+    - "&bBetrodde Spillere &7→ Administrer roller & tilgang"
+    - "&bClaim-flagg &7→ Slå på/av beskyttelser"
+    - "&aBe om Utvidelse &7→ Send forespørsel (hvis aktivert)"
+    - "&7Nedkjøling: &f%cooldown-hours%t &7(standard)."
+
+  admin:
+    - "&c&lProShield — Admin-håndbok"
+    - "&cAdmin-verktøy GUI &7→ Reload, Debug, Bypass, Verdenskontroller"
+    - "&7Utvidelsesforespørsler og verdenskontroller krever tillatelser."
+    - "&7Kommandoer er fallback hvis GUI feiler."
+    - "&f/proshield reload &7→ Last config på nytt"
+    - "&f/proshield debug &7→ Slå debug av/på"
+    - "&f/proshield bypass &7→ Slå bypass av/på"
+    - "&f/proshield admin &7→ Åpne Admin-verktøy GUI"
+
+  senior:
+    - "&4&lSenior Admin-verktøy"
+    - "&4Utvidelsesforespørsler &7– Krever &fproshield.admin.expansions"
+    - "&4Verdenskontroller &7– Krever &fproshield.admin.worldcontrols"
+    - "&7Begge funksjoner er GUI-baserte, kommandoer er unødvendige."

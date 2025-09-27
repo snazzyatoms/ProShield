@@ -1,0 +1,242 @@
+# ==========================================================
+# ProShield Messages — Magyar (Hybrid)
+# Version: 1.2.6.1
+# ----------------------------------------------------------
+# HYBRID pack: Gépi fordítás magyarra + angol tartalék.
+# A közösség szabadon javíthatja / cserélheti a szövegeket.
+# A kulcsok 100%-ban megegyeznek az angol master fájllal.
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- Általános hibák ---
+  error:
+    player-only: "&cEzt a műveletet csak játékosok használhatják."
+    no-permission: "&cNincs jogosultságod ehhez."
+    inventory-full: "&cAz eszköztárad tele van. Szabadíts fel egy helyet."
+    block-break: "&cItt nem törhetsz blokkokat."
+    block-place: "&cItt nem helyezhetsz el blokkokat."
+    bucket-empty: "&cItt nem üríthetsz vödröt."
+    bucket-fill: "&cItt nem tölthetsz meg vödröt."
+    pvp: "&cA PvP le van tiltva ebben a claimben."
+    pick-player-first: "&cElőször válassz játékost."
+    unknown-role: "&cEz a szerepkör nem létezik."
+    already-claimed: "&cEz a chunk már foglalt."
+    no-claim: "&cNincs claim itt."
+    claim-failed: "&cNem sikerült claimet létrehozni."
+
+  # --- Sikeres műveletek ---
+  success:
+    claim-created: "&aClaim sikeresen létrehozva."
+    claim-removed: "&eClaim eltávolítva."
+    role-assigned: "&a%player% hozzárendelve a(z) &f%role% &aszerephez."
+    trust-removed: "&e%player% eltávolítva a megbízható játékosok közül."
+    teleported: "&aTeleportálva a(z) &f%id% &aclaimhez."
+    flag-toggled: "&b%flag% &7→ %state%"
+
+  # --- Állapotok ---
+  state:
+    on: "&aBE"
+    off: "&cKI"
+
+  # --- Iránytű ---
+  compass:
+    command-success: "&aKaptál egy ProShield iránytűt."
+    already-have: "&eMár van nálad egy ProShield iránytű."
+    lore:
+      - "&7Jobb klikk → ProShield menü megnyitása"
+      - "&7Kezeld a claimeket, zászlókat és játékosokat"
+
+  # --- Admin / Rendszer ---
+  reloaded: "&aProShield konfiguráció újratöltve."
+
+  admin:
+    debug-on: "&eDebug mód: &aBEKAPCSOLVA"
+    debug-off: "&eDebug mód: &cKIKAPCSOLVA"
+    bypass-on: "&aBypass engedélyezve."
+    bypass-off: "&cBypass kikapcsolva."
+
+  # --- Claim / Régió váltások ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aBeléptél a saját claimedbe."
+  enter-other: "&aBeléptél %player% claimjébe."
+  leave-own: "&cElhagytad a saját claimedet."
+  leave-other: "&cElhagytad %player% claimjét."
+  wilderness: "&7Beléptél a vadonba."
+
+  # --- Terjeszkedési kérelmek (játékos) ---
+  expansion:
+    request-sent: "&eKérelmed +%blocks% blokk terjeszkedésre elküldve az adminoknak."
+    approved: "&aA claimed terjeszkedése (+%blocks% blokk) jóváhagyva!"
+    denied: "&cA kérelmed elutasítva: %reason%"
+    disabled: "&cA terjeszkedési kérelmek le vannak tiltva a szerveren."
+    cooldown-title: "&cVárakozási idő aktív"
+    cooldown-active: "&7Újra kérhetsz &f%hours% óra %minutes% perc &7múlva."
+    expired: "&eA kérelmed lejárt %days% nap után felülvizsgálat nélkül."
+
+  # --- Admin GUI: terjeszkedés ---
+  expansion-admin:
+    lore:
+      approve: "&aKattints: Jóváhagyás"
+      deny: "&cKattints: Elutasítás és indoklás"
+      info: "&7Használd az indoklások menüt a részletes üzenethez."
+
+  # --- Elutasítási okok ---
+  deny-reasons:
+    too-large: "&cA kért terjeszkedés túl nagy."
+    abusive: "&cA kérelmed vissza lett utasítva visszaélés miatt."
+    overlap: "&cA kért terület átfed egy másik claimmel."
+    custom-1: "&cNincs még elegendő játékidőd ehhez a terjeszkedéshez."
+    custom-2: "&cA claimed már elérte a maximális méretet."
+
+  # --- Világvezérlés ---
+  world-controls:
+    toggle: "&eA(z) &f%flag% &evilágvezérlés most: %state%."
+    enabled: "&aENGEDÉLYEZVE"
+    disabled: "&cLETILTVA"
+    titles:
+      world-list: "&cVilágvezérlés"
+      world-detail: "&8Világ: %world%"
+    placeholders:
+      nether: "&cWorld_Nether (Hamarosan)"
+      end: "&cWorld_The_End (Hamarosan)"
+
+  # --- GUI Navigáció ---
+  gui:
+    back-button: "&eVissza"
+    back-lore:
+      - "&7Vissza az előző menühöz"
+    exit-button: "&cKilépés"
+    exit-lore:
+      - "&7Menü biztonságos bezárása"
+    titles:
+      main: "&6ProShield Menü"
+      claim-info: "&eClaim információ"
+      expansion-menu: "&aTerjeszkedés menü"
+      trusted: "&bMegbízható játékosok"
+      assign-role: "&bSzerep hozzárendelése"
+      flags: "&eClaim zászlók"
+      admin: "&cAdmin eszközök"
+      world-controls: "&cVilágvezérlés"
+      expansion-requests: "&eTerjeszkedési kérelmek"
+      expansion-history: "&7Terjeszkedés előzmények"
+      deny-reasons: "&cElutasítási okok"
+
+    main:
+      claim-land: "&aChunk lefoglalása"
+      claim-land-lore:
+        - "&7Új claim létrehozása itt."
+      claim-info: "&eClaim információ"
+      claim-info-lore:
+        - "&7Részletek megtekintése"
+      unclaim-land: "&cClaim törlése"
+      unclaim-land-lore:
+        - "&7Jelenlegi claimed eltávolítása."
+      trusted-players: "&bMegbízható játékosok"
+      trusted-players-lore:
+        - "&7Szerepek és jogok kezelése."
+      claim-flags: "&eClaim zászlók"
+      claim-flags-lore:
+        - "&7Védelmi beállítások módosítása."
+      request-expansion: "&aTerjeszkedés kérése"
+      request-expansion-lore:
+        - "&7Terjeszkedési menü megnyitása."
+      admin-tools: "&cAdmin eszközök"
+      admin-tools-lore:
+        - "&7Csak adminok számára."
+      bungee-coming-soon: "&dBungee támogatás (Hamarosan)"
+      bungee-coming-soon-lore:
+        - "&72.0-s verzióban várható."
+        - "&7Szerverek szinkronizálása BungeeCorddal."
+
+    expansion-menu:
+      option: "&a+%blocks% Blokk"
+      option-lore:
+        - "&7Kérelem +%blocks% blokkal való bővítésre"
+
+    flags:
+      pvp: "&fPvP Engedélyezve"
+      safezone: "&dBiztonsági zóna"
+      explosions: "&cRobbanások"
+      fire-spread: "&6Tűz terjedése"
+      block-break: "&9Blokkok törése"
+      block-place: "&9Blokkok lerakása"
+      containers: "&bKonténerek"
+      crop-trample: "&aTermények taposása"
+      ignite-flint: "&6Gyújtás (Öngyújtó)"
+      ignite-lava: "&6Gyújtás (Láva)"
+      ignite-lightning: "&6Gyújtás (Villám)"
+
+  # --- Szerepek ---
+  roles:
+    display:
+      none: "&7Nincs"
+      visitor: "&7Látogató"
+      member: "&aTag"
+      trusted: "&bMegbízható"
+      builder: "&2Építő"
+      container: "&3Tároló"
+      moderator: "&eModerátor"
+      manager: "&6Menedzser"
+      owner: "&cTulajdonos"
+    lore:
+      visitor:
+        - "&7Alap szerep a nem megbízhatóknak"
+        - "&cNem tud építeni vagy tárolót nyitni"
+      member:
+        - "&7Alap tag"
+        - "&aMegnyithat tárolókat"
+        - "&cNem építhet és nem változtathat zászlókat"
+      trusted:
+        - "&7Fejlettebb megbízható szerep"
+        - "&aTeljes hozzáférés, kivéve tulaj funkciók"
+      builder:
+        - "&7Építő szerep"
+        - "&aÉpíthet és törhet blokkokat"
+        - "&cNem módosíthat zászlókat"
+      container:
+        - "&7Tároló szerep"
+        - "&aCsak tárolókat nyithat"
+        - "&cNem építhet vagy törhet"
+      moderator:
+        - "&7Moderátor szerep"
+        - "&aKezelhet szerepeket és zászlókat"
+        - "&cNem adhatja át a tulajdonjogot"
+      manager:
+        - "&7Menedzser szerep"
+        - "&aKezelhet mindent és átadhat tulajdonjogot"
+      owner:
+        - "&cClaim tulajdonosa"
+        - "&aTeljes irányítás"
+
+# ==========================================================
+# Segítség oldalak
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Játékos útmutató"
+    - "&aJobb klikkelj a ProShield iránytűre &7→ Menü megnyitása"
+    - "&bFőmenü &7→ Claim, Info, Törlés, Megbízhatóak, Zászlók"
+    - "&bMegbízható játékosok &7→ Szerepek és hozzáférés kezelése"
+    - "&bClaim zászlók &7→ Védelem be/ki"
+    - "&aTerjeszkedés kérése &7→ Admin jóváhagyással (ha engedélyezett)"
+    - "&7Várakozási idő: &f%cooldown-hours%h &7(alapértelmezett)."
+
+  admin:
+    - "&c&lProShield — Admin útmutató"
+    - "&cAdmin GUI &7→ Reload, Debug, Bypass, Világvezérlés"
+    - "&7Terjeszkedés és világvezérlés jogosultságot igényel."
+    - "&7Parancsok csak tartalékként vannak."
+    - "&f/proshield reload &7→ Konfig újratöltés"
+    - "&f/proshield debug &7→ Debug mód váltása"
+    - "&f/proshield bypass &7→ Bypass váltása"
+    - "&f/proshield admin &7→ Admin GUI megnyitása"
+
+  senior:
+    - "&4&lSenior Admin eszközök"
+    - "&4Terjeszkedési kérelmek &7– Jogosultság: &fproshield.admin.expansions"
+    - "&4Világvezérlés &7– Jogosultság: &fproshield.admin.worldcontrols"
+    - "&7Mindkettő GUI alapú, parancs nem szükséges."

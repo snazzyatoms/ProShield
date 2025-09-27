@@ -1,0 +1,242 @@
+# ==========================================================
+# ProShield Messages — Nederlands (Hybrid)
+# Version: 1.2.6.1
+# ----------------------------------------------------------
+# HYBRID pack: Nederlandse vertaling + Engelse fallback.
+# Community kan teksten vrij aanpassen of verbeteren.
+# Sleutels komen exact overeen met de Engelse master.
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- Algemene Fouten ---
+  error:
+    player-only: "&cAlleen spelers kunnen deze actie gebruiken."
+    no-permission: "&cJe hebt geen toestemming om dit te doen."
+    inventory-full: "&cJe inventaris is vol. Maak eerst ruimte."
+    block-break: "&cJe kunt hier geen blokken breken."
+    block-place: "&cJe kunt hier geen blokken plaatsen."
+    bucket-empty: "&cJe kunt hier geen emmers legen."
+    bucket-fill: "&cJe kunt hier geen emmers vullen."
+    pvp: "&cPvP is uitgeschakeld in dit claim."
+    pick-player-first: "&cKies eerst een speler."
+    unknown-role: "&cDie rol bestaat niet."
+    already-claimed: "&cDeze chunk is al geclaimd."
+    no-claim: "&cGeen claim hier."
+    claim-failed: "&cClaim kon hier niet worden aangemaakt."
+
+  # --- Algemene Successen ---
+  success:
+    claim-created: "&aClaim succesvol aangemaakt."
+    claim-removed: "&eClaim verwijderd."
+    role-assigned: "&a&f%player% &ais toegewezen aan rol &f%role%&a."
+    trust-removed: "&e&f%player% &eis verwijderd uit vertrouwde spelers."
+    teleported: "&aGeteleporteerd naar claim &f%id%&a."
+    flag-toggled: "&b%flag% &7→ %state%"
+
+  # --- Status ---
+  state:
+    on: "&aAAN"
+    off: "&cUIT"
+
+  # --- Kompas ---
+  compass:
+    command-success: "&aJe hebt een ProShield Kompas gekregen."
+    already-have: "&eJe hebt al een ProShield Kompas."
+    lore:
+      - "&7Klik met rechts om het ProShield-menu te openen"
+      - "&7Beheer je claims, flags & vertrouwde spelers"
+
+  # --- Admin / Systeem ---
+  reloaded: "&aProShield-configuratie herladen."
+
+  admin:
+    debug-on: "&eDebug-modus: &aINGESCHAKELD"
+    debug-off: "&eDebug-modus: &cUITGESCHAKELD"
+    bypass-on: "&aBypass ingeschakeld."
+    bypass-off: "&cBypass uitgeschakeld."
+
+  # --- Claim / Regio Overgangen ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aJe bent jouw claim binnengegaan."
+  enter-other: "&aJe bent de claim van %player% binnengegaan."
+  leave-own: "&cJe hebt je claim verlaten."
+  leave-other: "&cJe hebt de claim van %player% verlaten."
+  wilderness: "&7Je bent de wildernis binnengegaan."
+
+  # --- Uitbreidingsverzoeken (Speler) ---
+  expansion:
+    request-sent: "&eJe uitbreidingsverzoek van +%blocks% blokken is verzonden naar admins."
+    approved: "&aJe claimuitbreiding (+%blocks% blokken) is goedgekeurd!"
+    denied: "&cJe uitbreidingsverzoek is geweigerd: %reason%"
+    disabled: "&cUitbreidingsverzoeken zijn uitgeschakeld op de server."
+    cooldown-title: "&cCooldown Actief"
+    cooldown-active: "&7Je kunt opnieuw aanvragen in &f%hours%u %minutes%m&7."
+    expired: "&eJe uitbreidingsverzoek is verlopen na %days% dagen zonder beoordeling."
+
+  # --- Uitbreiding Review (Admin GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&aKlik: Keur deze uitbreiding goed"
+      deny: "&cKlik: Weiger en kies een reden"
+      info: "&7Gebruik het menu 'redenen weigeren' voor details."
+
+  # --- Redenen Weigeren ---
+  deny-reasons:
+    too-large: "&cDe aangevraagde uitbreiding is te groot."
+    abusive: "&cUitbreidingsverzoek geweigerd wegens misbruik."
+    overlap: "&cHet aangevraagde gebied overlapt met een bestaande claim."
+    custom-1: "&cNog niet genoeg speeltijd voor deze uitbreiding."
+    custom-2: "&cJe claim heeft al de maximale grootte bereikt."
+
+  # --- Wereld Controles ---
+  world-controls:
+    toggle: "&eWereldcontrole &f%flag% &eis nu %state%."
+    enabled: "&aINGESCHAKELD"
+    disabled: "&cUITGESCHAKELD"
+    titles:
+      world-list: "&cWereld Controles"
+      world-detail: "&8Wereld: %world%"
+    placeholders:
+      nether: "&cWorld_Nether (Binnenkort)"
+      end: "&cWorld_The_End (Binnenkort)"
+
+  # --- GUI Navigatie ---
+  gui:
+    back-button: "&eTerug"
+    back-lore:
+      - "&7Ga terug naar het vorige menu"
+    exit-button: "&cAfsluiten"
+    exit-lore:
+      - "&7Sluit dit menu veilig"
+    titles:
+      main: "&6ProShield Menu"
+      claim-info: "&eClaim Info"
+      expansion-menu: "&aUitbreiding Menu"
+      trusted: "&bVertrouwde Spelers"
+      assign-role: "&bRol Toewijzen"
+      flags: "&eClaim Flags"
+      admin: "&cAdmin Tools"
+      world-controls: "&cWereld Controles"
+      expansion-requests: "&eUitbreidingsverzoeken"
+      expansion-history: "&7Uitbreidingsgeschiedenis"
+      deny-reasons: "&cWeiger Redenen"
+
+    main:
+      claim-land: "&aClaim Chunk"
+      claim-land-lore:
+        - "&7Maak hier een nieuwe claim."
+      claim-info: "&eClaim Info"
+      claim-info-lore:
+        - "&7Bekijk details van deze claim"
+      unclaim-land: "&cUnclaim Chunk"
+      unclaim-land-lore:
+        - "&7Verwijder je huidige claim."
+      trusted-players: "&bVertrouwde Spelers"
+      trusted-players-lore:
+        - "&7Beheer vertrouwde spelers & rollen."
+      claim-flags: "&eClaim Flags"
+      claim-flags-lore:
+        - "&7Schakel claimbescherming in/uit."
+      request-expansion: "&aVraag Uitbreiding"
+      request-expansion-lore:
+        - "&7Open het uitbreidingsmenu."
+      admin-tools: "&cAdmin Tools"
+      admin-tools-lore:
+        - "&7Alleen voor admins."
+      bungee-coming-soon: "&dBungee Ondersteuning (Binnenkort)"
+      bungee-coming-soon-lore:
+        - "&7Gepland voor versie 2.0."
+        - "&7Synchroniseer meerdere servers via BungeeCord."
+
+    expansion-menu:
+      option: "&a+%blocks% Blokken"
+      option-lore:
+        - "&7Vraag uitbreiding van +%blocks% blokken aan"
+
+    flags:
+      pvp: "&fPvP Toegestaan"
+      safezone: "&dVeilige Zone"
+      explosions: "&cExplosies"
+      fire-spread: "&6Vuurverspreiding"
+      block-break: "&9Blokken Breken"
+      block-place: "&9Blokken Plaatsen"
+      containers: "&bContainers"
+      crop-trample: "&aGewassen Platstampen"
+      ignite-flint: "&6Aansteken (Vuursteen)"
+      ignite-lava: "&6Aansteken (Lava)"
+      ignite-lightning: "&6Aansteken (Bliksem)"
+
+  # --- Rollen ---
+  roles:
+    display:
+      none: "&7Geen"
+      visitor: "&7Bezoeker"
+      member: "&aLid"
+      trusted: "&bVertrouwd"
+      builder: "&2Bouwer"
+      container: "&3Container"
+      moderator: "&eModerator"
+      manager: "&6Manager"
+      owner: "&cEigenaar"
+    lore:
+      visitor:
+        - "&7Standaardrol voor niet-vertrouwde spelers"
+        - "&cKan niet bouwen of openen"
+      member:
+        - "&7Basis vertrouwde rol"
+        - "&aKan containers openen"
+        - "&cKan niet bouwen of flags wijzigen"
+      trusted:
+        - "&7Geavanceerde vertrouwde rol"
+        - "&aVolledige toegang behalve eigenaarsacties"
+      builder:
+        - "&7Bouwrol"
+        - "&aKan blokken plaatsen & breken"
+        - "&cKan geen flags wijzigen"
+      container:
+        - "&7Opslagrol"
+        - "&aKan alleen containers openen"
+        - "&cKan niet bouwen of breken"
+      moderator:
+        - "&7Moderatie rol"
+        - "&aKan rollen & flags beheren"
+        - "&cKan geen eigendom overdragen"
+      manager:
+        - "&7Manager rol"
+        - "&aKan alles beheren en eigendom overdragen"
+      owner:
+        - "&cClaim Eigenaar"
+        - "&aVolledige controle"
+
+# ==========================================================
+# Help Pagina's
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Spelersgids"
+    - "&aKlik rechts met ProShield Kompas &7→ Open hoofdmenu"
+    - "&bHoofdmenu &7→ Claim, Info, Unclaim, Vertrouwd, Flags"
+    - "&bVertrouwde Spelers &7→ Beheer rollen & toegang"
+    - "&bClaim Flags &7→ Schakel bescherming in/uit"
+    - "&aVraag Uitbreiding &7→ Vraag admins (indien ingeschakeld)"
+    - "&7Cooldown voor verzoeken: &f%cooldown-hours%h &7(standaard)."
+
+  admin:
+    - "&c&lProShield — Admin Gids"
+    - "&cAdmin Tools GUI &7→ Reload, Debug, Bypass, Wereld Controles"
+    - "&7Uitbreidingsverzoeken en Wereld Controles vereisen permissies."
+    - "&7Commando's zijn fallback als GUI faalt."
+    - "&f/proshield reload &7→ Herlaad config"
+    - "&f/proshield debug &7→ Schakel debug"
+    - "&f/proshield bypass &7→ Schakel bypass"
+    - "&f/proshield admin &7→ Open Admin Tools GUI"
+
+  senior:
+    - "&4&lSenior Admin Tools"
+    - "&4Uitbreidingsverzoeken &7– Vereist &fproshield.admin.expansions"
+    - "&4Wereld Controles &7– Vereist &fproshield.admin.worldcontrols"
+    - "&7Beide functies via GUI, commando's niet nodig."

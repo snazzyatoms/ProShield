@@ -1,0 +1,244 @@
+# ==========================================================
+# ProShield Messages — Suomi (Hybrid)
+# Version: 1.2.6.1
+# ----------------------------------------------------------
+# HYBRID pack: Machine-translated Finnish with English fallback.
+# Community can freely improve translations without breaking keys.
+# ==========================================================
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  # --- General Errors ---
+  error:
+    player-only: "&cVain pelaajat voivat käyttää tätä toimintoa."
+    no-permission: "&cSinulla ei ole oikeutta tehdä tätä."
+    inventory-full: "&cTavaraluettelosi on täynnä. Tyhjennä yksi paikka ensin."
+    block-break: "&cEt voi rikkoa blokkeja täällä."
+    block-place: "&cEt voi asettaa blokkeja täällä."
+    bucket-empty: "&cEt voi tyhjentää sankoa täällä."
+    bucket-fill: "&cEt voi täyttää sankoa täällä."
+    pvp: "&cPvP on pois käytöstä tässä claimissa."
+    pick-player-first: "&cValitse pelaaja ensin."
+    unknown-role: "&cTätä roolia ei ole olemassa."
+    already-claimed: "&cTämä chunk on jo claimattu."
+    no-claim: "&cTäällä ei ole claimia."
+    claim-failed: "&cClaimin luominen epäonnistui."
+
+  # --- General Success ---
+  success:
+    claim-created: "&aClaim luotu onnistuneesti."
+    claim-removed: "&eClaim poistettu."
+    role-assigned: "&a&f%player% &aon asetettu rooliin &f%role%&a."
+    trust-removed: "&ePelaaja &f%player% &eon poistettu luotetuista pelaajista."
+    teleported: "&aSinut on teleportattu claimiin &f%id%&a."
+    flag-toggled: "&b%flag% &7→ %state%"
+
+  # --- State Text ---
+  state:
+    on: "&aPÄÄLLÄ"
+    off: "&cPOIS PÄÄLTÄ"
+
+  # --- Compass ---
+  compass:
+    command-success: "&aSinulle on annettu ProShield-kompassi."
+    already-have: "&eSinulla on jo ProShield-kompassi."
+    lore:
+      - "&7Klikkaa oikealla avataaksesi ProShield-valikon"
+      - "&7Hallitse claimisi, liput ja luotetut pelaajat"
+
+  # --- Admin / System ---
+  reloaded: "&aProShieldin asetukset ladattu uudelleen."
+
+  admin:
+    debug-on: "&eDebug-tila: &aPÄÄLLÄ"
+    debug-off: "&eDebug-tila: &cPOIS PÄÄLTÄ"
+    bypass-on: "&aOhitus käytössä."
+    bypass-off: "&cOhitus pois käytöstä."
+
+  # --- Claim / Region Transitions ---
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aAstuit omaan claimiisi."
+  enter-other: "&aAstuit pelaajan %player% claimiin."
+  leave-own: "&cPoistuit omasta claimistasi."
+  leave-other: "&cPoistuit pelaajan %player% claimista."
+  wilderness: "&7Astuit erämaahan."
+
+  # --- Expansion Requests (Player) ---
+  expansion:
+    request-sent: "&eLaajennuspyyntösi +%blocks% lohkoa on lähetetty ylläpitäjille."
+    approved: "&aClaimin laajennus (+%blocks% lohkoa) hyväksyttiin!"
+    denied: "&cLaajennuspyyntösi hylättiin: %reason%"
+    disabled: "&cLaajennuspyynnöt ovat pois käytöstä palvelimella."
+    cooldown-title: "&cOdotusaika aktiivinen"
+    cooldown-active: "&7Voit pyytää uudelleen &f%hours%h %minutes%m&7 kuluttua."
+    expired: "&eLaajennuspyyntösi vanheni %days% päivän jälkeen ilman tarkistusta."
+
+  # --- Expansion Review (Admin GUI) ---
+  expansion-admin:
+    lore:
+      approve: "&aKlikkaa: Hyväksy tämä laajennus"
+      deny: "&cKlikkaa: Hylkää ja valitse syy"
+      info: "&7Käytä hylkäyssyyt-valikkoa tarkkoihin viesteihin."
+
+  # --- Deny reasons ---
+  deny-reasons:
+    too-large: "&cPyydetty laajennus on liian suuri."
+    abusive: "&cLaajennuspyyntö hylättiin väärinkäytön vuoksi."
+    overlap: "&cPyydetty alue menee päällekkäin olemassa olevan claimin kanssa."
+    custom-1: "&cEi tarpeeksi peliaikaa tälle laajennukselle."
+    custom-2: "&cClaimisi on jo saavuttanut suurimman koon."
+
+  # --- World Controls ---
+  world-controls:
+    toggle: "&eMaailman asetus &f%flag% &eon nyt %state%."
+    enabled: "&aKÄYTÖSSÄ"
+    disabled: "&cPOIS KÄYTÖSTÄ"
+    titles:
+      world-list: "&cMaailman asetukset"
+      world-detail: "&8Maailma: %world%"
+    placeholders:
+      nether: "&cWorld_Nether (Tulossa pian)"
+      end: "&cWorld_The_End (Tulossa pian)"
+
+  # --- GUI Navigation ---
+  gui:
+    back-button: "&eTakaisin"
+    back-lore:
+      - "&7Palaa edelliseen valikkoon"
+    exit-button: "&cPoistu"
+    exit-lore:
+      - "&7Sulje tämä valikko turvallisesti"
+    titles:
+      main: "&6ProShield-valikko"
+      claim-info: "&eClaimin tiedot"
+      expansion-menu: "&aLaajennusvalikko"
+      trusted: "&bLuotetut pelaajat"
+      assign-role: "&bAseta rooli"
+      flags: "&eClaimin liput"
+      admin: "&cYlläpitotyökalut"
+      world-controls: "&cMaailman asetukset"
+      expansion-requests: "&eLaajennuspyynnöt"
+      expansion-history: "&7Laajennushistoria"
+      deny-reasons: "&cHylkäyssyyt"
+
+    # --- Main Menu Buttons ---
+    main:
+      claim-land: "&aReclamaa chunk"
+      claim-land-lore:
+        - "&7Luo uusi claim tähän."
+      claim-info: "&eClaimin tiedot"
+      claim-info-lore:
+        - "&7Katso tämän claimin tiedot"
+      unclaim-land: "&cPoista claim"
+      unclaim-land-lore:
+        - "&7Poista nykyinen claimisi."
+      trusted-players: "&bLuotetut pelaajat"
+      trusted-players-lore:
+        - "&7Hallitse luotettuja pelaajia ja rooleja."
+      claim-flags: "&eClaimin liput"
+      claim-flags-lore:
+        - "&7Vaihda claimin suojauslippuja."
+      request-expansion: "&aPyydä laajennusta"
+      request-expansion-lore:
+        - "&7Avaa laajennusvalikko."
+      admin-tools: "&cYlläpitotyökalut"
+      admin-tools-lore:
+        - "&7Vain ylläpitäjille."
+      bungee-coming-soon: "&dBungee-tuki (Tulossa pian)"
+      bungee-coming-soon-lore:
+        - "&7Suunniteltu versioon 2.0 tai myöhempään."
+        - "&7Synkronoi useita palvelimia/maailmoja BungeeCordin kautta."
+
+    # --- Expansion Menu (Player GUI) ---
+    expansion-menu:
+      option: "&a+%blocks% Lohkoa"
+      option-lore:
+        - "&7Pyydä laajennusta +%blocks% lohkoa"
+
+    # --- Flags Menu ---
+    flags:
+      pvp: "&fPvP sallittu"
+      safezone: "&dTurva-alue"
+      explosions: "&cRäjähdykset"
+      fire-spread: "&6Tulipalon leviäminen"
+      block-break: "&9Blokkien rikkominen"
+      block-place: "&9Blokkien asettaminen"
+      containers: "&bKontit"
+      crop-trample: "&aViljelyjen tallominen"
+      ignite-flint: "&6Sytytä (Tuluksilla)"
+      ignite-lava: "&6Sytytä (Laava)"
+      ignite-lightning: "&6Sytytä (Salama)"
+
+  # --- Role Display Names & Lore ---
+  roles:
+    display:
+      none: "&7Ei mikään"
+      visitor: "&7Vierailija"
+      member: "&aJäsen"
+      trusted: "&bLuotettu"
+      builder: "&2Rakentaja"
+      container: "&3Säilyttäjä"
+      moderator: "&eModeraattori"
+      manager: "&6Johtaja"
+      owner: "&cOmistaja"
+    lore:
+      visitor:
+        - "&7Oletusrooli ei-luotetuille pelaajille"
+        - "&cEi voi rakentaa tai avata kontteja"
+      member:
+        - "&7Perusluotettu rooli"
+        - "&aVoi avata kontteja"
+        - "&cEi voi rakentaa tai vaihtaa lippuja"
+      trusted:
+        - "&7Kehittynyt luotettu rooli"
+        - "&aTäysi pääsy paitsi omistajan toiminnot"
+      builder:
+        - "&7Rakennusrooli"
+        - "&aVoi rakentaa ja rikkoa blokkeja"
+        - "&cEi voi vaihtaa lippuja"
+      container:
+        - "&7Varastointirooli"
+        - "&aVoi vain avata kontteja"
+        - "&cEi voi rakentaa tai rikkoa"
+      moderator:
+        - "&7Hallintarooli"
+        - "&aVoi hallita rooleja ja lippuja"
+        - "&cEi voi siirtää omistajuutta"
+      manager:
+        - "&7Korkean tason hallintarooli"
+        - "&aVoi hallita rooleja, lippuja ja siirtää omistajuuden"
+      owner:
+        - "&cClaimin omistaja"
+        - "&aTäysi hallinta claimiin"
+
+# ==========================================================
+# Help Pages
+# ==========================================================
+help:
+  player:
+    - "&3&lProShield &7— Pelaajan opas"
+    - "&aKlikkaa oikealla ProShield-kompassiasi &7→ Avaa päävalikko"
+    - "&bPäävalikko &7→ Claim, Info, Poista, Luotetut, Liput"
+    - "&bLuotetut pelaajat &7→ Hallitse rooleja ja pääsyä"
+    - "&bClaimin liput &7→ Vaihda suojauslippuja"
+    - "&aPyydä laajennusta &7→ Pyydä adminilta claimin laajennusta (jos sallittu)"
+    - "&7Laajennuspyynnöillä on &f%cooldown-hours%h &7odotusaika (oletus)."
+
+  admin:
+    - "&c&lProShield — Admin-opas"
+    - "&cYlläpitotyökalut GUI &7→ Reload, Debug, Bypass, Maailman asetukset"
+    - "&7Laajennuspyynnöt ja maailman asetukset vaativat oikeudet."
+    - "&7Komennot ovat vain varmuuskopiona jos GUI epäonnistuu."
+    - "&f/proshield reload &7→ Lataa asetukset uudelleen"
+    - "&f/proshield debug &7→ Vaihda debug-tila"
+    - "&f/proshield bypass &7→ Vaihda ohitus"
+    - "&f/proshield admin &7→ Avaa admin-GUI"
+
+  senior:
+    - "&4&lSenior Admin -työkalut"
+    - "&4Laajennuspyynnöt &7– Vaatii &fproshield.admin.expansions"
+    - "&4Maailman asetukset &7– Vaatii &fproshield.admin.worldcontrols"
+    - "&7Molemmat toiminnot ovat GUI-ohjattuja. Komentoja ei tarvita."

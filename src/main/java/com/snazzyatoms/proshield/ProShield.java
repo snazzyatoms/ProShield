@@ -44,9 +44,9 @@ public class ProShield extends JavaPlugin {
         // =====================
         saveDefaultConfig();
 
-        // Load language system
+        // 🔹 Initialize language system
         languageManager = new LanguageManager(this);
-        languageManager.reload();
+        languageManager.reload(); // ensures active lang is loaded
 
         messages                = new MessagesUtil(this);
         plotManager             = new PlotManager(this);
@@ -61,7 +61,7 @@ public class ProShield extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
         getServer().getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager), this);
 
-        new MobControlTasks(this); // registers its own tasks
+        new MobControlTasks(this); // self-registers tasks
 
         // =====================
         // 📌 Command registration
@@ -75,7 +75,8 @@ public class ProShield extends JavaPlugin {
             getLogger().warning("[ProShield] Command /proshield not found in plugin.yml!");
         }
 
-        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion());
+        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion() +
+                " | Active language: " + languageManager.getActiveLanguage());
     }
 
     @Override
@@ -149,15 +150,17 @@ public class ProShield extends JavaPlugin {
     }
 
     /**
-     * Reload everything cleanly:
+     * 🔄 Reload everything cleanly:
      * - config.yml
-     * - language manager
+     * - language files (via LanguageManager)
      * - messages util
      */
     public void reloadAll() {
         reloadConfig();
         if (languageManager != null) languageManager.reload();
         if (messages != null) messages.reload();
-        getLogger().info("[ProShield] Configuration & languages reloaded.");
+
+        getLogger().info("[ProShield] Configuration & languages reloaded. " +
+                "Active language: " + (languageManager != null ? languageManager.getActiveLanguage() : "unknown"));
     }
 }

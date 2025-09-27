@@ -9,7 +9,7 @@ import org.bukkit.command.CommandSender;
 import java.util.*;
 
 /**
- * MessagesUtil (ProShield v1.2.6.1)
+ * MessagesUtil (ProShield v1.2.6.1-polished)
  *
  * Handles:
  *  - Delegates to LanguageManager for loading active language
@@ -41,19 +41,19 @@ public class MessagesUtil {
      * Core Getters
      * ------------------- */
 
-    /** Get a colored message by key (no fallback). */
+    /** Get a colored message by key (no explicit fallback). */
     public String get(String key) {
-        return langs.get(key);
+        return color(langs.get(key));
     }
 
     /** Get a list of messages by key. */
     public List<String> getList(String key) {
-        return langs.getList(key);
+        return colorList(langs.getList(key));
     }
 
     /** Get a colored + formatted message with placeholders. */
     public String format(String key, Map<String, String> placeholders) {
-        return langs.format(key, placeholders);
+        return color(langs.format(key, placeholders));
     }
 
     /** Get all subkeys under a given path. */
@@ -71,13 +71,13 @@ public class MessagesUtil {
     public String getOrDefault(String key, String fallback) {
         String value = langs.get(key);
         if (value == null || value.isBlank()) return color(fallback);
-        return value;
+        return color(value);
     }
 
     /** Get a message or null if not found. */
     public String getOrNull(String key) {
         String value = langs.get(key);
-        return (value == null || value.isBlank()) ? null : value;
+        return (value == null || value.isBlank()) ? null : color(value);
     }
 
     /* -------------------
@@ -107,7 +107,7 @@ public class MessagesUtil {
 
     public List<String> colorList(List<String> input) {
         if (input == null) return Collections.emptyList();
-        List<String> out = new ArrayList<>();
+        List<String> out = new ArrayList<>(input.size());
         for (String s : input) {
             out.add(color(s));
         }

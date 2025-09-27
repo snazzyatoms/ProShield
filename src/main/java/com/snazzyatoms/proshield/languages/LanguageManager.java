@@ -69,7 +69,16 @@ public class LanguageManager {
                 + " (" + PREFIX + this.activeLanguage + EXT + ")");
     }
 
+    /** Returns the currently active language code (e.g. "en", "sv", "pl"). */
     public String getActiveLanguage() {
+        return activeLanguage;
+    }
+
+    /**
+     * Alias for backwards compatibility with older code.
+     * Some classes (e.g., GUIManager) expect getCurrentLanguage().
+     */
+    public String getCurrentLanguage() {
         return activeLanguage;
     }
 

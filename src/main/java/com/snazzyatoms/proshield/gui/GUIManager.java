@@ -475,47 +475,39 @@ public class GUIManager {
     }
     // ----------------------------- Central Click Router -----------------------------
 
-    /** Routes clicks by inventory title keywords into specific handlers. */
-    public void handleClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        String title = e.getView().getTitle();
-        if (title == null) return;
+    /** Routes clicks by tracked view type (language-independent). */
+public void handleClick(InventoryClickEvent e) {
+    if (!(e.getWhoClicked() instanceof Player p)) return;
+    e.setCancelled(true); // always cancel vanilla behavior
 
-        String low = ChatColor.stripColor(title).toLowerCase(Locale.ROOT);
+    View current = peek(p);
+    if (current == null) return;
 
-        e.setCancelled(true); // always cancel vanilla behavior
-
-        try {
-            if (low.contains("proshield menu") || low.contains("main")) {
-                handleMainClick(p, e);
-            } else if (low.contains("claim info")) {
-                handleMainClaimInfoClickOrPlayerRequest(p, e);
-            } else if (low.contains("expansion menu") || low.contains("request expansion")) {
-                handleExpansionMenuClick(p, e);
-            } else if (low.contains("trusted")) {
-                handleTrustedClick(p, e);
-            } else if (low.contains("assign role")) {
-                handleAssignRoleClick(p, e);
-            } else if (low.contains("claim flags") || low.contains("flags")) {
-                handleFlagsClick(p, e);
-            } else if (low.contains("admin tools") || low.equals("admin")) {
-                handleAdminClick(p, e);
-            } else if (low.contains("world:")) {
-                handleWorldControlsClick(p, e);
-            } else if (low.contains("world controls")) {
-                handleWorldControlsClick(p, e);
-            } else if (low.contains("pending expansion requests") || low.contains("pending")) {
-                handleExpansionReviewClick(p, e);
-            } else if (low.contains("expansion history")) {
-                handleHistoryClick(p, e);
-            } else if (low.contains("deny reason")) {
-                handleDenyReasonClick(p, e);
+    try {
+        switch (current.type) {
+            case "MAIN"           -> handleMainClick(p, e);
+            case "CLAIMINFO"      -> handleMainClaimInfoClickOrPlayerRequest(p, e);
+            case "EXPANSION_MENU" -> handleExpansionMenuClick(p, e);
+            case "TRUSTED"        -> handleTrustedClick(p, e);
+            case "ASSIGNROLE"     -> handleAssignRoleClick(p, e);
+            case "FLAGS"          -> handleFlagsClick(p, e);
+            case "ADMIN"          -> handleAdminClick(p, e);
+            case "WORLDS"         -> handleWorldControlsClick(p, e);
+            case "WORLDDETAIL"    -> handleWorldControlsClick(p, e);
+            case "PENDING"        -> handleExpansionReviewClick(p, e);
+            case "HISTORY"        -> handleHistoryClick(p, e);
+            case "DENYREASON"     -> handleDenyReasonClick(p, e);
+            default               -> {
+                // fallback, just log
+                if (debugClicks) plugin.getLogger().info("[ProShield][DEBUG] Unhandled click in view=" + current.type);
             }
-        } catch (Throwable ex) {
-            plugin.getLogger().warning("[ProShield] Click routing error: " + ex.getMessage());
-            ex.printStackTrace();
         }
+    } catch (Throwable ex) {
+        plugin.getLogger().warning("[ProShield] Click routing error: " + ex.getMessage());
+        ex.printStackTrace();
     }
+}
+
 
     // ----------------------------- Click Handlers -----------------------------
 

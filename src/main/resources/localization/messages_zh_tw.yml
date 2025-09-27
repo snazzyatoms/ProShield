@@ -1,0 +1,234 @@
+# ==========================================================
+# ProShield 訊息
+# 版本: 1.2.6 (Polished, Synced & Expanded)
+# ----------------------------------------------------------
+# - 角色顯示名稱與描述現在完全可自訂
+# - 所有 GUI 按鈕、描述、錯誤、成功與警告訊息皆已涵蓋
+# - 佔位符已標準化: %player%, %role%, %flag%, %state%
+# - 新增擴展功能選單支援 + 農作物踩踏保護
+# ----------------------------------------------------------
+# 注意:
+# 如果您發現此語言版本中有翻譯錯誤或不準確的地方，
+# 請在您的伺服器上編輯 `messages.yml` 檔案。
+# 此檔案已與語言包同步，您可隨時進行修改。
+# ==========================================================
+
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[除錯]&r "
+
+  error:
+    player-only: "&c此操作僅限玩家使用。"
+    no-permission: "&c你沒有執行此操作的權限。"
+    inventory-full: "&c你的物品欄已滿，請先清理空位。"
+    block-break: "&c你不能在這裡破壞方塊。"
+    block-place: "&c你不能在這裡放置方塊。"
+    bucket-empty: "&c你不能在這裡倒空桶子。"
+    bucket-fill: "&c你不能在這裡裝滿桶子。"
+    pvp: "&c此領地內禁用 PvP。"
+    pick-player-first: "&c請先選擇一位玩家。"
+    unknown-role: "&c該角色不存在。"
+    already-claimed: "&c此區塊已被佔領。"
+    no-claim: "&c這裡沒有領地。"
+    claim-failed: "&c無法在此處建立領地。"
+
+  success:
+    claim-created: "&a成功建立領地。"
+    claim-removed: "&e領地已移除。"
+    role-assigned: "&a已將玩家 &f%player% &a設定為角色 &f%role%&a。"
+    trust-removed: "&e已將玩家 &f%player% &e從信任列表移除。"
+    teleported: "&a已傳送至領地 &f%id%&a。"
+    flag-toggled: "&b%flag% &7→ %state%"
+
+  state:
+    on: "&a開啟"
+    off: "&c關閉"
+
+  compass:
+    command-success: "&a你已獲得 ProShield 指南針。"
+    already-have: "&e你已經擁有一個 ProShield 指南針。"
+    lore:
+      - "&7右鍵點擊打開 ProShield 選單"
+      - "&7管理領地、標誌與信任玩家"
+
+  reloaded: "&aProShield 設定已重新載入。"
+
+  admin:
+    debug-on: "&e除錯模式: &a已啟用"
+    debug-off: "&e除錯模式: &c已停用"
+    bypass-on: "&a已啟用旁路模式。"
+    bypass-off: "&c已停用旁路模式。"
+
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&a你進入了自己的領地。"
+  enter-other: "&a你進入了 %player% 的領地。"
+  leave-own: "&c你離開了自己的領地。"
+  leave-other: "&c你離開了 %player% 的領地。"
+  wilderness: "&7你進入了荒野。"
+
+  expansion:
+    request-sent: "&e你的擴展請求（+%blocks% 方塊）已送交管理員。"
+    approved: "&a你的領地擴展（+%blocks% 方塊）已獲批准！"
+    denied: "&c你的擴展請求被拒絕: %reason%"
+    disabled: "&c伺服器已停用擴展請求。"
+    cooldown-title: "&c冷卻中"
+    cooldown-active: "&7你還需等待 &f%hours%小時 %minutes%分鐘 &7後才能再次請求。"
+    expired: "&e你的擴展請求在 %days% 天未審核後已過期。"
+
+  expansion-admin:
+    lore:
+      approve: "&a點擊: 批准此擴展"
+      deny: "&c點擊: 拒絕並選擇理由"
+      info: "&7使用拒絕理由選單以提供詳細訊息"
+
+  deny-reasons:
+    too-large: "&c請求的擴展過大。"
+    abusive: "&c因濫用，擴展請求已被拒絕。"
+    overlap: "&c請求區域與現有領地重疊。"
+    custom-1: "&c遊戲時間不足，暫無法申請此擴展。"
+    custom-2: "&c你的領地已達到最大大小。"
+
+  world-controls:
+    toggle: "&e世界控制 &f%flag% &e現已 %state%。"
+    enabled: "&a已啟用"
+    disabled: "&c已停用"
+    titles:
+      world-list: "&c世界控制"
+      world-detail: "&8世界: %world%"
+    placeholders:
+      nether: "&c地獄 (即將推出)"
+      end: "&c終界 (即將推出)"
+
+  gui:
+    back-button: "&e返回"
+    back-lore:
+      - "&7返回上一個選單"
+    exit-button: "&c退出"
+    exit-lore:
+      - "&7安全關閉此選單"
+    titles:
+      main: "&6ProShield 選單"
+      claim-info: "&e領地資訊"
+      expansion-menu: "&a擴展選單"
+      trusted: "&b信任玩家"
+      assign-role: "&b分配角色"
+      flags: "&e領地標誌"
+      admin: "&c管理工具"
+      world-controls: "&c世界控制"
+      expansion-requests: "&e擴展請求"
+      expansion-history: "&7擴展歷史"
+      deny-reasons: "&c拒絕理由"
+
+    main:
+      claim-land: "&a佔領區塊"
+      claim-land-lore:
+        - "&7在此處建立新的領地"
+      claim-info: "&e領地資訊"
+      claim-info-lore:
+        - "&7查看此領地的詳細資訊"
+      unclaim-land: "&c取消佔領"
+      unclaim-land-lore:
+        - "&7移除目前領地"
+      trusted-players: "&b信任玩家"
+      trusted-players-lore:
+        - "&7管理信任玩家與角色"
+      claim-flags: "&e領地標誌"
+      claim-flags-lore:
+        - "&7切換此領地的保護標誌"
+      request-expansion: "&a擴展請求"
+      request-expansion-lore:
+        - "&7打開擴展選單"
+      admin-tools: "&c管理工具"
+      admin-tools-lore:
+        - "&7僅限管理員使用"
+      bungee-coming-soon: "&dBungee 支援 (即將推出)"
+      bungee-coming-soon-lore:
+        - "&7計劃於 2.0 或更高版本支援"
+        - "&7透過 BungeeCord 同步多個伺服器/世界"
+
+    expansion-menu:
+      option: "&a+%blocks% 方塊"
+      option-lore:
+        - "&7請求擴展 +%blocks% 方塊"
+
+    flags:
+      pvp: "&f允許 PvP"
+      safezone: "&d安全區"
+      explosions: "&c爆炸"
+      fire-spread: "&6火焰蔓延"
+      block-break: "&9破壞方塊"
+      block-place: "&9放置方塊"
+      containers: "&b容器"
+      crop-trample: "&a踩踏作物"
+      ignite-flint: "&6點火 (打火石)"
+      ignite-lava: "&6點火 (岩漿)"
+      ignite-lightning: "&6點火 (閃電)"
+
+  roles:
+    display:
+      none: "&7無"
+      visitor: "&7訪客"
+      member: "&a成員"
+      trusted: "&b信任"
+      builder: "&2建造者"
+      container: "&3倉庫員"
+      moderator: "&e管理員"
+      manager: "&6經理"
+      owner: "&c所有者"
+    lore:
+      visitor:
+        - "&7非信任玩家的預設角色"
+        - "&c不能建造或使用容器"
+      member:
+        - "&7基礎信任角色"
+        - "&a可以使用容器"
+        - "&c不能建造或切換標誌"
+      trusted:
+        - "&7進階信任角色"
+        - "&a除所有者操作外擁有全部權限"
+      builder:
+        - "&7建造角色"
+        - "&a可以建造和破壞方塊"
+        - "&c不能切換標誌"
+      container:
+        - "&7倉庫角色"
+        - "&a只能打開容器"
+        - "&c不能建造或破壞"
+      moderator:
+        - "&7管理角色"
+        - "&a可以管理角色與標誌"
+        - "&c不能轉讓所有權"
+      manager:
+        - "&7高階管理角色"
+        - "&a可以管理角色、標誌並轉讓所有權"
+      owner:
+        - "&c領地主人"
+        - "&a對領地擁有完全控制權"
+
+help:
+  player:
+    - "&3&lProShield &7— 玩家指南"
+    - "&a右鍵點擊 ProShield 指南針 &7→ 打開主選單"
+    - "&b主選單 &7→ 占領, 資訊, 取消佔領, 信任, 標誌"
+    - "&b信任玩家 &7→ 管理角色與權限"
+    - "&b領地標誌 &7→ 切換保護設定"
+    - "&a擴展請求 &7→ 向管理員申請擴展 (若啟用)"
+    - "&7擴展請求冷卻時間: &f%cooldown-hours%小時 &7(預設)"
+
+  admin:
+    - "&c&lProShield — 管理員指南"
+    - "&c管理工具 GUI &7→ 重載, 除錯, 旁路, 世界控制"
+    - "&7擴展請求與世界控制需要權限。"
+    - "&7僅在 GUI 無效時使用指令"
+    - "&f/proshield reload &7→ 重載設定"
+    - "&f/proshield debug &7→ 切換除錯模式"
+    - "&f/proshield bypass &7→ 切換旁路模式"
+    - "&f/proshield admin &7→ 打開管理工具 GUI"
+
+  senior:
+    - "&4&l高階管理工具"
+    - "&4擴展請求 &7– 需要權限: &fproshield.admin.expansions"
+    - "&4世界控制 &7– 需要權限: &fproshield.admin.worldcontrols"
+    - "&7這兩個功能均基於 GUI。無需指令。"

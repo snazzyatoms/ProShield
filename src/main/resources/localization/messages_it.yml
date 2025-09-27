@@ -1,0 +1,234 @@
+# ==========================================================
+# ProShield Messaggi
+# Versione: 1.2.6 (Ottimizzato, Sincronizzato e Ampliato)
+# ----------------------------------------------------------
+# - I nomi e le descrizioni dei ruoli ora sono completamente personalizzabili
+# - Tutti i pulsanti GUI, descrizioni, errori, successi e avvisi inclusi
+# - Segnaposto standardizzati: %player%, %role%, %flag%, %state%
+# - Aggiunto supporto al menu espansione + calpestamento colture
+# ----------------------------------------------------------
+# Nota:
+# Se trovi errori o problemi nella traduzione,
+# modifica il file `messages.yml` sul tuo server.
+# Questo file è sincronizzato con i pacchetti lingua e può essere modificato in qualsiasi momento.
+# ==========================================================
+
+
+messages:
+  prefix: "&3[ProShield]&r "
+  debug-prefix: "&8[Debug]&r "
+
+  error:
+    player-only: "&cSolo i giocatori possono usare questa azione."
+    no-permission: "&cNon hai il permesso per farlo."
+    inventory-full: "&cIl tuo inventario è pieno. Libera uno slot prima."
+    block-break: "&cNon puoi rompere blocchi qui."
+    block-place: "&cNon puoi piazzare blocchi qui."
+    bucket-empty: "&cNon puoi svuotare secchi qui."
+    bucket-fill: "&cNon puoi riempire secchi qui."
+    pvp: "&cIl PvP è disabilitato in questo claim."
+    pick-player-first: "&cSeleziona prima un giocatore."
+    unknown-role: "&cQuel ruolo non esiste."
+    already-claimed: "&cQuesto chunk è già reclamato."
+    no-claim: "&cNessun claim qui."
+    claim-failed: "&cImpossibile creare un claim qui."
+
+  success:
+    claim-created: "&aClaim creato con successo."
+    claim-removed: "&eClaim rimosso."
+    role-assigned: "&aAssegnato &f%player% &aal ruolo &f%role%&a."
+    trust-removed: "&eRimosso &f%player% &edai giocatori fidati."
+    teleported: "&aTeletrasportato al claim &f%id%&a."
+    flag-toggled: "&b%flag% &7→ %state%"
+
+  state:
+    on: "&aATTIVO"
+    off: "&cDISATTIVO"
+
+  compass:
+    command-success: "&aTi è stata data una Bussola ProShield."
+    already-have: "&eHai già una Bussola ProShield."
+    lore:
+      - "&7Click destro per aprire il menu ProShield"
+      - "&7Gestisci claim, flag e giocatori fidati"
+
+  reloaded: "&aConfigurazione di ProShield ricaricata."
+
+  admin:
+    debug-on: "&eModalità debug: &aATTIVA"
+    debug-off: "&eModalità debug: &cDISATTIVATA"
+    bypass-on: "&aBypass abilitato."
+    bypass-off: "&cBypass disabilitato."
+
+  show-wilderness: true
+  admin-flag-chat: true
+  enter-own: "&aSei entrato nel tuo claim."
+  enter-other: "&aSei entrato nel claim di %player%."
+  leave-own: "&cSei uscito dal tuo claim."
+  leave-other: "&cSei uscito dal claim di %player%."
+  wilderness: "&7Sei entrato nelle terre selvagge."
+
+  expansion:
+    request-sent: "&eLa tua richiesta di espansione di +%blocks% blocchi è stata inviata agli admin."
+    approved: "&aLa tua espansione del claim (+%blocks% blocchi) è stata approvata!"
+    denied: "&cLa tua richiesta di espansione è stata rifiutata: %reason%"
+    disabled: "&cLe richieste di espansione sono disabilitate su questo server."
+    cooldown-title: "&cCooldown attivo"
+    cooldown-active: "&7Potrai richiedere di nuovo tra &f%hours%h %minutes%m&7."
+    expired: "&eLa tua richiesta di espansione è scaduta dopo %days% giorni senza revisione."
+
+  expansion-admin:
+    lore:
+      approve: "&aClic: Approva questa espansione"
+      deny: "&cClic: Rifiuta e scegli un motivo"
+      info: "&7Usa il menu dei motivi di rifiuto per messaggi dettagliati."
+
+  deny-reasons:
+    too-large: "&cL’espansione richiesta è troppo grande."
+    abusive: "&cRichiesta rifiutata per uso improprio."
+    overlap: "&cL’area richiesta si sovrappone a un claim esistente."
+    custom-1: "&cNon hai ancora abbastanza tempo di gioco per questa espansione."
+    custom-2: "&cIl tuo claim ha già raggiunto la dimensione massima."
+
+  world-controls:
+    toggle: "&eIl controllo del mondo &f%flag% &eora è %state%."
+    enabled: "&aABILITATO"
+    disabled: "&cDISABILITATO"
+    titles:
+      world-list: "&cControlli del Mondo"
+      world-detail: "&8Mondo: %world%"
+    placeholders:
+      nether: "&cWorld_Nether (Prossimamente)"
+      end: "&cWorld_The_End (Prossimamente)"
+
+  gui:
+    back-button: "&eIndietro"
+    back-lore:
+      - "&7Torna al menu precedente"
+    exit-button: "&cEsci"
+    exit-lore:
+      - "&7Chiudi questo menu in sicurezza"
+    titles:
+      main: "&6Menu ProShield"
+      claim-info: "&eInformazioni Claim"
+      expansion-menu: "&aMenu Espansione"
+      trusted: "&bGiocatori Fidati"
+      assign-role: "&bAssegna Ruolo"
+      flags: "&eFlag del Claim"
+      admin: "&cStrumenti Admin"
+      world-controls: "&cControlli del Mondo"
+      expansion-requests: "&eRichieste di Espansione"
+      expansion-history: "&7Storico Espansioni"
+      deny-reasons: "&cMotivi di Rifiuto"
+
+    main:
+      claim-land: "&aReclama Chunk"
+      claim-land-lore:
+        - "&7Crea un nuovo claim qui."
+      claim-info: "&eInformazioni Claim"
+      claim-info-lore:
+        - "&7Vedi i dettagli di questo claim"
+      unclaim-land: "&cRilascia Chunk"
+      unclaim-land-lore:
+        - "&7Rimuovi il tuo claim attuale."
+      trusted-players: "&bGiocatori Fidati"
+      trusted-players-lore:
+        - "&7Gestisci giocatori fidati e ruoli."
+      claim-flags: "&eFlag del Claim"
+      claim-flags-lore:
+        - "&7Attiva/Disattiva le protezioni di questo claim."
+      request-expansion: "&aRichiedi Espansione"
+      request-expansion-lore:
+        - "&7Apri il menu di espansione."
+      admin-tools: "&cStrumenti Admin"
+      admin-tools-lore:
+        - "&7Solo per amministratori."
+      bungee-coming-soon: "&dSupporto Bungee (Prossimamente)"
+      bungee-coming-soon-lore:
+        - "&7Previsto per la versione 2.0 o successive."
+        - "&7Sincronizza più server/mondi tramite BungeeCord."
+
+    expansion-menu:
+      option: "&a+%blocks% Blocchi"
+      option-lore:
+        - "&7Richiedi espansione di +%blocks% blocchi"
+
+    flags:
+      pvp: "&fPvP Consentito"
+      safezone: "&dZona Sicura"
+      explosions: "&cEsplosioni"
+      fire-spread: "&6Propagazione del Fuoco"
+      block-break: "&9Rompere Blocchi"
+      block-place: "&9Piazzare Blocchi"
+      containers: "&bContenitori"
+      crop-trample: "&aCalpestamento Colture"
+      ignite-flint: "&6Accensione (Pietra Focaia)"
+      ignite-lava: "&6Accensione (Lava)"
+      ignite-lightning: "&6Accensione (Fulmine)"
+
+  roles:
+    display:
+      none: "&7Nessuno"
+      visitor: "&7Visitatore"
+      member: "&aMembro"
+      trusted: "&bFidato"
+      builder: "&2Costruttore"
+      container: "&3Magazziniere"
+      moderator: "&eModeratore"
+      manager: "&6Manager"
+      owner: "&cProprietario"
+    lore:
+      visitor:
+        - "&7Ruolo predefinito per giocatori non fidati"
+        - "&cNon può costruire né aprire contenitori"
+      member:
+        - "&7Ruolo fidato di base"
+        - "&aPuò aprire contenitori"
+        - "&cNon può costruire o cambiare i flag"
+      trusted:
+        - "&7Ruolo fidato avanzato"
+        - "&aAccesso completo tranne le azioni del proprietario"
+      builder:
+        - "&7Ruolo di costruzione"
+        - "&aPuò costruire e rompere blocchi"
+        - "&cNon può cambiare i flag"
+      container:
+        - "&7Ruolo magazzino"
+        - "&aPuò solo aprire contenitori"
+        - "&cNon può costruire o rompere"
+      moderator:
+        - "&7Ruolo di gestione"
+        - "&aPuò gestire ruoli e flag"
+        - "&cNon può trasferire la proprietà"
+      manager:
+        - "&7Gestione avanzata"
+        - "&aPuò gestire ruoli, flag e trasferire la proprietà"
+      owner:
+        - "&cProprietario del Claim"
+        - "&aControllo totale del claim"
+
+help:
+  player:
+    - "&3&lProShield &7— Guida Giocatore"
+    - "&aClick destro sulla Bussola ProShield &7→ Apri il menu principale"
+    - "&bMenu Principale &7→ Claim, Info, Unclaim, Trusted, Flags"
+    - "&bGiocatori Fidati &7→ Gestisci ruoli e accessi"
+    - "&bFlag del Claim &7→ Attiva/Disattiva protezioni"
+    - "&aRichiedi Espansione &7→ Chiedi agli admin di ampliare il claim (se abilitato)"
+    - "&7Le richieste hanno un cooldown di &f%cooldown-hours%h &7(predefinito)."
+
+  admin:
+    - "&c&lProShield — Guida Admin"
+    - "&cStrumenti Admin GUI &7→ Reload, Debug, Bypass, Controlli del Mondo"
+    - "&7Richieste di espansione e controlli del mondo richiedono permessi."
+    - "&7I comandi sono solo di backup se il GUI fallisce."
+    - "&f/proshield reload &7→ Ricarica configurazioni"
+    - "&f/proshield debug &7→ Attiva/Disattiva debug"
+    - "&f/proshield bypass &7→ Attiva/Disattiva bypass"
+    - "&f/proshield admin &7→ Apri GUI Strumenti Admin"
+
+  senior:
+    - "&4&lStrumenti Senior Admin"
+    - "&4Richieste di Espansione &7– Richiede &fproshield.admin.expansions"
+    - "&4Controlli del Mondo &7– Richiede &fproshield.admin.worldcontrols"
+    - "&7Entrambe le funzioni sono gestite via GUI. Comandi non necessari."

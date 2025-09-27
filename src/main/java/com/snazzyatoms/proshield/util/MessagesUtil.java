@@ -9,11 +9,11 @@ import org.bukkit.command.CommandSender;
 import java.util.*;
 
 /**
- * MessagesUtil (ProShield v1.2.6.1-polished)
+ * MessagesUtil (ProShield v1.2.6.2)
  *
  * Handles:
  *  - Delegates to LanguageManager for loading active language
- *  - Fallbacks handled inside LanguageManager
+ *  - Logs missing keys & falls back to English
  *  - Backwards-compatibility shims (getOrDefault, getOrNull)
  *  - Color formatting (& → § codes)
  *  - Utility for lists and optional values
@@ -41,19 +41,34 @@ public class MessagesUtil {
      * Core Getters
      * ------------------- */
 
-    /** Get a colored message by key (no explicit fallback). */
+    /** Get a colored message by key (logs warning if missing). */
     public String get(String key) {
-        return color(langs.get(key));
+        String value = langs.get(key);
+        if (value == null || value.isBlank()) {
+            plugin.getLogger().warning("[ProShield][Lang] Missing key: " + key + " (check your language file!)");
+            return "";
+        }
+        return color(value);
     }
 
-    /** Get a list of messages by key. */
+    /** Get a list of messages by key (logs warning if missing). */
     public List<String> getList(String key) {
-        return colorList(langs.getList(key));
+        List<String> list = langs.getList(key);
+        if (list == null || list.isEmpty()) {
+            plugin.getLogger().warning("[ProShield][Lang] Missing list key: " + key + " (check your language file!)");
+            return Collections.emptyList();
+        }
+        return colorList(list);
     }
 
     /** Get a colored + formatted message with placeholders. */
     public String format(String key, Map<String, String> placeholders) {
-        return color(langs.format(key, placeholders));
+        String base = langs.format(key, placeholders);
+        if (base == null || base.isBlank()) {
+            plugin.getLogger().warning("[ProShield][Lang] Missing format key: " + key + " (check your language file!)");
+            return "";
+        }
+        return color(base);
     }
 
     /** Get all subkeys under a given path. */
@@ -70,14 +85,21 @@ public class MessagesUtil {
     /** Get a message with fallback value if missing. */
     public String getOrDefault(String key, String fallback) {
         String value = langs.get(key);
-        if (value == null || value.isBlank()) return color(fallback);
+        if (value == null || value.isBlank()) {
+            plugin.getLogger().warning("[ProShield][Lang] Missing key: " + key + " → using fallback value.");
+            return color(fallback);
+        }
         return color(value);
     }
 
     /** Get a message or null if not found. */
     public String getOrNull(String key) {
         String value = langs.get(key);
-        return (value == null || value.isBlank()) ? null : color(value);
+        if (value == null || value.isBlank()) {
+            plugin.getLogger().warning("[ProShield][Lang] Missing key: " + key + " → returning null.");
+            return null;
+        }
+        return color(value);
     }
 
     /* -------------------

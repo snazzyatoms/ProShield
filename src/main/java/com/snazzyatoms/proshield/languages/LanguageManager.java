@@ -1,131 +1,103 @@
+// src/main/java/com/snazzyatoms/proshield/languages/LanguageManager.java
 package com.snazzyatoms.proshield.languages;
 
 import com.snazzyatoms.proshield.ProShield;
+import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
- * LanguageManager (ProShield v1.2.6.1+)
+ * LanguageManager (ProShield v1.2.6.1)
  *
- * Handles:
- *  - Loading language files from /resources/localization/
- *  - Copying missing language files into /plugins/ProShield/
- *  - Selecting the active language (from config.yml)
- *  - English fallback if keys are missing
- *  - Runtime reload
+ * - Handles loading of active language file
+ * - Provides safe getters for strings/lists
+ * - Tracks currently active language for debugging/logging
  */
 public class LanguageManager {
 
     private final ProShield plugin;
 
-    private YamlConfiguration activeLang;   // selected language
-    private YamlConfiguration fallbackLang; // English fallback
-
-    private String currentCode;
+    private FileConfiguration langConfig;
+    private String activeLanguage = "en"; // default fallback
 
     public LanguageManager(ProShield plugin) {
         this.plugin = plugin;
+        reload();
     }
 
-    /* -------------------
-     * Lifecycle
-     * ------------------- */
-
+    /**
+     * Reload language file from disk based on config.yml
+     */
     public void reload() {
-        String langCode = plugin.getConfig().getString("settings.language", "en").toLowerCase();
-        this.currentCode = langCode;
-
-        // Target file in /plugins/ProShield/
-        File targetFile = new File(plugin.getDataFolder(), "messages_" + langCode + ".yml");
-
-        // Resource path inside JAR
-        String resourcePath = "localization/messages_" + langCode + ".yml";
-
-        // Ensure file exists locally, copy from JAR if missing
-        if (!targetFile.exists()) {
-            if (plugin.getResource(resourcePath) != null) {
-                plugin.saveResource(resourcePath, false);
-                plugin.getLogger().info("[ProShield][Lang] Extracted " + resourcePath + " to plugin folder.");
-            } else {
-                plugin.getLogger().warning("[ProShield][Lang] Language file not found in JAR: " + resourcePath);
-            }
+        // Ensure plugin/data folder exists
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
         }
 
-        // Load chosen language
-        this.activeLang = YamlConfiguration.loadConfiguration(targetFile);
+        // Get language setting from config.yml
+        this.activeLanguage = plugin.getConfig().getString("settings.language", "en");
 
-        // Always load fallback English directly from JAR
-        InputStream enStream = plugin.getResource("localization/messages_en.yml");
-        if (enStream != null) {
-            this.fallbackLang = YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(enStream, StandardCharsets.UTF_8)
-            );
-        } else {
-            plugin.getLogger().warning("[ProShield][Lang] English fallback not found in JAR. Keys will use defaults.");
-            this.fallbackLang = new YamlConfiguration();
+        // Load the matching messages file (e.g. messages_en.yml)
+        File langFile = new File(plugin.getDataFolder(), "messages_" + activeLanguage + ".yml");
+
+        // If it doesn’t exist, copy from resources
+        if (!langFile.exists()) {
+            plugin.saveResource("messages_" + activeLanguage + ".yml", false);
         }
 
-        plugin.getLogger().info("[ProShield][Lang] Loaded language: " + langCode +
-                " (fallback=en, file=" + targetFile.getName() + ")");
+        this.langConfig = YamlConfiguration.loadConfiguration(langFile);
+
+        plugin.getLogger().info(ChatColor.GREEN + "[ProShield] Loaded language: " + activeLanguage);
     }
 
-    /* -------------------
-     * Getters
-     * ------------------- */
+    /**
+     * Get active language code (e.g. "en", "fr", "de")
+     */
+    public String getActiveLanguage() {
+        return activeLanguage;
+    }
 
+    /**
+     * Raw configuration access
+     */
+    public FileConfiguration raw() {
+        return langConfig;
+    }
+
+    /**
+     * Get a colored string from language file
+     */
     public String get(String key) {
-        String val = activeLang.getString(key);
-        if (val == null || val.isBlank()) {
-            val = fallbackLang.getString(key, "&cMissing: " + key);
-        }
-        return val;
+        String value = langConfig.getString(key);
+        if (value == null) return null;
+        return ChatColor.translateAlternateColorCodes('&', value);
     }
 
+    /**
+     * Get a string list from language file
+     */
     public List<String> getList(String key) {
-        List<String> list = activeLang.getStringList(key);
-        if (list == null || list.isEmpty()) {
-            list = fallbackLang.getStringList(key);
-        }
-        return list != null ? list : Collections.emptyList();
+        List<String> list = langConfig.getStringList(key);
+        if (list == null) return Collections.emptyList();
+        return list.stream()
+                .map(s -> ChatColor.translateAlternateColorCodes('&', s))
+                .toList();
     }
 
-    public String format(String key, Map<String, String> placeholders) {
-        String msg = get(key);
-        if (placeholders != null) {
-            for (Map.Entry<String, String> e : placeholders.entrySet()) {
-                msg = msg.replace("%" + e.getKey() + "%", e.getValue());
-            }
+    /**
+     * Format with placeholders
+     */
+    public String format(String key, java.util.Map<String, String> placeholders) {
+        String base = get(key);
+        if (base == null) return null;
+        for (var entry : placeholders.entrySet()) {
+            base = base.replace("%" + entry.getKey() + "%", entry.getValue());
         }
-        return msg;
-    }
-
-    public Set<String> getKeys(String path) {
-        if (activeLang.isConfigurationSection(path)) {
-            return activeLang.getConfigurationSection(path).getKeys(false);
-        }
-        if (fallbackLang.isConfigurationSection(path)) {
-            return fallbackLang.getConfigurationSection(path).getKeys(false);
-        }
-        return Collections.emptySet();
-    }
-
-    /* -------------------
-     * Info
-     * ------------------- */
-
-    public String getCurrentCode() {
-        return currentCode;
-    }
-
-    public YamlConfiguration raw() {
-        return activeLang;
+        return base;
     }
 }

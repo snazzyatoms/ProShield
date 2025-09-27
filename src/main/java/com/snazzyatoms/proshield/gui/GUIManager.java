@@ -590,8 +590,7 @@ public void handleMainClick(Player p, InventoryClickEvent e) {
     String id = extractId(it);
     if (id == null) return;
 
-    // Ignore info-only placeholders
-    if (id.startsWith("INFO:")) return;
+    if (id.startsWith("INFO:")) return; // Ignore info-only placeholders
 
     switch (id) {
         case "CLAIM" -> {
@@ -623,7 +622,8 @@ public void handleMainClick(Player p, InventoryClickEvent e) {
         }
         case "INFO"    -> openClaimInfo(p);
         case "TRUSTED" -> openTrusted(p, 0);
-        case "ROLES"   -> msg(p, messages.getOrDefault("messages.info.roles-howto", "&7Open &fTrusted&7, click a player, then choose a role."));
+        case "ROLES"   -> msg(p, messages.getOrDefault("messages.info.roles-howto",
+                                "&7Open &fTrusted&7, click a player, then choose a role."));
         case "FLAGS"   -> openFlags(p, 0);
         case "ADMIN"   -> {
             if (!p.hasPermission("proshield.admin")) { deny(p); return; }
@@ -639,22 +639,25 @@ public void handleAssignRoleClick(Player p, InventoryClickEvent e) {
     if (!valid(it)) return;
     String id = extractId(it);
     if (id == null) return;
-
-    // Ignore placeholders
     if (id.startsWith("INFO:")) return;
 
     Plot plot = plots.getPlotAt(p.getLocation());
     if (plot == null) { warn(p, messages.getOrDefault("messages.error.no-claim", "&cNo claim here.")); return; }
 
     View peek = peek(p);
-    if (peek == null || peek.pendingTarget == null) { warn(p, messages.getOrDefault("messages.error.pick-player-first", "&cPick a player first.")); return; }
+    if (peek == null || peek.pendingTarget == null) {
+        warn(p, messages.getOrDefault("messages.error.pick-player-first", "&cPick a player first."));
+        return;
+    }
 
     if (!plot.getOwner().equals(p.getUniqueId()) && !p.hasPermission("proshield.admin")) { deny(p); return; }
 
     if (id.startsWith("ROLE:")) {
         String roleName = id.substring("ROLE:".length());
         ClaimRole role = ClaimRole.fromName(roleName);
-        if (role == ClaimRole.NONE) { warn(p, messages.getOrDefault("messages.error.unknown-role", "&cUnknown role.")); return; }
+        if (role == ClaimRole.NONE) {
+            warn(p, messages.getOrDefault("messages.error.unknown-role", "&cUnknown role.")); return;
+        }
         roles.setRole(plot, peek.pendingTarget, role);
         plots.save(plot);
         msg(p, messages.getOrDefault("messages.success.role-assigned", "&aAssigned &f%player% &ato &f%role%")
@@ -673,8 +676,6 @@ public void handleTrustedClick(Player p, InventoryClickEvent e) {
     if (!valid(it)) return;
     String id = extractId(it);
     if (id == null) return;
-
-    // Ignore placeholders
     if (id.startsWith("INFO:")) return;
 
     Plot plot = plots.getPlotAt(p.getLocation());
@@ -708,8 +709,6 @@ public void handleMainClaimInfoClickOrPlayerRequest(Player p, InventoryClickEven
     if (!valid(it)) return;
     String id = extractId(it);
     if (id == null) return;
-
-    // Ignore placeholders
     if (id.startsWith("INFO:")) return;
 
     if (id.equals("BACK")) { back(p); return; }
@@ -727,8 +726,6 @@ public void handleExpansionMenuClick(Player p, InventoryClickEvent e) {
     if (!valid(it)) return;
     String id = extractId(it);
     if (id == null) return;
-
-    // Ignore placeholders
     if (id.startsWith("INFO:")) return;
 
     if (id.equals("BACK")) { back(p); return; }
@@ -747,8 +744,6 @@ public void handleFlagsClick(Player p, InventoryClickEvent e) {
     if (!valid(it)) return;
     String id = extractId(it);
     if (id == null) return;
-
-    // Ignore placeholders
     if (id.startsWith("INFO:")) return;
 
     if (id.equals("BACK")) { back(p); return; }
@@ -780,6 +775,123 @@ public void handleFlagsClick(Player p, InventoryClickEvent e) {
         openFlagsNoPush(p);
     }
 }
+
+public void handleAdminClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    switch (id) {
+        case "ADMIN:PENDING"    -> openPending(p, 0);
+        case "ADMIN:WORLD_CTRL" -> openWorldControls(p, 0);
+        case "ADMIN:RELOAD"     -> {
+            plugin.reloadConfig();
+            plugin.getLanguageManager().reload();
+            msg(p, messages.getOrDefault("messages.reloaded", "&aConfiguration and language reloaded."));
+        }
+        case "BACK"             -> back(p);
+        case "EXIT"             -> p.closeInventory();
+    }
+}
+
+public void handleWorldControlsClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.startsWith("WORLD:OPEN:")) {
+        String world = id.substring("WORLD:OPEN:".length());
+        openWorldDetail(p, world);
+    } else if (id.startsWith("WORLD:TOGGLE:")) {
+        String[] parts = id.split(":");
+        if (parts.length == 4) {
+            String world = parts[2];
+            String key   = parts[3];
+            boolean cur  = readWorldBool(world, key, defaultWorld(key));
+            writeWorldBool(world, key, !cur);
+            msg(p, "&eWorld &f" + world + "&e: &f" + key + " &7→ " + (!cur ? "&aON" : "&cOFF"));
+            openWorldDetailNoPush(p, world);
+        }
+    } else if (id.equals("BACK")) {
+        back(p);
+    } else if (id.equals("EXIT")) {
+        p.closeInventory();
+    }
+}
+
+public void handleExpansionReviewClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.startsWith("REQ:")) {
+        String reqId = id.substring("REQ:".length());
+        ExpansionRequest req = expansions.getById(reqId);
+        if (req == null) {
+            warn(p, "&cRequest not found.");
+            return;
+        }
+        if (e.isRightClick()) {
+            expansions.deny(reqId, "Denied by admin");
+            msg(p, "&cDenied expansion request from &f" + nameOrShort(req.getRequester()));
+        } else {
+            expansions.approve(reqId);
+            msg(p, "&aApproved expansion request for &f" + nameOrShort(req.getRequester()));
+        }
+        openPending(p, 0);
+    } else if (id.equals("BACK")) {
+        back(p);
+    } else if (id.equals("EXIT")) {
+        p.closeInventory();
+    }
+}
+
+public void handleHistoryClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.equals("BACK")) {
+        back(p);
+    } else if (id.equals("EXIT")) {
+        p.closeInventory();
+    }
+}
+
+public void handleDenyReasonClick(Player p, InventoryClickEvent e) {
+    ItemStack it = e.getCurrentItem();
+    if (!valid(it)) return;
+    String id = extractId(it);
+    if (id == null) return;
+
+    if (id.startsWith("DENY:")) {
+        String reason = id.substring("DENY:".length());
+        View peek = peek(p);
+        if (peek == null || !"PENDING".equals(peek.type)) {
+            warn(p, "&cNo request selected.");
+            return;
+        }
+        // Get the last request shown to this admin (for simplicity, deny latest viewed)
+        List<ExpansionRequest> pending = expansions.getAllPending();
+        if (pending.isEmpty()) {
+            warn(p, "&cNo pending requests to deny.");
+            return;
+        }
+        ExpansionRequest req = pending.get(0); // or improve with tracked selection
+        expansions.deny(req.getId(), reason);
+        msg(p, "&cDenied request by &f" + nameOrShort(req.getRequester()) + " &7Reason: &f" + reason);
+        openPending(p, peek.page);
+    } else if (id.equals("BACK")) {
+        back(p);
+    } else if (id.equals("EXIT")) {
+        p.closeInventory();
+    }
+}
+
 
     // ------------------------------ Icon Builder ------------------------------
 

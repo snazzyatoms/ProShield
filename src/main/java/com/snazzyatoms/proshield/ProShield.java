@@ -1,203 +1,165 @@
-package com.snazzyatoms.proshield.languages;
+package com.snazzyatoms.proshield;
 
-import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import com.snazzyatoms.proshield.commands.ProShieldCommand;
+import com.snazzyatoms.proshield.compass.CompassManager;
+import com.snazzyatoms.proshield.expansions.ExpansionRequestManager;
+import com.snazzyatoms.proshield.gui.GUIListener;
+import com.snazzyatoms.proshield.gui.GUIManager;
+import com.snazzyatoms.proshield.languages.LanguageManager;
+import com.snazzyatoms.proshield.listeners.MobControlTasks;
+import com.snazzyatoms.proshield.plots.ClaimProtectionListener;
+import com.snazzyatoms.proshield.plots.PlotManager;
+import com.snazzyatoms.proshield.roles.ClaimRoleManager;
+import com.snazzyatoms.proshield.util.MessagesUtil;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
-/**
- * LanguageManager (ProShield v1.2.6.3)
- *
- * - Looks for language files INSIDE the jar at: localization/messages_<code>.yml
- * - Extracts them to the plugin data folder: /plugins/ProShield/localization/messages_<code>.yml
- * - Always loads English (messages_en.yml) as a fallback
- * - Auto-clean support: removes unused languages if enabled
- * - Safe getters with logging for missing keys
- */
-public class LanguageManager {
+public class ProShield extends JavaPlugin {
 
-    private static final String JAR_DIR   = "localization";
-    private static final String PREFIX    = "messages_";
-    private static final String EXT       = ".yml";
-    private static final String FALLBACK  = "en";
+    private static ProShield instance;
 
-    private final ProShield plugin;
+    private LanguageManager languageManager;
+    private MessagesUtil messages;
+    private GUIManager guiManager;
+    private ClaimRoleManager roleManager;
+    private PlotManager plotManager;
+    private ExpansionRequestManager expansionRequestManager;
+    private CompassManager compassManager;
 
-    private FileConfiguration activeCfg;     // selected language
-    private FileConfiguration fallbackCfg;   // English
-    private String activeLanguage = FALLBACK; // the language actually loaded
+    private final Set<UUID> bypassing = new HashSet<>();
+    private boolean debugEnabled = false;
 
-    public LanguageManager(ProShield plugin) {
-        this.plugin = plugin;
-        reload();
-    }
+    @Override
+    public void onEnable() {
+        instance = this;
 
-    /* -------------------------------------------------------------
-     * Public API
-     * ------------------------------------------------------------- */
+        // =====================
+        // 📌 Core init
+        // =====================
+        saveDefaultConfig();
 
-    /** Reload according to config settings.language and refresh caches. */
-    public void reload() {
-        // Ensure data folder exists
-        if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdirs();
+        // 🔹 Initialize language system
+        languageManager = new LanguageManager(this);
+        languageManager.reload();
 
-        String requested = normalize(plugin.getConfig().getString("settings.language", FALLBACK));
+        messages                = new MessagesUtil(this);
+        plotManager             = new PlotManager(this);
+        roleManager             = new ClaimRoleManager(this);
+        expansionRequestManager = new ExpansionRequestManager(this);
+        guiManager              = new GUIManager(this);
+        compassManager          = new CompassManager(this);
 
-        // Load active language (with graceful fallback to English)
-        this.activeCfg = loadOrExtract(requested);
-        if (this.activeCfg == null) {
-            plugin.getLogger().warning("[ProShield][Lang] Could not load '" + requested + "'. Falling back to English.");
-            this.activeCfg = loadOrExtract(FALLBACK);
-            this.activeLanguage = FALLBACK;
+        // =====================
+        // 📌 Listener registration
+        // =====================
+        getServer().getPluginManager().registerEvents(new GUIListener(this, guiManager), this);
+        getServer().getPluginManager().registerEvents(new ClaimProtectionListener(this, plotManager), this);
+
+        new MobControlTasks(this); // self-registers tasks
+
+        // =====================
+        // 📌 Command registration
+        // =====================
+        PluginCommand cmd = getCommand("proshield");
+        if (cmd != null) {
+            ProShieldCommand dispatcher = new ProShieldCommand(this, compassManager);
+            cmd.setExecutor(dispatcher);
+            cmd.setTabCompleter(dispatcher);
         } else {
-            this.activeLanguage = requested;
+            getLogger().warning("[ProShield] Command /proshield not found in plugin.yml!");
         }
 
-        // Always load English fallback too
-        this.fallbackCfg = loadOrExtract(FALLBACK);
-        if (this.fallbackCfg == null) {
-            // Should never happen if messages_en.yml is in the JAR, but guard anyway
-            plugin.getLogger().warning("[ProShield][Lang] English fallback missing. Some keys may be empty.");
-            this.fallbackCfg = new YamlConfiguration(); // empty
+        getLogger().info("[ProShield] Enabled v" + getDescription().getVersion() +
+                " | Active language: " + languageManager.getActiveLanguage());
+    }
+
+    @Override
+    public void onDisable() {
+        if (plotManager != null) plotManager.saveAll();
+        if (expansionRequestManager != null) expansionRequestManager.save();
+
+        getLogger().info("[ProShield] Disabled cleanly.");
+    }
+
+    // ==========================
+    // 🔧 Helpers & Getters
+    // ==========================
+
+    public static ProShield getInstance() {
+        return instance;
+    }
+
+    public MessagesUtil getMessagesUtil() {
+        return messages;
+    }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+
+    public ClaimRoleManager getRoleManager() {
+        return roleManager;
+    }
+
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
+
+    public ExpansionRequestManager getExpansionRequestManager() {
+        return expansionRequestManager;
+    }
+
+    public CompassManager getCompassManager() {
+        return compassManager;
+    }
+
+    public LanguageManager getLanguageManager() {
+        return languageManager;
+    }
+
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public void toggleDebug() {
+        debugEnabled = !debugEnabled;
+    }
+
+    public boolean toggleBypass(UUID uuid) {
+        if (bypassing.contains(uuid)) {
+            bypassing.remove(uuid);
+            return false;
+        } else {
+            bypassing.add(uuid);
+            return true;
         }
-
-        plugin.getLogger().info(ChatColor.GREEN + "[ProShield] Loaded language: " + this.activeLanguage
-                + " (" + PREFIX + this.activeLanguage + EXT + ")");
     }
 
-    /** Removes all language files except the active one (if auto-clean is enabled). */
-    public void cleanInactiveLanguages() {
-        File locDir = new File(plugin.getDataFolder(), JAR_DIR);
-        if (!locDir.exists() || !locDir.isDirectory()) return;
-
-        File[] files = locDir.listFiles((dir, name) -> name.startsWith(PREFIX) && name.endsWith(EXT));
-        if (files == null) return;
-
-        for (File f : files) {
-            String name = f.getName().toLowerCase(Locale.ROOT);
-            if (!name.equals(PREFIX + activeLanguage + EXT)) {
-                if (f.delete()) {
-                    plugin.getLogger().info("[ProShield][Lang] Auto-clean removed unused: " + f.getName());
-                }
-            }
-        }
+    public boolean isBypassing(Player player) {
+        return bypassing.contains(player.getUniqueId());
     }
 
-    /** Language code currently in use (e.g., "en", "fr", "pl"). */
-    public String getActiveLanguage() {
-        return activeLanguage;
-    }
-
-    /** Raw configuration for the active language. */
-    public FileConfiguration raw() {
-        return activeCfg;
-    }
-
-    /** Get a colorized string for key, with English fallback. */
-    public String get(String key) {
-        String s = activeCfg.getString(key);
-        if (s == null || s.isBlank()) {
-            s = fallbackCfg.getString(key);
-            if (s == null) {
-                plugin.getLogger().warning("[ProShield][Lang] Missing key: " + key + " (no fallback found)");
-                return null;
-            }
-            plugin.getLogger().warning("[ProShield][Lang] Missing key in " + activeLanguage + ": " + key + " (using English)");
-        }
-        return ChatColor.translateAlternateColorCodes('&', s);
-    }
-
-    /** Get a colorized list for key, with English fallback. */
-    public List<String> getList(String key) {
-        List<String> list = activeCfg.getStringList(key);
-        if (list == null || list.isEmpty()) {
-            list = fallbackCfg.getStringList(key);
-            if (list == null || list.isEmpty()) {
-                plugin.getLogger().warning("[ProShield][Lang] Missing list key: " + key);
-                return Collections.emptyList();
-            }
-            plugin.getLogger().warning("[ProShield][Lang] Missing list in " + activeLanguage + ": " + key + " (using English)");
-        }
-        return list.stream()
-                .map(s -> ChatColor.translateAlternateColorCodes('&', s))
-                .toList();
-    }
-
-    /** Format a message with placeholders (%key%). */
-    public String format(String key, Map<String, String> placeholders) {
-        String base = get(key);
-        if (base == null) return null;
-        for (var e : placeholders.entrySet()) {
-            base = base.replace("%" + e.getKey() + "%", e.getValue());
-        }
-        return base;
-    }
-
-    /* -------------------------------------------------------------
-     * Internals
-     * ------------------------------------------------------------- */
-
-    private String normalize(String code) {
-        if (code == null || code.isBlank()) return FALLBACK;
-        // Normalize language codes to lowercase and prefer underscore (pt_br, zh_cn, etc.)
-        return code.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+    public Set<UUID> getBypassing() {
+        return bypassing;
     }
 
     /**
-     * Load a language file; if it isn't extracted yet, try to extract it from the JAR.
-     * Looks for a matching file in the JAR at: localization/messages_<code>.yml
-     * Returns a loaded YamlConfiguration, or null if neither disk nor JAR had the file.
+     * 🔄 Reload everything cleanly:
+     * - config.yml
+     * - language files
+     * - messages util
      */
-    private FileConfiguration loadOrExtract(String code) {
-        String jarPath  = JAR_DIR + "/" + PREFIX + code + EXT;
-        File   outFile  = new File(plugin.getDataFolder(), jarPath);
+    public void reloadAll() {
+        reloadConfig();
+        if (languageManager != null) languageManager.reload();
+        if (messages != null) messages.reload();
 
-        if (!outFile.exists()) {
-            if (!outFile.getParentFile().exists()) outFile.getParentFile().mkdirs();
-
-            if (hasResource(jarPath)) {
-                plugin.saveResource(jarPath, false);
-                plugin.getLogger().info("[ProShield][Lang] Extracted: " + jarPath);
-            } else {
-                String altUnderscore = JAR_DIR + "/" + PREFIX + code.replace('-', '_') + EXT;
-                String altHyphen     = JAR_DIR + "/" + PREFIX + code.replace('_', '-') + EXT;
-
-                boolean extracted = false;
-                if (hasResource(altUnderscore)) {
-                    plugin.saveResource(altUnderscore, false);
-                    outFile = new File(plugin.getDataFolder(), altUnderscore);
-                    plugin.getLogger().info("[ProShield][Lang] Extracted: " + altUnderscore + " (variant)");
-                    extracted = true;
-                } else if (hasResource(altHyphen)) {
-                    plugin.saveResource(altHyphen, false);
-                    outFile = new File(plugin.getDataFolder(), altHyphen);
-                    plugin.getLogger().info("[ProShield][Lang] Extracted: " + altHyphen + " (variant)");
-                    extracted = true;
-                }
-
-                if (!extracted) {
-                    plugin.getLogger().warning("[ProShield][Lang] Resource not in JAR: " + jarPath);
-                    return null;
-                }
-            }
-        }
-
-        return YamlConfiguration.loadConfiguration(outFile);
-    }
-
-    /** Check if a resource exists inside the plugin JAR. */
-    private boolean hasResource(String path) {
-        try (InputStream is = plugin.getResource(path)) {
-            return is != null;
-        } catch (Exception ignored) {
-            return false;
-        }
+        getLogger().info("[ProShield] Configuration & languages reloaded. " +
+                "Active language: " + (languageManager != null ? languageManager.getActiveLanguage() : "unknown"));
     }
 }

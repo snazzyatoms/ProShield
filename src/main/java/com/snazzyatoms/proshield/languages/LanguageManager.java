@@ -1,145 +1,131 @@
-// src/main/java/com/snazzyatoms/proshield/languages/LanguageManager.java
 package com.snazzyatoms.proshield.languages;
 
 import com.snazzyatoms.proshield.ProShield;
-import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.*;
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.*;
-import java.util.logging.Level;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
+/**
+ * LanguageManager (ProShield v1.2.6.1+)
+ *
+ * Handles:
+ *  - Loading language files from /resources/localization/
+ *  - Copying missing language files into /plugins/ProShield/
+ *  - Selecting the active language (from config.yml)
+ *  - English fallback if keys are missing
+ *  - Runtime reload
+ */
 public class LanguageManager {
 
     private final ProShield plugin;
-    private FileConfiguration messages;      // selected language (with defaults)
-    private String languageCode;             // e.g. "en", "fr", "pl"
+
+    private YamlConfiguration activeLang;   // selected language
+    private YamlConfiguration fallbackLang; // English fallback
+
+    private String currentCode;
 
     public LanguageManager(ProShield plugin) {
         this.plugin = plugin;
     }
 
-    /** Call onEnable and whenever /proshield reload runs */
+    /* -------------------
+     * Lifecycle
+     * ------------------- */
+
     public void reload() {
-        this.languageCode = plugin.getConfig().getString("language", "en").toLowerCase(Locale.ROOT);
-        String fileName = "messages_" + languageCode + ".yml";
+        String langCode = plugin.getConfig().getString("settings.language", "en").toLowerCase();
+        this.currentCode = langCode;
 
-        // Destination = plugin folder ROOT (no languages/ subfolder)
-        File dest = new File(plugin.getDataFolder(), fileName);
+        // Target file in /plugins/ProShield/
+        File targetFile = new File(plugin.getDataFolder(), "messages_" + langCode + ".yml");
 
-        // Ensure chosen language file exists on disk; copy from JAR if needed
-        ensureFileFromJar("languages/" + fileName, dest, /*fallbackToEnglish=*/true);
+        // Resource path inside JAR
+        String resourcePath = "localization/messages_" + langCode + ".yml";
 
-        // Load selected language from disk
-        this.messages = YamlConfiguration.loadConfiguration(utf8Reader(dest));
-
-        // Load English defaults straight from the JAR and hook as defaults
-        try (InputStream enStream = plugin.getResource("languages/messages_en.yml")) {
-            if (enStream != null) {
-                YamlConfiguration en = YamlConfiguration.loadConfiguration(new InputStreamReader(enStream, StandardCharsets.UTF_8));
-                this.messages.setDefaults(en);
-                this.messages.options().copyDefaults(true); // allows fallback lookups
+        // Ensure file exists locally, copy from JAR if missing
+        if (!targetFile.exists()) {
+            if (plugin.getResource(resourcePath) != null) {
+                plugin.saveResource(resourcePath, false);
+                plugin.getLogger().info("[ProShield][Lang] Extracted " + resourcePath + " to plugin folder.");
             } else {
-                plugin.getLogger().warning("[Lang] English fallback not found in JAR. Keys will not have defaults.");
-            }
-        } catch (IOException ioe) {
-            plugin.getLogger().log(Level.WARNING, "[Lang] Failed reading English fallback from JAR.", ioe);
-        }
-
-        plugin.getLogger().info("[Lang] Loaded language: " + languageCode + " (" + dest.getName() + ")");
-    }
-
-    private void ensureFileFromJar(String jarPath, File dest, boolean fallbackToEnglish) {
-        if (dest.exists()) return;
-
-        // Try to copy requested language from JAR
-        if (!copyFromJar(jarPath, dest)) {
-            plugin.getLogger().warning("[Lang] Requested '" + jarPath + "' not found in JAR.");
-
-            if (fallbackToEnglish) {
-                // Fall back to English
-                File enDest = new File(plugin.getDataFolder(), "messages_en.yml");
-                if (!enDest.exists()) {
-                    if (!copyFromJar("languages/messages_en.yml", enDest)) {
-                        plugin.getLogger().severe("[Lang] English fallback missing from JAR. Creating empty messages_en.yml to avoid crash.");
-                        try {
-                            plugin.getDataFolder().mkdirs();
-                            enDest.createNewFile();
-                        } catch (IOException e) {
-                            plugin.getLogger().log(Level.SEVERE, "[Lang] Could not create messages_en.yml", e);
-                        }
-                    }
-                }
-                // Also create an empty file for the requested language so admins can edit it
-                try {
-                    plugin.getDataFolder().mkdirs();
-                    dest.createNewFile();
-                } catch (IOException e) {
-                    plugin.getLogger().log(Level.WARNING, "[Lang] Could not create " + dest.getName(), e);
-                }
+                plugin.getLogger().warning("[ProShield][Lang] Language file not found in JAR: " + resourcePath);
             }
         }
-    }
 
-    private boolean copyFromJar(String jarPath, File dest) {
-        try (InputStream in = plugin.getResource(jarPath)) {
-            if (in == null) return false;
-            plugin.getDataFolder().mkdirs();
-            try (OutputStream out = Files.newOutputStream(dest.toPath())) {
-                in.transferTo(out);
-            }
-            return true;
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.WARNING, "[Lang] Failed to copy '" + jarPath + "' to " + dest.getName(), e);
-            return false;
+        // Load chosen language
+        this.activeLang = YamlConfiguration.loadConfiguration(targetFile);
+
+        // Always load fallback English directly from JAR
+        InputStream enStream = plugin.getResource("localization/messages_en.yml");
+        if (enStream != null) {
+            this.fallbackLang = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(enStream, StandardCharsets.UTF_8)
+            );
+        } else {
+            plugin.getLogger().warning("[ProShield][Lang] English fallback not found in JAR. Keys will use defaults.");
+            this.fallbackLang = new YamlConfiguration();
         }
+
+        plugin.getLogger().info("[ProShield][Lang] Loaded language: " + langCode +
+                " (fallback=en, file=" + targetFile.getName() + ")");
     }
 
-    private static Reader utf8Reader(File f) {
-        try {
-            return new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8);
-        } catch (FileNotFoundException e) {
-            // Shouldn't happen because ensureFileFromJar created it; return empty reader
-            return new StringReader("");
-        }
-    }
+    /* -------------------
+     * Getters
+     * ------------------- */
 
-    /** Colorized single string */
     public String get(String key) {
-        String raw = messages.getString(key, key);
-        return ChatColor.translateAlternateColorCodes('&', raw);
-    }
-
-    /** Colorized list */
-    public List<String> getList(String key) {
-        List<String> raw = messages.getStringList(key);
-        if (raw == null) return Collections.emptyList();
-        List<String> colored = new ArrayList<>(raw.size());
-        for (String s : raw) {
-            colored.add(ChatColor.translateAlternateColorCodes('&', s));
+        String val = activeLang.getString(key);
+        if (val == null || val.isBlank()) {
+            val = fallbackLang.getString(key, "&cMissing: " + key);
         }
-        return colored;
+        return val;
     }
 
-    /** Simple placeholder replacement: %key% → value */
+    public List<String> getList(String key) {
+        List<String> list = activeLang.getStringList(key);
+        if (list == null || list.isEmpty()) {
+            list = fallbackLang.getStringList(key);
+        }
+        return list != null ? list : Collections.emptyList();
+    }
+
     public String format(String key, Map<String, String> placeholders) {
-        String s = get(key);
+        String msg = get(key);
         if (placeholders != null) {
             for (Map.Entry<String, String> e : placeholders.entrySet()) {
-                s = s.replace("%" + e.getKey() + "%", e.getValue());
+                msg = msg.replace("%" + e.getKey() + "%", e.getValue());
             }
         }
-        return s;
+        return msg;
     }
 
-    public FileConfiguration raw() {
-        return messages;
+    public Set<String> getKeys(String path) {
+        if (activeLang.isConfigurationSection(path)) {
+            return activeLang.getConfigurationSection(path).getKeys(false);
+        }
+        if (fallbackLang.isConfigurationSection(path)) {
+            return fallbackLang.getConfigurationSection(path).getKeys(false);
+        }
+        return Collections.emptySet();
     }
 
-    public String currentLanguage() {
-        return languageCode;
+    /* -------------------
+     * Info
+     * ------------------- */
+
+    public String getCurrentCode() {
+        return currentCode;
+    }
+
+    public YamlConfiguration raw() {
+        return activeLang;
     }
 }

@@ -8,18 +8,16 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
- * LanguageManager (ProShield v1.2.6.3)
+ * LanguageManager (ProShield v1.2.6.4)
  *
- * - Only manages /localization/messages_<code>.yml files
+ * - Manages /localization/messages_<code>.yml files
  * - No more plain messages.yml confusion
  * - Extracts from JAR → /plugins/ProShield/localization/
  * - Always loads English as fallback
+ * - Optional auto-clean of unused language files (configurable)
  */
 public class LanguageManager {
 
@@ -68,6 +66,11 @@ public class LanguageManager {
 
         plugin.getLogger().info(ChatColor.GREEN + "[ProShield] Loaded language: " + this.activeLanguage
                 + " (" + PREFIX + this.activeLanguage + EXT + ")");
+
+        // 🔹 Auto-clean unused languages if enabled
+        if (plugin.getConfig().getBoolean("settings.language-auto-clean", true)) {
+            cleanupLanguages();
+        }
     }
 
     /** Language code currently in use (e.g., "en", "fr", "pl"). */
@@ -83,7 +86,10 @@ public class LanguageManager {
     /** Get a colorized string for key, with English fallback. */
     public String get(String key) {
         String s = activeCfg.getString(key);
-        if (s == null || s.isBlank()) s = fallbackCfg.getString(key);
+        if (s == null || s.isBlank()) {
+            plugin.getLogger().warning("[ProShield][Lang] Missing key: " + key + " (using English fallback)");
+            s = fallbackCfg.getString(key);
+        }
         if (s == null) return null;
         return ChatColor.translateAlternateColorCodes('&', s);
     }
@@ -91,7 +97,10 @@ public class LanguageManager {
     /** Get a colorized list for key, with English fallback. */
     public List<String> getList(String key) {
         List<String> list = activeCfg.getStringList(key);
-        if (list == null || list.isEmpty()) list = fallbackCfg.getStringList(key);
+        if (list == null || list.isEmpty()) {
+            plugin.getLogger().warning("[ProShield][Lang] Missing list key: " + key + " (using English fallback)");
+            list = fallbackCfg.getStringList(key);
+        }
         if (list == null) return Collections.emptyList();
         return list.stream()
                 .map(s -> ChatColor.translateAlternateColorCodes('&', s))
@@ -162,6 +171,25 @@ public class LanguageManager {
             return is != null;
         } catch (Exception ignored) {
             return false;
+        }
+    }
+
+    /** 🔹 Delete all localization files except active + English. */
+    private void cleanupLanguages() {
+        File locDir = new File(plugin.getDataFolder(), JAR_DIR);
+        if (!locDir.exists() || !locDir.isDirectory()) return;
+
+        File[] files = locDir.listFiles((dir, name) -> name.startsWith(PREFIX) && name.endsWith(EXT));
+        if (files == null) return;
+
+        for (File f : files) {
+            String fname = f.getName().toLowerCase(Locale.ROOT);
+            if (!fname.equals(PREFIX + activeLanguage + EXT) &&
+                !fname.equals(PREFIX + FALLBACK + EXT)) {
+                if (f.delete()) {
+                    plugin.getLogger().info("[ProShield][Lang] Cleaned unused language file: " + f.getName());
+                }
+            }
         }
     }
 }

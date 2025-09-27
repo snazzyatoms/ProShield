@@ -9,7 +9,10 @@ description: >
   ProShield is a lightweight yet powerful land & plot protection plugin 
   for Spigot and Paper servers. Secure claims, manage trust & roles, 
   repel mobs, protect items, and provide intuitive GUIs for players and admins.
-  Includes multilingual starter packs (20+ languages) with easy config toggle.
+  Includes multilingual starter packs (20+ languages) with easy config toggle.  
+  To change language: edit `settings.language` in config.yml (e.g. "fr", "pl", "de") 
+  and run `/proshield reload`. ProShield will extract the correct messages_xx.yml 
+  file into the plugin folder automatically and use it immediately (English fallback included).
 
 commands:
   proshield:

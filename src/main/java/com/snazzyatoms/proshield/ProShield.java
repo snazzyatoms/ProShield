@@ -16,6 +16,7 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -47,6 +48,9 @@ public class ProShield extends JavaPlugin {
         // 🔹 Initialize language system
         languageManager = new LanguageManager(this);
         languageManager.reload(); // ensures active lang is loaded
+
+        // 🔹 Clean old languages (keep only active one)
+        cleanOldLanguages(languageManager.getActiveLanguage());
 
         messages                = new MessagesUtil(this);
         plotManager             = new PlotManager(this);
@@ -157,10 +161,33 @@ public class ProShield extends JavaPlugin {
      */
     public void reloadAll() {
         reloadConfig();
-        if (languageManager != null) languageManager.reload();
+        if (languageManager != null) {
+            languageManager.reload();
+            cleanOldLanguages(languageManager.getActiveLanguage());
+        }
         if (messages != null) messages.reload();
 
         getLogger().info("[ProShield] Configuration & languages reloaded. " +
                 "Active language: " + (languageManager != null ? languageManager.getActiveLanguage() : "unknown"));
+    }
+
+    /**
+     * 🧹 Keep only the selected language file in /localization
+     */
+    private void cleanOldLanguages(String activeCode) {
+        File locDir = new File(getDataFolder(), "localization");
+        if (!locDir.exists() || !locDir.isDirectory()) return;
+
+        File[] files = locDir.listFiles();
+        if (files == null) return;
+
+        String activeName = "messages_" + activeCode + ".yml";
+        for (File f : files) {
+            if (f.isFile() && f.getName().startsWith("messages_") && !f.getName().equals(activeName)) {
+                if (f.delete()) {
+                    getLogger().info("[ProShield][Lang] Removed unused language file: " + f.getName());
+                }
+            }
+        }
     }
 }
